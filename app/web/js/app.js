@@ -25,7 +25,8 @@ function navigiere() {
   if (ziel !== "lesen") Bibliothek.anhalten();
   $$(".ansicht").forEach(a => a.classList.toggle("sichtbar", a.dataset.ansicht === ziel));
   $$("#hauptnav a").forEach(a => a.classList.toggle("aktiv", a.getAttribute("href") === "#" + ziel));
-  try { Ansichten[ziel].zeigen(params); } catch (e) { console.error(e); }
+  try { Ansichten[ziel].zeigen(params); } catch (e) { console.error(e); Statistik.fehler("Ansicht " + ziel + ": " + e.message); }
+  Statistik.bereich(ziel);
   if (ziel !== "lesen") window.scrollTo(0, 0);
 }
 
@@ -38,6 +39,7 @@ async function aktualisiereStatus() {
     OW.status = s;
     if (vorher && vorher.bibliothek !== s.bibliothek) OW.buecher = null;
     zeigeKopfStatus(s);
+    statistikNachfragen(s);
     return s;
   } catch (e) {
     const p = $("#ki-pill");

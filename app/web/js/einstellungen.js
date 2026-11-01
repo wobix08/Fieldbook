@@ -49,7 +49,11 @@ const Einstellungen = (() => {
       aktInfo, autoTeil);
     c.prepend(programmBox, inhalteBox);
     // Rückmeldung an den Entwickler, im Kasten Fieldbook-Programm (nur wenn in fieldbook.json ein Dienst eingetragen ist)
-    api("feedback").then(fb => { if (fb && fb.eingerichtet) programmBox.append(rueckmeldungTeil(fb)); }).catch(() => { });
+    // Danach Fehlerberichte und Nutzungsstatistik (Reihenfolge fest, auch wenn die Antworten verschieden schnell kommen)
+    const fbPlatz = el("div"), statPlatz = el("div");
+    programmBox.append(fbPlatz, statPlatz);
+    api("feedback").then(fb => { if (fb && fb.eingerichtet) fbPlatz.append(rueckmeldungTeil(fb)); }).catch(() => { });
+    api("statistik").then(st => { if (st && st.eingerichtet) statPlatz.append(statistikTeil(st)); }).catch(() => { });
     const zeigeVersion = (u) => {
       pv.innerHTML = "";
       pv.append(
@@ -199,6 +203,35 @@ const Einstellungen = (() => {
         el("p", { class: "klein hinweis" }, "Chats, Fragen an die KI und deine Einträge (Erste Hilfe, Vorsorge) gehen nie mit. In den Logdateien werden dein Benutzername und deine Ordnerpfade unkenntlich gemacht. Die Rückmeldung läuft über einen kleinen Dienst bei Cloudflare und landet in einem privaten GitHub-Repository, das nur der Entwickler sieht. Sie wird nicht veröffentlicht.")),
       el("div", { class: "knopfreihe" }, senden), status);
     return el("div", {}, zeile, box);
+  }
+
+  // Zwei Schalter (Fehlerberichte, Nutzungsstatistik) und das nächste Paket zum Ansehen
+  function statistikTeil(st) {
+    const teil = el("div");
+    const zeichnen = (st) => {
+      teil.innerHTML = "";
+      const schalter = (feld, titel, text) => el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, titel), el("small", {}, text)),
+        el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: !!st[feld], onchange: async (e) => {
+          const neu = await api("statistik/einstellen", { [feld]: e.target.checked });
+          await aktualisiereStatus();
+          zeichnen(neu);
+        } }), "an"));
+      teil.append(
+        schalter("fehler", "Fehlerberichte senden", "Fehler, die in Fieldbook auftreten, dein Gerät (Prozessor, Arbeitsspeicher, Grafik) und wie schnell die KI antwortet. Hilft mir, Probleme zu finden."),
+        schalter("nutzung", "Nutzungsstatistik senden", "Wie oft du die einzelnen Bereiche öffnest, welche Pakete und Karten installiert sind und dein Land. Zeigt mir, was wirklich genutzt wird."));
+      const info = el("small", { class: "hinweis" }, "Einmal pro Woche ein kleines Paket, nie über einen Handy-Hotspot. Fragen, Chats, Suchbegriffe und Einträge gehen nie mit." +
+        (st.gesendet ? " Zuletzt gesendet: " + new Date(st.gesendet).toLocaleDateString("de-DE") + "." : ""));
+      teil.append(el("div", { style: "padding:8px 0 0" }, info));
+      if (st.paket) {
+        teil.append(el("details", { class: "fb-details" }, el("summary", {}, "Was wird gesendet?"),
+          el("p", { class: "klein hinweis" }, "Das nächste Paket, genau so, wie es verschickt wird. „id“ ist eine zufällige Kennung, damit ein Gerät nicht doppelt gezählt wird. Sie hat nichts mit dir oder deinem Gerät zu tun."),
+          el("pre", { class: "stat-paket" }, JSON.stringify(st.paket, null, 2)),
+          el("button", { class: "knopf knopf-klein", onclick: async () => zeichnen(await api("statistik/neueid", {})) }, "Neue zufällige Kennung")));
+      }
+    };
+    zeichnen(st);
+    return teil;
   }
 
   async function entfernen(art, id, titel) {

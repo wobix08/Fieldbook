@@ -361,6 +361,11 @@ const Setup = (() => {
       knoepfe(() => geheZu(3), () => { location.hash = "#inhalte"; }, "Zu den Downloads →");
       return;
     }
+    // Bitte um Zustimmung zur Nutzungsstatistik (Standard aus)
+    if (OW.status && OW.status.statistikEingerichtet) {
+      if (!wahl.statistik) wahl.statistik = { fehler: !!OW.status.statistikFehler, nutzung: !!OW.status.statistikNutzung };
+      c.append(el("h2", {}, "Eine Bitte"), el("div", { class: "karte-box" }, statistikBitte(wahl.statistik)));
+    }
     c.append(el("p", { class: "hinweis" }, "Nach dem Abschließen startet der Download. Den Fortschritt siehst du unter „Inhalte“. Das Dashboard kannst du währenddessen schon benutzen: Fertige Pakete stehen sofort zur Verfügung."));
     knoepfe(() => geheZu(3), abschliessen, "✓ Einrichtung abschließen und herunterladen");
   }
@@ -375,6 +380,7 @@ const Setup = (() => {
     const routen = wahl.routen ? [...wahl.karten.keys()] : [];
     const r = await api("installieren", { modell: wahl.modell || "", backend: wahl.backend, pakete, karten, routen, uebersetzer: !!wahl.uebersetzer, abschliessen: true });
     if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
+    if (wahl.statistik) await api("statistik/einstellen", wahl.statistik).catch(() => { });
     // Desktop-Symbol anlegen oder entfernen (nebenbei, blockiert den Download nicht)
     if (wahl.desktop !== !!(OW.status && OW.status.desktopSymbol)) api("desktopsymbol", { an: !!wahl.desktop }).catch(() => { });
     hw = null; kat = null; // beim nächsten Öffnen neu laden

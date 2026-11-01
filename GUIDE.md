@@ -76,7 +76,9 @@ Der Assistent führt in fünf Schritten durch die Einrichtung:
    Wähle eine oder mehrere Regionen.\
    Die Größe wird automatisch berechnet.
 5. **Übersicht**\
-   Prüfe deine Auswahl und klicke auf **Einrichtung abschließen und herunterladen**.
+   Prüfe deine Auswahl.\
+   Darunter steht eine Bitte: Mit zwei Haken kannst du **Fehlerberichte** und eine **Nutzungsstatistik** erlauben, beide sind am Anfang aus.\
+   Dann klicke auf **Einrichtung abschließen und herunterladen**.
 
 Danach öffnet sich die Seite **Inhalte** mit dem Fortschritt der Downloads.\
 Bis zu drei Downloads laufen gleichzeitig, kleine zuerst.\
@@ -186,6 +188,10 @@ Ohne Automatik geht es jederzeit von Hand mit **Inhalte aktualisieren**.
   Eine Kontaktadresse ist freiwillig, gib sie an, wenn du eine Antwort möchtest.\
   Bei Fehlern hilft der Haken **Logdateien mitschicken**; unter **Was wird mitgeschickt?** steht genau, was dabei ist.\
   Ohne Internet merkt sich Fieldbook die Nachricht und schickt sie später.
+- **Fehlerberichte und Nutzungsstatistik**\
+  Im selben Kasten lassen sich beide ein- und ausschalten.\
+  Unter **Was wird gesendet?** siehst du das nächste Wochenpaket genau so, wie es verschickt wird.\
+  Schaltest du beides aus, löscht Fieldbook alles bisher Gesammelte.
 
 ## 8. Häufige Fragen
 
@@ -214,5 +220,5 @@ ZIM-Dateien von [library.kiwix.org](https://library.kiwix.org) in den Ordner `da
 Deine Fragen, Chats und Einträge nicht, sie bleiben auf deinem Gerät.\
 Internet braucht Fieldbook nur für Downloads und um nach einer neuen Version zu fragen.\
 Eine **Rückmeldung** geht nur raus, wenn du sie selbst abschickst.\
-Was dabei übertragen wird, steht in der README auf GitHub im Abschnitt **Datenschutz**.\
-Fehlerberichte oder Nutzungsstatistiken verschickt Fieldbook nur, wenn du ausdrücklich zustimmst (in dieser Version gibt es das noch nicht).
+Fehlerberichte und Nutzungsstatistik verschickt Fieldbook nur, wenn du zugestimmt hast, einmal pro Woche und nie über einen Handy-Hotspot.\
+Was dabei übertragen wird, steht in der README auf GitHub im Abschnitt **Datenschutz**.

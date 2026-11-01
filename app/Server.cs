@@ -73,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.5.3";
+        public const string Version = "0.6.0";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -157,6 +157,8 @@ namespace OfflineWissen
             }) { IsBackground = true }.Start();
             // Gemerkte Rückmeldungen verschicken, sobald Internet da ist
             new Thread(FeedbackHintergrund) { IsBackground = true }.Start();
+            // Wochenpaket der Nutzungsstatistik (nur mit Zustimmung)
+            new Thread(StatHintergrund) { IsBackground = true }.Start();
 
             // Nach einem Neustart durch das Programm-Update ist der Browser schon offen
             string neustartMarke = Path.Combine(Daten, "cache", "neustart");
@@ -707,6 +709,11 @@ namespace OfflineWissen
                     SendeJson(ctx, Verbindung());
                     return;
                 case "feedback": SendeJson(ctx, FeedbackInfo()); return;
+                case "statistik": SendeJson(ctx, StatInfo()); return;
+                case "statistik/einstellen": SendeJson(ctx, StatEinstellen(LeseBody(ctx))); return;
+                case "statistik/neueid": SendeJson(ctx, StatNeueId()); return;
+                case "statistik/ereignis": StatEreignis(LeseBody(ctx)); SendeJson(ctx, new Dictionary<string, object> { { "ok", true } }); return;
+                case "statistik/jetzt": SendeJson(ctx, new Dictionary<string, object> { { "code", StatSenden(true) } }); return;
                 case "feedback/senden": SendeJson(ctx, FeedbackSenden(LeseBody(ctx))); return;
                 case "aktualisierung/laden":
                     SendeJson(ctx, UpdatesJetztLaden());
@@ -854,7 +861,11 @@ namespace OfflineWissen
                 {"programmNeu", progUpdate != null && Bool(progUpdate, "verfuegbar") ? Str(progUpdate, "neu") : null},
                 {"programmBereit", BereitVersion()},
                 {"start", StartKennung},
-                {"updateBeimStart", UpdateBeimStart()}
+                {"updateBeimStart", UpdateBeimStart()},
+                {"statistikFehler", StatFehlerAn()},
+                {"statistikNutzung", StatNutzungAn()},
+                {"statistikGefragt", Bool(einst, "statistikGefragt")},
+                {"statistikEingerichtet", FeedbackUrl() != null}
             };
         }
 
@@ -1252,6 +1263,279 @@ namespace OfflineWissen
                 return c;
             }
             catch { return 0; }
+        }
+
+        // ------------------------------------------------------------------ Nutzungsstatistik und Fehlerberichte
+        // Nur mit ausdrücklicher Zustimmung, zwei getrennte Schalter (Standard aus):
+        //   statistikFehler:  Fehler (Dienste, Downloads, Oberfläche), Gerät, KI-Tempo
+        //   statistikNutzung: wie oft die Bereiche geöffnet werden, installierte Pakete und Karten, Land
+        // Gezählt wird nur auf dem Gerät (daten\statistik.json), und nur, solange der Schalter an ist. Einmal pro
+        // Woche geht ein kleines Paket an den Feedback-Dienst, nie über getaktete Verbindungen. Fragen, Chats,
+        // Suchbegriffe und Einträge gehen nie mit. Die Kennung ist zufällig und lässt sich neu würfeln.
+
+        static readonly object StatLk = new object();
+        static Dictionary<string, object> stat;
+        static string StatDatei { get { return Path.Combine(Daten, "statistik.json"); } }
+        static readonly string[] StatBereiche = { "start", "fragen", "bibliothek", "lesen", "kochen", "karten", "erstehilfe", "vorsorge", "einstellungen", "inhalte", "setup" };
+
+        static bool StatFehlerAn() { return Bool(einst, "statistikFehler"); }
+        static bool StatNutzungAn() { return Bool(einst, "statistikNutzung"); }
+
+        // Nur unter StatLk aufrufen
+        static Dictionary<string, object> StatLaden()
+        {
+            if (stat == null) stat = LadeJson(StatDatei) ?? new Dictionary<string, object>();
+            if (Str(stat, "id") == null) stat["id"] = NeueStatId();
+            return stat;
+        }
+
+        static void StatSpeichern() { try { File.WriteAllText(StatDatei, Json.Serialize(stat), Utf8); } catch { } }
+
+        static string NeueStatId()
+        {
+            var b = new byte[8];
+            using (var r = System.Security.Cryptography.RandomNumberGenerator.Create()) r.GetBytes(b);
+            return BitConverter.ToString(b).Replace("-", "").ToLowerInvariant();
+        }
+
+        static Dictionary<string, object> Unter(Dictionary<string, object> d, string k)
+        {
+            object v;
+            if (d.TryGetValue(k, out v) && v is Dictionary<string, object>) return (Dictionary<string, object>)v;
+            var n = new Dictionary<string, object>();
+            d[k] = n;
+            return n;
+        }
+
+        // Fehlertext ohne persönliche Angaben (Pfade, Benutzername, Zugangsdaten), höchstens 300 Zeichen
+        static string StatText(string s)
+        {
+            s = (s ?? "").Replace("\r", " ").Replace("\n", " ");
+            s = Regex.Replace(s, Regex.Escape(Root.TrimEnd('\\')), "<Fieldbook>", RegexOptions.IgnoreCase);
+            string profil = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(profil)) s = Regex.Replace(s, Regex.Escape(profil), "<Benutzerordner>", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"[A-Za-z]:\\[^\s""']*", "<Pfad>");
+            s = Regex.Replace(s, @"://[^/\s:@]+:[^/\s@]+@", "://<Zugang>@");
+            s = Regex.Replace(s, @"https?://(localhost|127\.0\.0\.1)[^\s""']*", "<lokal>");
+            if (Environment.UserName.Length >= 3) s = Regex.Replace(s, @"\b" + Regex.Escape(Environment.UserName) + @"\b", "<Benutzer>", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"\s+", " ").Trim();
+            return s.Length > 300 ? s.Substring(0, 300) : s;
+        }
+
+        // Gleiche Fehler werden zusammengezählt (Ziffern zählen dabei nicht), höchstens 30 verschiedene je Woche
+        static void StatFehler(string art, string text)
+        {
+            if (!StatFehlerAn() || string.IsNullOrEmpty(text)) return;
+            try
+            {
+                string t = StatText(text);
+                string schluessel = art + "|" + Regex.Replace(t, @"\d+", "#");
+                lock (StatLk)
+                {
+                    var f = Unter(StatLaden(), "fehler");
+                    if (!f.ContainsKey(schluessel) && f.Count >= 30) return;
+                    var e = Unter(f, schluessel);
+                    e["art"] = art;
+                    e["text"] = t;
+                    e["anzahl"] = (int)Num(e, "anzahl") + 1;
+                    StatSpeichern();
+                }
+            }
+            catch { }
+        }
+
+        static void StatBereich(string b)
+        {
+            if (!StatNutzungAn() || Array.IndexOf(StatBereiche, b) < 0) return;
+            lock (StatLk)
+            {
+                var d = Unter(StatLaden(), "bereiche");
+                d[b] = (int)Num(d, b) + 1;
+                StatSpeichern();
+            }
+        }
+
+        // KI-Tempo je Modell: "antwort" und "lesen" in Tokens pro Sekunde, "laden" in Sekunden
+        static void StatKi(string feld, double wert)
+        {
+            if (!StatFehlerAn() || double.IsNaN(wert) || wert <= 0 || wert > 100000) return;
+            lock (StatLk)
+            {
+                string m = (Str(einst, "modell") ?? "?") + "|" + (Str(einst, "backend") ?? "cpu");
+                var k = Unter(Unter(StatLaden(), "ki"), m);
+                k[feld + "Summe"] = Math.Round(Num(k, feld + "Summe") + wert, 2);
+                k[feld + "Anzahl"] = (int)Num(k, feld + "Anzahl") + 1;
+                StatSpeichern();
+            }
+        }
+
+        // Das Paket, das als Nächstes gesendet würde (wird in den Einstellungen genau so angezeigt)
+        static Dictionary<string, object> StatPaket()
+        {
+            Dictionary<string, object> s;
+            lock (StatLk) s = Json.DeserializeObject(Json.Serialize(StatLaden())) as Dictionary<string, object>;
+            var p = new Dictionary<string, object> {
+                { "art", "statistik" }, { "id", Str(s, "id") }, { "version", Version },
+                { "windows", Environment.OSVersion.Version.ToString() } };
+            if (StatFehlerAn())
+            {
+                var h = Hardware();
+                var gpus = (h["gpus"] as List<object> ?? new List<object>()).Select(o => (object)Str((Dictionary<string, object>)o, "name")).ToList();
+                p["geraet"] = new Dictionary<string, object> {
+                    { "cpu", Str(h, "cpu") }, { "kerne", h["kerne"] }, { "threads", h["threads"] },
+                    { "ramGB", Math.Round(Num(h, "ramGB")) }, { "grafik", gpus } };
+                var kiListe = new List<object>();
+                foreach (var kv in Unter(s, "ki"))
+                {
+                    var k = kv.Value as Dictionary<string, object>;
+                    if (k == null) continue;
+                    var teile = kv.Key.Split('|');
+                    var e = new Dictionary<string, object> { { "modell", teile[0] }, { "backend", teile.Length > 1 ? teile[1] : "cpu" } };
+                    if (Num(k, "antwortAnzahl") > 0) e["antwortTokenProSek"] = Math.Round(Num(k, "antwortSumme") / Num(k, "antwortAnzahl"), 1);
+                    if (Num(k, "lesenAnzahl") > 0) e["leseTokenProSek"] = Math.Round(Num(k, "lesenSumme") / Num(k, "lesenAnzahl"), 1);
+                    if (Num(k, "ladenAnzahl") > 0) e["ladeSek"] = Math.Round(Num(k, "ladenSumme") / Num(k, "ladenAnzahl"), 1);
+                    e["antworten"] = (int)Num(k, "antwortAnzahl");
+                    kiListe.Add(e);
+                }
+                p["ki"] = kiListe;
+                p["fehler"] = Unter(s, "fehler").Values.ToList();
+            }
+            if (StatNutzungAn())
+            {
+                p["land"] = Str(einst, "land") ?? "";
+                p["bereiche"] = Unter(s, "bereiche");
+                // Kennungen aus pakete.json (z. B. "wp-maxi"); alles andere nur als "eigenes Paket",
+                // damit kein selbst gewählter Dateiname nach außen geht
+                var pakete = new List<object>();
+                try
+                {
+                    var bekannt = Arr(LadeJson(Path.Combine(Config, "pakete.json")), "pakete").OfType<Dictionary<string, object>>()
+                        .Select(d => new { id = Str(d, "id"), datei = Str(d, "name") + (string.IsNullOrEmpty(Str(d, "flavour")) ? "" : "_" + Str(d, "flavour")) }).ToList();
+                    foreach (var f in Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim"))
+                    {
+                        string n = Regex.Replace(Path.GetFileNameWithoutExtension(f), @"_\d{4}-\d{2}[a-z]?$", "");
+                        var treffer = bekannt.FirstOrDefault(b => string.Equals(b.datei, n, StringComparison.OrdinalIgnoreCase));
+                        pakete.Add(treffer != null ? treffer.id : "eigenes Paket");
+                    }
+                }
+                catch { }
+                p["pakete"] = pakete;
+                var karten = new List<object>();
+                try
+                {
+                    foreach (var f in Directory.GetFiles(Path.Combine(Daten, "karten"), "*.pmtiles"))
+                        if (!f.EndsWith(".neu.pmtiles")) karten.Add(Path.GetFileNameWithoutExtension(f));
+                }
+                catch { }
+                p["karten"] = karten;
+                p["routen"] = Directory.GetFiles(Path.Combine(Daten, "routen"), "*.rd5").Length > 0;
+                p["uebersetzer"] = UebersetzerBereit();
+            }
+            return p;
+        }
+
+        static Dictionary<string, object> StatInfo()
+        {
+            string gesendet;
+            lock (StatLk) gesendet = File.Exists(StatDatei) || stat != null ? Str(StatLaden(), "gesendet") : null;
+            bool an = StatFehlerAn() || StatNutzungAn();
+            return new Dictionary<string, object> {
+                { "eingerichtet", FeedbackUrl() != null },
+                { "fehler", StatFehlerAn() }, { "nutzung", StatNutzungAn() }, { "gefragt", Bool(einst, "statistikGefragt") },
+                { "gesendet", gesendet }, { "paket", an ? (object)StatPaket() : null } };
+        }
+
+        static Dictionary<string, object> StatEinstellen(Dictionary<string, object> b)
+        {
+            lock (Lk)
+            {
+                if (b.ContainsKey("fehler")) einst["statistikFehler"] = Bool(b, "fehler");
+                if (b.ContainsKey("nutzung")) einst["statistikNutzung"] = Bool(b, "nutzung");
+                einst["statistikGefragt"] = true;
+                SpeichereEinst();
+            }
+            lock (StatLk)
+            {
+                if (!StatFehlerAn() && !StatNutzungAn())
+                {
+                    // Beides aus: alles Gesammelte löschen, beim nächsten Einschalten gibt es eine neue Kennung
+                    try { if (File.Exists(StatDatei)) File.Delete(StatDatei); } catch { }
+                    stat = null;
+                }
+                else
+                {
+                    var s = StatLaden();
+                    if (!StatFehlerAn()) { s.Remove("fehler"); s.Remove("ki"); }
+                    if (!StatNutzungAn()) s.Remove("bereiche");
+                    if (Str(s, "gesendet") == null && Str(s, "seit") == null) s["seit"] = DateTime.UtcNow.ToString("o");
+                    StatSpeichern();
+                }
+            }
+            return StatInfo();
+        }
+
+        static Dictionary<string, object> StatNeueId()
+        {
+            lock (StatLk) { StatLaden()["id"] = NeueStatId(); StatSpeichern(); }
+            return StatInfo();
+        }
+
+        static void StatEreignis(Dictionary<string, object> b)
+        {
+            switch (Str(b, "art"))
+            {
+                case "bereich": StatBereich(Str(b, "name") ?? ""); break;
+                case "jsfehler": StatFehler("oberflaeche", Str(b, "text")); break;
+                case "ki":
+                    StatKi("antwort", Num(b, "antwort"));
+                    StatKi("lesen", Num(b, "lesen"));
+                    break;
+            }
+        }
+
+        static void StatHintergrund()
+        {
+            Thread.Sleep(90000);
+            while (true)
+            {
+                try { StatSenden(false); } catch { }
+                Thread.Sleep(6 * 3600 * 1000);
+            }
+        }
+
+        // Schickt das Wochenpaket, wenn es fällig ist (oder sofort, nur zum Testen).
+        // Gibt den Antwortcode zurück, -1 = nicht fällig oder aus, 0 = keine passende Verbindung.
+        static int StatSenden(bool sofort)
+        {
+            if (!StatFehlerAn() && !StatNutzungAn()) return -1;
+            string url = FeedbackUrl();
+            if (url == null) return -1;
+            DateTime zuletzt;
+            lock (StatLk)
+            {
+                var s = StatLaden();
+                if (!DateTime.TryParse(Str(s, "gesendet") ?? Str(s, "seit") ?? "", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out zuletzt))
+                {
+                    zuletzt = DateTime.UtcNow;
+                    s["seit"] = zuletzt.ToString("o");
+                    StatSpeichern();
+                }
+            }
+            if (!sofort && (DateTime.UtcNow - zuletzt.ToUniversalTime()).TotalDays < 7) return -1;
+            var v = Verbindung();
+            if (!Bool(v, "online") || Bool(v, "getaktet")) return 0;
+            int code = SendePost(url, Json.Serialize(StatPaket()));
+            // Angekommen oder vom Dienst abgelehnt: neue Woche beginnen (nichts stapelt sich an)
+            if ((code >= 200 && code < 300) || code == 400 || code == 413)
+                lock (StatLk)
+                {
+                    var s = StatLaden();
+                    s.Remove("fehler"); s.Remove("ki"); s.Remove("bereiche");
+                    s["gesendet"] = DateTime.UtcNow.ToString("o");
+                    StatSpeichern();
+                }
+            Log("Statistik: " + (code >= 200 && code < 300 ? "gesendet." : "nicht gesendet (" + code + ")."));
+            return code;
         }
 
         // ------------------------------------------------------------------ Proxy und Verbindungstest
@@ -1898,6 +2182,7 @@ namespace OfflineWissen
                 j.Status = abbrechen ? "abgebrochen" : "fehler";
                 j.Fehler = e.Message;
                 Log("Fehler bei " + j.Titel + ": " + e.Message);
+                if (!abbrechen) StatFehler("download", j.Art + " " + j.Titel + ": " + e.Message);
             }
         }
 
@@ -2614,6 +2899,7 @@ namespace OfflineWissen
                 else
                     kiwixFehler = "Die Bibliothek konnte nicht starten. Details in daten\\logs\\kiwix.log";
                 if (defekt.Count > 0 && kiwixFehler == "") kiwixFehler = "Diese Pakete sind beschädigt und wurden ausgelassen: " + string.Join(", ", kiwixDefekt) + ". Bitte unter Inhalte löschen und neu laden.";
+                if (kiwixFehler != "") StatFehler("bibliothek", kiwixFehler);
             }
         }
 
@@ -3043,7 +3329,7 @@ namespace OfflineWissen
                     File.WriteAllText(AktDatei, Json.Serialize(d), Utf8);
                     AktLog("Fertig: " + j.Titel);
                 }
-                catch (Exception e) { j.Status = abbrechen ? "abgebrochen" : "fehler"; j.Fehler = e.Message; if (!abbrechen) AktLog("Fehler bei " + j.Titel + ": " + e.Message); }
+                catch (Exception e) { j.Status = abbrechen ? "abgebrochen" : "fehler"; j.Fehler = e.Message; if (!abbrechen) { AktLog("Fehler bei " + j.Titel + ": " + e.Message); StatFehler("aktualisierung", j.Art + " " + j.Titel + ": " + e.Message); } }
             }
             } finally { ladeLimit = 0; }
             Aufraeumen();
@@ -3236,7 +3522,7 @@ namespace OfflineWissen
                         j.Status = "fertig";
                         Neustart();
                     }
-                    catch (Exception e) { j.Status = abbrechen ? "abgebrochen" : "fehler"; j.Fehler = e.Message; Log("Programm-Update: " + e.Message); }
+                    catch (Exception e) { j.Status = abbrechen ? "abgebrochen" : "fehler"; j.Fehler = e.Message; Log("Programm-Update: " + e.Message); StatFehler("programmupdate", e.Message); }
                 }) { IsBackground = true };
                 worker.Start();
                 return new Dictionary<string, object> { { "ok", true }, { "neu", Str(u, "neu") } };
@@ -3384,6 +3670,7 @@ namespace OfflineWissen
                 Log("KI wird geladen: " + llmModell + " [" + backend + "]");
             }
             bool zweiterVersuch = false;
+            var ladeUhr = Stopwatch.StartNew();
             while (gen == llmGen)
             {
                 Thread.Sleep(500);
@@ -3402,12 +3689,14 @@ namespace OfflineWissen
                     var zeilen = log.Split('\n').Where(z => z.Trim().Length > 0).ToArray();
                     llmFehler = "KI konnte nicht starten. " + string.Join(" ", zeilen.Skip(Math.Max(0, zeilen.Length - 3))).Trim();
                     Log(llmFehler);
+                    StatFehler("ki", llmFehler);
                     return;
                 }
                 if (HttpOk("http://127.0.0.1:" + LlmPort + "/health"))
                 {
                     llmStatus = "bereit";
                     Log("KI ist bereit.");
+                    StatKi("laden", ladeUhr.Elapsed.TotalSeconds);
                     return;
                 }
             }

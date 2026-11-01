@@ -430,6 +430,62 @@ const Kiwix = {
   },
 };
 
+// ---------------------------------------------------------------- Nutzungsstatistik
+// Meldet nur, wenn der jeweilige Schalter in den Einstellungen an ist (der Server prüft das noch einmal).
+// Nie Inhalte: nur der Name des Bereichs, Fehlertexte der Oberfläche und das Tempo der KI.
+
+const Statistik = {
+  melden(daten) { fetch("/api/statistik/ereignis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(daten) }).catch(() => { }); },
+  bereich(name) { if (OW.status && OW.status.statistikNutzung) this.melden({ art: "bereich", name }); },
+  fehler(text) {
+    if (!(OW.status && OW.status.statistikFehler) || !text) return;
+    this.anzahl = (this.anzahl || 0) + 1;
+    if (this.anzahl <= 20) this.melden({ art: "jsfehler", text: String(text).slice(0, 400) });
+  },
+  ki(t) {
+    if (!(OW.status && OW.status.statistikFehler) || !t) return;
+    this.melden({ art: "ki", antwort: t.predicted_per_second || 0, lesen: t.prompt_per_second || 0 });
+  },
+};
+// Die Bitte um Zustimmung mit den zwei Haken (Einrichtung und einmalige Nachfrage nach einem Update).
+// wahl = { fehler, nutzung } wird beim Anhaken direkt geändert.
+function statistikBitte(wahl) {
+  const haken = (feld, titel, text) => el("label", { class: "stat-haken" },
+    el("input", { type: "checkbox", checked: !!wahl[feld], onchange: (e) => { wahl[feld] = e.target.checked; } }),
+    el("span", {}, el("b", {}, titel), el("small", {}, text)));
+  return el("div", { class: "stat-bitte" },
+    el("p", {}, "Ehrlich gesagt finde ich es selbst ziemlich blöd, wenn Programme Nutzungsdaten sammeln. Bei anderen Programmen schalte ich das auch meistens aus. Deshalb ist hier alles aus, solange du nichts anhakst."),
+    el("p", {}, "Trotzdem bitte ich dich, die beiden Haken zu setzen. Fieldbook läuft auf ganz unterschiedlichen Geräten, und ohne diese Zahlen bekomme ich kaum mit, wo es hakt, was zu langsam ist und welche Bereiche wirklich genutzt werden. Nur so kann ich Fieldbook gezielt besser machen."),
+    el("p", { class: "hinweis klein" }, "Es geht nie um Inhalte: Deine Fragen, Chats, Suchbegriffe und Einträge bleiben immer auf deinem Gerät. Einmal pro Woche geht ein kleines Paket raus, nie über einen Handy-Hotspot. Was genau drinsteht, siehst du jederzeit in den Einstellungen, und dort kannst du alles wieder abschalten."),
+    haken("fehler", "Fehlerberichte und Technik", "Fehler, die in Fieldbook auftreten, dein Gerät (Prozessor, Arbeitsspeicher, Grafik) und wie schnell die KI antwortet"),
+    haken("nutzung", "Nutzungsstatistik", "Wie oft du die einzelnen Bereiche öffnest, welche Pakete und Karten installiert sind und dein Land"));
+}
+
+// Einmalige Nachfrage für alle, die Fieldbook schon eingerichtet hatten, bevor es die Statistik gab
+async function statistikNachfragen(s) {
+  if (OW.statistikGefragt || !s.setupFertig || s.statistikGefragt || !s.statistikEingerichtet) return;
+  if (location.hash.startsWith("#setup") || document.querySelector(".dialog-hinter")) return;
+  OW.statistikGefragt = true;
+  const wahl = { fehler: false, nutzung: false };
+  const r = await dialog("Eine Bitte", statistikBitte(wahl),
+    [{ text: "Nein danke", wert: "nein" }, { text: "Auswahl speichern", wert: "ja", haupt: true }]);
+  if (r === null) return; // weggeklickt: beim nächsten Start noch einmal fragen
+  await api("statistik/einstellen", r === "ja" ? wahl : { fehler: false, nutzung: false }).catch(() => { });
+  aktualisiereStatus();
+}
+
+window.addEventListener("error", (e) => {
+  // Nur Dateiname und Zeile, keine Adressen mit Inhalt
+  const datei = (e.filename || "").split("/").pop().split("?")[0];
+  Statistik.fehler((e.message || "Fehler") + (datei ? " (" + datei + ":" + e.lineno + ")" : ""));
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const r = e.reason;
+  // Abgebrochene Anfragen (z. B. KI-Antwort gestoppt) sind keine Fehler
+  if (r && r.name === "AbortError") return;
+  Statistik.fehler("Unbehandelt: " + (r && r.message ? r.message : String(r)));
+});
+
 // ---------------------------------------------------------------- KI
 
 const KI = {
@@ -452,6 +508,7 @@ const KI = {
     }
     if (!onText) {
       const j = await r.json();
+      Statistik.ki(j.timings);
       return KI.ohneDenken(j.choices[0].message.content || "");
     }
     const leser = r.body.getReader();
@@ -472,6 +529,7 @@ const KI = {
           const j = JSON.parse(d);
           const delta = j.choices && j.choices[0] && j.choices[0].delta;
           if (delta && delta.content) { text += delta.content; onText(KI.ohneDenken(text)); }
+          if (j.timings) Statistik.ki(j.timings); // kommt mit dem letzten Stück
         } catch { }
       }
     }

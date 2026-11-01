@@ -586,6 +586,11 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .einst-zeile > :not(:first-child) { flex: none; max-width: 60%; }
 .einst-zeile > select { width: auto; }
 .fb-formular { padding: 12px 0 4px; }
+.stat-paket { max-height: 320px; overflow: auto; background: var(--flaeche2); border-radius: 8px; padding: 10px 12px; font-size: .8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.stat-bitte p { margin: 0 0 10px; }
+.stat-haken { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; cursor: pointer; }
+.stat-haken input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--akzent); }
+.stat-haken small { display: block; color: var(--text2); }
 .fb-details { margin-top: 10px; }
 .fb-details summary { cursor: pointer; color: var(--text2); }
 .fb-liste { margin: 8px 0 4px; padding-left: 20px; }
