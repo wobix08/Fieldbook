@@ -1441,8 +1441,9 @@ namespace OfflineWissen
                     if (!File.Exists(ziel))
                         jobs.Add(new Job { Art = "orte", Titel = "Ortsnamen: " + cc, Url = "https://download.geonames.org/export/dump/" + cc + ".zip", Ziel = ziel });
                 }
-                // Kleine Downloads zuerst (Hilfsprogramme ganz vorne, die brauchen andere Schritte)
-                var neu = jobs.OrderBy(x => x.Art == "programm" ? 0 : 1).ThenBy(x => x.Gesamt).ToList();
+                // Kleine Downloads zuerst (Hilfsprogramme ganz vorne, die brauchen andere Schritte;
+                // pmtiles als allererstes, ohne es kann keine Karte laden)
+                var neu = jobs.OrderBy(x => x.Art == "programm" ? 0 : 1).ThenBy(x => x.Art == "programm" && x.Ziel == "pmtiles" ? 0 : 1).ThenBy(x => x.Gesamt).ToList();
                 if (dazu)
                 {
                     // Was schon wartet oder lädt, nicht doppelt aufnehmen
