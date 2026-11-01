@@ -60,7 +60,7 @@ const Inhalte = (() => {
     const waehlen = el("button", { class: "knopf", type: "button", onclick: async (e) => {
       const k = e.currentTarget;
       k.disabled = true;
-      status.textContent = "Das Fenster zur Ordnerauswahl ist offen (es kann hinter dem Browser liegen) …";
+      status.textContent = "Das Fenster zur Ordnerauswahl ist offen. Falls du es nicht siehst: unten in der Taskleiste auf „Fieldbook: Ordner wählen“ klicken.";
       const r = await api("import/ordner", {}).catch(() => ({}));
       k.disabled = false;
       if (r.ordner) { feld.value = r.ordner; suchen(); } else status.textContent = "Kein Ordner gewählt.";

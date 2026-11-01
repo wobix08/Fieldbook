@@ -28,6 +28,41 @@ namespace OfflineWissen
         public string[] Liste;
     }
 
+    // Moderne Windows-Ordnerauswahl (IFileOpenDialog). Nur die benutzten Methoden, in der Reihenfolge der Schnittstelle.
+    [ComImport, Guid("DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7")]
+    class OrdnerDialogKlasse { }
+
+    [ComImport, Guid("42f85136-db7e-439c-85f1-e4075d135fc8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IOrdnerDialog
+    {
+        [PreserveSig] int Show(IntPtr eltern);
+        void SetFileTypes(uint anzahl, IntPtr typen);
+        void SetFileTypeIndex(uint i);
+        void GetFileTypeIndex(out uint i);
+        void Advise(IntPtr ereignisse, out uint kennung);
+        void Unadvise(uint kennung);
+        void SetOptions(uint optionen);
+        void GetOptions(out uint optionen);
+        void SetDefaultFolder(IShellEintrag ordner);
+        void SetFolder(IShellEintrag ordner);
+        void GetFolder(out IShellEintrag ordner);
+        void GetCurrentSelection(out IShellEintrag eintrag);
+        void SetFileName([MarshalAs(UnmanagedType.LPWStr)] string name);
+        void GetFileName([MarshalAs(UnmanagedType.LPWStr)] out string name);
+        void SetTitle([MarshalAs(UnmanagedType.LPWStr)] string titel);
+        void SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string text);
+        void SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string text);
+        void GetResult(out IShellEintrag eintrag);
+    }
+
+    [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IShellEintrag
+    {
+        void BindToHandler(IntPtr bc, ref Guid bhid, ref Guid riid, out IntPtr ppv);
+        void GetParent(out IShellEintrag eltern);
+        void GetDisplayName(uint art, out IntPtr name);
+    }
+
     public class Ort
     {
         public string Name, Alt, Land, Code;
@@ -38,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.5.1";
+        public const string Version = "0.5.1.1";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -1849,18 +1884,46 @@ namespace OfflineWissen
         // Pakete, Karten, KI-Modelle, Wegedaten und Ortslisten aus einem Ordner übernehmen, z. B. vom
         // USB-Stick oder dem daten-Ordner eines anderen Fieldbook-Laptops. Kopiert wird über die Warteschlange.
 
-        // Windows-Fenster zur Ordnerauswahl (eigener STA-Thread, immer im Vordergrund)
+        // Windows-Fenster zur Ordnerauswahl (eigener STA-Thread, vor dem Browser). Die moderne Auswahl wie im
+        // Explorer; nur wenn die nicht geht, das alte Baum-Fenster.
         static string OrdnerWaehlen()
         {
             string pfad = null;
             var t = new Thread(delegate ()
             {
-                using (var vorne = new System.Windows.Forms.Form { TopMost = true, ShowInTaskbar = false, Opacity = 0, FormBorderStyle = System.Windows.Forms.FormBorderStyle.None })
-                using (var d = new System.Windows.Forms.FolderBrowserDialog { Description = "Ordner oder USB-Stick mit Fieldbook-Daten wählen", ShowNewFolderButton = false })
+                using (var vorne = new System.Windows.Forms.Form { TopMost = true, ShowInTaskbar = true, Text = "Fieldbook: Ordner wählen", Opacity = 0, FormBorderStyle = System.Windows.Forms.FormBorderStyle.None, StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen })
                 {
                     vorne.Show();
+                    // Fieldbook-Logo statt des Standard-Symbols in der Taskleiste
+                    try
+                    {
+                        IntPtr symbol = ExtractIcon(IntPtr.Zero, Path.Combine(Root, "Fieldbook.exe"), 0);
+                        if ((long)symbol > 1) { SendMessage(vorne.Handle, 0x80, new IntPtr(0), symbol); SendMessage(vorne.Handle, 0x80, new IntPtr(1), symbol); }
+                    }
+                    catch { }
+                    // Windows lässt ein Hintergrundprogramm sonst nicht nach vorne; ein kurzer Alt-Tastendruck erlaubt es
+                    keybd_event(0x12, 0, 0, UIntPtr.Zero); keybd_event(0x12, 0, 2, UIntPtr.Zero);
+                    SetForegroundWindow(vorne.Handle);
                     vorne.Activate();
-                    if (d.ShowDialog(vorne) == System.Windows.Forms.DialogResult.OK) pfad = d.SelectedPath;
+                    try
+                    {
+                        var d = (IOrdnerDialog)new OrdnerDialogKlasse();
+                        d.SetOptions(0x20 | 0x40 | 0x800); // nur Ordner, nur echte Laufwerke, Pfad muss existieren
+                        d.SetTitle("Ordner oder USB-Stick mit Fieldbook-Daten wählen");
+                        d.SetOkButtonLabel("Diesen Ordner nehmen");
+                        if (d.Show(vorne.Handle) == 0)
+                        {
+                            IShellEintrag e; d.GetResult(out e);
+                            IntPtr p; e.GetDisplayName(0x80058000, out p); // SIGDN_FILESYSPATH
+                            pfad = Marshal.PtrToStringUni(p);
+                            Marshal.FreeCoTaskMem(p);
+                        }
+                    }
+                    catch
+                    {
+                        using (var d = new System.Windows.Forms.FolderBrowserDialog { Description = "Ordner oder USB-Stick mit Fieldbook-Daten wählen", ShowNewFolderButton = false })
+                            if (d.ShowDialog(vorne) == System.Windows.Forms.DialogResult.OK) pfad = d.SelectedPath;
+                    }
                 }
             });
             t.SetApartmentState(ApartmentState.STA);
