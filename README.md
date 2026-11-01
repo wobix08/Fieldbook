@@ -7,17 +7,32 @@ für unterwegs. Es braucht kein Linux, kein Docker und keine Installation: Ordne
 Doppelklick, fertig. Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und
 [Internet-in-a-Box](https://internet-in-a-box.org/).
 
+## Warum Fieldbook?
+
+Project NOMAD hat mich sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf
+einem Gerät und ohne Internet. Dafür braucht man aber ein eigenes Linux-System oder eine virtuelle
+Maschine, und darauf hatte ich keine Lust. Ich wollte dieselbe Idee auf einem ganz normalen
+Windows-Laptop haben: entpacken, doppelklicken, fertig.
+
+Außerdem soll so eine Wissenssammlung nicht nur etwas für Technikbegeisterte sein. Jeder, der einen
+Laptop hat, soll sie nutzen können, ob im Stromausfall, auf Reisen oder in einer einsamen Hütte
+im Wald.
+
+## Was drin ist
+
 | Bereich | Was es kann |
 |---|---|
-| 💬 **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
-| 📚 **Bibliothek** | Wikipedia, Medizin-Wikipedia, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr |
-| 🗺️ **Karten** | OpenStreetMap-Karten offline, Ortssuche, Krankenhäuser, Apotheken und Trinkwasser in der Nähe |
-| 🩹 **Notfall** | Große Kacheln mit Sofortmaßnahmen und direktem Link zum Artikel, ohne Warten auf die KI |
+| <img src=".github/symbole/fragen.svg" width="32" height="32" alt=""> **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
+| <img src=".github/symbole/bibliothek.svg" width="32" height="32" alt=""> **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, mit Übersetzer Englisch → Deutsch |
+| <img src=".github/symbole/kochen.svg" width="32" height="32" alt=""> **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
+| <img src=".github/symbole/karten.svg" width="32" height="32" alt=""> **Karten** | OpenStreetMap-Karten offline, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
+| <img src=".github/symbole/erstehilfe.svg" width="32" height="32" alt=""> **Erste Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
+| <img src=".github/symbole/vorsorge.svg" width="32" height="32" alt=""> **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
 
 ## Schnellstart
 
 1. Die neueste ZIP-Datei unter [Releases](../../releases) herunterladen und entpacken,
-   zum Beispiel nach `C:\OfflineWissen` oder auf einen USB-Stick.
+   zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser. Er erkennt die Hardware, schlägt eine passende
    KI vor und lädt die gewählten Inhalte herunter.
@@ -139,7 +154,7 @@ Fieldbook.exe           Startdatei (sucht app\Start.bat neben sich)
 app\
   Start.bat, start.ps1        Starter (PowerShell, in Windows enthalten)
   Server.cs                   Kleiner lokaler Server, wird beim Start kompiliert
-  config\                     Modelle, Wissenspakete, Kartenregionen, Notfall-Kacheln (JSON)
+  config\                     Modelle, Wissenspakete, Karten, Kochen, Erste Hilfe (JSON)
   web\                        Dashboard (HTML, CSS, JavaScript, MapLibre)
 programme\                    Wird vom Setup gefüllt: kiwix-serve, llama-server, pmtiles
 daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.gguf, karten\*.pmtiles
@@ -202,10 +217,9 @@ Für andere Länder ist es vorbereitet:
 - Das Land wird aus der Windows-Regionseinstellung erkannt und lässt sich im Assistenten und in den
   Einstellungen ändern.
 - Notrufnummern und die vorgeschlagene Karte kommen aus [`app/config/laender.json`](app/config/laender.json).
-  Ein neues Land braucht nur einen Eintrag dort (`"aktiv": true`). In den Notfall-Texten steht `{notruf}`,
-  das durch die Nummer des Landes ersetzt wird.
+  Ein neues Land braucht nur einen Eintrag dort (`"aktiv": true`). In den Erste-Hilfe-Texten steht
+  `{notruf}`, das durch die Nummer des Landes ersetzt wird.
 - Sprachen: Deutsch und Englisch. Die Antwortsprache der KI folgt der Sprache des Landes.
-  Eine englische Fassung der Notfall-Kacheln wird als `app/config/notfall.en.json` erkannt.
   Die Oberfläche selbst ist noch nicht übersetzt.
 
 ## Lizenz
@@ -213,13 +227,6 @@ Für andere Länder ist es vorbereitet:
 Der Code dieses Projekts steht unter der [MIT-Lizenz](LICENSE). Die heruntergeladenen Programme und
 Inhalte haben eigene Lizenzen, siehe [DRITTANBIETER.md](DRITTANBIETER.md).
 
-**Hinweis:** Die Notfall-Sofortmaßnahmen folgen gängigen Erste-Hilfe-Regeln, ersetzen aber keinen
+**Hinweis:** Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten
 Erste-Hilfe-Kurs und keine ärztliche Hilfe. KI-Antworten können Fehler enthalten. Bei wichtigen
 Entscheidungen immer die Quellen lesen.
-
-## Ideen für später
-
-- Persönliche Notfall-Infos (Medikamente, Blutgruppe, Kontakte)
-- Komplettpaket zum Weitergeben per USB-Stick, auch ohne Internet beim Einrichten
-- Offline-Routenplanung auf der Karte (zu Fuß, Rad, Auto)
-- Englische Oberfläche

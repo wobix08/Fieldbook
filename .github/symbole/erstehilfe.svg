@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<!-- Symbol aus Lucide (https://lucide.dev), ISC-Lizenz -->
+<style>.f{fill:#f4e4dd}.s{stroke:#9a3f2c}@media (prefers-color-scheme:dark){.f{fill:#33201a}.s{stroke:#db8b73}}</style>
+<rect class="f" width="32" height="32" rx="8"/>
+<g class="s" transform="translate(6 6) scale(.8333)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v4"/><path d="M14 13h-4"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M18 6v14"/><path d="M6 6v14"/><rect width="20" height="14" x="2" y="6" rx="2"/></g>
+</svg>

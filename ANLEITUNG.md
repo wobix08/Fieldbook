@@ -66,18 +66,18 @@ Danach öffnet sich die Seite **Inhalte** mit dem Fortschritt der Downloads. Bis
 Downloads laufen gleichzeitig, kleine zuerst. Fertige Pakete kannst du sofort benutzen, auch
 wenn der Rest noch lädt. Du kannst das Fenster jederzeit schließen: Beim nächsten Start geht
 es an derselben Stelle weiter. Läuft gerade ein Download, zeigt oben in der Kopfzeile
-„⬇ 40 %“ den Stand; ein Klick darauf führt zu den Downloads.
+„40 %“ mit einem Pfeil den Stand; ein Klick darauf führt zu den Downloads.
 
 ## 4. Benutzen (offline)
 
-### 💬 Fragen
+### Fragen
 Schreib eine Frage, zum Beispiel „Wie versorge ich eine Schnittwunde?“. Die KI sucht passende
 Artikel und antwortet mit Quellennummern wie [1]. Klick auf eine Nummer öffnet den Artikel.
 
 - **Neuer Chat** (links) beginnt ein neues Thema. Im selben Chat versteht die KI
   Rückfragen wie „Und wenn ich kein Feuerzeug habe?“. Für ein ganz anderes Thema lieber einen
   neuen Chat starten.
-- **Frühere Chats** stehen links in der Liste (auf dem Handy unter **🕘 Verlauf**). Ein Klick
+- **Frühere Chats** stehen links in der Liste (auf dem Handy unter **Verlauf**). Ein Klick
   öffnet den Chat wieder, dort kannst du weiterfragen. Mit ✕ löschst du einen Chat. Die Chats
   liegen im Ordner `daten\chats` und wandern mit, wenn du Fieldbook auf einen USB-Stick kopierst.
 - Eine Modellnummer oder einen Namen kannst du auch als eigene Nachricht hinterherschicken,
@@ -89,36 +89,46 @@ Artikel und antwortet mit Quellennummern wie [1]. Klick auf eine Nummer öffnet 
 - **Einfach erklären** macht die Antwort kindgerecht, gut für den Unterricht.
 - Auf schwachen Laptops dauert eine Antwort etwa 20 bis 60 Sekunden.
 
-### 📚 Bibliothek
+### Bibliothek
 Die Pakete sind nach Themen sortiert: Grundwissen, Gesundheit & Erste Hilfe, Reparieren & Technik,
 Draußen & Überleben, Selbstversorgung & Haushalt, Lernen & Schule, Für Kinder sowie Beschäftigung &
 Lesen. Ein Klick auf eine Kategorie zeigt ihre Pakete. Manche Pakete stehen in mehreren Kategorien.
 Oben rechts wechselst du zwischen **Kacheln** und **Liste** (mit Beschreibung). Über dem Regal kannst
 du in allen Paketen gleichzeitig suchen.
 
-**Englische Artikel auf Deutsch lesen:** Beim Lesen oben auf **🌐 Auf Deutsch** klicken. Der
+**Englische Artikel auf Deutsch lesen:** Beim Lesen oben auf **Auf Deutsch** klicken. Der
 Artikel wird offline übersetzt, meist in wenigen Sekunden. Solange die Übersetzung an ist,
 werden auch weitere Artikel automatisch übersetzt, wenn du auf Links klickst. **Original**
 zeigt wieder den englischen Text. Die Übersetzung macht ein Programm, keine Person: Bei
 Fachbegriffen und Zahlen im Zweifel das Original prüfen. Den Übersetzer (27 MB) wählst du im
 Assistenten oder unter **Inhalte** aus.
 
-### 🗺️ Karten
+### Karten
 Zoomen mit dem Mausrad, verschieben mit gedrückter Maustaste. Oben links nach Orten suchen.
-Die Knöpfe wie „🏥 Krankenhaus“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.
+Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.
 Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.
 
-### 🩹 Notfall
-Große Kacheln für die häufigsten Notfälle. Ein Klick zeigt sofort die wichtigsten Schritte
-und einen Knopf zum vollständigen Artikel. Die KI wird dafür nicht gebraucht.
+### Kochen
+Unter **Was hast du da?** gibst du ein, was im Haus ist. Fieldbook sucht passende Rezepte im
+Koch-Wiki, zuerst die, für die du alles hast. Darunter stehen Faustregeln zu Trinkwasser, Vorräten
+und Kühlschrank im Stromausfall, auch ohne heruntergeladene Pakete.
+
+### Erste Hilfe
+Ganz oben stehen die Notrufnummern und Spickzettel für den Ernstfall mit je fünf Sofort-Schritten.
+Darunter folgt ein Kurs mit 12 Lektionen, Quiz und Fallbeispielen zum Üben. Er ersetzt keinen
+echten Erste-Hilfe-Kurs.
+
+### Vorsorge
+Checklisten zum Abhaken: Vorräte für 10 Tage (mit Vorratsrechner), Stromausfall, Aufbewahren,
+Dokumente und Notgepäck. Jedes Kapitel lässt sich ausdrucken.
 
 ## 5. Strom sparen
 
 - Oben rechts siehst du den Akkustand.
-- Der **Sparmodus** schaltet die KI ab. Bibliothek, Karten und Notfall funktionieren weiter.
+- Der **Sparmodus** schaltet die KI ab. Bibliothek, Karten, Kochen und Erste Hilfe funktionieren weiter.
   Einschalten: auf das Feld „KI bereit“ oben rechts klicken. Bei wenig Akku schlägt das
   Programm den Sparmodus selbst vor.
-- Oben rechts wechselt ☀️ / 🌙 zwischen heller und dunkler Ansicht. Standard ist dunkel; hell ist zum Lesen und Lernen oft angenehmer.
+- Oben rechts wechselt der Knopf mit Sonne bzw. Mond zwischen heller und dunkler Ansicht. Standard ist dunkel; hell ist zum Lesen und Lernen oft angenehmer.
 - Bildschirmhelligkeit herunterdrehen spart am meisten.
 
 ## 6. Daten aktuell halten
@@ -134,7 +144,7 @@ ihn benutzt, pausiert der Download. Dein Computer wird dadurch nicht langsamer.
 
 ## 7. Später erweitern oder ändern
 
-- Einstellungen (⚙️ oben rechts) → **Inhalte hinzufügen oder aktualisieren** öffnet die Seite
+- Einstellungen (Zahnrad oben rechts) → **Inhalte hinzufügen oder aktualisieren** öffnet die Seite
   **Inhalte**. Dort hakst du an, was neu dazukommen soll (Pakete, Karten für eine Reise, ein
   anderes KI-Modell, Routenplanung), und klickst auf **Auswahl herunterladen**. Dort kannst du
   Inhalte auch löschen. Neue Versionen werden markiert.
