@@ -18,6 +18,9 @@ Außerdem soll so eine Wissenssammlung nicht nur etwas für Technikbegeisterte s
 Laptop hat, soll sie nutzen können, ob im Stromausfall, auf Reisen oder in einer einsamen Hütte
 im Wald.
 
+Fieldbook habe ich mit Hilfe der KI Claude entwickelt. Ideen, Auswahl der Inhalte und alle
+Entscheidungen stammen von mir.
+
 ## Was drin ist
 
 | | Bereich | Was es kann |
