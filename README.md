@@ -223,12 +223,22 @@ Protokoll: `daten\logs\aktualisierung.log`.
 
 ## Programm-Updates (Fieldbook selbst)
 
-Fieldbook fragt beim Start und in der optionalen Hintergrund-Aktualisierung bei den GitHub-Releases nach einer neuen Version.\
-Gefunden wird ein Release mit den Dateien `Fieldbook-<version>.zip` und `Fieldbook-<version>.zip.sha256` (beide erzeugt `tools\release-bauen.ps1`).\
-Ablauf:
+**Du entscheidest über Updates**\
+Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
+Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen unter *Fieldbook-Version*).\
+Heruntergeladen und eingespielt wird sie erst, wenn du dies bestätigst.
+
+**Mit automatischer Aktualisierung**\
+Hast du die automatische Aktualisierung eingeschaltet, sucht Fieldbook dabei auch nach neuen Versionen.\
+Im Modus „Vorher fragen“ fragt es dich, im Modus „Automatisch herunterladen“ lädt es die neue Version selbst und spielt sie beim nächsten Start ein.\
+Wer das nicht möchte, nimmt in den Einstellungen den Haken bei „Auch Fieldbook selbst aktualisieren“ heraus.\
+Dann aktualisiert die automatische Aktualisierung nur noch Inhalte.
+
+**So läuft ein Update ab**\
+Fieldbook sucht in den GitHub-Releases nach den Dateien `Fieldbook-<version>.zip` und `Fieldbook-<version>.zip.sha256` (beide erzeugt `tools\release-bauen.ps1`).
 
 1. Herunterladen und Prüfsumme kontrollieren, dann unter `daten\cache\update\bereit` ablegen.
-2. Fieldbook startet sich neu.\
+2. Fieldbook startet neu.\
    `app\start.ps1` sichert den bisherigen Programmteil nach `daten\cache\update\sicherung` und spielt die neue Version ein, **bevor** der Server geladen wird.
 3. Lässt sich die neue Version nicht laden, wird automatisch die Sicherung wiederhergestellt.
 
