@@ -113,9 +113,11 @@ const Inhalte = (() => {
     verlauf.push({ t: Date.now(), b: f.bytes });
     verlauf = verlauf.filter(v => Date.now() - v.t < 20000);
     let tempo = "", rest = "";
+    // Solange die Hilfsprogramme laden, läuft oft nur ein Download: Die Restzeit wäre viel zu hoch
+    const programme = f.aktiv && f.jobs.some(j => j.art === "programm" && (j.status === "laeuft" || j.status === "wartet"));
     if (f.aktiv && verlauf.length > 2) {
       const v = (verlauf[verlauf.length - 1].b - verlauf[0].b) / ((verlauf[verlauf.length - 1].t - verlauf[0].t) / 1000);
-      if (v > 0) { tempo = mbit(v); rest = "noch " + dauer((f.gesamt - f.bytes) / v); }
+      if (v > 0) { tempo = mbit(v); rest = programme ? "Restzeit folgt" : "noch " + dauer((f.gesamt - f.bytes) / v); }
     }
     if (!f.aktiv) verlauf = [];
     const anteil = f.gesamt > 0 ? Math.min(100, f.bytes / f.gesamt * 100) : 0;
@@ -136,6 +138,7 @@ const Inhalte = (() => {
           el("span", { class: "dl-tempo" }, tempo),
           el("span", { class: "dl-rest" }, rest))),
       el("div", { class: "balken" }, el("div", { style: "width:" + anteil + "%" })),
+      programme ? el("p", { class: "hinweis klein", style: "margin:6px 0 0" }, "Zuerst lädt Fieldbook die Hilfsprogramme. Danach laden bis zu drei Inhalte gleichzeitig. Das geht meist deutlich schneller, und Fieldbook zeigt dann auch die Restzeit.") : null,
       // Laufende oben, dann wartende, dann Fehler, fertige unten (innerhalb der Gruppen in Warteschlangen-Reihenfolge)
       ...[...f.jobs].sort((a, b) => JOB_REIHENFOLGE[a.status] - JOB_REIHENFOLGE[b.status]).map(j => {
         const p = j.gesamt > 0 ? Math.min(100, j.bytes / j.gesamt * 100) : (j.status === "fertig" ? 100 : 0);
