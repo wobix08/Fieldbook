@@ -1,0 +1,83 @@
+{
+  "_hinweis": "Wissenspakete von Kiwix. name + flavour wie im Kiwix-Katalog (library.kiwix.org). Grösse und Download-Adresse holt das Setup live aus dem Katalog; mb ist nur ein Ersatzwert. Pakete mit gleicher 'gruppeExklusiv' schliessen sich gegenseitig aus. 'kategorien': Ein Paket darf in mehreren Kategorien stehen; die erste ist die Hauptkategorie (dort erscheint es im Assistenten und unter Inhalte). 'startseite': eigene Fieldbook-Startseite in der Bibliothek mit Suche, Zufall und 'kacheln' (Pfad im Paket); 'ifixit': true zeigt den Geräte-Baum nur mit Zweigen, die Anleitungen enthalten.",
+  "kategorien": [
+    { "id": "grundwissen", "icon": "book-open", "titel": "Grundwissen", "text": "Nachschlagen: Was ist …? Wer war …?" },
+    { "id": "gesundheit", "icon": "heart-pulse", "titel": "Gesundheit & Erste Hilfe", "text": "Verletzungen, Krankheiten, Medikamente" },
+    { "id": "technik", "icon": "wrench", "titel": "Reparieren & Technik", "text": "Geräte, Elektrik, Fahrzeuge, Funk" },
+    { "id": "ueberleben", "icon": "tent", "titel": "Draußen & Überleben", "text": "Feuer, Wasser, Unterschlupf, Katastrophen" },
+    { "id": "selbstversorgung", "icon": "sprout", "titel": "Selbstversorgung & Haushalt", "text": "Anbauen, Vorräte, Kochen, Energie ohne Netz" },
+    { "id": "lernen", "icon": "graduation-cap", "titel": "Lernen & Schule", "text": "Lehrbücher, Kurse, Experimente" },
+    { "id": "kinder", "icon": "puzzle", "titel": "Für Kinder", "text": "Kindgerecht erklärt, zum Entdecken" },
+    { "id": "beschaeftigung", "icon": "book-heart", "titel": "Beschäftigung & Lesen", "text": "Bücher, Geschichten, Reiseführer zum Stöbern" }
+  ],
+  "pakete": [
+    { "id": "wp-mini",  "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "mini",  "titel": "Wikipedia Deutsch, kompakt", "text": "Alle Artikel, aber nur die Einleitungen. Gut für kleine Festplatten.", "mb": 4686, "gruppeExklusiv": "wikipedia", "sprache": "de" },
+    { "id": "wp-nopic", "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "nopic", "titel": "Wikipedia Deutsch, vollständig ohne Bilder", "text": "Alle Artikel mit vollem Text. Empfohlen.", "mb": 18585, "gruppeExklusiv": "wikipedia", "sprache": "de" },
+    { "id": "wp-maxi",  "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "maxi",  "titel": "Wikipedia Deutsch, vollständig mit Bildern", "text": "Alles mit Bildern. Braucht viel Platz.", "mb": 48626, "gruppeExklusiv": "wikipedia", "sprache": "de" },
+    { "id": "wp-top-mini", "kategorien": ["grundwissen"], "name": "wikipedia_de_top", "flavour": "mini", "titel": "Das Beste von Wikipedia, kompakt", "text": "Die wichtigsten Artikel, nur die Einleitungen. Sehr klein, gut für schwache Laptops.", "mb": 130, "gruppeExklusiv": "wikipedia-top", "sprache": "de" },
+    { "id": "wp-top-maxi", "kategorien": ["grundwissen"], "name": "wikipedia_de_top", "flavour": "maxi", "titel": "Das Beste von Wikipedia, mit Bildern", "text": "Die wichtigsten Artikel vollständig mit Bildern. Gute Ergänzung zur Wikipedia ohne Bilder.", "mb": 4335, "gruppeExklusiv": "wikipedia-top", "sprache": "de" },
+    { "id": "wiktionary", "kategorien": ["grundwissen", "lernen"], "name": "wiktionary_de_all", "flavour": "nopic", "titel": "Wiktionary Deutsch (Wörterbuch)", "text": "Bedeutung, Herkunft und Übersetzung von Wörtern.", "mb": 1603, "sprache": "de" },
+
+    { "id": "wp-medizin", "kategorien": ["gesundheit"], "name": "wikipedia_de_medicine", "flavour": "maxi", "titel": "Medizin-Wikipedia Deutsch", "text": "Alle medizinischen Wikipedia-Artikel mit Bildern. Für den Notfall-Bereich wichtig.", "mb": 421, "sprache": "de" },
+    { "id": "wikimed-en", "kategorien": ["gesundheit"], "name": "mdwiki_en_all", "flavour": "maxi", "titel": "WikiMed / MDWiki (Englisch)", "text": "Große medizinische Enzyklopädie, von Ärzten gepflegt.", "mb": 2302, "sprache": "en" },
+    { "id": "medizin-en", "kategorien": ["gesundheit", "ueberleben"], "name": "zimgit-medicine_en", "flavour": "", "titel": "Medizin-Handbücher für Notlagen (Englisch)", "text": "Ausgewählte Bücher zur medizinischen Versorgung ohne Arzt.", "mb": 70, "sprache": "en" },
+
+    { "id": "ifixit-de", "kategorien": ["technik"], "name": "ifixit_de_all", "flavour": "", "titel": "iFixit Reparaturanleitungen (Deutsch)", "text": "Schritt-für-Schritt-Anleitungen für Geräte, Elektronik und Haushalt.", "mb": 3592, "sprache": "de", "startseite": { "ifixit": true } },
+    { "id": "elektronik-en", "kategorien": ["technik"], "name": "electronics.stackexchange.com_en_all", "flavour": "", "titel": "Elektronik Fragen und Antworten (Englisch)", "text": "Hunderttausende Antworten von Elektronik-Fachleuten.", "mb": 4261, "sprache": "en" },
+    { "id": "haus-en", "kategorien": ["technik", "selbstversorgung"], "name": "diy.stackexchange.com_en_all", "flavour": "", "titel": "Haus und Heimwerken, Fragen und Antworten (Englisch)", "text": "Heizung, Wasser, Elektrik, Haushaltsgeräte: Ursachen und Lösungen allgemein erklärt.", "mb": 1989, "sprache": "en" },
+    { "id": "auto-en", "kategorien": ["technik"], "name": "mechanics.stackexchange.com_en_all", "flavour": "", "titel": "Auto und Motorrad, Fragen und Antworten (Englisch)", "text": "Warum springt der Motor nicht an? Fehlersuche und Reparatur für alle Fahrzeuge.", "mb": 326, "sprache": "en" },
+    { "id": "fahrrad-en", "kategorien": ["technik"], "name": "bicycles.stackexchange.com_en_all", "flavour": "", "titel": "Fahrrad, Fragen und Antworten (Englisch)", "text": "Reparatur und Wartung von Fahrrädern.", "mb": 476, "sprache": "en" },
+    { "id": "funk-en", "kategorien": ["technik", "ueberleben"], "name": "ham.stackexchange.com_en_all", "flavour": "", "titel": "Amateurfunk, Fragen und Antworten (Englisch)", "text": "Funkgeräte, Antennen, Empfang: Kommunikation ohne Handynetz.", "mb": 74, "sprache": "en" },
+
+    { "id": "post-disaster-en", "kategorien": ["ueberleben"], "name": "zimgit-post-disaster_en", "flavour": "", "titel": "Ratgeber nach Katastrophen (Englisch)", "text": "Sammlung von Anleitungen für die Zeit nach einer Katastrophe.", "mb": 644, "sprache": "en" },
+    { "id": "outdoor-en", "kategorien": ["ueberleben"], "name": "outdoors.stackexchange.com_en_all", "flavour": "", "titel": "Draußen und Überleben, Fragen und Antworten (Englisch)", "text": "Feuer, Wasser, Unterschlupf, Orientierung, Wildnis.", "mb": 135, "sprache": "en" },
+    { "id": "appropedia-en", "kategorien": ["ueberleben", "selbstversorgung"], "name": "appropedia_en_all", "flavour": "maxi", "titel": "Appropedia (Englisch)", "text": "Selbermachen, nachhaltige Technik, Wasser, Energie, Landwirtschaft.", "mb": 581, "sprache": "en" },
+
+    { "id": "kochwiki-de", "kategorien": ["selbstversorgung"], "name": "kochwiki.org_de_all", "flavour": "maxi", "titel": "Koch-Wiki (Rezepte)", "text": "Rezepte und Kochwissen, von einfacher Alltagsküche bis Vorratshaltung.", "mb": 71, "sprache": "de" },
+    { "id": "lowtech-en", "kategorien": ["selbstversorgung", "technik"], "name": "solar.lowtechmagazine.com_mul_all", "flavour": "", "titel": "Low-tech Magazine (Englisch)", "text": "Technik und Energie ohne Stromnetz: alte Techniken neu gedacht. Viele Artikel auch auf Deutsch.", "mb": 668, "sprache": "en" },
+    { "id": "garten-en", "kategorien": ["selbstversorgung"], "name": "gardening.stackexchange.com_en_all", "flavour": "", "titel": "Garten und Anbau, Fragen und Antworten (Englisch)", "text": "Gemüse anbauen, Pflanzenkrankheiten, Boden.", "mb": 890, "sprache": "en" },
+    { "id": "kochen-en", "kategorien": ["selbstversorgung"], "name": "cooking.stackexchange.com_en_all", "flavour": "", "titel": "Kochen und Vorräte, Fragen und Antworten (Englisch)", "text": "Kochen, Haltbarmachen, Lebensmittelsicherheit.", "mb": 227, "sprache": "en" },
+    { "id": "energypedia-en", "kategorien": ["selbstversorgung", "technik"], "name": "energypedia_en_all", "flavour": "nopic", "titel": "Energypedia (Englisch)", "text": "Solarstrom, Kochen, Energie ohne Stromnetz.", "mb": 722, "sprache": "en" },
+    { "id": "nachhaltig-en", "kategorien": ["selbstversorgung"], "name": "sustainability.stackexchange.com_en_all", "flavour": "", "titel": "Nachhaltig leben, Fragen und Antworten (Englisch)", "text": "Sparsam mit Wasser und Energie, Wiederverwenden.", "mb": 26, "sprache": "en" },
+
+    { "id": "wikibooks-de", "kategorien": ["lernen", "technik"], "name": "wikibooks_de_all", "flavour": "nopic", "titel": "Wikibooks Deutsch (Lehrbücher)", "text": "Freie Lehrbücher, z. B. Elektrotechnik, Mathematik, Kochen.", "mb": 2824, "sprache": "de" },
+    { "id": "wikiversity-de", "kategorien": ["lernen"], "name": "wikiversity_de_all", "flavour": "nopic", "titel": "Wikiversity Deutsch", "text": "Kurse und Lernmaterial.", "mb": 920, "sprache": "de" },
+    { "id": "phet-de", "kategorien": ["lernen", "kinder"], "name": "phet_de_all", "flavour": "", "titel": "PhET Simulationen (Deutsch)", "text": "Interaktive Experimente zu Physik, Chemie und Mathe.", "mb": 109, "sprache": "de", "keineSuche": true },
+
+    { "id": "klexikon", "kategorien": ["kinder"], "name": "klexikon_de_all", "flavour": "maxi", "titel": "Klexikon (Kinderlexikon)", "text": "Die Wikipedia für Kinder, mit Bildern.", "mb": 135, "sprache": "de",
+      "startseite": { "kacheln": [
+        { "titel": "Säugetiere", "pfad": "Säugetiere_(Übersicht)" },
+        { "titel": "Vögel", "pfad": "Vögel_(Übersicht)" },
+        { "titel": "Tiere", "pfad": "Tiere" },
+        { "titel": "Dinosaurier", "pfad": "Dinosaurier" },
+        { "titel": "Pflanzen", "pfad": "Pflanzen_(Übersicht)" },
+        { "titel": "Der Körper", "pfad": "Körper" },
+        { "titel": "Die Erde", "pfad": "Erde" },
+        { "titel": "Planeten", "pfad": "Planeten" },
+        { "titel": "Länder der Erde", "pfad": "Länder_der_Erde" },
+        { "titel": "Deutschland", "pfad": "Deutschland_(Übersicht)" },
+        { "titel": "Österreich", "pfad": "Österreich_(Übersicht)" },
+        { "titel": "Schweiz", "pfad": "Schweiz_(Übersicht)" },
+        { "titel": "Frankreich", "pfad": "Frankreich_(Übersicht)" },
+        { "titel": "Italien", "pfad": "Italien_(Übersicht)" },
+        { "titel": "Spanien", "pfad": "Spanien_(Übersicht)" },
+        { "titel": "England", "pfad": "England_(Übersicht)" },
+        { "titel": "USA", "pfad": "USA_(Übersicht)" },
+        { "titel": "Musik", "pfad": "Musik_(Übersicht)" },
+        { "titel": "Spannendes und Schauriges", "pfad": "Spannendes_und_Schauriges_(Übersicht)" }
+      ] } },
+
+    { "id": "ted-kids", "kategorien": ["kinder", "lernen"], "name": "ted_mul_kids", "flavour": "", "titel": "TED Kids (Videos, Englisch)", "text": "Kurze Vortragsvideos für Kinder über Natur, Technik und Ideen, mit deutschen Untertiteln.", "mb": 3801, "sprache": "en", "keineSuche": true },
+
+    { "id": "gutenberg-de", "kategorien": ["beschaeftigung"], "name": "gutenberg_de_all", "flavour": "", "titel": "Project Gutenberg Deutsch (Bücher)", "text": "Tausende freie Bücher, Klassiker und Märchen.", "mb": 11045, "sprache": "de", "keineSuche": true },
+    { "id": "wikiquote-de", "kategorien": ["beschaeftigung"], "name": "wikiquote_de_all", "flavour": "nopic", "titel": "Wikiquote Deutsch (Zitate)", "text": "Zitate und Sprüche von bekannten Menschen, aus Filmen und Büchern.", "mb": 16, "sprache": "de" },
+    { "id": "wikisource-de", "kategorien": ["beschaeftigung"], "name": "wikisource_de_all", "flavour": "nopic", "titel": "Wikisource Deutsch", "text": "Freie Texte, Gedichte und historische Quellen.", "mb": 1205, "sprache": "de", "keineSuche": true },
+    { "id": "wikivoyage-de-nopic", "kategorien": ["beschaeftigung", "grundwissen"], "name": "wikivoyage_de_all", "flavour": "nopic", "titel": "Wikivoyage Deutsch (Reiseführer), ohne Bilder", "text": "Reiseführer für Länder, Regionen und Städte. Ohne Karten, Flaggen und Fotos.", "mb": 207, "gruppeExklusiv": "wikivoyage", "sprache": "de" },
+    { "id": "wikivoyage-de", "kategorien": ["beschaeftigung", "grundwissen"], "name": "wikivoyage_de_all", "flavour": "maxi", "titel": "Wikivoyage Deutsch (Reiseführer), mit Bildern", "text": "Reiseführer mit Lagekarten, Regionenkarten, Flaggen und Fotos. Empfohlen.", "mb": 1072, "gruppeExklusiv": "wikivoyage", "sprache": "de" }
+  ],
+  "vorlagen": [
+    { "id": "reise", "titel": "Reise", "text": "Klein und leicht", "pakete": ["wp-mini", "wp-medizin", "wikivoyage-de-nopic"] },
+    { "id": "zuhause", "titel": "Zuhause", "text": "Empfohlene Auswahl", "pakete": ["wp-nopic", "wp-medizin", "medizin-en", "ifixit-de", "wikibooks-de", "haus-en", "auto-en", "post-disaster-en", "appropedia-en", "outdoor-en", "kochen-en", "kochwiki-de", "lowtech-en", "klexikon", "wikiversity-de", "wikivoyage-de"] },
+    { "id": "alles", "titel": "Alles", "text": "Alle Pakete", "pakete": ["wp-maxi", "wiktionary", "wp-medizin", "wikimed-en", "medizin-en", "ifixit-de", "wikibooks-de", "elektronik-en", "haus-en", "auto-en", "fahrrad-en", "funk-en", "appropedia-en", "energypedia-en", "post-disaster-en", "outdoor-en", "garten-en", "kochen-en", "kochwiki-de", "lowtech-en", "nachhaltig-en", "klexikon", "ted-kids", "wikiversity-de", "phet-de", "wikivoyage-de", "gutenberg-de", "wikisource-de", "wikiquote-de"] }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "_hinweis": "Seite Kochen. 'rezeptPaket' = Paket mit Rezepten (Abschnitt 'Zutaten'). 'immerDa' = Zutaten, die als vorhanden gelten (Wortende genügt, z. B. 'öl' für Sonnenblumenöl). 'nachlesen' = Gruppen mit Artikeltiteln, die der Reihe nach in den Paketen aus 'pakete' gesucht werden; nicht gefundene werden ausgeblendet. 'Artikel#Abschnitt' springt zum Abschnitt und zeigt dessen Namen. 'leitfaden' = feste Faustregeln, auch ohne Pakete lesbar; 'verweis' in einem Abschnitt macht Wörter der Überschrift zu Links ({ Wort: Artikel }), gesucht wie bei 'nachlesen'.",
+  "rezeptPaket": "kochwiki.org_de_all",
+  "immerDa": ["salz", "pfeffer", "wasser", "öl"],
+  "pakete": ["kochwiki.org_de_all", "wikipedia_de_all", "wikipedia_de_top", "klexikon_de_all"],
+  "nachlesen": [
+    { "icon": "flame", "titel": "Kochen ohne Strom", "artikel": ["Lagerfeuer#Kochfeuer_2", "Kochkiste", "Hobo-Kocher", "Raketenofen", "Solarkocher", "Campingkocher", "Spirituskocher", "Dutch Oven", "Erdofen"] },
+    { "icon": "archive", "titel": "Vorräte haltbar machen", "artikel": ["Einkochen", "Haltbarmachung", "Lebensmittelkonservierung", "Sauerkraut", "Vorratshaltung", "Notvorrat"] },
+    { "icon": "wheat", "titel": "Brot ohne Backofen", "artikel": ["Notbrot", "Pfannenbrot", "Weizentortilla", "Stockbrot"] },
+    { "icon": "droplet", "titel": "Trinkwasser", "artikel": ["SODIS", "Trinkwasseraufbereitung"] }
+  ],
+  "leitfaden": [
+    {
+      "id": "wasser", "icon": "droplet", "titel": "Wasser trinkbar machen",
+      "abschnitte": [
+        {
+          "titel": "Abkochen (am sichersten)", "verweis": { "Abkochen": "Abkochen" },
+          "punkte": [
+            "Trübes Wasser zuerst absetzen lassen und durch ein sauberes Tuch oder einen Kaffeefilter gießen.",
+            "Das Wasser sprudelnd kochen lassen, mindestens 1 Minute lang. Im Gebirge über 2000 m: 3 Minuten.",
+            "Abgedeckt abkühlen lassen und in saubere, verschließbare Gefäße füllen.",
+            "Abkochen tötet Keime ab. Gegen Chemikalien (Benzin, Öl, Dünger, Reinigungsmittel) hilft es nicht. Riecht oder schmeckt Wasser danach, nicht trinken."
+          ]
+        },
+        {
+          "titel": "Mit der Sonne (SODIS), wenn man nicht kochen kann", "verweis": { "SODIS": "SODIS" },
+          "punkte": [
+            "Durchsichtige, farblose Plastikflaschen (PET) bis 2 Liter nehmen, Etiketten entfernen. Keine gefärbten oder zerkratzten Flaschen.",
+            "Nur klares Wasser: Trübes vorher filtern. Probe: Durch die volle Flasche muss man große Schrift noch lesen können.",
+            "Flasche ganz füllen, verschließen und liegend in die volle Sonne legen, am besten auf ein Blechdach oder eine dunkle Fläche.",
+            "Bei Sonne mindestens 6 Stunden liegen lassen. Ist der Himmel mehr als halb bewölkt: 2 Tage hintereinander. Bei Dauerregen wirkt es nicht.",
+            "Direkt aus der Flasche trinken oder in ein sauberes Gefäß gießen. Auch SODIS hilft nur gegen Keime, nicht gegen Chemikalien.",
+            "Wenn irgend möglich, ist Abkochen sicherer."
+          ]
+        },
+        {
+          "titel": "Regenwasser auffangen", "verweis": { "Regenwasser": "Regenwasser" },
+          "punkte": [
+            "Regen ist meist sauberer als Wasser aus Bach, Teich oder Pfütze. Auffangen mit Eimern, Töpfen, einer gespannten Plane oder am Fallrohr der Dachrinne.",
+            "Die ersten Minuten Regen vom Dach weglaufen lassen. Sie spülen Staub, Laub und Vogelkot herunter.",
+            "Nicht von Teer- oder Bitumendächern und nicht von frisch gestrichenen Flächen auffangen.",
+            "In sauberen, abgedeckten Gefäßen sammeln und innerhalb weniger Tage verbrauchen.",
+            "Wasser vom Dach oder aus der Regenrinne vor dem Trinken immer abkochen oder mit SODIS behandeln. Direkt in einem sauberen Gefäß aufgefangener Regen ist frisch meist trinkbar, abgekocht ist er aber sicherer."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "strom", "icon": "refrigerator", "titel": "Stromausfall: Kühlschrank und Gefriertruhe",
+      "abschnitte": [
+        {
+          "titel": "Faustregeln",
+          "punkte": [
+            "Türen geschlossen halten. Ein geschlossener Kühlschrank hält etwa 4 Stunden kalt.",
+            "Eine volle Gefriertruhe hält etwa 2 Tage, eine halb volle etwa 1 Tag.",
+            "Zuerst essen, was am schnellsten verdirbt: Fleisch, Fisch, Milchprodukte, Reste. Danach frisches Obst und Gemüse, zuletzt die Vorräte.",
+            "Gekochtes Essen höchstens 2 Stunden ungekühlt stehen lassen, bei Hitze über 30 °C nur 1 Stunde.",
+            "Aufgetautes Fleisch und Fisch bald durchgaren und nicht wieder einfrieren."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "haltbarkeit", "icon": "calendar", "titel": "Wie lange hält was ohne Kühlschrank?",
+      "abschnitte": [
+        {
+          "titel": "Trocken und kühl gelagert",
+          "punkte": [
+            "Reis, Nudeln, getrocknete Bohnen und Linsen: 1 bis 2 Jahre und länger.",
+            "Weizenmehl: etwa 6 bis 12 Monate. Vollkornmehl nur einige Monate, es wird ranzig.",
+            "Haferflocken: etwa 1 Jahr.",
+            "Konserven: mehrere Jahre. Aufgewölbte, undichte oder stark verrostete Dosen wegwerfen.",
+            "Kartoffeln: dunkel, kühl und trocken mehrere Wochen bis Monate. Grüne Stellen und Keime großzügig wegschneiden.",
+            "Zwiebeln: kühl und trocken mehrere Wochen bis Monate."
+          ]
+        },
+        {
+          "titel": "Frisches",
+          "punkte": [
+            "Eier: ohne Kühlung bis etwa 18 Tage nach dem Legen, ältere nur gut durchgegart essen. Nicht abwaschen, sonst geht die Schutzschicht ab und Keime gelangen ins Ei. Einmal gekühlt, immer gekühlt, sonst bildet sich Kondenswasser auf der Schale. Frisch-Probe: Im Glas Wasser sinkt ein frisches Ei, schwimmt es oben, nicht mehr essen.",
+            "Brot: je nach Sorte 3 bis 7 Tage. Vollkorn- und Sauerteigbrot halten länger.",
+            "Hartkäse: ungekühlt einige Tage. Frischkäse, Joghurt und frische Milch nur wenige Stunden.",
+            "Gekochter Reis: schnell abkühlen lassen und innerhalb eines Tages essen, nicht stundenlang warm stehen lassen.",
+            "Hackfleisch, Geflügel und Fisch: ohne Kühlung am selben Tag gut durchgaren."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verdorben", "icon": "search", "titel": "Noch gut oder verdorben?",
+      "abschnitte": [
+        {
+          "titel": "Datum auf der Packung",
+          "punkte": [
+            "„Mindestens haltbar bis“: Danach ist vieles noch gut. Ansehen, riechen, ein wenig probieren.",
+            "„Zu verbrauchen bis“ (z. B. Hackfleisch, Geflügel): Danach nicht mehr essen."
+          ]
+        },
+        {
+          "titel": "Schimmel",
+          "punkte": [
+            "Brot, Marmelade, Joghurt, Obst und Gekochtes: ganz wegwerfen, auch wenn nur eine Stelle schimmelt. Ebenso weicher Käse (z. B. Frischkäse, Mozzarella, Feta), Scheibenkäse und geriebener Käse.",
+            "Fester Käse am Stück (z. B. Gouda, Bergkäse, Parmesan) und festes Gemüse (z. B. Möhren): Schimmel großzügig wegschneiden, mindestens 1 cm rundherum.",
+            "Schimmelkäse (Camembert, Blauschimmel): Der gewollte Edelschimmel ist essbar. Fremder Schimmel in anderer Farbe (z. B. grüne Flecken auf weißem Camembert): ganz wegwerfen.",
+            "Im Zweifel wegwerfen. Krank zu werden ist ohne Arzt und Apotheke schlimmer als ein verlorenes Essen."
+          ]
+        }
+      ]
+    }
+  ]
+}

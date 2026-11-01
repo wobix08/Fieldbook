@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldbook</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="kopf">
+  <a href="#start" class="marke" title="Fieldbook – Wissen, wo kein Netz ist">
+    <!-- Logo: aufgeschlagenes Buch, dessen Seiten einen Bergkamm bilden (Linien in Akzentfarbe) -->
+    <svg class="logo" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20c-2.6-1.7-6-2.1-10-1.5V9.6l3.6-2.7 2.2 1.7L12 4"/><path d="M12 20c2.6-1.7 6-2.1 10-1.5V9.6l-4-3.6-2 1.8L12 4"/><path d="M12 4v16"/></svg>
+    <span>Fieldbook</span>
+  </a>
+  <nav class="hauptnav" id="hauptnav">
+    <a href="#fragen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#message-circle"/></svg><span>Fragen</span></a>
+    <a href="#bibliothek"><svg class="sym" aria-hidden="true"><use href="symbole.svg#library"/></svg><span>Bibliothek</span></a>
+    <a href="#kochen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#cooking-pot"/></svg><span>Kochen</span></a>
+    <a href="#karten"><svg class="sym" aria-hidden="true"><use href="symbole.svg#map"/></svg><span>Karten</span></a>
+    <a href="#erstehilfe" class="nav-notfall"><svg class="sym" aria-hidden="true"><use href="symbole.svg#briefcase-medical"/></svg><span>Erste Hilfe</span></a>
+    <a href="#vorsorge"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shield-check"/></svg><span>Vorsorge</span></a>
+  </nav>
+  <div class="kopf-status">
+    <a class="pill ok" id="download-pill" href="#inhalte" title="Downloads ansehen" hidden>lädt …</a>
+    <button class="pill" id="ki-pill" title="KI ein- oder ausschalten">KI …</button>
+    <span class="pill pill-still" id="akku-pill" hidden></span>
+    <button class="zahnrad" id="thema-knopf" title="Helle Ansicht"><svg class="sym" aria-hidden="true"><use href="symbole.svg#sun"/></svg></button>
+    <a href="#einstellungen" class="zahnrad" title="Einstellungen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#settings"/></svg></a>
+    <div class="aus-menue">
+      <button class="zahnrad" id="aus-knopf" title="Ausschalten" aria-haspopup="true" aria-expanded="false"><svg class="sym" aria-hidden="true"><use href="symbole.svg#power"/></svg></button>
+      <div class="menue" id="aus-liste" hidden>
+        <button id="menue-sparmodus"><svg class="sym" aria-hidden="true"><use href="symbole.svg#zap"/></svg>Nur KI ausschalten (Sparmodus)</button>
+        <button id="menue-beenden" class="menue-rot"><svg class="sym" aria-hidden="true"><use href="symbole.svg#power"/></svg>Programm beenden</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<main id="inhalt">
+
+  <!-- START -->
+  <section class="ansicht" data-ansicht="start">
+    <div class="start-wrap">
+      <form class="suche-gross" id="start-suche">
+        <input type="search" id="start-suche-feld" placeholder="Stichwort suchen oder Frage stellen, z. B. wie repariere ich ein Radio" autocomplete="off">
+        <button type="submit">Suchen</button>
+      </form>
+      <div class="kacheln-start">
+        <a class="kachel" href="#fragen"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#message-circle"/></svg></span><span class="k-titel">Fragen</span><span class="k-text">Die KI antwortet mit Quellen</span></a>
+        <a class="kachel" href="#bibliothek"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#library"/></svg></span><span class="k-titel">Bibliothek</span><span class="k-text">Alle Wissenspakete lesen</span></a>
+        <a class="kachel" href="#kochen"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#cooking-pot"/></svg></span><span class="k-titel">Kochen</span><span class="k-text">Was kann ich mit meinen Vorräten kochen?</span></a>
+        <a class="kachel" href="#karten"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#map"/></svg></span><span class="k-titel">Karten</span><span class="k-text">Offline-Karten und Ortssuche</span></a>
+        <a class="kachel kachel-notfall" href="#erstehilfe"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#briefcase-medical"/></svg></span><span class="k-titel">Erste Hilfe</span><span class="k-text">Kurs zum Vorbereiten, Spickzettel für den Ernstfall</span></a>
+        <a class="kachel" href="#vorsorge"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#shield-check"/></svg></span><span class="k-titel">Vorsorge</span><span class="k-text">Vorräte, Stromausfall, Notfallkiste: was du vorbereiten kannst</span></a>
+      </div>
+      <p class="start-info" id="start-info"></p>
+    </div>
+  </section>
+
+  <!-- FRAGEN -->
+  <section class="ansicht" data-ansicht="fragen">
+   <div class="fragen-layout">
+    <aside id="chat-verlauf" class="chat-verlauf">
+      <button type="button" id="neuer-chat" class="knopf knopf-haupt" title="Neues Thema: Die KI vergisst das bisherige Gespräch"><svg class="sym" aria-hidden="true"><use href="symbole.svg#plus"/></svg>Neuer Chat</button>
+      <div class="verlauf-titel">Frühere Chats</div>
+      <div id="chat-liste" class="chat-liste"></div>
+    </aside>
+    <div class="spalte">
+      <div class="titel-zeile">
+        <h1>Fragen</h1>
+        <button type="button" id="verlauf-knopf" class="knopf verlauf-knopf" aria-expanded="false"><svg class="sym" aria-hidden="true"><use href="symbole.svg#history"/></svg>Verlauf</button>
+      </div>
+      <div id="chat" class="chat"></div>
+      <form id="frage-form" class="frage-form">
+        <textarea id="frage-feld" rows="2" placeholder="Zum Beispiel: Wie versorge ich eine Schnittwunde?"></textarea>
+        <div class="frage-leiste">
+          <div class="frage-optionen">
+            <label class="lage-wahl" title="Die KI richtet die Antwort nach deiner Lage aus">Lage:
+              <select id="lage">
+                <option value="normal">Zuhause</option>
+                <option value="strom">Stromausfall</option>
+                <option value="draussen">Draußen / unterwegs</option>
+                <option value="krise">Krise (keine Läden, keine Hilfe)</option>
+              </select>
+            </label>
+            <label class="schalter"><input type="checkbox" id="einfach"> <span>Einfach erklären (für Kinder)</span></label>
+          </div>
+          <button type="submit" id="frage-senden" class="knopf knopf-haupt">Fragen</button>
+        </div>
+      </form>
+      <p class="hinweis klein">Die KI antwortet nur anhand der gefundenen Artikel. Sie kann sich trotzdem irren: Bei wichtigen Dingen bitte die Quelle lesen.</p>
+    </div>
+   </div>
+  </section>
+
+  <!-- BIBLIOTHEK -->
+  <section class="ansicht" data-ansicht="bibliothek">
+    <div class="spalte breit">
+      <div class="titel-zeile">
+        <h1>Bibliothek</h1>
+        <div class="ansicht-wahl" role="group" aria-label="Darstellung">
+          <button type="button" data-bib-ansicht="kacheln" aria-pressed="true" title="Als Kacheln anzeigen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#layout-grid"/></svg>Kacheln</button>
+          <button type="button" data-bib-ansicht="liste" aria-pressed="false" title="Als Liste mit Details anzeigen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#list"/></svg>Liste</button>
+        </div>
+      </div>
+      <form class="suche-gross" id="bib-suche">
+        <input type="search" id="bib-suche-feld" placeholder="In allen Paketen suchen …" autocomplete="off">
+        <button type="submit">Suchen</button>
+      </form>
+      <div id="bib-treffer"></div>
+      <div id="bib-kopf" class="bib-kopf"></div>
+      <div id="regal" class="regal kacheln"></div>
+      <div id="bib-unten"></div>
+    </div>
+  </section>
+
+  <!-- LESEN -->
+  <section class="ansicht ansicht-voll" data-ansicht="lesen">
+    <div class="lese-leiste">
+      <button class="knopf" id="lese-zurueck">← Zurück</button>
+      <span id="lese-titel" class="lese-titel"></span>
+      <form id="lese-suche" class="lese-suche" role="search"><input type="search" id="lese-suche-feld" placeholder="In diesem Paket suchen …" aria-label="In diesem Paket suchen"></form>
+      <button class="knopf" id="lese-start" title="Startseite dieses Pakets"><svg class="sym" aria-hidden="true"><use href="symbole.svg#house"/></svg><span>Startseite</span></button>
+      <button class="knopf" id="lese-zufall" title="Zufälliger Artikel aus diesem Paket"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shuffle"/></svg><span>Zufall</span></button>
+      <span id="uebersetzen-status" class="uebersetzen-status" aria-live="polite"></span>
+      <button class="knopf" id="uebersetzen-knopf" hidden title="Englische Artikel offline ins Deutsche übersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg>Auf Deutsch</button>
+      <a id="lese-neu" class="knopf" target="_blank" rel="noopener">In neuem Tab öffnen</a>
+    </div>
+    <iframe id="lese-rahmen" title="Artikel"></iframe>
+  </section>
+
+  <!-- KARTEN -->
+  <section class="ansicht ansicht-voll" data-ansicht="karten">
+    <div id="karte-leer" class="spalte" hidden></div>
+    <div id="karte-wrap" class="karte-wrap">
+      <div id="karte"></div>
+      <div class="karte-panel">
+        <!-- Nur sichtbar, wenn mehr als eine Karte installiert ist -->
+        <select id="karten-region" aria-label="Karte wählen" hidden></select>
+        <div class="routen-kopf">
+          <button class="knopf" id="routen-knopf" type="button"><svg class="sym" aria-hidden="true"><use href="symbole.svg#compass"/></svg>Route planen</button>
+        </div>
+        <div id="routen-panel" class="routen-panel" hidden></div>
+        <form id="ort-suche" class="ort-suche">
+          <input type="search" id="ort-feld" placeholder="Ort suchen …" autocomplete="off">
+        </form>
+        <div id="ort-treffer" class="ort-treffer"></div>
+        <div class="chips" id="poi-chips"></div>
+        <div id="poi-treffer" class="ort-treffer"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ERSTE HILFE -->
+  <section class="ansicht" data-ansicht="erstehilfe">
+    <div class="spalte breit">
+      <h1 class="eh-titel">Erste Hilfe</h1>
+      <div class="ernstfall">
+        <div class="ernstfall-kopf"><b><svg class="sym" aria-hidden="true"><use href="symbole.svg#siren"/></svg>Im Ernstfall</b><div class="notruf" id="notruf"></div></div>
+        <div class="ernstfall-knoepfe" id="ernstfall-knoepfe"></div>
+      </div>
+      <p class="eh-hinweis" id="eh-hinweis"></p>
+      <div id="eh-inhalt"></div>
+    </div>
+  </section>
+
+  <!-- VORSORGE -->
+  <section class="ansicht" data-ansicht="vorsorge">
+    <div class="spalte">
+      <h1>Vorsorge</h1>
+      <div id="vs-inhalt"></div>
+    </div>
+  </section>
+
+  <!-- KOCHEN -->
+  <section class="ansicht" data-ansicht="kochen">
+    <div class="spalte">
+      <h1>Kochen</h1>
+      <p id="koch-start" class="hinweis" hidden>Die Bibliothek wird gerade gestartet …</p>
+      <p id="koch-fehlt" class="warnung" hidden>Für die Rezeptsuche wird das Paket „Koch-Wiki“ gebraucht. <a href="#inhalte">Unter Inhalte herunterladen</a></p>
+      <form id="koch-form" class="karte-box koch-form" hidden>
+        <label for="koch-zutaten"><b>Was hast du da?</b></label>
+        <textarea id="koch-zutaten" rows="2" placeholder="z. B. Kartoffeln, Eier, Zwiebeln, Mehl, Käse"></textarea>
+        <div class="koch-zeile">
+          <label for="koch-ofen">Womit kochst du?</label>
+          <select id="koch-ofen">
+            <option value="mit">Herd mit Backofen</option>
+            <option value="ohne">Ohne Backofen (Herdplatte, Gaskocher, Feuer)</option>
+          </select>
+          <button type="submit" class="knopf knopf-haupt">Rezepte finden</button>
+        </div>
+        <div class="koch-zeile">
+          <span class="hinweis klein">Salz, Pfeffer, Öl und Wasser gelten als vorhanden.</span>
+          <a id="koch-paket" class="knopf knopf-klein koch-paket" href="#bibliothek"><svg class="sym" aria-hidden="true"><use href="symbole.svg#book-open"/></svg>Alle Rezepte im Koch-Wiki</a>
+        </div>
+      </form>
+      <div id="koch-ergebnis"></div>
+
+      <h2>Nachlesen</h2>
+      <div id="koch-nachlesen" class="koch-nachlesen"></div>
+
+      <h2>Leitfaden: Wasser und Lebensmittel</h2>
+      <div id="koch-leitfaden"></div>
+      <p class="hinweis klein">Faustregeln für Notlagen. Im Zweifel ein Lebensmittel lieber wegwerfen.</p>
+      <p><a class="knopf knopf-klein" href="#vorsorge?k=vorraete"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shield-check"/></svg>Vorräte anlegen: zur Seite Vorsorge</a></p>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section class="ansicht" data-ansicht="setup">
+    <div class="spalte">
+      <div class="schritte" id="schritte"></div>
+      <div id="setup-inhalt"></div>
+      <div class="setup-knoepfe" id="setup-knoepfe"></div>
+    </div>
+  </section>
+
+  <!-- INHALTE (Downloads und Verwaltung) -->
+  <section class="ansicht" data-ansicht="inhalte">
+    <div class="spalte">
+      <div class="titel-zeile">
+        <h1>Inhalte</h1>
+        <div class="knopfreihe" style="margin:0">
+          <button class="knopf" id="inhalte-import" title="Pakete, Karten und KI-Modelle von einem USB-Stick oder Ordner übernehmen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#usb"/></svg>Von USB-Stick übernehmen</button>
+          <button class="knopf" id="inhalte-update"><svg class="sym" aria-hidden="true"><use href="symbole.svg#refresh-cw"/></svg>Nach Aktualisierungen suchen</button>
+        </div>
+      </div>
+      <div id="inhalte-downloads" class="karte-box" style="margin-bottom:16px" hidden></div>
+      <div id="inhalte-liste"></div>
+    </div>
+  </section>
+
+  <!-- EINSTELLUNGEN -->
+  <section class="ansicht" data-ansicht="einstellungen">
+    <div class="spalte">
+      <div class="titel-zeile">
+        <h1>Einstellungen</h1>
+        <div class="knopfreihe" style="margin:0">
+          <a class="knopf" href="#setup?schritt=0&amp;neu=1"><svg class="sym" aria-hidden="true"><use href="symbole.svg#rotate-ccw"/></svg>Einrichtung neu starten</a>
+          <a class="knopf knopf-haupt" href="#inhalte"><svg class="sym" aria-hidden="true"><use href="symbole.svg#plus"/></svg>Inhalte hinzufügen oder aktualisieren</a>
+        </div>
+      </div>
+      <div id="einst-inhalt"></div>
+    </div>
+  </section>
+
+</main>
+
+<script src="js/helfer.js"></script>
+<script src="js/setup.js"></script>
+<script src="js/fragen.js"></script>
+<script src="js/uebersetzer.js"></script>
+<script src="js/bibliothek.js"></script>
+<script src="js/erstehilfe.js"></script>
+<script src="js/kochen.js"></script>
+<script src="js/vorsorge.js"></script>
+<script src="js/karten.js"></script>
+<script src="js/routen.js"></script>
+<script src="js/einstellungen.js"></script>
+<script src="js/inhalte.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

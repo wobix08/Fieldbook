@@ -1,0 +1,5 @@
+{
+  "_hinweis": "Programm-Update: 'github' = Repository im Format 'besitzer/name'. Fieldbook fragt dort nach dem neuesten Release (Asset Fieldbook-<version>.zip und .sha256). 'updateApi' überschreibt die Adresse (nur zum Testen).",
+  "github": "wobix08/Fieldbook",
+  "updateApi": ""
+}

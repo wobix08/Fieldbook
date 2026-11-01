@@ -1,0 +1,171 @@
+# Anleitung: Fieldbook einrichten und benutzen
+
+Diese Anleitung ist für alle gedacht, auch ohne Computer-Erfahrung.
+
+---
+
+## 1. Herunterladen und entpacken
+
+1. Die Datei `Fieldbook-…zip` herunterladen.
+2. Mit der rechten Maustaste auf die Datei klicken und **Alle extrahieren …** wählen.
+3. Einen Ort auswählen, zum Beispiel `C:\Fieldbook` oder einen USB-Stick.
+   Auf dem Laufwerk sollte genug Platz frei sein, siehe Schritt 3.
+
+Danach liegt im Ordner unter anderem die Datei **Fieldbook**.
+
+## 2. Starten
+
+Doppelklick auf **Fieldbook**.
+
+### Beim allerersten Start: Windows-Warnung
+
+Windows zeigt beim ersten Start sehr wahrscheinlich ein blaues Fenster:
+
+> **Der Computer wurde durch Windows geschützt**
+> Von Microsoft Defender SmartScreen wurde der Start einer unbekannten App verhindert.
+
+So geht es weiter:
+
+1. Auf **Weitere Informationen** klicken (kleiner Text unter der Meldung).
+2. Unten erscheint der Knopf **Trotzdem ausführen**. Darauf klicken.
+
+Das musst du nur einmal machen. Danach startet Fieldbook ohne Nachfrage.
+
+**Warum kommt die Warnung?** Windows warnt bei jedem Programm aus dem Internet, das noch nicht
+viele Menschen heruntergeladen haben oder das nicht mit einem kostenpflichtigen Zertifikat
+signiert ist. Die Meldung sagt nichts über einen Virus aus, sondern nur: „Microsoft kennt dieses
+Programm noch nicht.“ Fieldbook ist ein kleines, freies Projekt. Woran du erkennst, dass es
+harmlos ist, steht in der README auf GitHub im Abschnitt **Ist das sicher?**.
+
+Wichtig: Fieldbook braucht **keine Administratorrechte**. Fragt Windows nach einem
+Administrator-Passwort, stimmt etwas nicht. Dann bitte abbrechen.
+
+### Danach
+
+- Es öffnet sich ein schwarzes Fenster. **Lass es offen**, solange du das Programm benutzt.
+  Schließt du es, wird Fieldbook beendet.
+- Der Browser öffnet sich automatisch mit dem Dashboard.
+
+## 3. Einrichten (einmalig, mit Internet)
+
+Der Assistent führt in fünf Schritten durch die Einrichtung:
+
+1. **Dein Gerät**: Das Programm prüft Prozessor, Arbeitsspeicher, Grafikkarte und freien Platz.
+   Hier wählst du auch dein Land, ob ein **Symbol auf dem Desktop** angelegt werden soll und
+   ob Fieldbook sich automatisch aktuell hält.
+2. **KI-Assistent**: Die passende KI ist schon vorausgewählt („Empfohlen“). Größere Modelle
+   antworten besser, brauchen aber mehr Speicher und Strom. „Keine KI“ geht auch.
+3. **Wissen**: Wähle die Bibliotheken aus. Die Schnellwahl hilft:
+   - **Reise**: klein, etwa 5 GB (Wikipedia kompakt, Medizin, Reiseführer)
+   - **Zuhause**: empfohlen, etwa 30 GB (vollständige Wikipedia, Medizin, Reparaturanleitungen, Lehrbücher, Kinderlexikon …)
+   - **Alles**: über 100 GB
+4. **Karten**: Wähle eine oder mehrere Regionen. Die Größe wird automatisch berechnet.
+5. **Übersicht**: Prüfe deine Auswahl und klicke auf **Einrichtung abschließen und herunterladen**.
+
+Danach öffnet sich die Seite **Inhalte** mit dem Fortschritt der Downloads. Bis zu drei
+Downloads laufen gleichzeitig, kleine zuerst. Fertige Pakete kannst du sofort benutzen, auch
+wenn der Rest noch lädt. Du kannst das Fenster jederzeit schließen: Beim nächsten Start geht
+es an derselben Stelle weiter. Läuft gerade ein Download, zeigt oben in der Kopfzeile
+„⬇ 40 %“ den Stand; ein Klick darauf führt zu den Downloads.
+
+## 4. Benutzen (offline)
+
+### 💬 Fragen
+Schreib eine Frage, zum Beispiel „Wie versorge ich eine Schnittwunde?“. Die KI sucht passende
+Artikel und antwortet mit Quellennummern wie [1]. Klick auf eine Nummer öffnet den Artikel.
+
+- **Neuer Chat** (links) beginnt ein neues Thema. Im selben Chat versteht die KI
+  Rückfragen wie „Und wenn ich kein Feuerzeug habe?“. Für ein ganz anderes Thema lieber einen
+  neuen Chat starten.
+- **Frühere Chats** stehen links in der Liste (auf dem Handy unter **🕘 Verlauf**). Ein Klick
+  öffnet den Chat wieder, dort kannst du weiterfragen. Mit ✕ löschst du einen Chat. Die Chats
+  liegen im Ordner `daten\chats` und wandern mit, wenn du Fieldbook auf einen USB-Stick kopierst.
+- Eine Modellnummer oder einen Namen kannst du auch als eigene Nachricht hinterherschicken,
+  zum Beispiel erst „Wie repariere ich einen Kühlschrank von LG?“ und dann „LFX25973“.
+- **Lage** (unter dem Fragefeld) sagt der KI, was dir zur Verfügung steht: *Zuhause*,
+  *Stromausfall* (keine Steckdose), *Draußen / unterwegs* (nur was du dabei hast oder findest)
+  oder *Krise* (keine Läden, keine Hilfe). Die KI erklärt immer, wie du es selbst machst, nicht
+  wen du beauftragen sollst.
+- **Einfach erklären** macht die Antwort kindgerecht, gut für den Unterricht.
+- Auf schwachen Laptops dauert eine Antwort etwa 20 bis 60 Sekunden.
+
+### 📚 Bibliothek
+Die Pakete sind nach Themen sortiert: Grundwissen, Gesundheit & Erste Hilfe, Reparieren & Technik,
+Draußen & Überleben, Selbstversorgung & Haushalt, Lernen & Schule, Für Kinder sowie Beschäftigung &
+Lesen. Ein Klick auf eine Kategorie zeigt ihre Pakete. Manche Pakete stehen in mehreren Kategorien.
+Oben rechts wechselst du zwischen **Kacheln** und **Liste** (mit Beschreibung). Über dem Regal kannst
+du in allen Paketen gleichzeitig suchen.
+
+**Englische Artikel auf Deutsch lesen:** Beim Lesen oben auf **🌐 Auf Deutsch** klicken. Der
+Artikel wird offline übersetzt, meist in wenigen Sekunden. Solange die Übersetzung an ist,
+werden auch weitere Artikel automatisch übersetzt, wenn du auf Links klickst. **Original**
+zeigt wieder den englischen Text. Die Übersetzung macht ein Programm, keine Person: Bei
+Fachbegriffen und Zahlen im Zweifel das Original prüfen. Den Übersetzer (27 MB) wählst du im
+Assistenten oder unter **Inhalte** aus.
+
+### 🗺️ Karten
+Zoomen mit dem Mausrad, verschieben mit gedrückter Maustaste. Oben links nach Orten suchen.
+Die Knöpfe wie „🏥 Krankenhaus“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.
+Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.
+
+### 🩹 Notfall
+Große Kacheln für die häufigsten Notfälle. Ein Klick zeigt sofort die wichtigsten Schritte
+und einen Knopf zum vollständigen Artikel. Die KI wird dafür nicht gebraucht.
+
+## 5. Strom sparen
+
+- Oben rechts siehst du den Akkustand.
+- Der **Sparmodus** schaltet die KI ab. Bibliothek, Karten und Notfall funktionieren weiter.
+  Einschalten: auf das Feld „KI bereit“ oben rechts klicken. Bei wenig Akku schlägt das
+  Programm den Sparmodus selbst vor.
+- Oben rechts wechselt ☀️ / 🌙 zwischen heller und dunkler Ansicht. Standard ist dunkel; hell ist zum Lesen und Lernen oft angenehmer.
+- Bildschirmhelligkeit herunterdrehen spart am meisten.
+
+## 6. Daten aktuell halten
+
+Im ersten Schritt des Assistenten (oder später in den Einstellungen) kannst du
+**Daten automatisch aktuell halten** einschalten. Wähle dann:
+
+- **Vorher fragen**: Ein Fenster zeigt, welche neuen Daten es gibt, und fragt, ob sie geladen werden sollen.
+- **Automatisch herunterladen**: ohne Nachfrage.
+
+Geladen wird nur, wenn der Computer am Strom hängt und gerade nicht benutzt wird. Sobald du
+ihn benutzt, pausiert der Download. Dein Computer wird dadurch nicht langsamer.
+
+## 7. Später erweitern oder ändern
+
+- Einstellungen (⚙️ oben rechts) → **Inhalte hinzufügen oder aktualisieren** öffnet die Seite
+  **Inhalte**. Dort hakst du an, was neu dazukommen soll (Pakete, Karten für eine Reise, ein
+  anderes KI-Modell, Routenplanung), und klickst auf **Auswahl herunterladen**. Dort kannst du
+  Inhalte auch löschen. Neue Versionen werden markiert.
+- **Einrichtung neu starten** (ebenfalls in den Einstellungen) führt noch einmal durch den
+  ganzen Assistenten, zum Beispiel um die KI oder grundlegende Einstellungen zu ändern.
+  Bereits Installiertes bleibt erhalten und ist vorausgewählt.
+- **Fieldbook selbst aktualisieren**: In den Einstellungen unter **Fieldbook-Version** steht,
+  ob es eine neue Programmversion gibt. Ein Klick lädt sie, Fieldbook startet kurz neu.
+  Deine Daten bleiben erhalten. Mit eingeschalteter automatischer Aktualisierung passiert das
+  auch im Hintergrund.
+
+## 8. Häufige Fragen
+
+**Die Bibliothek sagt „Paket beschädigt“.**
+Eine Datei ist unvollständig oder defekt, zum Beispiel nach einem Absturz beim Download.
+Fieldbook lässt sie aus und startet die anderen Pakete trotzdem. Unter **Inhalte** das
+betroffene Paket löschen und neu herunterladen.
+
+**Der Browser öffnet sich nicht.**
+Öffne ihn selbst und gib `http://localhost:8090` ein.
+
+**„KI-Fehler“ oben rechts.**
+Meist reicht der Arbeitsspeicher nicht. In den Einstellungen ein kleineres Modell wählen oder
+andere Programme schließen. Details stehen in `daten\logs\ki.log`.
+
+**Kann ich den Ordner auf einen anderen Computer kopieren?**
+Ja. Den ganzen Ordner kopieren und dort **Fieldbook** doppelklicken.
+
+**Kann ich eigene Wissenspakete hinzufügen?**
+Ja. ZIM-Dateien von [library.kiwix.org](https://library.kiwix.org) in den Ordner `daten\wissen`
+legen und Fieldbook neu starten.
+
+**Wird etwas ins Internet geschickt?**
+Nein. Alles läuft auf deinem Gerät. Internet wird nur für Downloads im Assistenten benutzt.

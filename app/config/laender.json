@@ -1,0 +1,61 @@
+{
+  "_hinweis": "Länder mit Notrufnummern. Das Land wird aus der Windows-Regionseinstellung erkannt und kann im Setup geändert werden. Nur Länder mit aktiv=true werden angeboten. sprache: nur 'de' oder 'en'. karte: vorgeschlagene Region aus karten.json.",
+  "standard": "DE",
+  "sprachen": ["de", "en"],
+  "laender": [
+    {
+      "code": "DE", "aktiv": true, "sprache": "de", "karte": "deutschland",
+      "name": { "de": "Deutschland", "en": "Germany" },
+      "notruf": "112",
+      "nummern": [
+        { "nummer": "112", "titel": { "de": "Rettungsdienst und Feuerwehr", "en": "Ambulance and fire" } },
+        { "nummer": "110", "titel": { "de": "Polizei", "en": "Police" } },
+        { "nummer": "030 19240", "titel": { "de": "Giftnotruf (Berlin, bundesweit)", "en": "Poison control (Berlin, nationwide)" } },
+        { "nummer": "116 117", "titel": { "de": "Ärztlicher Bereitschaftsdienst", "en": "Out-of-hours doctor" } }
+      ]
+    },
+    {
+      "code": "AT", "aktiv": true, "sprache": "de", "karte": "oesterreich",
+      "name": { "de": "Österreich", "en": "Austria" },
+      "notruf": "112",
+      "nummern": [
+        { "nummer": "144", "titel": { "de": "Rettung", "en": "Ambulance" } },
+        { "nummer": "122", "titel": { "de": "Feuerwehr", "en": "Fire" } },
+        { "nummer": "133", "titel": { "de": "Polizei", "en": "Police" } },
+        { "nummer": "112", "titel": { "de": "Euro-Notruf", "en": "European emergency number" } },
+        { "nummer": "01 406 43 43", "titel": { "de": "Vergiftungsinformationszentrale", "en": "Poison information centre" } }
+      ]
+    },
+    {
+      "code": "CH", "aktiv": true, "sprache": "de", "karte": "schweiz",
+      "name": { "de": "Schweiz", "en": "Switzerland" },
+      "notruf": "144",
+      "nummern": [
+        { "nummer": "144", "titel": { "de": "Sanität / Rettung", "en": "Ambulance" } },
+        { "nummer": "118", "titel": { "de": "Feuerwehr", "en": "Fire" } },
+        { "nummer": "117", "titel": { "de": "Polizei", "en": "Police" } },
+        { "nummer": "112", "titel": { "de": "Euro-Notruf", "en": "European emergency number" } },
+        { "nummer": "145", "titel": { "de": "Tox Info Suisse (Vergiftungen)", "en": "Tox Info Suisse (poisoning)" } }
+      ]
+    },
+    {
+      "code": "GB", "aktiv": false, "sprache": "en", "karte": null,
+      "name": { "de": "Vereinigtes Königreich", "en": "United Kingdom" },
+      "notruf": "999",
+      "nummern": [
+        { "nummer": "999", "titel": { "de": "Notruf", "en": "Emergency" } },
+        { "nummer": "112", "titel": { "de": "Euro-Notruf", "en": "European emergency number" } },
+        { "nummer": "111", "titel": { "de": "NHS-Beratung (kein Notfall)", "en": "NHS advice (non-emergency)" } }
+      ]
+    },
+    {
+      "code": "US", "aktiv": false, "sprache": "en", "karte": null,
+      "name": { "de": "USA", "en": "United States" },
+      "notruf": "911",
+      "nummern": [
+        { "nummer": "911", "titel": { "de": "Notruf", "en": "Emergency" } },
+        { "nummer": "1-800-222-1222", "titel": { "de": "Giftnotruf", "en": "Poison Control" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1455 @@
+{
+  "_hinweis": "Erste-Hilfe-Kurs (Deutsch; englische Fassung später als erstehilfe.en.json). {notruf} wird durch die Notrufnummer des gewählten Landes aus laender.json ersetzt. 'spickzettel' = Sofort-Schritte für den Ernstfall oben auf der Seite. 'lektionen' = der Kurs; Lektionen ohne 'schritte' erscheinen als 'kommt bald'. 'artikel' = Artikeltitel, die der Reihe nach in den Paketen aus 'pakete' gesucht werden. 'kursanbieter' = wo man einen echten Kurs machen kann, je Land. Inhalte nach den Leitlinien des European Resuscitation Council (ERC); sie ersetzen keinen Erste-Hilfe-Kurs und sollten vor dem Veröffentlichen fachlich gegengelesen werden.",
+  "pakete": ["wikipedia_de_medicine", "wikipedia_de_all", "klexikon_de_all", "mdwiki_en_all"],
+  "kursanbieter": {
+    "DE": "beim Deutschen Roten Kreuz, bei den Johannitern, den Maltesern oder beim Arbeiter-Samariter-Bund",
+    "AT": "beim Österreichischen Roten Kreuz, beim Arbeiter-Samariter-Bund, bei den Johannitern oder den Maltesern",
+    "CH": "beim Schweizerischen Samariterbund oder beim Schweizerischen Roten Kreuz",
+    "sonst": "beim Roten Kreuz oder anderen Hilfsorganisationen"
+  },
+  "gruppen": [
+    { "id": "lebensgefahr", "titel": "Lebensgefahr" },
+    { "id": "krank", "titel": "Plötzlich krank" },
+    { "id": "unfall", "titel": "Unfall und Umwelt" }
+  ],
+  "spickzettel": [
+    {
+      "id": "bewusstlos", "titel": "Bewusstlos / Wiederbelebung", "kurz": "Bewusstlos", "gruppe": "lebensgefahr", "icon": "heart", "lektion": "wiederbelebung", "takt": true,
+      "artikel": ["Herz-Lungen-Wiederbelebung", "Stabile Seitenlage", "Bewusstlosigkeit"],
+      "sofort": [
+        "Laut ansprechen und an den Schultern rütteln.",
+        "Atmung prüfen: Kopf überstrecken, höchstens 10 Sekunden sehen, hören, fühlen.",
+        "Atmet normal: stabile Seitenlage, zudecken, Atmung immer wieder prüfen, Notruf {notruf}.",
+        "Atmet nicht oder nur schnappend: Notruf {notruf}, dann Herzdruckmassage in der Brustmitte, 100 bis 120 Mal pro Minute, 5 bis 6 cm tief.",
+        "Wenn geübt: 30 Mal drücken, 2 Mal beatmen. Nicht aufhören, bis Hilfe kommt. Defibrillator (AED) nutzen, falls vorhanden."
+      ]
+    },
+    {
+      "id": "ersticken", "titel": "Verschlucken / Ersticken", "kurz": "Ersticken", "gruppe": "lebensgefahr", "icon": "wind", "lektion": "ersticken",
+      "artikel": ["Bolustod", "Heimlich-Manöver", "Atemwegsverlegung"],
+      "sofort": [
+        "Kann die Person noch husten: kräftig weiterhusten lassen, nicht auf den Rücken klopfen.",
+        "Wird das Husten schwach: Person nach vorn beugen, bis zu 5 kräftige Schläge mit der flachen Hand zwischen die Schulterblätter.",
+        "Hilft das nicht: bis zu 5 Mal den Oberbauch ruckartig nach innen oben drücken (Heimlich-Griff), von hinten umfassen. Nicht bei Säuglingen.",
+        "Säuglinge: bäuchlings auf den Unterarm, Kopf tiefer, 5 Schläge auf den Rücken, dann 5 Mal mit zwei Fingern auf die Brustmitte drücken.",
+        "Im Wechsel wiederholen. Notruf {notruf}. Wird die Person bewusstlos: sofort mit der Wiederbelebung beginnen."
+      ]
+    },
+    {
+      "id": "blutung", "titel": "Blutung / Schnittwunde", "kurz": "Blutung", "gruppe": "lebensgefahr", "icon": "droplet", "lektion": "blutung",
+      "artikel": ["Wundversorgung", "Blutstillung", "Druckverband", "Schnittwunde", "Wunde"],
+      "sofort": [
+        "Sauberes Tuch oder Kompresse sofort fest direkt auf die Wunde drücken. Das hat Vorrang vor allem anderen.",
+        "Bei starker Blutung: sofort Notruf {notruf} (oder wählen lassen), Person hinlegen, Druckverband anlegen.",
+        "Hilft eine zweite Person, kann sie den verletzten Körperteil zusätzlich hochhalten.",
+        "Kleine Wunden mit sauberem Wasser ausspülen und abdecken.",
+        "Tiefe, klaffende oder verschmutzte Wunden ärztlich versorgen lassen (Tetanus-Schutz)."
+      ]
+    },
+    {
+      "id": "herzinfarkt", "titel": "Herzinfarkt", "kurz": "Herzinfarkt", "gruppe": "krank", "icon": "activity", "lektion": "herz",
+      "artikel": ["Herzinfarkt", "Akutes Koronarsyndrom"],
+      "sofort": [
+        "Notruf {notruf} und sagen: „Verdacht auf Herzinfarkt“.",
+        "Oberkörper hoch lagern (z. B. an eine Wand oder ein Sofa gelehnt), enge Kleidung öffnen.",
+        "Beruhigen, nicht allein lassen. Die Person soll sich nicht anstrengen und nicht herumlaufen.",
+        "Nur eigene, ärztlich verordnete Notfallmedikamente (z. B. Nitrospray) nehmen lassen, sonst keine Medikamente geben.",
+        "Wird die Person bewusstlos und atmet nicht normal: Wiederbelebung, Defibrillator holen lassen."
+      ]
+    },
+    {
+      "id": "schlaganfall", "titel": "Schlaganfall", "kurz": "Schlaganfall", "gruppe": "krank", "icon": "brain", "lektion": "herz",
+      "artikel": ["Schlaganfall", "Transitorische ischämische Attacke"],
+      "sofort": [
+        "Bei Verdacht sofort Notruf {notruf} und sagen: „Verdacht auf Schlaganfall“.",
+        "FAST-Test: lächeln lassen (hängt ein Mundwinkel?), beide Arme vorstrecken lassen (sinkt einer ab?), einen Satz nachsprechen lassen (klingt die Sprache verwaschen?).",
+        "Uhrzeit merken, wann die Zeichen begonnen haben.",
+        "Oberkörper leicht erhöht lagern, nichts essen oder trinken lassen. Bei Erbrechen oder starkem Speichelfluss: stabile Seitenlage.",
+        "Dabeibleiben und beruhigen, auch wenn die Zeichen wieder verschwinden."
+      ]
+    },
+    {
+      "id": "allergie", "titel": "Allergische Reaktion", "kurz": "Allergie", "gruppe": "krank", "icon": "bug", "lektion": "vergiftung",
+      "artikel": ["Anaphylaxie", "Anaphylaktischer Schock", "Insektenstich"],
+      "sofort": [
+        "Auslöser entfernen (z. B. Stachel wegwischen, nicht quetschen).",
+        "Notfallset der Person benutzen (Adrenalin-Pen), falls vorhanden. Danach immer sofort Notruf {notruf}.",
+        "Atemnot: Oberkörper hoch lagern. Kreislaufprobleme: flach hinlegen, Beine hoch.",
+        "Bei Schwellung im Mund oder Hals: kühlen (Eis lutschen), Notruf {notruf}.",
+        "Person nicht allein lassen und Atmung beobachten."
+      ]
+    },
+    {
+      "id": "schock", "titel": "Schock", "kurz": "Schock", "gruppe": "lebensgefahr", "icon": "circle-alert", "lektion": "schock",
+      "artikel": ["Schock (Medizin)", "Hypovolämischer Schock"],
+      "sofort": [
+        "Zeichen erkennen: blasse, kalte, feuchte Haut, Frieren, Unruhe oder Angst, schneller, schwacher Puls.",
+        "Sofort Notruf {notruf} (oder wählen lassen).",
+        "Ursache behandeln, z. B. eine starke Blutung stillen.",
+        "Flach hinlegen, Beine leicht hoch. Bei Atemnot oder Schmerzen in der Brust stattdessen den Oberkörper hoch lagern.",
+        "Zudecken, auch von unten. Beruhigen, nichts zu essen oder zu trinken geben."
+      ]
+    },
+    {
+      "id": "krampf", "titel": "Krampfanfall", "kurz": "Krampfanfall", "gruppe": "krank", "icon": "zap",
+      "artikel": ["Epileptischer Anfall", "Epilepsie", "Fieberkrampf"],
+      "sofort": [
+        "Ruhe bewahren und auf die Uhr schauen. Die meisten Anfälle hören nach 1 bis 2 Minuten von selbst auf.",
+        "Vor Verletzungen schützen: Gegenstände wegräumen, den Kopf weich abpolstern. Die Person nicht festhalten.",
+        "Nichts in den Mund stecken, auch keinen Beißkeil.",
+        "Nach dem Anfall: Atmung prüfen, stabile Seitenlage, dabeibleiben. Die Person ist danach oft noch eine Weile verwirrt oder müde.",
+        "Notruf {notruf}, wenn der Anfall länger als 5 Minuten dauert, ein weiterer folgt, die Person verletzt ist, nicht wieder zu sich kommt, schwanger ist oder es ihr erster Anfall ist."
+      ]
+    },
+    {
+      "id": "unterzucker", "titel": "Unterzuckerung", "kurz": "Unterzucker", "gruppe": "krank", "icon": "candy",
+      "artikel": ["Hypoglykämie", "Diabetes mellitus"],
+      "sofort": [
+        "Zeichen, oft bei Menschen mit Diabetes: Zittern, Schwitzen, Heißhunger, Blässe, Unruhe, Verwirrtheit oder ungewohntes Verhalten (wirkt manchmal wie betrunken).",
+        "Ist die Person wach und kann schlucken: sofort Zucker geben, z. B. Traubenzucker, ein Glas Saft oder zuckerhaltige Limonade (keine Light-Getränke).",
+        "Meist wird es nach 10 bis 15 Minuten besser. Sonst noch einmal Zucker geben und Notruf {notruf}.",
+        "Ist die Person nicht mehr wach: nichts in den Mund geben (Erstickungsgefahr), Atmung prüfen, stabile Seitenlage, Notruf {notruf}.",
+        "Hat die Person ein Notfallset gegen Unterzuckerung (Glukagon), es nach der Anleitung im Set benutzen."
+      ]
+    },
+    {
+      "id": "verbrennung", "titel": "Verbrennung", "kurz": "Verbrennung", "gruppe": "unfall", "icon": "flame", "lektion": "verbrennung",
+      "artikel": ["Verbrennung (Medizin)", "Brandwunde", "Verbrühung"],
+      "sofort": [
+        "Kleine Verbrennungen kurz mit handwarmem, nicht eiskaltem Wasser kühlen, höchstens etwa 5 Minuten oder bis der erste starke Schmerz nachlässt.",
+        "Großflächige Verbrennungen (mehr als 5 bis 10 Handflächen, bei Kindern schon weniger) nicht kühlen (Unterkühlungsgefahr), nur keimfrei abdecken.",
+        "Keine Hausmittel wie Mehl, Öl oder Butter. Blasen nicht öffnen.",
+        "Kleidung, die an der Haut klebt, nicht abreißen.",
+        "Bei großer Fläche, Gesicht, Händen oder Kindern: Notruf {notruf}."
+      ]
+    },
+    {
+      "id": "bruch", "titel": "Knochenbruch", "kurz": "Knochenbruch", "gruppe": "unfall", "icon": "bone", "lektion": "bruch",
+      "artikel": ["Knochenbruch", "Schiene (Medizin)", "Ruhigstellung"],
+      "sofort": [
+        "Nicht einrenken oder gerade ziehen.",
+        "In der vorgefundenen Lage ruhigstellen und abpolstern (Decken, Kleidung).",
+        "Offene Wunden keimfrei abdecken, offene Brüche nicht kühlen.",
+        "Geschlossene Brüche vorsichtig kühlen, wenn es der Person guttut, nicht direkt mit Eis auf die Haut.",
+        "Auf Schock achten: blass, kalter Schweiß, unruhig. Dann hinlegen, zudecken."
+      ]
+    },
+    {
+      "id": "vergiftung", "titel": "Vergiftung", "kurz": "Vergiftung", "gruppe": "unfall", "icon": "skull", "lektion": "vergiftung",
+      "artikel": ["Vergiftung", "Lebensmittelvergiftung", "Kohlenstoffmonoxidvergiftung"],
+      "sofort": [
+        "Kein Erbrechen auslösen, keine Milch geben.",
+        "Giftnotruf {giftnotruf} anrufen, bei schweren Zeichen Notruf {notruf}.",
+        "Reste, Verpackung oder Pflanzenteile aufbewahren.",
+        "Bei Gas, Rauch oder Verdacht auf Kohlenmonoxid: den Raum nicht betreten, Feuerwehr rufen. Nur wenn es gefahrlos geht, die Person an die frische Luft bringen.",
+        "Bei Bewusstlosigkeit: stabile Seitenlage, Atmung überwachen."
+      ]
+    },
+    {
+      "id": "temperatur", "titel": "Unterkühlung / Hitzschlag", "kurz": "Kälte / Hitze", "gruppe": "unfall", "icon": "thermometer", "lektion": "temperatur",
+      "artikel": ["Hypothermie", "Unterkühlung", "Hitzschlag", "Sonnenstich"],
+      "sofort": [
+        "Unterkühlung: vor weiterer Kälte schützen, nasse Kleidung vorsichtig wechseln, warm einpacken.",
+        "Unterkühlte Person wenig bewegen, nicht abreiben. Warme, gezuckerte Getränke nur bei vollem Bewusstsein.",
+        "Hitze: in den Schatten bringen, Kleidung öffnen, mit feuchten Tüchern kühlen.",
+        "Bei Bewusstsein schluckweise Wasser trinken lassen.",
+        "Verwirrtheit, Krampf, Bewusstlosigkeit oder steifer Nacken: Notruf {notruf}. Keine Fiebermittel bei Überhitzung."
+      ]
+    }
+  ],
+  "lektionen": [
+    {
+      "id": "erstdenken", "titel": "Erst denken: Eigenschutz und Notruf", "icon": "phone",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Wer sich selbst in Gefahr bringt, kann niemandem mehr helfen. Deshalb kommt vor jeder Hilfe ein kurzer Blick: Ist es hier für mich sicher?",
+        "Hilfe funktioniert wie eine Kette: absichern und Notruf, Erste Hilfe, Rettungsdienst, Krankenhaus. Du bist die ersten Glieder. Ohne dich kommen die anderen zu spät oder gar nicht.",
+        "Beim Notruf musst du dir keine Reihenfolge merken. Die Leitstelle fragt alles, was sie braucht. Am wichtigsten ist: Wo ist es passiert? Ohne den Ort kann niemand kommen.",
+        "Die 112 ist in ganz Europa kostenlos. Sie geht auch ohne Guthaben und bei gesperrtem Bildschirm. In Deutschland muss dafür aber eine SIM-Karte im Handy stecken, ein altes Handy ohne SIM-Karte kann dort keinen Notruf wählen. Hat dein eigenes Netz keinen Empfang, nutzt das Handy für den Notruf auch ein anderes Netz, wenn eins da ist."
+      ],
+      "schritte": [
+        "Kurz stehen bleiben und schauen: Gibt es Gefahr durch Verkehr, Feuer, Rauch, Strom, Gas, Wasser, Glas oder Tiere?",
+        "Unfallstelle absichern: Warnblinker an, Warnweste anziehen, Warndreieck aufstellen (innerorts etwa 50 m, außerorts etwa 100 m, auf der Autobahn etwa 200 m vor der Stelle).",
+        "Eine Person nur aus der Gefahr holen, wenn das für dich sicher ist. Bei Strom erst abschalten. In einen verrauchten Raum oder einen Raum mit Gasgeruch nicht hineingehen.",
+        "Notruf {notruf} wählen. Ruhig sagen, wo du bist: Ort, Straße, Hausnummer, Stockwerk oder auffällige Punkte in der Nähe.",
+        "Die Fragen der Leitstelle beantworten, z. B. was passiert ist, wie viele Verletzte es gibt und wie es ihnen geht.",
+        "Nicht auflegen, bis die Leitstelle das Gespräch beendet. Oft erklärt sie dir am Telefon, was du tun sollst.",
+        "Wenn möglich, jemanden an die Straße schicken, der den Rettungsdienst einweist. Nachts Licht machen.",
+        "Bei der Person bleiben, mit ihr sprechen, sie beruhigen und zudecken, bis Hilfe da ist."
+      ],
+      "ueben": [
+        { "id": "notruf", "text": "Spielt einen Notruf zu zweit durch: Eine Person fragt wie die Leitstelle, die andere antwortet. Dabei natürlich nicht wirklich die {notruf} wählen." },
+        { "id": "adresse", "text": "Kennen alle im Haushalt die genaue Adresse, auch Kinder? Schreib sie für Gäste neben das Telefon oder an den Kühlschrank." },
+        { "id": "handy", "text": "Schau nach, wie man an deinem Handy bei gesperrtem Bildschirm einen Notruf wählt. Nur ansehen, nicht anrufen." }
+      ],
+      "quiz": [
+        {
+          "frage": "Du kommst auf der Landstraße zu einem Unfall. Was tust du zuerst?",
+          "antworten": ["Sofort zum Verletzten laufen.", "Warnblinker an, Warnweste anziehen und die Stelle absichern.", "Im Auto bleiben und auf die Polizei warten."],
+          "richtig": 1,
+          "erklaerung": "Erst sichern, dann helfen. Sonst wirst du selbst zum nächsten Verletzten."
+        },
+        {
+          "frage": "Was ist beim Notruf am wichtigsten?",
+          "antworten": ["Wo es passiert ist.", "Der Name des Verletzten.", "Die eigene Telefonnummer."],
+          "richtig": 0,
+          "erklaerung": "Ohne den Ort kann niemand kommen. Alles andere fragt die Leitstelle nach."
+        },
+        {
+          "frage": "Wann legst du beim Notruf auf?",
+          "antworten": ["Sobald ich alles gesagt habe.", "Wenn die Leitstelle das Gespräch beendet.", "Nach einer Minute, damit die Leitung frei ist."],
+          "richtig": 1,
+          "erklaerung": "Die Leitstelle hat oft noch Fragen oder erklärt dir, was du bis zum Eintreffen tun kannst."
+        },
+        {
+          "frage": "In einer Wohnung riecht es stark nach Gas, drinnen liegt jemand am Boden. Was tust du?",
+          "antworten": ["Licht anmachen, um besser zu sehen.", "Nicht hineingehen, keinen Schalter betätigen, draußen den Notruf wählen.", "Hineinlaufen und mit dem Handy die Leitstelle anrufen."],
+          "richtig": 1,
+          "erklaerung": "Ein Funke kann das Gas entzünden, auch von Lichtschalter, Klingel oder Handy. Die Feuerwehr hat Schutzausrüstung."
+        }
+      ],
+      "artikel": ["Rettungskette", "Notruf", "Euronotruf"]
+    },
+    {
+      "id": "ansprechbar", "titel": "Ist die Person ansprechbar? Stabile Seitenlage", "icon": "bed",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Ein bewusstloser Mensch auf dem Rücken kann ersticken. Die Zunge fällt nach hinten und verlegt den Atemweg, Erbrochenes oder Blut kann in die Lunge laufen.",
+        "Die stabile Seitenlage hält den Atemweg frei. Der Mund ist der tiefste Punkt, Flüssigkeit kann ablaufen.",
+        "Sie ist nur für Menschen, die nicht reagieren, aber normal atmen. Atmet jemand nicht normal, braucht er die Wiederbelebung (Lektion 3).",
+        "Woran erkennst du normale Atmung? Der Brustkorb (oft auch der Bauch) hebt und senkt sich ruhig und gleichmäßig, etwa alle 3 bis 5 Sekunden. In 10 Sekunden siehst du also mindestens zwei Atemzüge. Dazu hörst du die Luft leise ein- und ausströmen und spürst sie an deiner Wange.",
+        "Nicht normal ist: Der Brustkorb bewegt sich gar nicht, du hörst und spürst keine Luft, oder die Person schnappt nur selten und mühsam nach Luft, oft mit offenem Mund und einem Geräusch (Schnappatmung). Das wirkt wie Atmen, ist aber ein Zeichen für einen Kreislaufstillstand. Im Zweifel gilt: Behandle es als nicht normal und beginne mit der Wiederbelebung.",
+        "Auch in der Seitenlage kann die Atmung aussetzen. Deshalb bleibst du dabei und prüfst sie immer wieder."
+      ],
+      "bilder": {
+        "datei": "bilder/erstehilfe/seitenlage-{n}.svg",
+        "titel": "So geht die stabile Seitenlage",
+        "schritte": [
+          "Den Arm auf deiner Seite angewinkelt nach oben legen.",
+          "Die andere Hand an die Wange legen und festhalten. Das gegenüberliegende Bein am Knie hochziehen, bis es angewinkelt aufgestellt ist.",
+          "Am Knie und an der gegenüberliegenden Schulter zu dir herüberziehen.",
+          "Die Hand liegt unter der Wange und stützt den Kopf.",
+          "Das obere Bein ausrichten: Hüfte und Knie im rechten Winkel.",
+          "Fertig: Kopf nach hinten überstrecken, damit der Atemweg frei bleibt. Der Mund zeigt zum Boden, so kann Erbrochenes ablaufen. Atmung weiter prüfen."
+        ],
+        "quelle": "Zeichnung: Hibernate, Wikimedia Commons (Stabilt sidoläge.svg), Lizenz CC BY-SA 3.0 (creativecommons.org/licenses/by-sa/3.0), für Fieldbook in Einzelbilder aufgeteilt."
+      },
+      "schritte": [
+        "Laut ansprechen („Hallo, hören Sie mich?“) und an den Schultern rütteln.",
+        "Reagiert die Person: so liegen lassen, fragen, was passiert ist, Verletzungen versorgen, wenn nötig Notruf {notruf}.",
+        "Keine Reaktion: laut um Hilfe rufen. Die Person auf den Rücken drehen, eine Hand an die Stirn, zwei Finger unter das Kinn, den Kopf vorsichtig nach hinten neigen und das Kinn anheben. So wird der Atemweg frei.",
+        "Atmung prüfen, höchstens 10 Sekunden: dein Ohr über Mund und Nase der Person halten, den Blick zum Brustkorb. Sehen: Hebt und senkt sich der Brustkorb? Hören: Strömt Luft? Fühlen: Spürst du den Atem an deiner Wange?",
+        "Mindestens zwei ruhige, gleichmäßige Atemzüge in 10 Sekunden heißt: Die Person atmet normal. Kein Atemzug oder nur seltenes Schnappen heißt: Sie atmet nicht normal, dann Notruf {notruf} und Wiederbelebung (Lektion 3).",
+        "Atmet sie normal: neben die Person knien. Den Arm auf deiner Seite angewinkelt nach oben legen, Handfläche nach oben.",
+        "Den anderen Arm über die Brust holen und den Handrücken an die Wange auf deiner Seite legen. Die Hand dort festhalten.",
+        "Mit der freien Hand das gegenüberliegende Bein am Knie hochziehen, bis es angewinkelt aufgestellt ist. Der Fuß bleibt dabei am Boden. Dann die Person am Knie und an der gegenüberliegenden Schulter zu dir herüberziehen.",
+        "Das oben liegende Bein so ausrichten, dass Hüfte und Knie etwa im rechten Winkel liegen.",
+        "Kopf nach hinten überstrecken und den Mund leicht öffnen, er zeigt zum Boden. Warum: Ist der Kopf überstreckt, kann die Zunge nicht nach hinten fallen und der Atemweg bleibt frei. Zeigt der Mund nach unten, laufen Erbrochenes oder Blut ab statt in die Lunge. Die Hand unter der Wange hält den Kopf in dieser Lage.",
+        "Notruf {notruf}, zudecken und die Atmung regelmäßig prüfen. Atmet die Person nicht mehr normal: auf den Rücken drehen und mit der Wiederbelebung beginnen."
+      ],
+      "ueben": [
+        { "id": "seitenlage", "text": "Bring eine zweite Person in die stabile Seitenlage, dann tauscht ihr. Beim ersten Mal fühlt es sich ungewohnt an, beim dritten Mal sitzt es." },
+        { "id": "atmung", "text": "Übe die Atemprüfung an einer zweiten Person, die ruhig liegt: Kopf nach hinten neigen, Kinn anheben, Ohr über Mund und Nase, Blick zur Brust, bis 10 zählen. Wie viele Atemzüge siehst, hörst und spürst du?" }
+      ],
+      "quiz": [
+        {
+          "frage": "Eine Person reagiert nicht, atmet aber normal. Was ist richtig?",
+          "antworten": ["Stabile Seitenlage, Notruf und die Atmung immer wieder prüfen.", "Mit der Herzdruckmassage beginnen.", "Aufsetzen und etwas zu trinken geben."],
+          "richtig": 0,
+          "erklaerung": "Die Seitenlage hält den Atemweg frei. Einem Menschen, der nicht reagiert, gibst du nie etwas zu trinken."
+        },
+        {
+          "frage": "Warum ist die Rückenlage für Bewusstlose gefährlich?",
+          "antworten": ["Der Kreislauf wird zu stark belastet.", "Die Zunge und Erbrochenes können den Atemweg verlegen.", "Sie ist nicht gefährlich."],
+          "richtig": 1,
+          "erklaerung": "Ohne Bewusstsein fehlen die Schutzreflexe. Die Person kann still ersticken."
+        },
+        {
+          "frage": "Wie lange prüfst du die Atmung höchstens?",
+          "antworten": ["10 Sekunden", "30 Sekunden", "1 Minute"],
+          "richtig": 0,
+          "erklaerung": "Länger kostet wertvolle Zeit, falls die Person nicht atmet."
+        },
+        {
+          "frage": "Woran erkennst du, dass eine Person normal atmet?",
+          "antworten": ["Der Brustkorb hebt und senkt sich ruhig und gleichmäßig, mindestens zweimal in 10 Sekunden.", "Sie holt nur ab und zu mühsam und schnappend Luft, mit offenem Mund.", "Ihre Lippen sind rot."],
+          "richtig": 0,
+          "erklaerung": "Seltenes, schnappendes Luftholen ist keine normale Atmung, sondern ein Zeichen für einen Kreislaufstillstand. Dann sofort Notruf und Wiederbelebung."
+        },
+        {
+          "frage": "Die Person in der Seitenlage atmet plötzlich nicht mehr normal. Was tust du?",
+          "antworten": ["Liegen lassen, sie wacht bestimmt gleich auf.", "Auf den Rücken drehen und mit der Wiederbelebung beginnen.", "Auf die andere Seite drehen."],
+          "richtig": 1,
+          "erklaerung": "Ohne normale Atmung zählt jede Sekunde. Jetzt hilft nur die Herzdruckmassage."
+        }
+      ],
+      "artikel": ["Stabile Seitenlage", "Bewusstlosigkeit"]
+    },
+    {
+      "id": "wiederbelebung", "titel": "Wiederbelebung", "icon": "heart",
+      "stand": "nach den Leitlinien des European Resuscitation Council (ERC)",
+      "verstehen": [
+        "Bei einem Kreislaufstillstand pumpt das Herz kein Blut mehr. Schon nach 3 bis 5 Minuten ohne Sauerstoff nimmt das Gehirn Schaden.",
+        "Der Rettungsdienst braucht oft 10 Minuten oder länger. Diese Zeit überbrückst du: Mit deinen Händen pumpst du das Blut weiter, damit das Gehirn Sauerstoff bekommt.",
+        "Achtung bei der Atmung: Viele Menschen schnappen in den ersten Minuten noch selten und schwer nach Luft (Schnappatmung). Das ist keine normale Atmung, sondern ein Zeichen für den Kreislaufstillstand. Dann sofort drücken.",
+        "Du kannst nichts falsch machen, außer nichts zu tun. Wenn dabei eine Rippe knackt oder bricht, ist das kein Grund aufzuhören. Ein Bruch heilt, ein Gehirn ohne Sauerstoff nicht.",
+        "Herzdruckmassage ist sehr anstrengend. Schon nach etwa 2 Minuten werden die meisten Menschen langsamer und drücken weniger tief, oft ohne es selbst zu merken. Sind zwei Helfer da, wechselt ihr euch deshalb ab, auch wenn du dich noch fit fühlst."
+      ],
+      "schritte": [
+        "Auf die eigene Sicherheit achten (Straßenverkehr, Strom, Feuer, Gas).",
+        "Laut ansprechen und an den Schultern rütteln. Keine Reaktion: laut um Hilfe rufen.",
+        "Kopf vorsichtig nach hinten neigen und das Kinn anheben. Höchstens 10 Sekunden prüfen, ob die Person normal atmet: sehen, hören, fühlen.",
+        "Keine normale Atmung: Notruf {notruf}, Telefon auf Lautsprecher. Ist jemand da, schickt ihn los, einen Defibrillator (AED) zu holen.",
+        "Person auf einen harten Untergrund auf den Rücken legen und den Oberkörper frei machen. Einen Handballen auf die Mitte des Brustkorbs legen, die zweite Hand darauf. Arme gestreckt, Schultern senkrecht über den Händen.",
+        "Kräftig drücken: 5 bis 6 cm tief, 100 bis 120 Mal pro Minute, also etwa zweimal pro Sekunde. Nach jedem Drücken den Brustkorb ganz entlasten, die Hände aber liegen lassen.",
+        "Wenn du es gelernt hast und dich traust: nach 30 Mal Drücken 2 Mal beatmen (Mund zu Mund, je etwa eine Sekunde). Sonst ohne Pause einfach weiterdrücken.",
+        "Ist ein zweiter Helfer da: etwa alle 2 Minuten wechseln, früher, wenn die Kraft nachlässt. Kündigt den Wechsel an und tauscht schnell, damit die Pause beim Drücken nur ein bis zwei Sekunden dauert.",
+        "Kommt ein Defibrillator: Einer drückt ohne Pause weiter, der andere schaltet das Gerät ein, klebt die Elektroden auf und tut genau, was es sagt. Es spricht und erklärt jeden Schritt. Bist du schon erschöpft, übernimmt der andere das Drücken und du kümmerst dich um das Gerät.",
+        "Nicht aufhören, bis der Rettungsdienst übernimmt, die Person wieder normal atmet oder du nicht mehr kannst."
+      ],
+      "kinder": "Bei Kindern zuerst 5 Mal beatmen, dann 30 Mal drücken und 2 Mal beatmen. Drücken etwa ein Drittel der Brustkorbtiefe: bei Kindern mit einer oder beiden Händen, bei Säuglingen mit zwei Fingern. Wichtiger als die genaue Technik ist, überhaupt anzufangen. Wichtig: Wenn du allein bist, mache bei Kindern erst 1 Minute lang die Wiederbelebung und wähle erst danach den Notruf {notruf} (außer du kannst das Handy sofort auf Lautsprecher stellen und gleichzeitig weitermachen). Kinder haben meist ein Atemproblem, deshalb hilft ihnen die erste Minute Beatmen und Drücken besonders.",
+      "ueben": [
+        { "id": "takt", "text": "Takt-Übung: 2 Minuten im Takt auf ein festes Kissen drücken und laut mitzählen.", "takt": true },
+        { "id": "hand", "text": "Zeig an dir selbst, wo die Hände hingehören: Mitte des Brustkorbs, auf dem unteren Teil des Brustbeins." },
+        { "id": "aed", "text": "Finde heraus, wo der nächste Defibrillator hängt (Arbeit, Supermarkt, Bahnhof, Rathaus). Er ist mit einem grünen Schild mit Herz und Blitz markiert." }
+      ],
+      "quiz": [
+        {
+          "frage": "Eine Person liegt am Boden, reagiert nicht und schnappt nur ab und zu nach Luft. Was tust du?",
+          "antworten": ["Stabile Seitenlage, sie atmet ja.", "Notruf und sofort mit der Herzdruckmassage beginnen.", "Abwarten und die Atmung weiter beobachten."],
+          "richtig": 1,
+          "erklaerung": "Schnappatmung ist keine normale Atmung. Sie ist ein Zeichen für einen Kreislaufstillstand. Jetzt zählt jede Sekunde."
+        },
+        {
+          "frage": "Wie schnell drückst du?",
+          "antworten": ["Etwa einmal pro Sekunde (60 Mal pro Minute).", "Etwa zweimal pro Sekunde (100 bis 120 Mal pro Minute).", "So schnell, wie ich kann."],
+          "richtig": 1,
+          "erklaerung": "100 bis 120 Mal pro Minute. Zu langsam pumpt zu wenig Blut, zu schnell lässt dem Herzen keine Zeit, sich wieder zu füllen."
+        },
+        {
+          "frage": "Wohin legst du die Hände?",
+          "antworten": ["Auf die linke Brustseite, über das Herz.", "Auf die Mitte des Brustkorbs.", "Auf den oberen Bauch, unter die Rippen."],
+          "richtig": 1,
+          "erklaerung": "In die Mitte des Brustkorbs, auf den unteren Teil des Brustbeins. Von dort wird das Herz zwischen Brustbein und Wirbelsäule zusammengedrückt."
+        },
+        {
+          "frage": "Beim Drücken knackt es, vermutlich ist eine Rippe gebrochen. Was tust du?",
+          "antworten": ["Aufhören, um nichts schlimmer zu machen.", "Weniger tief drücken.", "Genauso weiterdrücken."],
+          "richtig": 2,
+          "erklaerung": "Weiterdrücken, genauso tief. Eine gebrochene Rippe heilt wieder. Ohne Herzdruckmassage stirbt der Mensch."
+        },
+        {
+          "frage": "Ihr seid zu zweit. Wann wechselt ihr euch beim Drücken ab?",
+          "antworten": ["Etwa alle 2 Minuten, früher, wenn die Kraft nachlässt.", "Erst wenn einer nicht mehr kann.", "Gar nicht, sonst entsteht eine Pause."],
+          "richtig": 0,
+          "erklaerung": "Nach etwa 2 Minuten lässt die Kraft nach, meist ohne dass man es merkt. Ein schneller Wechsel kostet nur ein bis zwei Sekunden und hält die Herzdruckmassage wirksam."
+        }
+      ],
+      "artikel": ["Herz-Lungen-Wiederbelebung", "Automatisierter externer Defibrillator", "Kreislaufstillstand"]
+    },
+    {
+      "id": "ersticken", "titel": "Verschlucken und Ersticken", "icon": "wind",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Beim Essen kann ein Bissen in die Luftröhre geraten. Solange die Person husten, sprechen und atmen kann, ist der Atemweg nur teilweise blockiert. Dann ist kräftiges Husten das beste Mittel.",
+        "Wird der Husten schwach oder kann die Person nicht mehr sprechen, ist der Atemweg fast oder ganz zu. Jetzt musst du helfen: Schläge auf den Rücken und Druck auf den Oberbauch erzeugen einen Luftstoß, der den Bissen heraustreibt.",
+        "Kinder verschlucken sich besonders oft, z. B. an Nüssen, Weintrauben, Bonbons oder kleinen Spielteilen.",
+        "Nach Oberbauchkompressionen muss die Person immer ärztlich untersucht werden, auch wenn es ihr gut geht. Dabei können innere Organe verletzt werden."
+      ],
+      "schritte": [
+        "Fragen: „Hast du dich verschluckt?“ Kann die Person husten: zum kräftigen Husten auffordern und dabeibleiben. Nicht auf den Rücken klopfen, solange sie gut hustet.",
+        "Wird der Husten schwach: dich seitlich neben die Person stellen, mit einer Hand ihre Brust stützen und den Oberkörper weit nach vorn beugen.",
+        "Mit dem Handballen bis zu 5 kräftige Schläge zwischen die Schulterblätter geben. Nach jedem Schlag schauen, ob der Bissen heraus ist.",
+        "Hilft das nicht: hinter die Person stellen, beide Arme um ihren Oberbauch legen und sie nach vorn beugen.",
+        "Eine Faust zwischen Bauchnabel und unterem Ende des Brustbeins legen (der sogenannte Heimlich-Handgriff), mit der anderen Hand umfassen und kräftig ruckartig nach innen und oben ziehen. Bis zu 5 Mal.",
+        "Weiter abwechseln: 5 Schläge auf den Rücken, 5 Oberbauchkompressionen. Spätestens wenn die ersten Rückenschläge nicht helfen, sofort den Notruf {notruf} wählen (oder wählen lassen).",
+        "Wird die Person bewusstlos: vorsichtig auf den Boden legen, Notruf {notruf} und sofort mit der Wiederbelebung beginnen (Lektion 3)."
+      ],
+      "kinder": "Bei Kindern über einem Jahr wie bei Erwachsenen, nur mit weniger Kraft. Knie dich dafür hinter das Kind. Bei Säuglingen unter einem Jahr keine Oberbauchkompressionen: Den Säugling bäuchlings auf deinen Unterarm legen, Kopf tiefer als der Körper, Kiefer mit der Hand stützen und bis zu 5 Schläge zwischen die Schulterblätter geben. Dann auf den Rücken auf deinen anderen Unterarm drehen (Kopf weiterhin tief halten, so hilft die Schwerkraft) und bis zu 5 Mal mit zwei Fingern kräftig auf die Mitte des Brustkorbs drücken. Im Wechsel wiederholen.",
+      "ueben": [
+        { "id": "haltung", "text": "Stellt die Haltung zu zweit nach: nach vorn beugen, Hand an der Brust, Schläge auf den Rücken nur andeuten." },
+        { "id": "faust", "text": "Zeig an einer zweiten Person, wo die Faust für die Oberbauchkompression hingehört, ohne wirklich zu drücken. Echte Kompressionen übt man nie an Gesunden." },
+        { "id": "kleinteile", "text": "Wenn kleine Kinder im Haushalt sind: Prüfe, ob Nüsse, Murmeln, Knopfbatterien oder Kleinteile für sie erreichbar sind." }
+      ],
+      "quiz": [
+        {
+          "frage": "Jemand hat sich verschluckt und hustet kräftig. Was tust du?",
+          "antworten": ["Sofort fest auf den Rücken klopfen.", "Zum Husten auffordern und dabeibleiben.", "Schnell etwas zu trinken geben."],
+          "richtig": 1,
+          "erklaerung": "Kräftiges Husten ist am wirksamsten. Bleib dabei und greif ein, wenn es schwächer wird."
+        },
+        {
+          "frage": "Der Husten wird schwach, die Person kann nicht mehr sprechen. Womit beginnst du?",
+          "antworten": ["Bis zu 5 Schläge zwischen die Schulterblätter, Oberkörper vorgebeugt.", "Wasser trinken lassen.", "Mit dem Finger tief in den Rachen greifen."],
+          "richtig": 0,
+          "erklaerung": "Erst Rückenschläge, dann Oberbauchkompressionen. Blindes Greifen in den Rachen kann den Bissen tiefer schieben."
+        },
+        {
+          "frage": "Was ist bei einem Säugling anders?",
+          "antworten": ["Gar nichts.", "Keine Oberbauchkompressionen, sondern Druck mit zwei Fingern auf die Brustmitte.", "Man hält ihn an den Füßen hoch und schüttelt ihn."],
+          "richtig": 1,
+          "erklaerung": "Der Bauch eines Säuglings ist zu empfindlich. Rückenschläge und Brustkorbkompressionen wechseln sich ab."
+        },
+        {
+          "frage": "Die Person wird bewusstlos. Was jetzt?",
+          "antworten": ["Im Stehen weiter Oberbauchkompressionen.", "Hinlegen, Notruf, Wiederbelebung beginnen.", "Stabile Seitenlage und abwarten."],
+          "richtig": 1,
+          "erklaerung": "Die Herzdruckmassage hilft dann doppelt: Sie pumpt Blut und kann den Bissen lösen."
+        }
+      ],
+      "artikel": ["Bolustod", "Heimlich-Manöver", "Aspiration (Medizin)"]
+    },
+    {
+      "id": "blutung", "titel": "Starke Blutungen und Druckverband", "icon": "droplet",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Ein Erwachsener hat etwa 5 bis 6 Liter Blut. Verliert er schnell mehr als einen Liter, wird es lebensgefährlich. Starke Blutungen haben deshalb Vorrang vor fast allem anderen.",
+        "Druck stoppt Blut. Fester, direkter Druck auf die Wunde drückt die Gefäße zusammen, bis das Blut gerinnt.",
+        "Schütze dich vor fremdem Blut: Einmalhandschuhe aus dem Verbandkasten, notfalls eine Plastiktüte über der Hand.",
+        "Ein Druckverband ersetzt deine Hand. Er muss so fest sitzen, dass die Blutung steht. Finger oder Zehen dahinter dürfen aber nicht blau, kalt oder taub werden."
+      ],
+      "schritte": [
+        "Handschuhe anziehen, wenn vorhanden.",
+        "Die Person hinsetzen oder hinlegen und bei starker Blutung sofort den Notruf {notruf} wählen (oder wählen lassen).",
+        "Sofort fest auf die Wunde drücken: mit einer Kompresse, einem sauberen Tuch oder notfalls mit der Hand. Das Drücken hat oberste Priorität. Hilft eine zweite Person, kann sie den verletzten Arm oder das Bein zusätzlich hochhalten.",
+        "Druckverband: eine Kompresse auf die Wunde legen und mit 2 bis 3 Bindengängen befestigen.",
+        "Ein Druckpolster (z. B. ein ungeöffnetes Verbandpäckchen oder ein zusammengefaltetes Tuch) genau über die Wunde legen und mit der Binde fest umwickeln.",
+        "Blutet es durch: ein zweites Druckpolster darüberlegen und noch einmal fest wickeln. Den ersten Verband nicht abnehmen.",
+        "Steht die Blutung trotzdem nicht: weiter fest auf die Wunde drücken, bis der Rettungsdienst übernimmt.",
+        "Nur bei lebensbedrohlicher Blutung an Arm oder Bein, wenn Drücken nicht reicht: abbinden. Ein breites Tuch (z. B. ein Dreiecktuch) etwa eine Handbreit oberhalb der Wunde verknoten. Einen stabilen Gegenstand (z. B. eine Schere, einen Kochlöffel oder einen dicken Stift) als Knebel auf den Knoten legen, darüber noch einmal festknoten und den Knebel so lange drehen, bis die Blutung steht. Den Knebel festbinden, damit er sich nicht zurückdreht. Mit bloßer Hand zugezogen ist ein Tuch oder Gürtel nie fest genug, und ein schmaler Gürtel ist ungeeignet. Uhrzeit merken, dem Rettungsdienst sagen, nicht wieder lockern.",
+        "Steckt etwas in der Wunde (Messer, Glas, Holz): nicht herausziehen, denn es wirkt wie ein Stöpsel und dichtet das verletzte Gefäß teilweise ab. Stattdessen rundherum abpolstern.",
+        "Die Person hinlegen, zudecken und auf Zeichen eines Schocks achten (Lektion 6)."
+      ],
+      "ueben": [
+        { "id": "druckverband", "text": "Leg mit Verbandpäckchen oder Tuch und Binde einen Druckverband am Unterarm einer zweiten Person an. Prüfe danach, ob die Finger warm und rosig bleiben." },
+        { "id": "verbandkasten", "text": "Schau in deine Verbandkästen (zu Hause und im Auto): Ist alles da, sind Handschuhe drin, ist etwas abgelaufen oder ausgetrocknet?" }
+      ],
+      "quiz": [
+        {
+          "frage": "Eine Wunde am Unterarm blutet stark. Was tust du zuerst?",
+          "antworten": ["Die Wunde gründlich auswaschen.", "Fest auf die Wunde drücken und den Arm hochhalten.", "Ein Pflaster aufkleben und abwarten."],
+          "richtig": 1,
+          "erklaerung": "Erst die Blutung stoppen. Sauber machen kann später der Arzt."
+        },
+        {
+          "frage": "Der Druckverband blutet durch. Was tust du?",
+          "antworten": ["Den Verband abnehmen und neu anlegen.", "Ein zweites Druckpolster darüber fest einwickeln.", "Den Verband lockern."],
+          "richtig": 1,
+          "erklaerung": "Beim Abnehmen reißt das gerinnende Blut wieder auf. Darüber wickeln erhöht den Druck."
+        },
+        {
+          "frage": "In der Wunde steckt eine Glasscherbe. Was ist richtig?",
+          "antworten": ["Sofort herausziehen.", "Drinlassen und rundherum abpolstern.", "Fest hineindrücken, damit sie nicht wackelt."],
+          "richtig": 1,
+          "erklaerung": "Der Fremdkörper verschließt oft selbst das Gefäß. Herausziehen kann die Blutung stark verschlimmern."
+        },
+        {
+          "frage": "Woran merkst du, dass ein Druckverband zu fest ist?",
+          "antworten": ["Finger oder Zehen dahinter werden blau, kalt oder taub.", "Ein Druckverband kann nie zu fest sein.", "Die Person sagt nichts."],
+          "richtig": 0,
+          "erklaerung": "Dann ist auch der Blutfluss in den gesunden Teil abgeschnürt. Etwas lockern, aber die Blutung muss stehen bleiben."
+        }
+      ],
+      "artikel": ["Druckverband", "Blutstillung", "Tourniquet", "Wundversorgung"]
+    },
+    {
+      "id": "schock", "titel": "Schock erkennen", "icon": "circle-alert",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Schock heißt in der Ersten Hilfe nicht Schreck, sondern Kreislaufversagen: Es ist zu wenig Blut im Umlauf, die Organe bekommen zu wenig Sauerstoff.",
+        "Ursachen sind z. B. starker Blutverlust (auch nach innen, ohne dass man es sieht), große Verbrennungen, starker Flüssigkeitsverlust, eine schwere Allergie oder ein akutes Versagen des Herzens (z. B. bei einem Herzinfarkt).",
+        "Der Körper wehrt sich zuerst: Das Herz schlägt schneller, die Haut wird blass und kalt. Später wird die Person unruhig, dann teilnahmslos und schließlich bewusstlos.",
+        "Schock ist lebensgefährlich und wird oft übersehen. Wer ihn früh erkennt, kann viel tun: die Ursache behandeln, für Ruhe und Wärme sorgen und den Notruf wählen."
+      ],
+      "schritte": [
+        "Auf die Zeichen achten: blasse, kalte, feuchte Haut, Frieren, kalter Schweiß, Unruhe oder Angst, schneller und schwacher Puls, Durst.",
+        "Sofort Notruf {notruf} (oder wählen lassen).",
+        "Die Ursache behandeln, z. B. eine starke Blutung stillen (Lektion 5).",
+        "Die Person flach auf den Rücken legen. Ist sie bei Bewusstsein und an Beinen, Becken und Rücken nicht verletzt: Beine leicht hochlegen. Achtung: Bei Atemnot, Schmerzen in der Brust oder Verdacht auf einen Herzinfarkt die Beine nie hochlegen, sondern den Oberkörper erhöht lagern. Hochgelegte Beine schicken dann zusätzliches Blut zum geschwächten Herzen und erschweren das Atmen.",
+        "Zudecken und auch von unten gegen Kälte schützen (Decke oder Jacke unter den Körper).",
+        "Beruhigen, nicht allein lassen. Nichts zu essen und nichts zu trinken geben, auch bei Durst: Wird die Person bewusstlos, kann sie daran ersticken, und für eine Operation im Krankenhaus muss der Magen leer sein.",
+        "Wird die Person bewusstlos: Atmung prüfen, dann stabile Seitenlage oder Wiederbelebung."
+      ],
+      "ueben": [
+        { "id": "puls", "text": "Fühl bei einer zweiten Person den Puls am Handgelenk (auf der Daumenseite) und zähle 15 Sekunden lang. Mal 4 ergibt die Schläge pro Minute." },
+        { "id": "lagerung", "text": "Übt zu zweit die Lagerung: flach auf den Rücken, Beine leicht hoch (z. B. auf einem Rucksack), zudecken." }
+      ],
+      "quiz": [
+        {
+          "frage": "Was bedeutet „Schock“ in der Ersten Hilfe?",
+          "antworten": ["Ein großer Schreck.", "Der Kreislauf versagt, die Organe bekommen zu wenig Sauerstoff.", "Ein Stromschlag."],
+          "richtig": 1,
+          "erklaerung": "Ein Schock ist ein lebensbedrohliches Kreislaufversagen, kein seelischer Zustand."
+        },
+        {
+          "frage": "Welche Zeichen passen zu einem Schock?",
+          "antworten": ["Rotes Gesicht und warme Haut.", "Blasse, kalte, feuchte Haut und Unruhe.", "Langsamer, kräftiger Puls."],
+          "richtig": 1,
+          "erklaerung": "Der Körper zieht das Blut aus der Haut ab, um die wichtigen Organe zu versorgen."
+        },
+        {
+          "frage": "Die Person im Schock hat großen Durst. Was tust du?",
+          "antworten": ["Viel Wasser geben.", "Nichts zu trinken geben.", "Einen Schnaps zum Aufwärmen geben."],
+          "richtig": 1,
+          "erklaerung": "Vielleicht muss sie bald operiert werden, außerdem kann sie erbrechen. Alkohol verschlimmert den Schock."
+        },
+        {
+          "frage": "Wie lagerst du eine Person im Schock, die an Beinen und Rücken nicht verletzt ist und weder Atemnot noch Schmerzen in der Brust hat?",
+          "antworten": ["Sitzend.", "Flach auf dem Rücken, Beine leicht hoch, zugedeckt.", "Auf dem Bauch."],
+          "richtig": 1,
+          "erklaerung": "So fließt mehr Blut zu Herz und Gehirn. Die Decke schützt vor Auskühlung."
+        }
+      ],
+      "artikel": ["Schock (Medizin)", "Hypovolämischer Schock", "Schocklage"]
+    },
+    {
+      "id": "herz", "titel": "Herzinfarkt und Schlaganfall erkennen", "icon": "heart-pulse",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Bei beiden ist ein Blutgefäß verstopft, beim Schlaganfall manchmal auch geplatzt. Herzmuskel oder Gehirn bekommen keinen Sauerstoff, und mit jeder Minute stirbt mehr Gewebe ab.",
+        "Dein wichtigster Beitrag: die Zeichen erkennen und sofort den Notruf wählen. Nicht abwarten, ob es von allein besser wird.",
+        "Herzinfarkt: starker Druck, Enge oder Schmerz in der Brust, oft ausstrahlend in Arm, Hals, Kiefer, Rücken oder Oberbauch, länger als 5 Minuten. Dazu oft Atemnot, Übelkeit, kalter Schweiß und Angst. Bei Frauen und älteren Menschen sind die Zeichen oft schwächer: nur Übelkeit, Atemnot oder Bauchschmerzen.",
+        "Schlaganfall: plötzlich eine schwache oder gelähmte Körperseite, ein hängender Mundwinkel, verwaschene Sprache, Sehstörungen, starker Schwindel oder heftigster Kopfschmerz. Der FAST-Test hilft beim Erkennen."
+      ],
+      "schritte": [
+        "Herzinfarkt: Notruf {notruf} und sagen: „Verdacht auf Herzinfarkt“.",
+        "Oberkörper hoch lagern (z. B. an eine Wand oder ein Sofa gelehnt), enge Kleidung öffnen, beruhigen. Die Person soll sich nicht mehr anstrengen und nicht herumlaufen.",
+        "Hat die Person eigene, ärztlich verordnete Notfallmedikamente (z. B. Nitrospray), beim Einnehmen helfen. Gib niemals eigenmächtig andere Medikamente, auch keine rezeptfreien wie Aspirin.",
+        "Schlaganfall: Bei Verdacht sofort Notruf {notruf} wählen und sagen: „Verdacht auf Schlaganfall“. Den FAST-Test kannst du auch während des Telefonats machen:",
+        "Face (Gesicht): Bitte die Person zu lächeln. Hängt ein Mundwinkel?",
+        "Arms (Arme): Beide Arme nach vorn strecken lassen, Handflächen nach oben. Sinkt ein Arm ab oder dreht sich weg?",
+        "Speech (Sprache): Einen einfachen Satz nachsprechen lassen. Klingt die Sprache verwaschen oder findet die Person die Worte nicht?",
+        "Time (Zeit): Keine Zeit verlieren. Schon ein einziges dieser Zeichen reicht für den Notruf {notruf}, auch wenn es wieder besser wird.",
+        "Uhrzeit merken, wann die Zeichen begonnen haben. Davon hängt ab, welche Behandlung im Krankenhaus noch möglich ist.",
+        "Beim Schlaganfall den Oberkörper leicht erhöht lagern und nichts essen oder trinken lassen, das Schlucken kann gestört sein. Achtung: Bei Erbrechen oder starkem Speichelfluss stattdessen die stabile Seitenlage anwenden, damit der Atemweg frei bleibt.",
+        "Bei beiden: dabeibleiben und beruhigen. Wird die Person bewusstlos und atmet nicht normal: Wiederbelebung (Lektion 3) und einen Defibrillator holen lassen."
+      ],
+      "ueben": [
+        { "id": "fast", "text": "Mach den FAST-Test mit einer zweiten Person: lächeln lassen, Arme vorstrecken lassen, einen Satz nachsprechen lassen." },
+        { "id": "zeichen", "text": "Zähl die Zeichen eines Herzinfarkts einmal laut auf, ohne nachzusehen. Denk dabei auch an die schwächeren Zeichen bei Frauen und Älteren." }
+      ],
+      "quiz": [
+        {
+          "frage": "Ein Mann hat seit 10 Minuten starken Druck in der Brust und kalten Schweiß. Was tust du?",
+          "antworten": ["Ihn hinlegen lassen und abwarten.", "Sofort Notruf, Oberkörper hoch lagern, beruhigen.", "Ihn zu Fuß zum Hausarzt begleiten."],
+          "richtig": 1,
+          "erklaerung": "Das sind typische Zeichen eines Herzinfarkts. Jede Minute zählt, und Anstrengung belastet das Herz zusätzlich."
+        },
+        {
+          "frage": "Wofür steht das T im FAST-Test?",
+          "antworten": ["Temperatur messen.", "Time: keine Zeit verlieren, sofort Notruf.", "Tablette geben."],
+          "richtig": 1,
+          "erklaerung": "Beim Schlaganfall sterben pro Minute Millionen Nervenzellen. Je schneller die Behandlung, desto besser."
+        },
+        {
+          "frage": "Warum merkst du dir, wann der Schlaganfall begonnen hat?",
+          "antworten": ["Für die Krankenkasse.", "Davon hängt ab, welche Behandlung im Krankenhaus noch möglich ist.", "Das ist nicht wichtig."],
+          "richtig": 1,
+          "erklaerung": "Manche Behandlungen, die das Gefäß wieder öffnen, sind nur in den ersten Stunden möglich."
+        },
+        {
+          "frage": "Die Zeichen eines Schlaganfalls sind nach 5 Minuten wieder verschwunden. Was tust du?",
+          "antworten": ["Nichts, es ist ja vorbei.", "Trotzdem Notruf, das kann der Vorbote eines schweren Schlaganfalls sein.", "Am nächsten Tag zum Hausarzt gehen."],
+          "richtig": 1,
+          "erklaerung": "Kurze Ausfälle sind ein Warnzeichen. Oft folgt bald ein schwerer Schlaganfall, der sich im Krankenhaus noch verhindern lässt."
+        }
+      ],
+      "artikel": ["Herzinfarkt", "Schlaganfall", "Transitorische ischämische Attacke"]
+    },
+    {
+      "id": "verbrennung", "titel": "Verbrennungen und Verbrühungen", "icon": "flame",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Hitze zerstört die Haut. Je größer und tiefer die Verbrennung, desto gefährlicher. Großflächige Verbrennungen führen zu starkem Flüssigkeitsverlust und zum Schock.",
+        "Kühlen lindert Schmerzen und begrenzt den Schaden, aber nur bei kleinen Flächen. Bei großen Flächen kühlt der ganze Körper aus, und das ist gefährlicher als die Verbrennung selbst.",
+        "Als Maß gilt: Die Handfläche der verletzten Person mit Fingern entspricht etwa 1 Prozent ihrer Haut.",
+        "Hausmittel wie Mehl, Butter, Öl oder Zahnpasta schaden. Sie halten die Hitze in der Haut und verschmutzen die Wunde."
+      ],
+      "schritte": [
+        "Brennt die Kleidung: Person am Boden wälzen oder mit einer Decke (nicht aus Kunstfaser) löschen. Die Decke fest an den Körper drücken und von oben nach unten arbeiten, damit die Flammen vom Gesicht weg erstickt werden. Die Decke danach nicht sofort wieder hochreißen. Nicht weglaufen lassen, das facht das Feuer an.",
+        "Verbrühung: nasse, heiße Kleidung sofort ausziehen, bei Kindern auch die Windel.",
+        "Kleidung, die an der Haut klebt, nicht abreißen, sondern drumherum abschneiden.",
+        "Kleine Verbrennungen nur kurz mit handwarmem Leitungswasser kühlen, höchstens etwa 5 Minuten oder bis der erste starke Schmerz nachlässt. Nicht eiskalt, kein Eis und keine Kühlpacks direkt auf die Haut. Länger kühlen bringt nichts, kühlt aber den Körper aus.",
+        "Großflächige Verbrennungen (Faustregel: größer als 5 bis 10 Handflächen der betroffenen Person, bei Kindern schon kleiner) nicht kühlen, sondern nur keimfrei abdecken und die Person zudecken, damit sie nicht auskühlt.",
+        "Brandblasen nicht öffnen. Die Wunde locker und keimfrei abdecken, am besten mit dem silbern beschichteten Brandwunden-Verbandtuch aus dem Verbandkasten, denn es verklebt nicht mit der Wunde. Sonst ein sauberes, fusselfreies Tuch, kein Mull und kein Pflaster direkt auf die Wunde. Keine Salben, kein Puder.",
+        "Notruf {notruf} bei allem, was größer ist als ein paar Handflächen, bei Verbrennungen im Gesicht, an Händen, Füßen oder im Intimbereich, bei Kindern, nach Strom oder Chemikalien und bei Atemnot nach Rauch oder heißem Dampf.",
+        "Auf Zeichen eines Schocks achten (Lektion 6)."
+      ],
+      "kinder": "Kinder haben eine dünnere Haut und kühlen schneller aus. Schon Verbrühungen von der Größe einiger Handflächen des Kindes gehören ins Krankenhaus. Nur kleine Flächen kühlen, mit handwarmem Wasser und nicht zu lange.",
+      "ueben": [
+        { "id": "handflaeche", "text": "Nimm deine Handfläche als Maß: Wie viele Handflächen passen auf deinen Unterarm, wie viele auf deinen Rücken?" },
+        { "id": "kueche", "text": "Prüfe deine Küche: Zeigen Topfstiele nach hinten? Können Kinder heiße Getränke oder ein Wasserkocherkabel vom Tisch ziehen?" },
+        { "id": "verbandtuch", "text": "Schau, ob in deinem Verbandkasten ein großes Verbandtuch für Brandwunden liegt, und falte es einmal auf." }
+      ],
+      "quiz": [
+        {
+          "frage": "Ein Kind hat sich die Hand mit heißem Wasser verbrüht. Was tust du zuerst?",
+          "antworten": ["Butter oder Öl auftragen.", "Kurz mit handwarmem Leitungswasser kühlen, bis der erste starke Schmerz nachlässt.", "Eiswürfel direkt auflegen."],
+          "richtig": 1,
+          "erklaerung": "Handwarmes Wasser lindert den Schmerz, ohne das Kind auszukühlen. Eis schädigt die Haut zusätzlich."
+        },
+        {
+          "frage": "Eine Person hat großflächige Verbrennungen am Rücken. Was ist richtig?",
+          "antworten": ["Lange mit kaltem Wasser abduschen.", "Keimfrei abdecken, zudecken, Notruf.", "Mit Brandsalbe einreiben."],
+          "richtig": 1,
+          "erklaerung": "Bei großen Flächen droht Unterkühlung und Schock. Salben müssen im Krankenhaus mühsam wieder entfernt werden."
+        },
+        {
+          "frage": "Was machst du mit Brandblasen?",
+          "antworten": ["Aufstechen, damit sie schneller heilen.", "Nicht öffnen und locker abdecken.", "Mit Mehl bestreuen."],
+          "richtig": 1,
+          "erklaerung": "Die Blase schützt die Wunde vor Keimen."
+        },
+        {
+          "frage": "Die Kleidung klebt an der Brandwunde. Was tust du?",
+          "antworten": ["Mit einem Ruck abreißen.", "Drumherum abschneiden und den Rest drauflassen.", "Mit Wasser einweichen und abziehen."],
+          "richtig": 1,
+          "erklaerung": "Beim Abreißen geht die verletzte Haut mit ab."
+        }
+      ],
+      "artikel": ["Verbrennung (Medizin)", "Verbrühung", "Brandwunde"]
+    },
+    {
+      "id": "bruch", "titel": "Knochenbrüche und Kopfverletzungen", "icon": "bone",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Einen Bruch erkennt man an Schmerzen, Schwellung, Fehlstellung, ungewöhnlicher Beweglichkeit oder daran, dass die Person den Körperteil nicht mehr benutzen kann. Sicher ist es oft erst nach dem Röntgen. Im Zweifel behandelst du es wie einen Bruch.",
+        "Ruhigstellen lindert den Schmerz und verhindert, dass Knochenenden Gefäße oder Nerven verletzen.",
+        "Bei Kopfverletzungen ist das Gehirn in Gefahr. Gefährliche Zeichen können erst nach Stunden auftreten: Benommenheit, Erbrechen, starke Kopfschmerzen, Verwirrtheit. Ein Alarmzeichen für eine schwere Verletzung des Schädels ist auch, wenn Blut oder klare Flüssigkeit (Gehirnwasser) aus Nase oder Ohren fließt.",
+        "Nach einem Sturz aus großer Höhe oder einem schweren Unfall kann die Wirbelsäule verletzt sein. Dann bewegst du die Person so wenig wie möglich, außer sie ist in Gefahr oder atmet nicht normal."
+      ],
+      "schritte": [
+        "Bruch: nicht einrenken, nicht gerade ziehen. Die Person nimmt meistens selbst die Haltung ein, die am wenigsten schmerzt.",
+        "Den Körperteil in dieser Lage ruhigstellen: mit Decken, Jacken oder Kissen abpolstern. Einen verletzten Arm kann die Person selbst halten, oder du legst ein Dreiecktuch als Schlinge an.",
+        "Offene Brüche (Knochen sichtbar oder Wunde über dem Bruch) keimfrei abdecken. Hier niemals kühlen oder Wasser darüber gießen, sonst gelangen Keime in den Knochen, und keinen Druck auf die Knochenenden ausüben.",
+        "Geschlossene Brüche vorsichtig kühlen, aber nur, wenn die Person es als angenehm empfindet, z. B. mit einem Kühlpack in einem Tuch. Nie Eis direkt auf die Haut.",
+        "Auf Zeichen eines Schocks achten (Lektion 6), vor allem bei Brüchen von Oberschenkel oder Becken. Notruf {notruf}.",
+        "Kopfverletzung: Wunden am Kopf bluten stark, mit Druck stillen. Ist die Person bei Bewusstsein, den Oberkörper leicht erhöht lagern.",
+        "Notruf {notruf} bei Bewusstlosigkeit (auch nur kurz), Erinnerungslücken, Erbrechen, Verwirrtheit, starken Kopfschmerzen oder Blut oder klarer Flüssigkeit aus Nase oder Ohr.",
+        "Nach einem Schlag auf den Kopf die Person in den nächsten 24 Stunden nicht allein lassen und immer wieder ansprechen.",
+        "Verdacht auf eine Wirbelsäulenverletzung (Taubheit, Kribbeln, Lähmung oder starke Rückenschmerzen nach einem Sturz): die Person bitten, sich nicht zu bewegen, nicht umlagern, Notruf {notruf}. Atmet sie nicht normal, hat die Wiederbelebung Vorrang. Ist sie bewusstlos, atmet aber normal, hat die stabile Seitenlage (Lektion 2) Vorrang vor dem Stillhalten, sonst kann sie an Zunge oder Erbrochenem ersticken. Dabei möglichst in einem Stück drehen, Kopf, Rumpf und Beine in einer Linie wie ein Baumstamm, am besten zu zweit."
+      ],
+      "ueben": [
+        { "id": "schlinge", "text": "Leg einer zweiten Person ein Dreiecktuch (oder ein großes, schräg gefaltetes Tuch) als Armschlinge an." },
+        { "id": "polstern", "text": "Polstere mit Jacken und Kissen ein „verletztes“ Bein so ab, dass es nicht zur Seite kippen kann." }
+      ],
+      "quiz": [
+        {
+          "frage": "Nach einem Sturz steht der Unterschenkel schief. Was tust du?",
+          "antworten": ["Vorsichtig gerade ziehen.", "So lassen, abpolstern, ruhigstellen, Notruf.", "Die Person aufstehen lassen, um zu sehen, ob es geht."],
+          "richtig": 1,
+          "erklaerung": "Beim Geradeziehen können Knochenenden Gefäße und Nerven verletzen. Das richtet der Arzt mit Schmerzmitteln."
+        },
+        {
+          "frage": "Nach einem Schlag auf den Kopf: Bei welchem Zeichen wählst du den Notruf?",
+          "antworten": ["Eine kleine Beule.", "Erbrechen und Verwirrtheit.", "Eine leichte Rötung."],
+          "richtig": 1,
+          "erklaerung": "Erbrechen und Verwirrtheit können auf eine Blutung im Kopf hinweisen."
+        },
+        {
+          "frage": "Nach einem Sturz von der Leiter spürt die Person ihre Beine nicht. Was ist richtig?",
+          "antworten": ["Sofort aufsetzen.", "Nicht bewegen, still liegen lassen, Notruf.", "In die stabile Seitenlage drehen, obwohl sie wach ist."],
+          "richtig": 1,
+          "erklaerung": "Das kann eine Verletzung der Wirbelsäule sein. Jede Bewegung kann das Rückenmark weiter schädigen."
+        },
+        {
+          "frage": "Wie kühlst du einen geschwollenen Knöchel?",
+          "antworten": ["Eiswürfel direkt auf die Haut.", "Kühlpack in ein Tuch gewickelt.", "Gar nicht, Wärme ist besser."],
+          "richtig": 1,
+          "erklaerung": "Kälte lindert Schmerz und Schwellung. Direktes Eis kann aber Erfrierungen verursachen."
+        }
+      ],
+      "artikel": ["Knochenbruch", "Schädel-Hirn-Trauma", "Gehirnerschütterung"]
+    },
+    {
+      "id": "vergiftung", "titel": "Vergiftung und Allergie", "icon": "skull",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Gift kann geschluckt, eingeatmet, über die Haut aufgenommen oder durch einen Stich übertragen werden. Bei Kindern sind es oft Putzmittel, Medikamente, Pflanzen oder Lampenöl.",
+        "Erbrechen auszulösen ist gefährlich: Ätzende Stoffe verletzen die Speiseröhre ein zweites Mal, schäumende oder ölige Stoffe gelangen in die Lunge.",
+        "Kohlenmonoxid ist unsichtbar und riecht nicht. Es entsteht z. B. bei Gasgrill, Holzkohle, Ofen oder Notstromaggregat in geschlossenen Räumen, gerade bei Stromausfall. Zeichen sind Kopfschmerzen, Schwindel, Übelkeit und Benommenheit, oft bei mehreren Menschen gleichzeitig.",
+        "Eine schwere allergische Reaktion (Anaphylaxie) kann in Minuten lebensbedrohlich werden: Schwellung in Mund und Hals, Atemnot, Kreislaufversagen."
+      ],
+      "schritte": [
+        "Geschluckt: Mund ausspülen und Reste ausspucken lassen. Kein Erbrechen auslösen, keine Milch, kein Salzwasser.",
+        "Giftnotruf anrufen: {giftnotruf} (die Nummer steht auch auf der Seite Erste Hilfe ganz oben unter „Im Ernstfall“), bei schweren Zeichen sofort Notruf {notruf}. Sagen: wer, was, wie viel, wann, und wie es der Person geht. Etwas zu trinken nur, wenn der Giftnotruf dazu rät.",
+        "Verpackung, Reste, Pflanzenteile oder Erbrochenes aufheben und dem Rettungsdienst mitgeben.",
+        "Gas oder Rauch: Bei Verdacht auf Kohlenmonoxid (z. B. Grill, Ofen oder Aggregat im Raum) den Raum niemals betreten, auch nicht kurz zum Fenster öffnen. Der Eigenschutz geht vor, die Feuerwehr hat Atemschutz. Nur wenn es gefahrlos möglich ist (z. B. die Person liegt direkt an der Tür): Person an die frische Luft ziehen. Keine Schalter, kein Feuer.",
+        "Allergie: Auslöser entfernen. Einen Stachel mit dem Fingernagel oder einer Karte (z. B. Bankkarte) flach von der Haut wegschieben, nicht mit den Fingern greifen oder herausquetschen, sonst drückt man das restliche Gift hinein.",
+        "Hat die Person einen Adrenalin-Pen, ihr beim Benutzen helfen: in die Außenseite des Oberschenkels, das geht auch durch die Hose. Nach dem Pen immer sofort den Notruf {notruf} wählen, denn die Wirkung hält nur kurz an.",
+        "Bei Atemnot den Oberkörper hoch lagern. Bei Kreislaufproblemen (blass, schwindelig) flach hinlegen, Beine hoch. Notruf {notruf}.",
+        "Stich in Mund oder Hals: Eis lutschen lassen, kalte Umschläge um den Hals, Notruf {notruf}.",
+        "Wird die Person bewusstlos: Atmung prüfen, dann stabile Seitenlage oder Wiederbelebung."
+      ],
+      "kinder": "Kinder probieren alles. War ein Kind an Putzmitteln, Medikamenten, Zigaretten oder Pflanzen, sofort den Giftnotruf anrufen, auch wenn es ihm noch gut geht. Viele Gifte wirken erst nach Stunden.",
+      "ueben": [
+        { "id": "giftnotruf", "text": "Speichere die Nummer des Giftnotrufs ({giftnotruf}) im Handy und schreib sie gut sichtbar neben das Telefon." },
+        { "id": "sicher", "text": "Prüfe, ob Putzmittel, Medikamente und Lampenöl für Kinder unerreichbar stehen." },
+        { "id": "pen", "text": "Hat jemand in deiner Familie einen Adrenalin-Pen? Lasst euch zeigen, wie er funktioniert. Es gibt Übungs-Pens ohne Nadel." }
+      ],
+      "quiz": [
+        {
+          "frage": "Ein Kind hat Spülmaschinenreiniger in den Mund genommen. Was ist richtig?",
+          "antworten": ["Den Finger in den Hals stecken, damit es erbricht.", "Mund ausspülen, Giftnotruf anrufen, Verpackung bereithalten.", "Ein großes Glas Milch geben."],
+          "richtig": 1,
+          "erklaerung": "Spülmaschinenreiniger ist ätzend. Beim Erbrechen verätzt er die Speiseröhre ein zweites Mal."
+        },
+        {
+          "frage": "Bei Stromausfall läuft ein Notstromaggregat in der Garage. Mehrere Personen im Haus haben Kopfschmerzen und Schwindel. Woran denkst du?",
+          "antworten": ["An eine Grippe.", "An eine Kohlenmonoxidvergiftung: alle sofort an die frische Luft, Notruf.", "Alle haben zu wenig getrunken."],
+          "richtig": 1,
+          "erklaerung": "Aggregate, Grills und Öfen gehören nie in geschlossene Räume. Kohlenmonoxid merkt man nicht, bis es zu spät ist."
+        },
+        {
+          "frage": "Nach einem Wespenstich schwillt der Hals an und die Person bekommt schwer Luft. Was tust du?",
+          "antworten": ["Abwarten, das geht vorbei.", "Notruf, Eis lutschen lassen, Adrenalin-Pen falls vorhanden, Oberkörper hoch.", "Viel Wasser trinken lassen."],
+          "richtig": 1,
+          "erklaerung": "Eine Schwellung im Hals kann den Atemweg verschließen. Das ist ein lebensbedrohlicher Notfall."
+        }
+      ],
+      "artikel": ["Vergiftung", "Kohlenstoffmonoxidvergiftung", "Anaphylaxie"]
+    },
+    {
+      "id": "temperatur", "titel": "Kälte und Hitze", "icon": "thermometer",
+      "stand": "nach den Erste-Hilfe-Leitlinien des European Resuscitation Council (ERC) und den Regeln der Hilfsorganisationen",
+      "verstehen": [
+        "Der Körper hält seine Temperatur bei etwa 37 °C. Sinkt sie unter 35 °C, ist er unterkühlt. Das passiert nicht nur im Schnee, sondern auch bei Nässe, Wind oder in einer ungeheizten Wohnung, besonders bei alten Menschen und Kindern.",
+        "Bei Unterkühlung ist das Blut in Armen und Beinen besonders kalt. Wird es durch Reiben oder viel Bewegung plötzlich zum Herzen gepumpt, kann das Herz aus dem Takt geraten. Deshalb wärmt man vorsichtig und langsam.",
+        "Bei Hitze kann sich der Körper irgendwann nicht mehr genug kühlen. Hitzeerschöpfung zeigt sich durch Schwäche, Schwindel und Übelkeit. Beim Hitzschlag ist die Haut heiß, die Person verwirrt oder bewusstlos. Das ist lebensgefährlich.",
+        "Sonnenstich: Kopf und Nacken waren zu lange ungeschützt in der Sonne. Zeichen sind ein roter, heißer Kopf, Kopfschmerzen, Übelkeit und ein steifer Nacken."
+      ],
+      "schritte": [
+        "Unterkühlung: vor weiterer Kälte schützen und in einen warmen, windgeschützten Raum bringen. Dabei nur vorsichtig bewegen.",
+        "Nasse Kleidung vorsichtig ausziehen oder aufschneiden. Am besten zuerst in die Rettungsdecke aus dem Verbandkasten einwickeln (silberne Seite nach innen zum Körper), dann in Decken einpacken, auch den Kopf, und von unten gegen die Bodenkälte schützen. Wichtig ist vor allem, dass der Körper rundum eingehüllt ist.",
+        "Nicht abreiben, nicht massieren, kein heißes Bad, kein Alkohol.",
+        "Bei vollem Bewusstsein warme, gezuckerte Getränke geben.",
+        "Starke Unterkühlung (das Zittern hört auf, die Person wird schläfrig oder verwirrt): Notruf {notruf}, flach lagern, kaum bewegen, Atmung überwachen. Reagiert sie nicht mehr, die Atmung länger prüfen als sonst, bis zu einer Minute, denn sie kann sehr langsam und flach sein.",
+        "Hitze: in den Schatten oder einen kühlen Raum bringen, Kleidung öffnen.",
+        "Kühlen: feuchte Tücher auflegen, Luft zufächeln, kühle Umschläge an Nacken, Achseln und Leisten. Bei Bewusstsein schluckweise kühles Wasser trinken lassen.",
+        "Hitzschlag (heiße Haut, Verwirrtheit, Krampfanfall oder Bewusstlosigkeit): Notruf {notruf} und so schnell wie möglich kräftig kühlen, z. B. mit kühlem (nicht eiskaltem) Wasser benetzen und Luft zufächeln. Die Kälte entsteht vor allem durch das Verdunsten.",
+        "Sonnenstich (roter, heißer Kopf, Kopf- oder Nackenschmerzen): Oberkörper erhöht im Schatten lagern, Kopf und Nacken mit feuchten Tüchern kühlen. Bei steifem Nacken, starkem Erbrechen oder Benommenheit sofort Notruf {notruf}, das kann eine Reizung der Hirnhäute sein.",
+        "Wichtig: Bei Überhitzung (Hitzschlag, Sonnenstich) keine Fiebermittel wie Paracetamol oder Ibuprofen geben. Sie wirken hier nicht, weil es kein Fieber ist, belasten aber Leber und Nieren zusätzlich."
+      ],
+      "kinder": "Babys und Kleinkinder kühlen schneller aus und überhitzen schneller als Erwachsene. Lass Kinder nie im Auto zurück, auch nicht für kurze Zeit.",
+      "ueben": [
+        { "id": "waerme", "text": "Leg für einen Stromausfall im Winter eine Wärme-Ecke an: Decken, Mützen, Wärmflasche, Rettungsdecke." },
+        { "id": "einpacken", "text": "Pack eine zweite Person einmal richtig ein: Decke darunter, Decke darüber, Kopf bedeckt, nur das Gesicht frei." }
+      ],
+      "quiz": [
+        {
+          "frage": "Eine unterkühlte Person zittert stark. Was solltest du nicht tun?",
+          "antworten": ["In Decken einpacken.", "Arme und Beine kräftig abreiben.", "Warmen, gezuckerten Tee geben."],
+          "richtig": 1,
+          "erklaerung": "Abreiben treibt das kalte Blut aus Armen und Beinen zum Herzen. Das kann gefährliche Herzrhythmusstörungen auslösen."
+        },
+        {
+          "frage": "Ein Wanderer an einem heißen Tag ist plötzlich verwirrt, seine Haut ist heiß. Was liegt am nächsten?",
+          "antworten": ["Ein Hitzschlag: Notruf und sofort kräftig kühlen.", "Normale Müdigkeit.", "Er hat zu wenig gegessen, Schokolade geben."],
+          "richtig": 0,
+          "erklaerung": "Verwirrtheit bei heißer Haut ist ein Alarmzeichen. Beim Hitzschlag zählt schnelles Kühlen."
+        },
+        {
+          "frage": "Bei einem Stromausfall im Winter ist eine ältere Person aus der Nachbarschaft schläfrig und zittert nicht mehr. Was bedeutet das?",
+          "antworten": ["Ihr ist wieder warm.", "Starke Unterkühlung: Notruf, vorsichtig einpacken, kaum bewegen.", "Sie ist nur müde."],
+          "richtig": 1,
+          "erklaerung": "Wenn das Zittern aufhört, hat der Körper keine Kraft mehr, sich zu wärmen. Das ist ein gefährliches Zeichen."
+        }
+      ],
+      "artikel": ["Unterkühlung", "Hypothermie", "Hitzschlag", "Sonnenstich"]
+    },
+    {
+      "id": "keinehilfe", "titel": "Wenn keine Hilfe kommt", "icon": "phone-off",
+      "stand": "nach den Empfehlungen der Hilfsorganisationen und des Katastrophenschutzes",
+      "verstehen": [
+        "Bei einem großen Stromausfall fällt nach einiger Zeit oft auch das Handynetz aus. Dann kommt kein Notruf durch, und der Rettungsdienst ist vielleicht überlastet.",
+        "Dann bist du nicht nur Ersthelfer für ein paar Minuten, sondern vielleicht für Stunden. Alles, was du in diesem Kurs gelernt hast, gilt weiter, nur länger.",
+        "Viele Gemeinden richten in solchen Lagen Anlaufstellen ein, oft in Feuerwehrhäusern, Rathäusern oder Schulen. Sie heißen z. B. „Notfalltreffpunkt“ oder „Katastrophenschutz-Leuchtturm“. Dort kann man Notrufe absetzen und bekommt Hilfe.",
+        "Die beste Hilfe ist Vorbereitung: Wer weiß, wo die nächste Anlaufstelle ist, und einen gut gefüllten Verbandkasten hat, ist im Vorteil. Ein normaler Verbandkasten reicht für Stunden ohne Hilfe nicht lange. Erweitere deinen Verbandkasten zu Hause deshalb vorab um zusätzliche Dreiecktücher, Rettungsdecken, Verbandsmaterial und deine wichtigen Dauermedikamente."
+      ],
+      "schritte": [
+        "Den Notruf trotzdem an verschiedenen Stellen versuchen: draußen, höher gelegen, am Fenster. Eine SMS an Angehörige kommt manchmal noch durch, wenn Anrufe nicht gehen. Ist das eigene Handynetz weg, versucht das Handy beim Notruf auch andere Netze. Sind alle Sendemasten ohne Strom, geht aber auch das nicht mehr.",
+        "Festnetz: Heutige Festnetztelefone laufen über einen Router und fallen bei Stromausfall meist mit aus. Frag in der Nachbarschaft, ob jemand den Router über ein Notstromaggregat oder eine große Powerbank betreibt. Dann geht das Telefon manchmal noch, solange das Netz dahinter Strom hat.",
+        "Hilfe holen: Nachbarn ansprechen und einen Boten zur nächsten Feuerwehr, Polizei, Arztpraxis oder Anlaufstelle schicken.",
+        "Dem Boten einen Zettel mitgeben: Wo ist es passiert, was ist passiert, wie viele Verletzte, wie geht es ihnen.",
+        "Den Verletzten möglichst nicht allein lassen. Sind mehrere Helfer da, Aufgaben verteilen.",
+        "Aufschreiben: die Uhrzeit, was passiert ist, was du getan hast und alle 15 Minuten Bewusstsein und Atmung. Das hilft später dem Rettungsdienst.",
+        "Verletzte warm halten, beruhigen und regelmäßig prüfen, ob sie normal atmen.",
+        "Selbst transportieren nur, wenn das Warten am aktuellen Ort lebensgefährlich ist. Niemanden mit Verdacht auf eine Verletzung der Wirbelsäule bewegen, außer am Ort droht akute Lebensgefahr (z. B. Feuer, Einsturz, extreme Kälte). Dann mit mehreren Helfern tragen und dabei Kopf, Rumpf und Beine möglichst in einer Linie halten.",
+        "Fieldbook hilft: Auf der Seite Erste Hilfe stehen ganz oben unter „Im Ernstfall“ die Sofort-Schritte, in der Bibliothek ausführliche Artikel, und auf der Karte findest du Krankenhäuser, Apotheken und Ärzte in der Nähe."
+      ],
+      "ueben": [
+        { "id": "anlaufstelle", "text": "Finde heraus, wo in deinem Ort die Anlaufstelle für Notfälle bei Stromausfall ist (Website der Gemeinde, Aushang, Feuerwehr)." },
+        { "id": "notfallkarte", "text": "Schreib eine Notfallkarte auf Papier: Adresse, Vorerkrankungen, Medikamente, Allergien und wichtige Telefonnummern. Leg sie zum Verbandkasten." },
+        { "id": "karte", "text": "Such auf der Karte in Fieldbook das nächste Krankenhaus und die nächste Apotheke.", "link": "#karten" },
+        { "id": "hausapotheke", "text": "Prüfe deine Hausapotheke: Verbandsmaterial, Schmerzmittel, Fieberthermometer und eigene Medikamente für einige Tage." }
+      ],
+      "quiz": [
+        {
+          "frage": "Das Handynetz ist ausgefallen und jemand ist schwer verletzt. Was tust du?",
+          "antworten": ["Nichts, ohne Notruf kann man nicht helfen.", "Erste Hilfe leisten und einen Boten zur nächsten Feuerwehr oder Anlaufstelle schicken.", "Den Verletzten allein lassen und selbst stundenlang Hilfe suchen."],
+          "richtig": 1,
+          "erklaerung": "Deine Erste Hilfe hält den Verletzten am Leben, der Bote holt Hilfe. Beides zusammen ist am besten."
+        },
+        {
+          "frage": "Was gibst du einem Boten mit?",
+          "antworten": ["Nichts, er wird es sich schon merken.", "Einen Zettel mit Ort, Geschehen und Zahl der Verletzten.", "Nur die Adresse."],
+          "richtig": 1,
+          "erklaerung": "In der Aufregung vergisst man schnell etwas. Auf dem Zettel steht alles, was die Helfer brauchen."
+        },
+        {
+          "frage": "Wozu schreibst du Uhrzeiten und Beobachtungen auf?",
+          "antworten": ["Damit der Rettungsdienst später weiß, was passiert ist und wie es sich entwickelt hat.", "Für die Versicherung.", "Das ist nicht nötig."],
+          "richtig": 0,
+          "erklaerung": "Wenn Hilfe erst nach Stunden kommt, ist der Verlauf wichtig für die weitere Behandlung."
+        }
+      ],
+      "artikel": ["Stromausfall", "Katastrophenschutz"]
+    }
+  ],
+  "_fallbeispiele": "Kleine Geschichten zum Durchspielen. Stufe 1: Auswahl. Jeder Schritt hat optional eine 'situation' (wie geht die Geschichte weiter), eine 'frage', 'antworten', 'richtig' (Nummer ab 0) und eine 'erklaerung'. Stufe 2 (freie Antwort) braucht je Schritt 'kernpunkte' und 'fehler' (je id und text; die KI prüft nur dagegen), optional 'frage2' als offenere Frage. Fallbeispiele ohne 'schritte' erscheinen als 'kommt bald'. 'lektionen' = passende Lektionen (ids).",
+  "fallbeispiele": [
+    {
+      "id": "amboden", "titel": "Jemand liegt am Boden", "icon": "house",
+      "lektionen": ["erstdenken", "ansprechbar", "wiederbelebung"],
+      "einleitung": "Du kommst in einen Hausflur. Dort liegt eine Person auf dem Boden und bewegt sich nicht.",
+      "schritte": [
+        {
+          "frage": "Was tust du zuerst?",
+          "antworten": [
+            "Kurz umsehen, ob dir selbst Gefahr droht, dann laut ansprechen und an den Schultern rütteln.",
+            "Sofort mit der Herzdruckmassage beginnen, denn bei einem Kreislaufstillstand zählt jede Sekunde.",
+            "Erst den Notruf wählen, bevor du die Person anfasst, damit der Rettungsdienst schon unterwegs ist.",
+            "Die Person vorsichtig aufsetzen und an die Wand lehnen, damit sie besser Luft bekommt."
+          ],
+          "richtig": 0,
+          "erklaerung": "Ein kurzer Blick genügt: Liegt ein Kabel herum, riecht es nach Gas? Dann prüfst du, ob die Person reagiert. Erst danach weißt du, was zu tun ist und was du der Leitstelle sagen musst.",
+          "kernpunkte": [
+            { "id": "eigenschutz", "text": "Auf die eigene Sicherheit achten (kurz nach Gefahren umsehen)" },
+            { "id": "bewusstsein", "text": "Prüfen, ob die Person reagiert: laut ansprechen und an den Schultern rütteln" }
+          ],
+          "fehler": [
+            { "id": "bewegen", "text": "Die Person aufsetzen, hochziehen oder umhertragen" },
+            { "id": "trinken", "text": "Der Person etwas zu trinken geben" }
+          ]
+        },
+        {
+          "situation": "Es ist sicher. Du sprichst die Person laut an und rüttelst sie an den Schultern. Sie reagiert nicht.",
+          "frage": "Was jetzt?",
+          "antworten": [
+            "Laut um Hilfe rufen, dann den Kopf überstrecken, das Kinn anheben und die Atmung prüfen.",
+            "Die Person sofort in die stabile Seitenlage bringen, damit sie nicht an ihrer Zunge erstickt.",
+            "Ihr kaltes Wasser ins Gesicht spritzen und auf die Wangen klopfen, damit sie wieder zu sich kommt.",
+            "Am Hals nach dem Puls tasten und so lange suchen, bis du ihn sicher gefunden hast."
+          ],
+          "richtig": 0,
+          "erklaerung": "Ob Seitenlage oder Wiederbelebung, entscheidet die Atmung. Den Puls zu suchen ist für Laien unsicher und kostet wertvolle Zeit.",
+          "kernpunkte": [
+            { "id": "hilfe", "text": "Laut um Hilfe rufen" },
+            { "id": "atemweg", "text": "Atemweg frei machen: Kopf nach hinten überstrecken, Kinn anheben" },
+            { "id": "atmung", "text": "Atmung prüfen (sehen, hören, fühlen), höchstens 10 Sekunden" }
+          ],
+          "fehler": [
+            { "id": "puls", "text": "Lange nach dem Puls suchen" },
+            { "id": "seitenlage", "text": "Stabile Seitenlage, ohne vorher die Atmung zu prüfen" },
+            { "id": "trinken", "text": "Der Person etwas zu trinken geben" }
+          ]
+        },
+        {
+          "situation": "Du überstreckst den Kopf der Person und hältst dein Ohr über ihren Mund. In 10 Sekunden hebt sich der Brustkorb ein einziges Mal kurz und ruckartig. Dabei schnappt sie mit offenem Mund nach Luft.",
+          "frage": "Wie deutest du das?",
+          "antworten": [
+            "Sie atmet, wenn auch schwach. Also kommt sie in die stabile Seitenlage, damit der Atemweg frei bleibt.",
+            "Das ist Schnappatmung und keine normale Atmung. Sie braucht eine Wiederbelebung.",
+            "Sie beginnt gerade aufzuwachen. Du prüfst noch einmal 10 Sekunden, um ganz sicher zu sein."
+          ],
+          "richtig": 1,
+          "erklaerung": "Ein einzelnes Schnappen in 10 Sekunden ist keine normale Atmung, sondern ein Zeichen für einen Kreislaufstillstand. Normal wären mindestens zwei ruhige, gleichmäßige Atemzüge.",
+          "frage2": "Wie deutest du das, und was folgt daraus?",
+          "kernpunkte": [
+            { "id": "nichtnormal", "text": "Erkennen: Das ist keine normale Atmung (Schnappatmung)" },
+            { "id": "wiederbeleben", "text": "Folgerung: Notruf und sofort Wiederbelebung (Herzdruckmassage)" }
+          ],
+          "fehler": [
+            { "id": "seitenlage", "text": "Es für normale Atmung halten und die Person in die stabile Seitenlage bringen" },
+            { "id": "warten", "text": "Abwarten oder die Atmung noch länger beobachten" }
+          ]
+        },
+        {
+          "situation": "Auf dein Rufen hin kommt ein zweiter Helfer aus einer Wohnung gelaufen. In der Apotheke an der Ecke hängt ein Defibrillator.",
+          "frage": "Wie teilt ihr euch auf?",
+          "antworten": [
+            "Du wählst den Notruf {notruf}, stellst auf Lautsprecher und beginnst zu drücken. Der zweite Helfer holt den Defibrillator.",
+            "Ihr tragt die Person zusammen ins Auto und fahrt sie ins Krankenhaus. Das geht schneller, als auf den Rettungsdienst zu warten.",
+            "Ihr wählt beide gleichzeitig den Notruf, damit sicher einer durchkommt, und wartet dann gemeinsam auf Anweisungen.",
+            "Der zweite Helfer sucht im Internet nach einer Anleitung, während du die Person beobachtest und ihr gut zuredest."
+          ],
+          "richtig": 0,
+          "erklaerung": "Notruf und Herzdruckmassage sofort, ein zweiter Helfer holt den Defibrillator. Mit jeder Minute ohne Herzdruckmassage sinkt die Überlebenschance deutlich.",
+          "kernpunkte": [
+            { "id": "notruf", "text": "Notruf {notruf} wählen (am besten über Lautsprecher)" },
+            { "id": "druecken", "text": "Sofort mit der Herzdruckmassage beginnen" },
+            { "id": "aed", "text": "Den zweiten Helfer den Defibrillator holen lassen" }
+          ],
+          "fehler": [
+            { "id": "fahren", "text": "Die Person selbst ins Auto tragen oder ins Krankenhaus fahren" },
+            { "id": "aufaedwarten", "text": "Mit der Herzdruckmassage warten, bis der Defibrillator da ist" }
+          ]
+        },
+        {
+          "situation": "Du kniest neben der Person, die Leitstelle ist am Telefon. Du hast noch nie jemanden beatmet und traust dich nicht.",
+          "frage": "Was tust du?",
+          "antworten": [
+            "Nur drücken, ohne Pause: fest in die Mitte des Brustkorbs, 100 bis 120 Mal pro Minute, 5 bis 6 cm tief.",
+            "Lieber abwarten, bis der Rettungsdienst kommt. Ohne Beatmung bringt Drücken wenig, und etwas falsch zu machen ist schlimmer.",
+            "Vorsichtig und langsam drücken, etwa einmal pro Sekunde und nicht zu tief, damit keine Rippe bricht."
+          ],
+          "richtig": 0,
+          "erklaerung": "Nur drücken ist viel besser als nichts. Die Leitstelle hilft dir am Telefon und zählt oft sogar mit.",
+          "frage2": "Was tust du, und wie genau?",
+          "kernpunkte": [
+            { "id": "nurdruecken", "text": "Ohne Beatmung einfach durchgehend drücken" },
+            { "id": "mitte", "text": "Hände auf die Mitte des Brustkorbs" },
+            { "id": "tempo", "text": "100 bis 120 Mal pro Minute (etwa zweimal pro Sekunde)" },
+            { "id": "tiefe", "text": "5 bis 6 cm tief drücken" }
+          ],
+          "fehler": [
+            { "id": "nichts", "text": "Gar nichts tun und auf den Rettungsdienst warten" },
+            { "id": "sanft", "text": "Langsam oder nur sanft drücken" }
+          ]
+        },
+        {
+          "situation": "Nach 4 Minuten kommt der zweite Helfer mit dem Defibrillator zurück. Deine Arme werden schwer.",
+          "frage": "Wie geht es weiter?",
+          "antworten": [
+            "Der zweite Helfer übernimmt das Drücken, du bedienst den Defibrillator und folgst seinen Ansagen. Danach wechselt ihr euch alle 2 Minuten ab.",
+            "Du drückst weiter, bis du wirklich nicht mehr kannst. So kann sich der andere in Ruhe um das Gerät kümmern, und kein Wechsel kostet Zeit.",
+            "Ihr macht eine kurze Pause beim Drücken und lest gemeinsam die Anleitung auf dem Gerät, damit ihr beim Aufkleben der Elektroden nichts falsch macht.",
+            "Du hörst auf zu drücken und klebst die Elektroden auf, denn ab jetzt übernimmt der Defibrillator die Arbeit des Herzens."
+          ],
+          "richtig": 0,
+          "erklaerung": "Mit müden Armen drückst du langsamer und weniger tief, ohne es zu merken. Deshalb übernimmt der Ausgeruhte das Drücken. Der Defibrillator sagt jeden Schritt an, das schafft auch der Erschöpfte. Das Gerät drückt nicht selbst, es gibt nur, wenn nötig, einen Stromstoß.",
+          "kernpunkte": [
+            { "id": "uebernehmen", "text": "Der ausgeruhte Helfer übernimmt das Drücken" },
+            { "id": "geraet", "text": "Defibrillator einschalten, Elektroden aufkleben und den Ansagen folgen" },
+            { "id": "abwechseln", "text": "Danach etwa alle 2 Minuten beim Drücken abwechseln" }
+          ],
+          "fehler": [
+            { "id": "pause", "text": "Eine längere Pause beim Drücken machen" },
+            { "id": "aufhoeren", "text": "Aufhören zu drücken, weil das Gerät jetzt übernimmt" }
+          ]
+        }
+      ],
+      "abschluss": "Nach 9 Minuten übernimmt der Rettungsdienst. Ob die Person überlebt, kann niemand versprechen. Aber ohne euch hätte sie kaum eine Chance gehabt."
+    },
+    {
+      "id": "verschluckt", "titel": "Ein Kind verschluckt sich beim Essen", "icon": "grape",
+      "lektionen": ["ersticken"],
+      "einleitung": "Ihr sitzt zu mehreren beim Mittagessen. Ein etwa sechsjähriges Kind am Tisch verschluckt sich an einer Weintraube.",
+      "schritte": [
+        {
+          "situation": "Das Kind hustet heftig und hat ein rotes Gesicht. Es krächzt: „Hab mich verschluckt!“",
+          "frage": "Was tust du?",
+          "antworten": [
+            "Es zum kräftigen Husten auffordern, bei ihm bleiben und genau beobachten.",
+            "Sofort kräftig zwischen die Schulterblätter klopfen, damit die Traube schneller herauskommt.",
+            "Schnell ein Glas Wasser geben, damit die Traube hinunterrutscht und der Hals wieder frei ist.",
+            "Mit dem Finger in den Mund greifen und die Traube herausholen, bevor sie tiefer rutscht."
+          ],
+          "richtig": 0,
+          "erklaerung": "Solange das Kind kräftig hustet und sprechen kann, ist der Atemweg nur teilweise blockiert. Husten ist dann das beste Mittel. Schläge auf den Rücken braucht es erst, wenn der Husten schwach wird. Blindes Greifen kann die Traube tiefer schieben.",
+          "kernpunkte": [
+            { "id": "husten", "text": "Zum kräftigen Husten auffordern" },
+            { "id": "beobachten", "text": "Dabeibleiben und beobachten" }
+          ],
+          "fehler": [
+            { "id": "klopfen", "text": "Auf den Rücken klopfen, solange das Kind gut hustet" },
+            { "id": "trinken", "text": "Etwas zu trinken geben" },
+            { "id": "greifen", "text": "Blind in den Mund oder Rachen greifen" }
+          ]
+        },
+        {
+          "situation": "Der Husten wird schwächer. Das Kind bringt keinen Laut mehr heraus, greift sich an den Hals, die Lippen werden bläulich.",
+          "frage": "Was jetzt?",
+          "antworten": [
+            "Den Oberkörper des Kindes weit nach vorn beugen, die Brust mit einer Hand stützen und bis zu 5 kräftige Schläge zwischen die Schulterblätter geben.",
+            "Das Kind an den Füßen hochhalten und kräftig schütteln, damit die Traube durch die Schwerkraft herausfällt.",
+            "Das Kind hinlegen und in die stabile Seitenlage bringen, damit die Traube aus dem Mund herauslaufen kann.",
+            "Sofort den Notruf wählen, das Kind ruhig hinsetzen und abwarten, was die Leitstelle als Nächstes sagt."
+          ],
+          "richtig": 0,
+          "erklaerung": "Jetzt ist der Atemweg fast zu, das Kind braucht sofort deine Hilfe. Durch das Vorbeugen kann die Traube nach vorn herausfallen statt tiefer zu rutschen. Schlag mit dem Handballen und schau nach jedem Schlag, ob die Traube heraus ist. Hochhalten und Schütteln ist gefährlich und hilft nicht.",
+          "frage2": "Was tust du jetzt, und wie genau?",
+          "kernpunkte": [
+            { "id": "vorbeugen", "text": "Oberkörper weit nach vorn beugen" },
+            { "id": "rueckenschlaege", "text": "Bis zu 5 kräftige Schläge zwischen die Schulterblätter" },
+            { "id": "nachsehen", "text": "Nach jedem Schlag nachsehen, ob der Bissen heraus ist" }
+          ],
+          "fehler": [
+            { "id": "fuesse", "text": "An den Füßen hochhalten oder schütteln" },
+            { "id": "greifen", "text": "Blind in den Rachen greifen" },
+            { "id": "abwarten", "text": "Nur abwarten" }
+          ]
+        },
+        {
+          "situation": "Nach 5 Schlägen steckt die Traube immer noch fest. Eine zweite erwachsene Person steht neben dir.",
+          "frage": "Wie geht es weiter?",
+          "antworten": [
+            "Die zweite Person wählt den Notruf {notruf}. Du gibst bis zu 5 Oberbauchkompressionen mit weniger Kraft, dann wieder 5 Rückenschläge, im Wechsel.",
+            "Weiter nur auf den Rücken schlagen, aber fester. Oberbauchkompressionen sind für Kinder zu gefährlich, die macht nur der Rettungsdienst.",
+            "Das Kind ins Auto setzen und auf dem schnellsten Weg ins Krankenhaus fahren. Das geht schneller, als auf den Rettungsdienst zu warten.",
+            "Dem Kind ein Stück weiches Brot zu essen geben, damit es die Traube beim Schlucken mit hinunterdrückt."
+          ],
+          "richtig": 0,
+          "erklaerung": "Helfen die Rückenschläge nicht, kommen die Oberbauchkompressionen dazu: Faust zwischen Bauchnabel und unterem Ende des Brustbeins, mit der anderen Hand umfassen und ruckartig nach innen und oben ziehen. Spätestens jetzt muss der Notruf gewählt werden. Bis ein Auto am Krankenhaus ist, wäre es zu spät.",
+          "kernpunkte": [
+            { "id": "notruf", "text": "Notruf {notruf} wählen (lassen)" },
+            { "id": "oberbauch", "text": "Oberbauchkompressionen, bis zu 5, mit angepasster Kraft" },
+            { "id": "wechsel", "text": "Rückenschläge und Oberbauchkompressionen abwechseln" }
+          ],
+          "fehler": [
+            { "id": "fahren", "text": "Selbst ins Krankenhaus fahren" },
+            { "id": "essen", "text": "Etwas zu essen oder zu trinken geben" },
+            { "id": "aufhoeren", "text": "Aufhören und abwarten" }
+          ]
+        },
+        {
+          "situation": "Beim dritten Druck fliegt die Traube heraus. Das Kind hustet, weint und atmet wieder. Nach ein paar Minuten will es weiterspielen. Der Rettungsdienst ist unterwegs.",
+          "frage": "Was ist jetzt richtig?",
+          "antworten": [
+            "Den Rettungsdienst trotzdem kommen lassen, bis dahin beim Kind bleiben und es beruhigen.",
+            "Den Notruf wieder absagen. Das Kind atmet normal und spielt schon wieder, also ist die Gefahr vorbei.",
+            "Das Kind in Ruhe weiteressen lassen, damit es sich beruhigt, und es den Rest des Tages gut im Auge behalten."
+          ],
+          "richtig": 0,
+          "erklaerung": "Bei Oberbauchkompressionen können innere Organe verletzt werden, auch wenn man es nicht sofort merkt. Deshalb muss danach immer ein Arzt nachsehen. Erzähl dem Rettungsdienst von den Oberbauchkompressionen.",
+          "kernpunkte": [
+            { "id": "arzt", "text": "Ärztlich untersuchen lassen, weil Oberbauchkompressionen innere Organe verletzen können" },
+            { "id": "beruhigen", "text": "Beim Kind bleiben und es beruhigen" }
+          ],
+          "fehler": [
+            { "id": "absagen", "text": "Den Notruf absagen oder auf eine Untersuchung verzichten" }
+          ]
+        }
+      ],
+      "abschluss": "Im Krankenhaus finden die Ärzte keine Verletzung. Ihr habt alles richtig gemacht. Für kleine Kinder schneidet man Weintrauben und Kirschtomaten übrigens am besten in Viertel."
+    },
+    {
+      "id": "holzhacken", "titel": "Schnittverletzung beim Holzhacken", "icon": "axe",
+      "lektionen": ["blutung", "schock"],
+      "einleitung": "Hinter dem Haus spaltet eine Person Holz. Das Beil rutscht ab und trifft ihren linken Unterarm. Hellrotes Blut spritzt im Takt aus der Wunde.",
+      "schritte": [
+        {
+          "frage": "Was tust du zuerst?",
+          "antworten": [
+            "Die Person hinsetzen, sofort fest auf die Wunde drücken (mit Tuch oder bloßer Hand) und laut um Hilfe rufen.",
+            "Ins Haus laufen und den Verbandkasten holen, damit du die Wunde richtig versorgen kannst. Die Person drückt solange selbst.",
+            "Die Wunde erst unter fließendem Wasser auswaschen, damit kein Schmutz und keine Holzsplitter darin bleiben.",
+            "Den Arm sofort oberhalb der Wunde mit deinem Gürtel abbinden, damit kein Blut mehr nachfließt."
+          ],
+          "richtig": 0,
+          "erklaerung": "Spritzendes Blut kommt aus einer Schlagader. Hier zählt jede Sekunde, und Druck stoppt Blut. Sauber machen kann später der Arzt. Ein Gürtel ist zum Abbinden zu schmal und lässt sich mit der Hand nie fest genug zuziehen. Handschuhe wären gut, aber das Drücken geht vor. Notfalls eine Plastiktüte über die Hand ziehen.",
+          "kernpunkte": [
+            { "id": "hinsetzen", "text": "Person hinsetzen oder hinlegen" },
+            { "id": "druecken", "text": "Sofort fest auf die Wunde drücken" },
+            { "id": "hilfe", "text": "Laut um Hilfe rufen" }
+          ],
+          "fehler": [
+            { "id": "auswaschen", "text": "Die Wunde zuerst auswaschen" },
+            { "id": "guertel", "text": "Mit einem Gürtel abbinden" }
+          ]
+        },
+        {
+          "situation": "Auf dein Rufen kommt eine zweite Person aus dem Nachbarhaus.",
+          "frage": "Wie teilt ihr euch auf?",
+          "antworten": [
+            "Du drückst ohne Pause weiter. Die zweite Person wählt den Notruf {notruf} und holt den Verbandkasten.",
+            "Du lässt kurz los, damit ihr gemeinsam nachsehen könnt, wie tief die Wunde ist und ob ein Knochen verletzt ist.",
+            "Ihr bringt die Person zusammen zum Auto und fahrt zum Arzt im Ort. Das geht schneller, als auf den Rettungsdienst zu warten."
+          ],
+          "richtig": 0,
+          "erklaerung": "Jedes Loslassen kostet Blut und reißt das Gerinnsel wieder auf. Bei einer so starken Blutung muss der Rettungsdienst kommen.",
+          "kernpunkte": [
+            { "id": "weiterdruecken", "text": "Ohne Unterbrechung weiter drücken" },
+            { "id": "notruf", "text": "Notruf {notruf} wählen lassen" },
+            { "id": "verbandkasten", "text": "Verbandkasten holen lassen" }
+          ],
+          "fehler": [
+            { "id": "loslassen", "text": "Den Druck lösen, um nach der Wunde zu sehen" },
+            { "id": "fahren", "text": "Die Person selbst zum Arzt fahren" }
+          ]
+        },
+        {
+          "situation": "Der Verbandkasten ist da.",
+          "frage": "Wie versorgst du die Wunde?",
+          "antworten": [
+            "Kompresse auf die Wunde, ein Druckpolster (z. B. ein ungeöffnetes Verbandpäckchen) darauf und fest umwickeln. Danach prüfen, ob die Finger warm bleiben.",
+            "Die Wunde gründlich mit Desinfektionsmittel aus dem Verbandkasten reinigen, damit sie sich nicht entzündet, und dann ein großes Pflaster aufkleben.",
+            "Eine Binde locker in mehreren Lagen um den Arm wickeln, damit es nicht noch mehr wehtut und die Finger gut durchblutet bleiben."
+          ],
+          "richtig": 0,
+          "erklaerung": "Zuerst Handschuhe anziehen. Das Druckpolster ersetzt deine Hand. Der Verband muss so fest sitzen, dass die Blutung steht. Werden die Finger blau, kalt oder taub, ist er zu fest.",
+          "frage2": "Wie legst du den Verband an?",
+          "kernpunkte": [
+            { "id": "kompresse", "text": "Kompresse auf die Wunde" },
+            { "id": "druckpolster", "text": "Druckpolster darauf und fest umwickeln (Druckverband)" },
+            { "id": "finger", "text": "Danach die Finger prüfen (warm, rosig, nicht taub)" }
+          ],
+          "fehler": [
+            { "id": "reinigen", "text": "Die Wunde zuerst reinigen oder desinfizieren" },
+            { "id": "locker", "text": "Nur locker verbinden oder ein Pflaster aufkleben" }
+          ]
+        },
+        {
+          "situation": "Nach einer Minute ist der Verband rot durchgeblutet, Blut tropft auf den Boden.",
+          "frage": "Was tust du?",
+          "antworten": [
+            "Ein zweites Druckpolster darüberlegen und fest umwickeln. Den ersten Verband drauflassen.",
+            "Den durchgebluteten Verband abnehmen und einen neuen, fester gewickelten anlegen, denn der erste sitzt offenbar falsch.",
+            "Den Verband etwas lockern. Wenn er durchblutet, drückt er vermutlich an der falschen Stelle."
+          ],
+          "richtig": 0,
+          "erklaerung": "Beim Abnehmen reißt das gerade gerinnende Blut wieder auf. Ein zweites Polster darüber erhöht den Druck.",
+          "kernpunkte": [
+            { "id": "zweites", "text": "Zweites Druckpolster darüber und fest wickeln" },
+            { "id": "drauflassen", "text": "Den ersten Verband drauflassen" }
+          ],
+          "fehler": [
+            { "id": "abnehmen", "text": "Den ersten Verband abnehmen" },
+            { "id": "lockern", "text": "Den Verband lockern" }
+          ]
+        },
+        {
+          "situation": "Auch durch den zweiten Verband spritzt das Blut weiter, obwohl du zusätzlich mit der Hand drückst. Die Person wird immer blasser.",
+          "frage": "Was jetzt?",
+          "antworten": [
+            "Abbinden: breites Tuch eine Handbreit oberhalb der Wunde, mit einem Knebel festdrehen, bis die Blutung steht, Knebel sichern, Uhrzeit merken.",
+            "Einen schmalen Gürtel oberhalb der Wunde umlegen und mit aller Kraft von Hand zuziehen. Das geht schneller als ein Tuch mit Knebel.",
+            "Nichts weiter tun und abwarten. Die meisten Blutungen hören nach einigen Minuten von selbst auf, wenn das Blut gerinnt."
+          ],
+          "richtig": 0,
+          "erklaerung": "Abbinden ist nur dann richtig, wenn Drücken eine lebensbedrohliche Blutung an Arm oder Bein nicht stoppt. Das Tuch (z. B. ein Dreiecktuch) wird verknotet, ein stabiler Gegenstand als Knebel darauf festgeknotet und gedreht. Ohne Knebel wird es nie fest genug. Die Uhrzeit braucht der Rettungsdienst, und das Tuch wird nicht wieder gelockert.",
+          "frage2": "Was tust du jetzt, und wie genau?",
+          "kernpunkte": [
+            { "id": "tuch", "text": "Breites Tuch eine Handbreit oberhalb der Wunde" },
+            { "id": "knebel", "text": "Mit einem Knebel festdrehen, bis die Blutung steht, und den Knebel sichern" },
+            { "id": "uhrzeit", "text": "Uhrzeit merken und nicht wieder lockern" }
+          ],
+          "fehler": [
+            { "id": "schmal", "text": "Einen schmalen Gürtel, eine Schnur oder ein Kabel verwenden" },
+            { "id": "lockern", "text": "Die Abbindung wieder lockern" }
+          ]
+        },
+        {
+          "situation": "Die Blutung steht. Die Person ist blass, hat kalten Schweiß auf der Stirn, zittert und ist unruhig. Sie sagt, sie habe großen Durst, und will aufstehen.",
+          "frage": "Was tust du?",
+          "antworten": [
+            "Zeichen eines Schocks: flach hinlegen, Beine leicht hoch, zudecken, nichts zu trinken geben und bei ihr bleiben.",
+            "Ihr ein großes Glas Wasser geben. Sie hat mit dem Blut viel Flüssigkeit verloren, die der Körper jetzt wieder braucht.",
+            "Sie aufstehen und ein paar Schritte gehen lassen, damit der Kreislauf in Schwung kommt und ihr nicht schwindelig wird.",
+            "Ihr einen Schnaps gegen das Zittern geben und sie in eine warme Decke hüllen, damit sie sich beruhigt."
+          ],
+          "richtig": 0,
+          "erklaerung": "Nach großem Blutverlust versagt der Kreislauf. Die Beine hochzulegen schickt Blut zu Herz und Gehirn. Die Decke gehört auch unter den Körper, gegen die Bodenkälte. Trinken ist trotz Durst falsch: Die Person kann erbrechen und muss vielleicht operiert werden.",
+          "kernpunkte": [
+            { "id": "schock", "text": "Schock erkennen" },
+            { "id": "lagern", "text": "Flach lagern, Beine leicht hoch" },
+            { "id": "zudecken", "text": "Zudecken, auch von unten" },
+            { "id": "nichttrinken", "text": "Nichts zu trinken geben" },
+            { "id": "beruhigen", "text": "Beruhigen und dabeibleiben" }
+          ],
+          "fehler": [
+            { "id": "trinken", "text": "Etwas zu trinken oder Alkohol geben" },
+            { "id": "aufstehen", "text": "Aufstehen oder herumgehen lassen" }
+          ]
+        }
+      ],
+      "abschluss": "Nach 12 Minuten übernimmt der Rettungsdienst. Du sagst, um wie viel Uhr du abgebunden hast. Im Krankenhaus wird die Schlagader genäht. Ohne euch wäre die Person verblutet."
+    },
+    {
+      "id": "sprache", "titel": "Eine ältere Person spricht plötzlich undeutlich", "icon": "speech",
+      "lektionen": ["herz", "ansprechbar"],
+      "einleitung": "Im Gemeinschaftsraum eures Hauses trinkst du mit einer älteren Frau aus der Nachbarschaft Kaffee. Mitten im Satz klingt ihre Sprache verwaschen, und Kaffee läuft ihr aus dem Mundwinkel.",
+      "schritte": [
+        {
+          "frage": "Woran denkst du, und was tust du?",
+          "antworten": [
+            "An einen Schlaganfall. Du machst den FAST-Test: lächeln, Arme vorstrecken, einen Satz nachsprechen lassen.",
+            "Sie ist wohl müde oder hat schlecht geschlafen. Du schlägst vor, dass sie sich zu Hause eine Weile hinlegt.",
+            "Du gibst ihr ein Glas Wasser und klopfst ihr auf den Rücken, damit sie sich nicht noch einmal verschluckt.",
+            "Vielleicht ist ihr Blutzucker zu niedrig. Du fragst, ob sie zu wenig gegessen hat, und gibst ihr etwas Süßes."
+          ],
+          "richtig": 0,
+          "erklaerung": "Plötzlich verwaschene Sprache ist ein typisches Zeichen eines Schlaganfalls. Der FAST-Test geht schnell, du kannst ihn auch während des Notrufs machen. Trinken kann gefährlich sein, weil das Schlucken gestört sein kann.",
+          "kernpunkte": [
+            { "id": "schlaganfall", "text": "An einen Schlaganfall denken" },
+            { "id": "fast", "text": "FAST-Test machen (Gesicht, Arme, Sprache)" }
+          ],
+          "fehler": [
+            { "id": "abtun", "text": "Als Müdigkeit oder Alter abtun und abwarten" },
+            { "id": "trinken", "text": "Etwas zu essen oder zu trinken geben" }
+          ]
+        },
+        {
+          "situation": "Beim Lächeln hängt der linke Mundwinkel. Der linke Arm sinkt langsam ab. Sie winkt ab: „Ist nicht so schlimm, ich will kein Aufhebens. Morgen gehe ich zum Hausarzt.“",
+          "frage": "Was tust du?",
+          "antworten": [
+            "Sofort den Notruf {notruf} wählen, „Verdacht auf Schlaganfall“ sagen und die Uhrzeit merken.",
+            "Ihren Wunsch respektieren. Sie ist erwachsen und will kein Aufhebens, also gehst du morgen früh mit ihr zum Hausarzt.",
+            "Sie selbst ins Auto setzen und zum nächsten Krankenhaus fahren. Das geht schneller, als auf den Rettungsdienst zu warten.",
+            "Eine halbe Stunde abwarten und sie dabei beobachten. Wird es bis dahin nicht besser, wählst du den Notruf."
+          ],
+          "richtig": 0,
+          "erklaerung": "Schon ein einziges Zeichen reicht für den Notruf. Der Rettungsdienst bringt sie in ein Krankenhaus mit Schlaganfall-Station, das nächste Krankenhaus hat vielleicht keine. Manche Behandlungen sind nur in den ersten Stunden möglich, deshalb ist die Uhrzeit so wichtig.",
+          "kernpunkte": [
+            { "id": "notruf", "text": "Sofort Notruf {notruf} mit „Verdacht auf Schlaganfall“" },
+            { "id": "uhrzeit", "text": "Uhrzeit merken, wann die Zeichen begonnen haben" }
+          ],
+          "fehler": [
+            { "id": "abwarten", "text": "Abwarten oder auf den Hausarzt verschieben" },
+            { "id": "fahren", "text": "Selbst ins Krankenhaus fahren" }
+          ]
+        },
+        {
+          "situation": "Der Rettungsdienst ist unterwegs. Sie sitzt auf einem Stuhl und hat einen trockenen Mund. In ihrer Handtasche sind Aspirin-Tabletten.",
+          "frage": "Was tust du bis dahin?",
+          "antworten": [
+            "Den Oberkörper erhöht lagern, nichts essen oder trinken lassen, beruhigen und dabeibleiben.",
+            "Ihr eine Aspirin aus ihrer Handtasche mit etwas Wasser geben. Das macht das Blut dünner und kann das verstopfte Gefäß wieder öffnen.",
+            "Mit ihr langsam ein paar Schritte durch den Raum gehen, um zu sehen, ob Arm und Bein wieder richtig funktionieren."
+          ],
+          "richtig": 0,
+          "erklaerung": "Ob ein Gefäß verstopft oder geplatzt ist, sieht man erst im Krankenhaus. Bei einer Blutung im Gehirn kann Aspirin schaden. Außerdem kann sie sich verschlucken.",
+          "kernpunkte": [
+            { "id": "lagern", "text": "Oberkörper leicht erhöht lagern" },
+            { "id": "nichttrinken", "text": "Nichts essen oder trinken lassen" },
+            { "id": "beruhigen", "text": "Beruhigen und dabeibleiben" }
+          ],
+          "fehler": [
+            { "id": "aspirin", "text": "Medikamente wie Aspirin geben" },
+            { "id": "trinken", "text": "Etwas zu trinken geben" },
+            { "id": "gehen", "text": "Aufstehen oder herumgehen lassen" }
+          ]
+        },
+        {
+          "situation": "Plötzlich erbricht sie sich. Danach wird sie benommen und reagiert kaum noch auf dein Ansprechen. Sie atmet ruhig und gleichmäßig.",
+          "frage": "Was jetzt?",
+          "antworten": [
+            "Sie hinlegen, die Atmung prüfen und sie in die stabile Seitenlage bringen. Dann die Atmung immer wieder kontrollieren.",
+            "Sie aufrecht auf dem Stuhl sitzen lassen und ihren Kopf stützen, damit sie besser Luft bekommt und nicht umkippt.",
+            "Ihr ein Glas Wasser geben, damit sie den Mund ausspülen kann, und ihr dann helfen, sich wieder bequem hinzusetzen."
+          ],
+          "richtig": 0,
+          "erklaerung": "Wer kaum reagiert, kann an Erbrochenem ersticken. In der stabilen Seitenlage fließt es aus dem Mund ab. Hört sie auf, normal zu atmen: Notruf noch einmal melden und mit der Wiederbelebung beginnen.",
+          "frage2": "Was tust du jetzt?",
+          "kernpunkte": [
+            { "id": "atmung", "text": "Atmung prüfen" },
+            { "id": "seitenlage", "text": "Stabile Seitenlage, damit Erbrochenes abfließen kann" },
+            { "id": "ueberwachen", "text": "Atmung weiter überwachen (atmet sie nicht mehr normal: Wiederbelebung)" }
+          ],
+          "fehler": [
+            { "id": "sitzen", "text": "Sie sitzen lassen oder aufsetzen" },
+            { "id": "trinken", "text": "Etwas zu trinken geben" }
+          ]
+        }
+      ],
+      "abschluss": "Wenige Minuten später übernimmt der Rettungsdienst. Weil du die Uhrzeit sagen konntest, wissen die Ärzte, welche Behandlung noch möglich ist."
+    },
+    {
+      "id": "topf", "titel": "Ein Topf mit kochendem Wasser kippt", "icon": "soup",
+      "lektionen": ["verbrennung"],
+      "einleitung": "Seit dem Morgen ist der Strom weg. Du kochst auf einem Campingkocher in der Küche Nudelwasser. Ein etwa fünfjähriges Kind zieht am Topfstiel, der Topf kippt, und kochendes Wasser läuft über seinen Unterarm, die Hand und den Ärmel des Pullovers.",
+      "schritte": [
+        {
+          "frage": "Was tust du zuerst?",
+          "antworten": [
+            "Kocher aus, dann sofort den nassen Pullover ausziehen. Wo er an der Haut klebt, drumherum abschneiden.",
+            "Den Pullover anlassen, damit die Haut darunter geschützt bleibt, und die geröteten Stellen mit Butter einreiben.",
+            "Den Pullover schnell mit einem Ruck ausziehen, auch dort, wo er an der Haut klebt, damit die Hitze sofort weg ist.",
+            "Erst einmal Eiswürfel aus der Kühlbox holen und auf den Arm legen, um die Hitze möglichst schnell herauszuziehen."
+          ],
+          "richtig": 0,
+          "erklaerung": "Nasser, heißer Stoff verbrüht die Haut weiter, er muss sofort weg. Klebender Stoff wird nicht abgerissen, sonst geht die verletzte Haut mit ab. Butter, Mehl oder Zahnpasta halten die Hitze in der Haut.",
+          "kernpunkte": [
+            { "id": "ausziehen", "text": "Heiße, nasse Kleidung sofort ausziehen" },
+            { "id": "kleben", "text": "Klebende Stellen nicht abreißen, sondern drumherum abschneiden" }
+          ],
+          "fehler": [
+            { "id": "hausmittel", "text": "Hausmittel wie Butter, Öl, Mehl oder Zahnpasta" },
+            { "id": "abreissen", "text": "Klebende Kleidung abreißen" }
+          ]
+        },
+        {
+          "situation": "Unterarm und Handrücken sind stark gerötet, etwa so groß wie zwei Handflächen des Kindes. Das Kind schreit vor Schmerz.",
+          "frage": "Wie kühlst du?",
+          "antworten": [
+            "Kurz mit handwarmem Wasser kühlen, höchstens etwa 5 Minuten oder bis der Schmerz nachlässt.",
+            "Eiswürfel oder ein Kühlpack direkt auf die Haut legen, damit die Hitze schnell aus der Haut gezogen wird.",
+            "Den Arm 20 Minuten unter eiskaltes Wasser halten, damit die Verbrühung möglichst wenig Schaden anrichtet.",
+            "Gar nicht kühlen, sondern den Arm sofort fest mit einer Binde verbinden, damit kein Schmutz an die Haut kommt."
+          ],
+          "richtig": 0,
+          "erklaerung": "Handwarmes Wasser lindert den Schmerz, ohne das Kind auszukühlen. Kinder kühlen schnell aus, deshalb nicht zu kalt und nicht zu lange. Eis schädigt die Haut zusätzlich.",
+          "kernpunkte": [
+            { "id": "kurz", "text": "Kurz kühlen, höchstens etwa 5 Minuten" },
+            { "id": "handwarm", "text": "Handwarmes Wasser, kein Eis und nichts Eiskaltes" }
+          ],
+          "fehler": [
+            { "id": "eis", "text": "Eis oder Kühlpack direkt auf die Haut" },
+            { "id": "lange", "text": "Lange oder eiskalt kühlen" }
+          ]
+        },
+        {
+          "situation": "Auf der Hand bilden sich Blasen. Das Handynetz funktioniert noch.",
+          "frage": "Was tust du jetzt?",
+          "antworten": [
+            "Notruf {notruf} wählen, die Blasen nicht öffnen und die Wunde locker und keimfrei abdecken.",
+            "Die Blasen vorsichtig mit einer sauberen Nadel aufstechen, damit die Flüssigkeit abläuft, und dann Brandsalbe auftragen.",
+            "Ein großes Pflaster direkt auf die Blasen kleben, damit sie nicht aufplatzen, und das Kind dann ablenken.",
+            "Abwarten und beobachten. Verbrühungen bei Kindern heilen schnell, und der Notruf ist bei Stromausfall sowieso überlastet."
+          ],
+          "richtig": 0,
+          "erklaerung": "Verbrühungen bei Kindern und Verbrennungen an den Händen gehören immer in ärztliche Behandlung. Die Blasen schützen die Wunde vor Keimen. Zum Abdecken eignet sich am besten das Brandwunden-Verbandtuch aus dem Verbandkasten. Salben müssen im Krankenhaus mühsam wieder entfernt werden.",
+          "kernpunkte": [
+            { "id": "notruf", "text": "Notruf {notruf}, weil ein Kind und die Hand betroffen sind" },
+            { "id": "blasen", "text": "Blasen nicht öffnen" },
+            { "id": "abdecken", "text": "Locker und keimfrei abdecken" }
+          ],
+          "fehler": [
+            { "id": "oeffnen", "text": "Blasen öffnen" },
+            { "id": "salbe", "text": "Salbe, Puder oder Hausmittel auftragen" },
+            { "id": "pflaster", "text": "Pflaster oder Mull direkt auf die Wunde" }
+          ]
+        },
+        {
+          "situation": "Ihr wartet auf den Rettungsdienst. Die Wohnung ist ohne Heizung kühl geworden. Das Kind zittert und will, dass du den Arm weiter unter Wasser hältst, weil es noch wehtut.",
+          "frage": "Was tust du?",
+          "antworten": [
+            "Nicht weiter kühlen, sondern das Kind in eine Decke einpacken, trösten, bei ihm bleiben und auf Schockzeichen achten.",
+            "Den Arm weiter unter das Wasser halten, solange es wehtut. Das Kind spürt selbst am besten, was ihm guttut.",
+            "Das Kind zum Ablenken mit einem Spiel allein ins Wohnzimmer setzen, während du die Küche aufräumst und das Wasser aufwischst."
+          ],
+          "richtig": 0,
+          "erklaerung": "Ein Kind kühlt schnell aus, und Auskühlen ist gefährlicher als der Schmerz. Bei Verbrühungen verliert der Körper Flüssigkeit, deshalb auf Schockzeichen achten.",
+          "kernpunkte": [
+            { "id": "warm", "text": "Nicht weiter kühlen, sondern warm halten und zudecken" },
+            { "id": "troesten", "text": "Trösten und dabeibleiben" },
+            { "id": "schock", "text": "Auf Zeichen eines Schocks achten" }
+          ],
+          "fehler": [
+            { "id": "weiterkuehlen", "text": "Lange weiter kühlen" },
+            { "id": "allein", "text": "Das Kind allein lassen" }
+          ]
+        }
+      ],
+      "abschluss": "Im Krankenhaus wird die Hand versorgt, sie heilt ohne Narben. Beim Kochen ohne Strom gilt: Topfstiele nach hinten drehen, der Kocher steht fest, und Kinder bleiben auf Abstand."
+    },
+    {
+      "id": "stromausfall", "titel": "Stromausfall: Jemand in der Nachbarschaft friert und ist verwirrt", "icon": "zap-off",
+      "lektionen": ["temperatur", "keinehilfe"],
+      "einleitung": "Es ist Januar, seit zwei Tagen ist der Strom weg, das Handynetz seit gestern auch. Du schaust bei einem älteren Mann aus der Nachbarschaft vorbei, der allein lebt. Er öffnet erst nach langem Klopfen.",
+      "schritte": [
+        {
+          "situation": "In der Wohnung ist es kalt, das Thermometer zeigt 11 °C. Es läuft kein Ofen und kein Grill, es riecht nach nichts Ungewöhnlichem. Der Mann trägt nur eine dünne Strickjacke, spricht langsam und weiß nicht, welcher Tag ist. Seine Hände sind eiskalt. Er zittert nicht, wirkt aber sehr schläfrig.",
+          "frage": "Wie schätzt du die Lage ein?",
+          "antworten": [
+            "Er ist stark unterkühlt. Dass er nicht mehr zittert und verwirrt ist, ist ein gefährliches Zeichen.",
+            "Er ist müde und schon älter. Langsames Sprechen und etwas Vergesslichkeit sind in dem Alter normal.",
+            "Er zittert nicht, also friert er offenbar nicht so sehr. Die Kälte macht ihm weniger aus als gedacht."
+          ],
+          "richtig": 0,
+          "erklaerung": "Unterkühlung kommt nicht nur im Schnee vor, sondern auch in einer kalten Wohnung, gerade bei älteren Menschen. Hört das Zittern auf, hat der Körper keine Kraft mehr, sich selbst zu wärmen. Gut, dass du auf Gefahren geachtet hast: Ein Grill oder Ofen im Raum hätte auch an eine Kohlenmonoxidvergiftung denken lassen.",
+          "kernpunkte": [
+            { "id": "unterkuehlung", "text": "Unterkühlung erkennen" },
+            { "id": "alarm", "text": "Aufgehörtes Zittern, Verwirrtheit und Schläfrigkeit als Alarmzeichen deuten" }
+          ],
+          "fehler": [
+            { "id": "abtun", "text": "Als Müdigkeit oder Alter abtun" }
+          ]
+        },
+        {
+          "frage": "Was tust du?",
+          "antworten": [
+            "Behutsam hinlegen, kaum bewegen, in Rettungsdecke und Decken einpacken, auch den Kopf, und von unten gegen Kälte schützen.",
+            "Seine Arme und Beine kräftig abreiben und massieren, damit das Blut wieder fließt und sie schnell warm werden.",
+            "Ihn in der Wohnung herumgehen lassen und ihn dabei stützen, damit ihm durch die Bewegung von innen warm wird.",
+            "Ihm einen Schluck Schnaps geben, der wärmt von innen, und ihm dann eine zweite Jacke anziehen."
+          ],
+          "richtig": 0,
+          "erklaerung": "Das Blut in Armen und Beinen ist sehr kalt. Abreiben oder Bewegung pumpt es plötzlich zum Herzen, das kann das Herz aus dem Takt bringen. Deshalb vorsichtig und langsam wärmen. Die silberne Seite der Rettungsdecke gehört zum Körper. Alkohol entzieht dem Körper zusätzlich Wärme.",
+          "frage2": "Was tust du, und worauf achtest du dabei?",
+          "kernpunkte": [
+            { "id": "flach", "text": "Flach lagern und kaum bewegen" },
+            { "id": "einpacken", "text": "Rundum einpacken (Rettungsdecke, Decken, Kopf bedeckt)" },
+            { "id": "unten", "text": "Auch von unten gegen Kälte schützen" }
+          ],
+          "fehler": [
+            { "id": "abreiben", "text": "Abreiben oder massieren" },
+            { "id": "bewegen", "text": "Herumgehen oder sich anstrengen lassen" },
+            { "id": "alkohol", "text": "Alkohol geben" }
+          ]
+        },
+        {
+          "situation": "Du hast eine Thermoskanne mit heißem, gezuckertem Tee dabei. Der Mann ist eingepackt, aber immer noch schläfrig und antwortet nur langsam.",
+          "frage": "Gibst du ihm den Tee?",
+          "antworten": [
+            "Nein, noch nicht. Getränke nur bei vollem Bewusstsein, sonst kann er sich verschlucken.",
+            "Ja, so viel er trinken mag. Heißer, gezuckerter Tee wärmt von innen und gibt ihm neue Kraft.",
+            "Ja, du flößt ihm den Tee vorsichtig in kleinen Schlucken ein, auch wenn er dabei die Augen zumacht."
+          ],
+          "richtig": 0,
+          "erklaerung": "Warme, gezuckerte Getränke sind gut, aber nur, wenn die Person ganz wach ist und selbst sicher schlucken kann.",
+          "frage2": "Was machst du mit dem Tee, und warum?",
+          "kernpunkte": [
+            { "id": "keintee", "text": "Keinen Tee, solange er nicht voll bei Bewusstsein ist" },
+            { "id": "grund", "text": "Grund: Er kann sich verschlucken" }
+          ],
+          "fehler": [
+            { "id": "einfloessen", "text": "Ihm trotz Schläfrigkeit etwas zu trinken geben oder einflößen" }
+          ]
+        },
+        {
+          "situation": "Der Notruf kommt nicht durch, auch nicht am Fenster. Im Treppenhaus triffst du eine Nachbarin. Die Gemeinde hat im Feuerwehrhaus eine Anlaufstelle eingerichtet, etwa 15 Minuten zu Fuß.",
+          "frage": "Wie holt ihr Hilfe?",
+          "antworten": [
+            "Du bleibst bei ihm. Die Nachbarin geht mit einem Zettel zum Feuerwehrhaus: Adresse, was passiert ist, wie es ihm geht.",
+            "Du gehst selbst zum Feuerwehrhaus, weil du am besten erklären kannst, was los ist. Der Mann bleibt so lange eingepackt allein.",
+            "Ohne Notruf kann man nichts tun. Ihr bleibt beide bei ihm und wartet, bis das Handynetz wieder geht."
+          ],
+          "richtig": 0,
+          "erklaerung": "Der Mann braucht jemanden, der bei ihm bleibt und seine Atmung im Blick hat. Auf dem Zettel steht alles, was die Helfer brauchen, auch wenn die Botin in der Aufregung etwas vergisst.",
+          "kernpunkte": [
+            { "id": "bleiben", "text": "Beim Unterkühlten bleiben" },
+            { "id": "bote", "text": "Einen Boten zur Anlaufstelle oder Feuerwehr schicken" },
+            { "id": "zettel", "text": "Dem Boten einen Zettel mitgeben (Ort, was passiert ist, Zustand)" }
+          ],
+          "fehler": [
+            { "id": "allein", "text": "Den Unterkühlten allein lassen" },
+            { "id": "aufgeben", "text": "Aufgeben und auf das Netz warten" }
+          ]
+        },
+        {
+          "situation": "Du schreibst die Uhrzeit auf und prüfst alle paar Minuten, wie es ihm geht. Nach einer halben Stunde reagiert er nicht mehr, wenn du ihn ansprichst und an den Schultern rüttelst.",
+          "frage": "Was tust du?",
+          "antworten": [
+            "Atmung prüfen, wegen der Kälte bis zu einer Minute. Atmet er normal: stabile Seitenlage, sonst Wiederbelebung.",
+            "Ihn aufsetzen und ihm vorsichtig etwas warmen Tee einflößen, damit er wieder zu sich kommt und Wärme bekommt.",
+            "Ihn kräftig schütteln und auf die Wangen klopfen, bis er aufwacht. Er darf jetzt auf keinen Fall einschlafen."
+          ],
+          "richtig": 0,
+          "erklaerung": "Bei starker Unterkühlung kann die Atmung sehr langsam und flach sein. Deshalb prüft man sie hier länger als die üblichen 10 Sekunden. In der Seitenlage bleibt er eingepackt. Was du sonst brauchst, kennst du aus Lektion 2 und 3.",
+          "frage2": "Was tust du jetzt?",
+          "kernpunkte": [
+            { "id": "atmung", "text": "Atmung prüfen" },
+            { "id": "seitenlage", "text": "Atmet er normal: stabile Seitenlage und eingepackt lassen" },
+            { "id": "wiederbeleben", "text": "Atmet er nicht normal: Wiederbelebung" }
+          ],
+          "fehler": [
+            { "id": "aufsetzen", "text": "Aufsetzen oder etwas zu trinken geben" },
+            { "id": "schlagen", "text": "Heftig schütteln oder schlagen" }
+          ]
+        }
+      ],
+      "abschluss": "Nach einer Stunde kommt die Botin mit der Feuerwehr zurück. Sie bringt den Mann in eine beheizte Notunterkunft mit Arzt. Deine Notizen helfen dem Arzt zu verstehen, wie es ihm in der Zwischenzeit ging."
+    }
+  ]
+}

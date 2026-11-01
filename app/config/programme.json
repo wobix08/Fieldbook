@@ -1,0 +1,38 @@
+{
+  "_hinweis": "Hilfsprogramme, die das Setup herunterlädt. Versionen bewusst fest eingetragen, damit alles zusammenpasst.",
+  "kiwix": {
+    "titel": "Kiwix (Bibliothek)",
+    "url": "https://download.kiwix.org/release/kiwix-tools/kiwix-tools_win-x86_64-3.8.1.zip",
+    "exe": "kiwix-serve.exe"
+  },
+  "llama-cpu": {
+    "titel": "llama.cpp (KI, Prozessor)",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12020/llama-b12020-bin-win-cpu-x64.zip",
+    "exe": "llama-server.exe"
+  },
+  "llama-vulkan": {
+    "titel": "llama.cpp (KI, Grafikkarte)",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12020/llama-b12020-bin-win-vulkan-x64.zip",
+    "exe": "llama-server.exe"
+  },
+  "pmtiles": {
+    "titel": "PMTiles (Karten-Werkzeug)",
+    "url": "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Windows_x86_64.zip",
+    "exe": "pmtiles.exe"
+  },
+  "java": {
+    "titel": "Java-Laufzeit (für die Routenplanung)",
+    "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jre_x64_windows_hotspot_21.0.13_9.zip",
+    "exe": "java.exe"
+  },
+  "brouter": {
+    "titel": "BRouter (Routenplanung)",
+    "url": "https://github.com/abrensch/brouter/releases/download/v1.7.10/brouter-1.7.10.zip",
+    "exe": "brouter-1.7.10-all.jar"
+  },
+  "karten-assets": {
+    "titel": "Kartenschriften und Symbole",
+    "url": "https://github.com/protomaps/basemaps-assets/archive/refs/heads/main.zip",
+    "exe": "fonts"
+  }
+}
