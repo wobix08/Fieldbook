@@ -17,7 +17,7 @@ Copy-Item (Join-Path $root 'THIRD-PARTY.md') (Join-Path $ordner 'THIRD-PARTY.txt
 
 # Leere Ordner anlegen, damit klar ist, wohin die Daten kommen
 New-Item -ItemType Directory -Force (Join-Path $ordner 'daten') | Out-Null
-Set-Content -Path (Join-Path $ordner 'daten\LIESMICH.txt') -Encoding UTF8 -Value 'Hier speichert Fieldbook Bibliotheken, KI-Modelle und Karten. Bitte nicht von Hand ändern.'
+Set-Content -Path (Join-Path $ordner 'daten\README.txt') -Encoding UTF8 -Value 'Hier speichert Fieldbook Bibliotheken, KI-Modelle und Karten. Bitte nicht von Hand ändern.'
 
 $zip = Join-Path $dist "Fieldbook-$Version.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
