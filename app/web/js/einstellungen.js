@@ -35,14 +35,23 @@ const Einstellungen = (() => {
           el("small", {}, pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : "") + (upd ? " · " + upd + " neue Version(en) verfügbar" : ""))),
         el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten"))));
 
-    // Fieldbook-Version (Programm-Update)
-    const pv = el("div", { class: "karte-box", style: "margin-bottom:16px" });
-    c.prepend(pv);
+    // Ganz oben: Fieldbook und Inhalte aktualisieren, darunter die automatische Aktualisierung
+    const pv = el("div"), aktInfo = el("div");
+    const oben = el("div", { class: "karte-box", style: "margin-bottom:16px" },
+      el("h2", { style: "margin-top:0" }, "Aktualisieren"), pv, aktInfo,
+      el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, "Beim Start nach neuer Version fragen"),
+          el("small", {}, "Eine kurze Anfrage bei GitHub, heruntergeladen wird nichts. Ausgeschaltet fragt Fieldbook nur, wenn du auf „Nach neuer Version suchen“ klickst oder die automatische Aktualisierung es tut.")),
+        el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.updateBeimStart !== false, onchange: async (e) => {
+          s.updateBeimStart = e.target.checked;
+          OW.status = await api("einstellungen", { updateBeimStart: e.target.checked });
+        } }), "an")));
+    c.prepend(oben);
     const zeigeVersion = (u) => {
       pv.innerHTML = "";
-      pv.append(el("h2", { style: "margin-top:0" }, "Fieldbook-Version"),
+      pv.append(
         el("div", { class: "einst-zeile", style: "border:0;padding-top:0" },
-          el("div", {}, el("b", {}, "Installiert: " + s.version),
+          el("div", {}, el("b", {}, "Fieldbook-Version " + s.version),
             el("small", {}, !u.eingerichtet ? "Programm-Updates sind noch nicht eingerichtet (kein GitHub-Repository in app\\config\\fieldbook.json)."
               : u.entwicklung ? "Entwicklungsordner: Hier wird nicht automatisch aktualisiert."
               : u.fehler ? "Suche fehlgeschlagen (Internet?)."
@@ -52,14 +61,7 @@ const Einstellungen = (() => {
           el("button", { class: "knopf knopf-klein", onclick: async (e) => {
             e.target.disabled = true; e.target.textContent = "Suche …";
             zeigeVersion(await api("programmupdate").catch(err => ({ fehler: err.message, eingerichtet: true })));
-          } }, "Nach neuer Version suchen")),
-        el("div", { class: "einst-zeile" },
-          el("div", {}, el("b", {}, "Beim Start nach neuer Version fragen"),
-            el("small", {}, "Eine kurze Anfrage bei GitHub, heruntergeladen wird nichts. Ausgeschaltet fragt Fieldbook nur, wenn du auf „Nach neuer Version suchen“ klickst oder die automatische Aktualisierung es tut.")),
-          el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.updateBeimStart !== false, onchange: async (e) => {
-            s.updateBeimStart = e.target.checked;
-            OW.status = await api("einstellungen", { updateBeimStart: e.target.checked });
-          } }), "an")));
+          } }, "Nach neuer Version suchen")));
       if (u.verfuegbar && u.notizen) pv.append(el("details", {}, el("summary", {}, "Was ist neu in " + u.neu + "?"), el("pre", { style: "white-space:pre-wrap;font-family:inherit" }, u.notizen)));
       if ((u.verfuegbar || u.bereit) && !u.entwicklung) {
         pv.append(el("div", { class: "knopfreihe" }, el("button", { class: "knopf knopf-haupt", onclick: async () => {
@@ -78,22 +80,24 @@ const Einstellungen = (() => {
     zeigeVersion({ eingerichtet: true, neu: s.programmNeu, verfuegbar: !!s.programmNeu, bereit: s.programmBereit });
     if (s.updateBeimStart !== false) api("programmupdate").then(zeigeVersion).catch(() => { });
 
-    // Automatische Aktualisierung
+    // Inhalte aktualisieren (oben) und automatische Aktualisierung (direkt darunter)
     const akt = await api("aktualisierung");
-    c.append(aktualisierungBox(akt, true));
-    const aktInfo = el("div", { class: "karte-box", style: "margin-top:8px" });
     const zeigeAkt = (a) => {
       aktInfo.innerHTML = "";
-      aktInfo.append(el("p", { class: "hinweis klein", style: "margin-top:0" },
-        a.geprueft ? "Zuletzt geprüft: " + a.geprueft + " · " + (a.anzahl ? a.anzahl + " Aktualisierung(en), ca. " + groesse(a.bytes) + ": " + a.titel.join(", ") : "alles aktuell") : "Noch nicht geprüft."));
-      aktInfo.append(el("div", { class: "knopfreihe", style: "margin-top:0" },
-        el("button", { class: "knopf knopf-haupt", onclick: async (e) => {
+      aktInfo.append(el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, "Inhalte"),
+          el("small", {}, "Wissenspakete, Karten und Wegedaten · " +
+            (a.geprueft ? "zuletzt geprüft: " + a.geprueft + " · " + (a.anzahl ? a.anzahl + " Aktualisierung(en), ca. " + groesse(a.bytes) + ": " + a.titel.join(", ") : "alles aktuell") : "noch nicht geprüft"))),
+        el("button", { class: "knopf knopf-klein", onclick: async (e) => {
           const r = await jetztAktualisieren(e.currentTarget);
           if (r && location.hash.startsWith("#einstellungen")) zeigeAkt(r);
-        } }, "⟳ Jetzt aktualisieren")));
+        } }, "⟳ Inhalte aktualisieren")));
     };
     zeigeAkt(akt);
-    c.append(aktInfo);
+    const autoBox = aktualisierungBox(akt, true);
+    autoBox.style.marginTop = "0";
+    autoBox.style.marginBottom = "16px";
+    oben.after(autoBox);
 
     // Internetverbindung: Test und Proxy für Firmen- und Schulnetze
     const netz = el("div", { class: "karte-box", style: "margin-top:16px" }, el("h2", { style: "margin-top:0" }, "Internetverbindung"));

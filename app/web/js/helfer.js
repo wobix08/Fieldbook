@@ -191,14 +191,14 @@ function aktualisierungBox(akt, sofort) {
         wahl("akt-wann", "wann", "sofort", "Sofort, im Hintergrund", "Startet direkt mit niedrigster Priorität. Unterbrochene Downloads gehen beim nächsten Einschalten weiter."),
         wahl("akt-wann", "wann", "leerlauf", "Nur wenn der Computer nicht benutzt wird", "Lädt erst, wenn der Computer etwa 10 Minuten unbenutzt am Strom hängt, und pausiert sofort, sobald du ihn benutzt."));
     }
-    // Drosselung: auch für "Jetzt aktualisieren" in den Einstellungen
+    // Drosselung: auch für "Inhalte aktualisieren" in den Einstellungen
     if (akt.an || sofort) {
       const stufen = [0, 50, 20, 10, 5, 2];
       const sel = el("select", { style: "width:auto", onchange: (e) => setze({ mbit: +e.target.value }) },
         ...stufen.map(m => el("option", { value: m, selected: (akt.mbit || 0) === m }, m ? "höchstens " + m + " MBit/s" : "Unbegrenzt (volle Geschwindigkeit)")));
       box.append(el("h3", {}, "Download-Geschwindigkeit"),
         el("div", { class: "einst-zeile", style: "border:0;padding-top:0" },
-          el("div", {}, el("small", {}, "Begrenzt Aktualisierungen, damit Internet für andere im Haushalt flüssig bleibt (z. B. Videos, Telefonate). Gilt auch für „Jetzt aktualisieren“.")),
+          el("div", {}, el("small", {}, "Begrenzt Aktualisierungen, damit Internet für andere im Haushalt flüssig bleibt (z. B. Videos, Telefonate). Gilt auch für „Inhalte aktualisieren“.")),
           sel));
     }
   };
@@ -241,7 +241,7 @@ async function verbindungPruefen(knopf) {
   return t;
 }
 
-// "Jetzt aktualisieren": suchen, bei getakteter Verbindung warnen, dann herunterladen
+// "Inhalte aktualisieren": suchen, bei getakteter Verbindung warnen, dann herunterladen
 async function jetztAktualisieren(knopf) {
   const text = knopf.textContent;
   knopf.disabled = true;
@@ -260,7 +260,7 @@ async function jetztAktualisieren(knopf) {
         "Achtung: Du bist mit einer getakteten Verbindung verbunden" + (v.name ? " („" + v.name + "“)" : "") +
         ", zum Beispiel einem Handy-Hotspot. Das Herunterladen von " + groesse(a.bytes) + " kann dein Datenvolumen verbrauchen und Kosten verursachen."));
     }
-    const ok = await dialog(v.getaktet ? "Getaktete Verbindung" : "Jetzt aktualisieren?", liste,
+    const ok = await dialog(v.getaktet ? "Getaktete Verbindung" : "Inhalte aktualisieren?", liste,
       v.getaktet ? [{ text: "Abbrechen", wert: false }, { text: "Trotzdem laden", wert: true, haupt: true }]
                  : [{ text: "Abbrechen", wert: false }, { text: "Herunterladen", wert: true, haupt: true }]);
     if (!ok) return a;
