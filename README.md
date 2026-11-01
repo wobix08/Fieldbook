@@ -1,6 +1,7 @@
 # Fieldbook
 
-**Wissen, wo kein Netz ist.** Wikipedia, KI-Assistent, Karten, Kochen und Erste Hilfe auf dem Laptop, komplett ohne Internet.
+**Wissen, wo kein Netz ist**\
+Wikipedia, KI-Assistent, Karten, Kochen und Erste Hilfe auf dem Laptop, komplett ohne Internet.
 
 Fieldbook ist ein portables Windows-Programm für Stromausfall, Reisen ohne Netz oder einfach für unterwegs.\
 Es braucht kein Linux, kein Docker und keine Installation: Ordner entpacken, Doppelklick, fertig.\
@@ -50,18 +51,23 @@ Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [GUIDE.md](GUIDE.
 Ein unbekanntes Programm aus dem Internet zu starten, erfordert Vertrauen.\
 Deshalb ist bei Fieldbook alles offen und überprüfbar:
 
-- **Der komplette Quellcode liegt in diesem Repository.** Es gibt keine versteckten Teile.\
+- **Der komplette Quellcode liegt in diesem Repository**\
+  Es gibt keine versteckten Teile.\
   Auch die Startdatei `Fieldbook.exe` wird aus [`tools/Starter.cs`](tools/Starter.cs) gebaut (rund 90 Zeilen).\
   Sie macht nur eines: `app\Start.bat` starten.
-- **Wer keine .exe starten möchte**, kann stattdessen `app\Start.bat` doppelklicken.\
+- **Ohne .exe starten**\
+  Wer keine .exe starten möchte, kann stattdessen `app\Start.bat` doppelklicken.\
   Das ist eine lesbare Textdatei, genau wie der restliche Programmcode in `app\`.
-- **Keine Installation, keine Administratorrechte.** Fieldbook verändert nichts an Windows und schreibt nur in seinen eigenen Ordner.\
+- **Keine Installation, keine Administratorrechte**\
+  Fieldbook verändert nichts an Windows und schreibt nur in seinen eigenen Ordner.\
   Zum Entfernen genügt es, den Ordner zu löschen.\
   Einzige Ausnahme: Die *optionale* automatische Aktualisierung legt zwei Aufgaben in der Windows-Aufgabenplanung an.\
   Ausschalten in den Einstellungen entfernt sie wieder.
-- **Keine Daten nach außen.** Kein Konto, keine Werbung, keine Nutzungsstatistik.\
+- **Keine Daten nach außen**\
+  Kein Konto, keine Werbung, keine Nutzungsstatistik.\
   Alles läuft auf `localhost`, also nur auf deinem Gerät.
-- **Downloads nur aus offiziellen Quellen**, alle in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien nachlesbar:
+- **Downloads nur aus offiziellen Quellen**\
+  Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien:
 
   | Was | Woher |
   |---|---|
@@ -74,7 +80,8 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   | Übersetzer (Bergamot) | cdn.jsdelivr.net (npm-Paket `@browsermt/bergamot-translator`, feste Version) |
   | Übersetzungsmodell Englisch → Deutsch | storage.googleapis.com (Mozilla, Prüfsumme wird beim Laden kontrolliert) |
 
-- **Prüfsumme:** Zu jedem Release gibt es eine Datei `.sha256`.\
+- **Prüfsumme**\
+  Zu jedem Release gibt es eine Datei `.sha256`.\
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
@@ -82,7 +89,8 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
-- **Selbst prüfen lassen:** Wer möchte, lädt die ZIP bei [VirusTotal](https://www.virustotal.com) hoch.\
+- **Selbst prüfen lassen**\
+  Wer möchte, lädt die ZIP bei [VirusTotal](https://www.virustotal.com) hoch.\
   Dort prüfen rund 70 Virenscanner gleichzeitig.
 
 ## Systemanforderungen
@@ -97,11 +105,14 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
 Fieldbook braucht Internet nur zum Herunterladen.\
 Sperren ein Werbeblocker (z. B. Pi-hole, AdGuard), eine Firewall oder ein Jugendschutzfilter einzelne Adressen, schlagen Downloads fehl.
 
-- **Verbindung prüfen:** Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
+- **Verbindung prüfen**\
+  Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
   Derselbe Knopf erscheint, wenn ein Download scheitert.
-- **Proxy:** Fieldbook übernimmt den Proxy aus den Windows-Einstellungen automatisch.\
+- **Proxy**\
+  Fieldbook übernimmt den Proxy aus den Windows-Einstellungen automatisch.\
   Falls nötig, lässt sich unter *Einstellungen → Internetverbindung* ein eigener eintragen (z. B. `proxy.schule.de:8080`).
-- **Ohne Internet:** Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*).\
+- **Ohne Internet**\
+  Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*).\
   So kann man zum Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.
 
 Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbeblocker):
@@ -229,6 +240,7 @@ Für andere Länder ist es vorbereitet:
 Der Code dieses Projekts steht unter der [MIT-Lizenz](LICENSE).\
 Die heruntergeladenen Programme und Inhalte haben eigene Lizenzen, siehe [THIRD-PARTY.md](THIRD-PARTY.md).
 
-**Hinweis:** Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
+**Hinweis**\
+Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
 KI-Antworten können Fehler enthalten.\
 Bei wichtigen Entscheidungen immer die Quellen lesen.
