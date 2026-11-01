@@ -47,6 +47,10 @@ if ((Test-Path (Join-Path $bereit 'app\Server.cs')) -and -not (Test-Path (Join-P
         Spiegeln (Join-Path $bereit 'app') $app
         # Dateien im Hauptordner (Startdatei, Anleitung, Lizenzen); der Ordner "daten" bleibt unangetastet
         Get-ChildItem $bereit -File | Where-Object { $_.Name -ne 'version.txt' } | ForEach-Object { Copy-Item -Force $_.FullName (Join-Path $root $_.Name) }
+        # Seit 0.5.1 heißen Anleitung und Drittanbieter-Liste englisch; alte Namen entfernen
+        foreach ($alt in @('Anleitung.txt', 'Drittanbieter.txt')) {
+            if (Test-Path (Join-Path $root 'GUIDE.txt')) { Remove-Item -Force (Join-Path $root $alt) -ErrorAction SilentlyContinue }
+        }
         Remove-Item -Recurse -Force $bereit
         $aktualisiert = $true
         Write-Host "  Aktualisiert auf Version $neu." -ForegroundColor Green

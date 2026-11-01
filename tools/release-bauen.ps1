@@ -1,5 +1,5 @@
 ﻿# Baut das Release-Paket dist\Fieldbook-<Version>.zip
-# Inhalt: Startdatei, app\, Anleitung, Lizenzen. Keine Downloads (daten\, programme\).
+# Inhalt: Startdatei, app\, Anleitung (GUIDE.txt), Lizenzen (LICENSE.txt, THIRD-PARTY.txt). Keine Downloads (daten\, programme\).
 param([string]$Version = '0.5.0')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -11,9 +11,9 @@ New-Item -ItemType Directory -Force $ordner | Out-Null
 
 & (Join-Path $PSScriptRoot 'starter-bauen.ps1') -Ziel $ordner
 Copy-Item -Recurse (Join-Path $root 'app') (Join-Path $ordner 'app')
-Copy-Item (Join-Path $root 'ANLEITUNG.md') (Join-Path $ordner 'Anleitung.txt')
+Copy-Item (Join-Path $root 'GUIDE.md') (Join-Path $ordner 'GUIDE.txt')
 Copy-Item (Join-Path $root 'LICENSE') (Join-Path $ordner 'LICENSE.txt')
-Copy-Item (Join-Path $root 'DRITTANBIETER.md') (Join-Path $ordner 'Drittanbieter.txt')
+Copy-Item (Join-Path $root 'THIRD-PARTY.md') (Join-Path $ordner 'THIRD-PARTY.txt')
 
 # Leere Ordner anlegen, damit klar ist, wohin die Daten kommen
 New-Item -ItemType Directory -Force (Join-Path $ordner 'daten') | Out-Null

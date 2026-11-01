@@ -22,12 +22,12 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 | | Bereich | Was es kann |
 |---|---|---|
-| <img src=".github/symbole/fragen.svg" width="32" height="32" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
-| <img src=".github/symbole/bibliothek.svg" width="32" height="32" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, mit Übersetzer Englisch → Deutsch |
-| <img src=".github/symbole/kochen.svg" width="32" height="32" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
-| <img src=".github/symbole/karten.svg" width="32" height="32" alt=""> | **Karten** | OpenStreetMap-Karten offline, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
-| <img src=".github/symbole/erstehilfe.svg" width="32" height="32" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
-| <img src=".github/symbole/vorsorge.svg" width="32" height="32" alt=""> | **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
+| <img src=".github/icons/ask.svg" width="32" height="32" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
+| <img src=".github/icons/library.svg" width="32" height="32" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, mit Übersetzer Englisch → Deutsch |
+| <img src=".github/icons/cooking.svg" width="32" height="32" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
+| <img src=".github/icons/maps.svg" width="32" height="32" alt=""> | **Karten** | OpenStreetMap-Karten offline, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
+| <img src=".github/icons/first-aid.svg" width="32" height="32" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
+| <img src=".github/icons/preparedness.svg" width="32" height="32" alt=""> | **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
 
 ## Schnellstart
 
@@ -37,7 +37,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
    Er erkennt die Hardware, schlägt eine passende KI vor und lädt die gewählten Inhalte herunter.
 4. Ab dann funktioniert alles offline.
 
-Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [ANLEITUNG.md](ANLEITUNG.md).
+Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [GUIDE.md](GUIDE.md).
 
 > Windows zeigt beim ersten Start „Der Computer wurde durch Windows geschützt“, weil das Programm neu und nicht signiert ist.\
 > Dann auf **Weitere Informationen → Trotzdem ausführen** klicken.\
@@ -226,7 +226,7 @@ Für andere Länder ist es vorbereitet:
 ## Lizenz
 
 Der Code dieses Projekts steht unter der [MIT-Lizenz](LICENSE).\
-Die heruntergeladenen Programme und Inhalte haben eigene Lizenzen, siehe [DRITTANBIETER.md](DRITTANBIETER.md).
+Die heruntergeladenen Programme und Inhalte haben eigene Lizenzen, siehe [THIRD-PARTY.md](THIRD-PARTY.md).
 
 **Hinweis:** Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
 KI-Antworten können Fehler enthalten.\
