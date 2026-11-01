@@ -2850,7 +2850,7 @@ namespace OfflineWissen
                 var a = (Dictionary<string, object>)o;
                 string n = Str(a, "name") ?? "";
                 if (n.EndsWith(".zip.sha256", StringComparison.OrdinalIgnoreCase)) sha = Str(a, "browser_download_url");
-                // Fieldbook-<version>.zip bevorzugen; Fieldbook.zip (für den festen Download-Link) ist dieselbe Datei
+                // Fieldbook-<version>.zip bevorzugen, falls weitere ZIP-Dateien im Release liegen
                 else if (n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && n.StartsWith("Fieldbook", StringComparison.OrdinalIgnoreCase)
                     && (zip == null || n.Equals("Fieldbook-" + neu + ".zip", StringComparison.OrdinalIgnoreCase))) { zip = Str(a, "browser_download_url"); bytes = (long)Num(a, "size"); }
             }

@@ -32,7 +32,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Schnellstart
 
-1. **[Fieldbook herunterladen](https://github.com/wobix08/Fieldbook/releases/latest/download/Fieldbook.zip)** (ZIP-Datei, unter 1 MB, immer die neueste Version) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.5.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.5.0/Fieldbook-0.5.0.zip)** (ZIP-Datei, unter 1 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
