@@ -162,6 +162,25 @@ function istFrage(t) {
 
 window.addEventListener("hashchange", navigiere);
 
+// Doppelte Tabs vermeiden: Öffnet Fieldbook beim Start einen neuen Tab, obwohl schon einer offen ist
+// (z. B. weil der Browser seine alten Tabs wiederhergestellt hat), schließt sich der neue wieder.
+// Nur ein frisch von Fieldbook geöffneter Tab (Startseite, ohne Verlauf) tut das, nie ein Tab, in dem man schon war.
+(function doppelteTabs() {
+  if (!("BroadcastChannel" in window)) return;
+  const kanal = new BroadcastChannel("fieldbook-tabs");
+  const ich = { t: performance.timeOrigin || Date.now() };
+  // Frisch: gerade erst geöffnet (höchstens 15 s), noch auf der Startseite und ohne Verlauf
+  const frisch = () => Date.now() - ich.t < 15000 && location.pathname === "/" && !location.hash && history.length === 1;
+  kanal.onmessage = (e) => {
+    const d = e.data || {};
+    if (d.art === "hallo") kanal.postMessage({ art: "da", t: ich.t, frisch: frisch() });
+    // Ein anderer Tab ist da (egal, ob er vor oder nach diesem geladen hat): der frische Tab geht,
+    // sind beide frisch, der jüngere
+    if (frisch() && !ich.weg && (!d.frisch || d.t < ich.t)) { ich.weg = true; window.close(); }
+  };
+  kanal.postMessage({ art: "hallo", t: ich.t, frisch: frisch() });
+})();
+
 (async function init() {
   const s = await aktualisiereStatus();
   await Land.laden();
