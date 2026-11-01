@@ -47,6 +47,11 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
 | <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
 
+> **Wichtig**\
+> Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
+> KI-Antworten können Fehler enthalten.\
+> Bei wichtigen Entscheidungen immer die Quellen lesen.
+
 ## Schnellstart
 
 1. **[Fieldbook 0.5.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.5.0/Fieldbook-0.5.0.zip)** (ZIP-Datei, unter 1 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
@@ -283,8 +288,3 @@ Für andere Länder ist es vorbereitet:
 
 Der Code dieses Projekts steht unter der [MIT-Lizenz](LICENSE).\
 Die heruntergeladenen Programme und Inhalte haben eigene Lizenzen, siehe [THIRD-PARTY.md](THIRD-PARTY.md).
-
-**Hinweis**\
-Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
-KI-Antworten können Fehler enthalten.\
-Bei wichtigen Entscheidungen immer die Quellen lesen.
