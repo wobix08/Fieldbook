@@ -2,24 +2,21 @@
 
 **Wissen, wo kein Netz ist.** Wikipedia, KI-Assistent, Karten, Kochen und Erste Hilfe auf dem Laptop, komplett ohne Internet.
 
-Fieldbook ist ein portables Windows-Programm für Stromausfall, Reisen ohne Netz oder einfach
-für unterwegs. Es braucht kein Linux, kein Docker und keine Installation: Ordner entpacken,
-Doppelklick, fertig. Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und
-[Internet-in-a-Box](https://internet-in-a-box.org/).
+Fieldbook ist ein portables Windows-Programm für Stromausfall, Reisen ohne Netz oder einfach für unterwegs.\
+Es braucht kein Linux, kein Docker und keine Installation: Ordner entpacken, Doppelklick, fertig.\
+Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und [Internet-in-a-Box](https://internet-in-a-box.org/).
 
 ## Warum Fieldbook?
 
-Project NOMAD hat mich sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf
-einem Gerät und ohne Internet. Dafür braucht man aber ein eigenes Linux-System oder eine virtuelle
-Maschine, und darauf hatte ich keine Lust. Ich wollte dieselbe Idee auf einem ganz normalen
-Windows-Laptop haben: entpacken, doppelklicken, fertig.
+Project NOMAD hat mich sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf einem Gerät und ohne Internet.\
+Dafür braucht man aber ein eigenes Linux-System oder eine virtuelle Maschine, und darauf hatte ich keine Lust.\
+Ich wollte dieselbe Idee auf einem ganz normalen Windows-Laptop haben: entpacken, doppelklicken, fertig.
 
-Außerdem soll so eine Wissenssammlung nicht nur etwas für Technikbegeisterte sein. Jeder, der einen
-Laptop hat, soll sie nutzen können, ob im Stromausfall, auf Reisen oder in einer einsamen Hütte
-im Wald.
+Außerdem soll so eine Wissenssammlung nicht nur etwas für Technikbegeisterte sein.\
+Jeder, der einen Laptop hat, soll sie nutzen können, ob im Stromausfall, auf Reisen oder in einer einsamen Hütte im Wald.
 
-Fieldbook habe ich mit Hilfe der KI Claude entwickelt. Ideen, Auswahl der Inhalte und alle
-Entscheidungen stammen von mir.
+Fieldbook habe ich mit Hilfe der KI Claude entwickelt.\
+Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Was drin ist
 
@@ -34,37 +31,36 @@ Entscheidungen stammen von mir.
 
 ## Schnellstart
 
-1. Die neueste ZIP-Datei unter [Releases](../../releases) herunterladen und entpacken,
-   zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.
+1. Die neueste ZIP-Datei unter [Releases](../../releases) herunterladen und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.
 2. **`Fieldbook.exe`** doppelklicken.
-3. Der Einrichtungs-Assistent öffnet sich im Browser. Er erkennt die Hardware, schlägt eine passende
-   KI vor und lädt die gewählten Inhalte herunter.
+3. Der Einrichtungs-Assistent öffnet sich im Browser.\
+   Er erkennt die Hardware, schlägt eine passende KI vor und lädt die gewählten Inhalte herunter.
 4. Ab dann funktioniert alles offline.
 
 Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [ANLEITUNG.md](ANLEITUNG.md).
 
-> Windows zeigt beim ersten Start „Der Computer wurde durch Windows geschützt“, weil das
-> Programm neu und nicht signiert ist. Dann auf **Weitere Informationen → Trotzdem ausführen**
-> klicken. Das ist nur einmal nötig. Warum das harmlos ist, steht unter [Ist das sicher?](#ist-das-sicher).
+> Windows zeigt beim ersten Start „Der Computer wurde durch Windows geschützt“, weil das Programm neu und nicht signiert ist.\
+> Dann auf **Weitere Informationen → Trotzdem ausführen** klicken.\
+> Das ist nur einmal nötig.\
+> Warum das harmlos ist, steht unter [Ist das sicher?](#ist-das-sicher).
 
 ## Ist das sicher?
 
-Ein unbekanntes Programm aus dem Internet zu starten, erfordert Vertrauen. Deshalb ist bei
-Fieldbook alles offen und überprüfbar:
+Ein unbekanntes Programm aus dem Internet zu starten, erfordert Vertrauen.\
+Deshalb ist bei Fieldbook alles offen und überprüfbar:
 
-- **Der komplette Quellcode liegt in diesem Repository.** Es gibt keine versteckten Teile.
-  Auch die Startdatei `Fieldbook.exe` wird aus [`tools/Starter.cs`](tools/Starter.cs)
-  gebaut (rund 90 Zeilen). Sie macht nur eines: `app\Start.bat` starten.
-- **Wer keine .exe starten möchte**, kann stattdessen `app\Start.bat` doppelklicken.
+- **Der komplette Quellcode liegt in diesem Repository.** Es gibt keine versteckten Teile.\
+  Auch die Startdatei `Fieldbook.exe` wird aus [`tools/Starter.cs`](tools/Starter.cs) gebaut (rund 90 Zeilen).\
+  Sie macht nur eines: `app\Start.bat` starten.
+- **Wer keine .exe starten möchte**, kann stattdessen `app\Start.bat` doppelklicken.\
   Das ist eine lesbare Textdatei, genau wie der restliche Programmcode in `app\`.
-- **Keine Installation, keine Administratorrechte.** Fieldbook verändert nichts an Windows
-  und schreibt nur in seinen eigenen Ordner. Zum Entfernen genügt es, den Ordner zu löschen.
-  Einzige Ausnahme: Die *optionale* automatische Aktualisierung legt zwei Aufgaben in der
-  Windows-Aufgabenplanung an. Ausschalten in den Einstellungen entfernt sie wieder.
-- **Keine Daten nach außen.** Kein Konto, keine Werbung, keine Nutzungsstatistik. Alles läuft
-  auf `localhost`, also nur auf deinem Gerät.
-- **Downloads nur aus offiziellen Quellen**, alle in [`app/config/programme.json`](app/config/programme.json)
-  und den anderen Konfigurationsdateien nachlesbar:
+- **Keine Installation, keine Administratorrechte.** Fieldbook verändert nichts an Windows und schreibt nur in seinen eigenen Ordner.\
+  Zum Entfernen genügt es, den Ordner zu löschen.\
+  Einzige Ausnahme: Die *optionale* automatische Aktualisierung legt zwei Aufgaben in der Windows-Aufgabenplanung an.\
+  Ausschalten in den Einstellungen entfernt sie wieder.
+- **Keine Daten nach außen.** Kein Konto, keine Werbung, keine Nutzungsstatistik.\
+  Alles läuft auf `localhost`, also nur auf deinem Gerät.
+- **Downloads nur aus offiziellen Quellen**, alle in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien nachlesbar:
 
   | Was | Woher |
   |---|---|
@@ -77,16 +73,16 @@ Fieldbook alles offen und überprüfbar:
   | Übersetzer (Bergamot) | cdn.jsdelivr.net (npm-Paket `@browsermt/bergamot-translator`, feste Version) |
   | Übersetzungsmodell Englisch → Deutsch | storage.googleapis.com (Mozilla, Prüfsumme wird beim Laden kontrolliert) |
 
-- **Prüfsumme:** Zu jedem Release gibt es eine Datei `.sha256`. Damit lässt sich prüfen, dass
-  die heruntergeladene ZIP nicht verändert wurde:
+- **Prüfsumme:** Zu jedem Release gibt es eine Datei `.sha256`.\
+  Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
   Get-FileHash .\Fieldbook-0.5.0.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
-- **Selbst prüfen lassen:** Wer möchte, lädt die ZIP bei [VirusTotal](https://www.virustotal.com)
-  hoch. Dort prüfen rund 70 Virenscanner gleichzeitig.
+- **Selbst prüfen lassen:** Wer möchte, lädt die ZIP bei [VirusTotal](https://www.virustotal.com) hoch.\
+  Dort prüfen rund 70 Virenscanner gleichzeitig.
 
 ## Systemanforderungen
 
@@ -97,17 +93,15 @@ Fieldbook alles offen und überprüfbar:
 
 ## Downloads in Firmen- und Schulnetzen
 
-Fieldbook braucht Internet nur zum Herunterladen. Sperren ein Werbeblocker (z. B. Pi-hole,
-AdGuard), eine Firewall oder ein Jugendschutzfilter einzelne Adressen, schlagen Downloads fehl.
+Fieldbook braucht Internet nur zum Herunterladen.\
+Sperren ein Werbeblocker (z. B. Pi-hole, AdGuard), eine Firewall oder ein Jugendschutzfilter einzelne Adressen, schlagen Downloads fehl.
 
-- **Verbindung prüfen:** Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle
-  Adressen und sagt, welche gesperrt ist. Derselbe Knopf erscheint, wenn ein Download scheitert.
-- **Proxy:** Fieldbook übernimmt den Proxy aus den Windows-Einstellungen automatisch. Falls nötig,
-  lässt sich unter *Einstellungen → Internetverbindung* ein eigener eintragen (z. B.
-  `proxy.schule.de:8080`).
-- **Ohne Internet:** Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem
-  anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*). So kann man zum
-  Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.
+- **Verbindung prüfen:** Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
+  Derselbe Knopf erscheint, wenn ein Download scheitert.
+- **Proxy:** Fieldbook übernimmt den Proxy aus den Windows-Einstellungen automatisch.\
+  Falls nötig, lässt sich unter *Einstellungen → Internetverbindung* ein eigener eintragen (z. B. `proxy.schule.de:8080`).
+- **Ohne Internet:** Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*).\
+  So kann man zum Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.
 
 Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbeblocker):
 
@@ -134,9 +128,9 @@ Der Assistent misst Arbeitsspeicher und Grafikkarte und schlägt automatisch vor
 | Grafikkarte ab 10 GB | Gemma 4 (12B) | 7,1 GB |
 | Grafikkarte ab 20 GB | Qwen 3.5 (27B) | 16,7 GB |
 
-Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt. Es ist keine
-Treiber-Zusatzinstallation wie CUDA nötig. Die Liste steht in
-[`app/config/modelle.json`](app/config/modelle.json) und lässt sich leicht erweitern.
+Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt.\
+Es ist keine Treiber-Zusatzinstallation wie CUDA nötig.\
+Die Liste steht in [`app/config/modelle.json`](app/config/modelle.json) und lässt sich leicht erweitern.
 
 ## So funktioniert die Frage-Antwort-Funktion
 
@@ -146,9 +140,10 @@ Frage ──► KI erzeugt Suchbegriffe ──► Suche in allen Wissenspaketen 
 Antwort mit Quellen [1] [2] ◄── KI liest die besten Abschnitte
 ```
 
-Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen. Englische Quellen
-(z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche. Im **Sparmodus** ist die KI
-aus. Dann zeigt der Bereich „Fragen“ die passenden Artikel direkt an.
+Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
+Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
+Im **Sparmodus** ist die KI aus.\
+Dann zeigt der Bereich „Fragen“ die passenden Artikel direkt an.
 
 ## Aufbau
 
@@ -163,8 +158,9 @@ programme\                    Wird vom Setup gefüllt: kiwix-serve, llama-server
 daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.gguf, karten\*.pmtiles
 ```
 
-Alles läuft auf `localhost`. Es werden keine Daten ins Internet geschickt. Nach der Einrichtung
-stellt das Programm keine Verbindung mehr her, außer man lädt im Assistenten neue Inhalte.
+Alles läuft auf `localhost`.\
+Es werden keine Daten ins Internet geschickt.\
+Nach der Einrichtung stellt das Programm keine Verbindung mehr her, außer man lädt im Assistenten neue Inhalte.
 
 Verwendete Bausteine:
 - [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
@@ -174,62 +170,64 @@ Verwendete Bausteine:
 
 ## Entwicklung
 
-Der Code braucht keinen Build-Schritt. Zum Testen `app\Start.bat` starten.
+Der Code braucht keinen Build-Schritt.\
+Zum Testen `app\Start.bat` starten.
 
 - Startdatei mit Symbol neu bauen: `powershell -ExecutionPolicy Bypass -File tools\starter-bauen.ps1`
 - Release-ZIP bauen: `powershell -ExecutionPolicy Bypass -File tools\release-bauen.ps1 -Version 0.1.0`
-- Neue Wissenspakete: Eintrag in `app/config/pakete.json` mit `name` und `flavour` wie im
-  [Kiwix-Katalog](https://library.kiwix.org)
-- Eigene ZIM-Dateien kann man einfach in `daten\wissen` legen. Sie werden automatisch eingebunden.
+- Neue Wissenspakete: Eintrag in `app/config/pakete.json` mit `name` und `flavour` wie im [Kiwix-Katalog](https://library.kiwix.org)
+- Eigene ZIM-Dateien kann man einfach in `daten\wissen` legen.\
+  Sie werden automatisch eingebunden.
 
 ## Automatische Aktualisierung (optional)
 
-Im Assistenten ganz am Anfang einschaltbar, standardmäßig aus. Es gibt keinen Autostart und
-kein Programm, das dauerhaft im Hintergrund läuft. Stattdessen legt Fieldbook zwei Aufgaben
-in der Windows-Aufgabenplanung an:
+Im Assistenten ganz am Anfang einschaltbar, standardmäßig aus.\
+Es gibt keinen Autostart und kein Programm, das dauerhaft im Hintergrund läuft.\
+Stattdessen legt Fieldbook zwei Aufgaben in der Windows-Aufgabenplanung an:
 
 | Aufgabe | Wann | Was |
 |---|---|---|
 | *Fieldbook Daten pruefen* | einmal pro Woche (Sonntag 19 Uhr oder beim nächsten Einschalten) | ein paar kleine Anfragen, dauert unter einer Sekunde; im Modus „Vorher fragen“ danach ein Pop-up |
 | *Fieldbook Daten herunterladen* | nur wenn der Computer 10 Minuten unbenutzt am Strom hängt | lädt freigegebene Daten mit niedrigster Priorität; bei Maus, Tastatur oder Akkubetrieb sofort Pause, beim nächsten Leerlauf geht es weiter |
 
-Nicht über getaktete Verbindungen (z. B. Handy-Hotspot). Aktualisiert werden Wissenspakete
-(neue Ausgaben im Kiwix-Katalog), Wegedaten (höchstens monatlich) und Karten (etwa halbjährlich).
-Ausschalten in den Einstellungen entfernt beide Aufgaben wieder. Protokoll: `daten\logs\aktualisierung.log`.
+Nicht über getaktete Verbindungen (z. B. Handy-Hotspot).\
+Aktualisiert werden Wissenspakete (neue Ausgaben im Kiwix-Katalog), Wegedaten (höchstens monatlich) und Karten (etwa halbjährlich).\
+Ausschalten in den Einstellungen entfernt beide Aufgaben wieder.\
+Protokoll: `daten\logs\aktualisierung.log`.
 
 ## Programm-Updates (Fieldbook selbst)
 
-Fieldbook fragt beim Start und in der optionalen Hintergrund-Aktualisierung bei den GitHub-Releases
-nach einer neuen Version. Gefunden wird ein Release mit den Dateien `Fieldbook-<version>.zip` und
-`Fieldbook-<version>.zip.sha256` (beide erzeugt `tools\release-bauen.ps1`). Ablauf:
+Fieldbook fragt beim Start und in der optionalen Hintergrund-Aktualisierung bei den GitHub-Releases nach einer neuen Version.\
+Gefunden wird ein Release mit den Dateien `Fieldbook-<version>.zip` und `Fieldbook-<version>.zip.sha256` (beide erzeugt `tools\release-bauen.ps1`).\
+Ablauf:
 
 1. Herunterladen und Prüfsumme kontrollieren, dann unter `daten\cache\update\bereit` ablegen.
-2. Fieldbook startet sich neu. `app\start.ps1` sichert den bisherigen Programmteil nach
-   `daten\cache\update\sicherung` und spielt die neue Version ein, **bevor** der Server geladen wird.
+2. Fieldbook startet sich neu.\
+   `app\start.ps1` sichert den bisherigen Programmteil nach `daten\cache\update\sicherung` und spielt die neue Version ein, **bevor** der Server geladen wird.
 3. Lässt sich die neue Version nicht laden, wird automatisch die Sicherung wiederhergestellt.
 
-Der Ordner `daten` wird dabei nie verändert. Im Git-Entwicklungsordner sind Programm-Updates
-gesperrt. Das Repository steht in [`app/config/fieldbook.json`](app/config/fieldbook.json)
-(`"github": "besitzer/name"`).
+Der Ordner `daten` wird dabei nie verändert.\
+Im Git-Entwicklungsordner sind Programm-Updates gesperrt.\
+Das Repository steht in [`app/config/fieldbook.json`](app/config/fieldbook.json) (`"github": "wobix08/Fieldbook"`).
 
 ## Länder und Sprachen
 
-Vorerst ist Fieldbook auf Deutsch und für Deutschland, Österreich und die Schweiz eingerichtet.
+Vorerst ist Fieldbook auf Deutsch und für Deutschland, Österreich und die Schweiz eingerichtet.\
 Für andere Länder ist es vorbereitet:
 
-- Das Land wird aus der Windows-Regionseinstellung erkannt und lässt sich im Assistenten und in den
-  Einstellungen ändern.
-- Notrufnummern und die vorgeschlagene Karte kommen aus [`app/config/laender.json`](app/config/laender.json).
-  Ein neues Land braucht nur einen Eintrag dort (`"aktiv": true`). In den Erste-Hilfe-Texten steht
-  `{notruf}`, das durch die Nummer des Landes ersetzt wird.
-- Sprachen: Deutsch und Englisch. Die Antwortsprache der KI folgt der Sprache des Landes.
+- Das Land wird aus der Windows-Regionseinstellung erkannt und lässt sich im Assistenten und in den Einstellungen ändern.
+- Notrufnummern und die vorgeschlagene Karte kommen aus [`app/config/laender.json`](app/config/laender.json).\
+  Ein neues Land braucht nur einen Eintrag dort (`"aktiv": true`).\
+  In den Erste-Hilfe-Texten steht `{notruf}`, das durch die Nummer des Landes ersetzt wird.
+- Sprachen: Deutsch und Englisch.\
+  Die Antwortsprache der KI folgt der Sprache des Landes.\
   Die Oberfläche selbst ist noch nicht übersetzt.
 
 ## Lizenz
 
-Der Code dieses Projekts steht unter der [MIT-Lizenz](LICENSE). Die heruntergeladenen Programme und
-Inhalte haben eigene Lizenzen, siehe [DRITTANBIETER.md](DRITTANBIETER.md).
+Der Code dieses Projekts steht unter der [MIT-Lizenz](LICENSE).\
+Die heruntergeladenen Programme und Inhalte haben eigene Lizenzen, siehe [DRITTANBIETER.md](DRITTANBIETER.md).
 
-**Hinweis:** Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten
-Erste-Hilfe-Kurs und keine ärztliche Hilfe. KI-Antworten können Fehler enthalten. Bei wichtigen
-Entscheidungen immer die Quellen lesen.
+**Hinweis:** Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
+KI-Antworten können Fehler enthalten.\
+Bei wichtigen Entscheidungen immer die Quellen lesen.
