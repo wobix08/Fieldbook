@@ -68,9 +68,10 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Alles läuft auf `localhost`, also nur auf deinem Gerät.\
   Fragen an die KI, Chats und alles, was du in Fieldbook einträgst, verlassen dein Gerät nicht.\
   Fehlerberichte oder Nutzungsstatistiken verschickt Fieldbook nur, wenn du ausdrücklich zustimmst, und du kannst das jederzeit wieder abschalten.\
-  In der aktuellen Version gibt es das noch gar nicht.\
-  Ich verstehe jeden, der das nicht möchte, ich schalte so etwas selbst auch immer ab.\
-  Trotzdem würde ich mich sehr über eingeschaltete Statistiken freuen: Fieldbook läuft auf ganz unterschiedlichen Geräten, und nur so kann ich herausfinden, wo es hakt oder zu langsam ist.
+  In der aktuellen Version ist so etwas noch gar nicht eingebaut.\
+  Ganz ehrlich: Ich kann jeden verstehen, der das ausgeschaltet lässt, bei anderen Programmen mache ich es genauso.\
+  Über jedes Ja würde ich mich trotzdem sehr freuen.\
+  Fieldbook läuft auf ganz unterschiedlichen Laptops, und ohne solche Rückmeldungen bekomme ich kaum mit, wo es hakt oder zu langsam ist.
 - **Downloads nur aus offiziellen Quellen**\
   Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien:
 
