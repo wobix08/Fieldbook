@@ -119,8 +119,8 @@ namespace OfflineWissen
                 StarteRouting();
                 if (!Bool(einst, "sparmodus")) StarteKi();
                 try { FortsetzenBeimStart(); } catch (Exception e) { Log("Fortsetzen: " + e.Message); }
-                // Einmal beim Start kurz nach einer neuen Fieldbook-Version fragen (eine kleine Anfrage)
-                try { if (UpdateApi() != null && !IstEntwicklungsordner()) ProgrammUpdateSuchen(); } catch { }
+                // Einmal beim Start kurz nach einer neuen Fieldbook-Version fragen (eine kleine Anfrage, abschaltbar)
+                try { if (UpdateBeimStart() && UpdateApi() != null && !IstEntwicklungsordner()) ProgrammUpdateSuchen(); } catch { }
             }) { IsBackground = true }.Start();
 
             // Nach einem Neustart durch das Programm-Update ist der Browser schon offen
@@ -728,8 +728,15 @@ namespace OfflineWissen
                 {"landErkannt", WindowsLand()},
                 {"sprache", Str(einst, "sprache") ?? "de"},
                 {"programmNeu", progUpdate != null && Bool(progUpdate, "verfuegbar") ? Str(progUpdate, "neu") : null},
-                {"programmBereit", BereitVersion()}
+                {"programmBereit", BereitVersion()},
+                {"updateBeimStart", UpdateBeimStart()}
             };
+        }
+
+        // Beim Start und beim Öffnen der Einstellungen nach einer neuen Version fragen (Standard: an)
+        static bool UpdateBeimStart()
+        {
+            return !einst.ContainsKey("updateBeimStart") || Bool(einst, "updateBeimStart");
         }
 
         // Land aus der Windows-Regionseinstellung (offline verfügbar)

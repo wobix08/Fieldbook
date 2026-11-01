@@ -182,7 +182,8 @@ Alles läuft auf `localhost`.\
 Deine Fragen, Chats und Einträge bleiben auf deinem Gerät.\
 Nach der Einrichtung geht Fieldbook nur noch in drei Fällen ins Internet:
 - **Beim Start** fragt es kurz bei GitHub nach, ob es eine neue Version gibt.\
-  Heruntergeladen wird sie erst, wenn du dies bestätigst.
+  Heruntergeladen wird sie erst, wenn du dies bestätigst.\
+  Auch diese Anfrage kannst du in den Einstellungen abschalten.
 - **Neue Inhalte** lädt es, wenn du sie auf der Seite *Inhalte* auswählst.
 - **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
   Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte oder eine neue Version gibt, und fragt vorher oder lädt sie selbst, je nach Einstellung.\
@@ -226,7 +227,9 @@ Protokoll: `daten\logs\aktualisierung.log`.
 **Du entscheidest über Updates**\
 Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
 Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen unter *Fieldbook-Version*).\
-Heruntergeladen und eingespielt wird sie erst, wenn du dies bestätigst.
+Heruntergeladen und eingespielt wird sie erst, wenn du dies bestätigst.\
+Möchtest du auch diese kurze Anfrage nicht, schaltest du sie in den Einstellungen bei *Beim Start nach neuer Version fragen* aus.\
+Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach neuer Version suchen* klickst oder die automatische Aktualisierung eingeschaltet hast.
 
 **Mit automatischer Aktualisierung**\
 Hast du die automatische Aktualisierung eingeschaltet, sucht Fieldbook dabei auch nach neuen Versionen.\

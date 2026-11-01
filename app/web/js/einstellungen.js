@@ -52,7 +52,14 @@ const Einstellungen = (() => {
           el("button", { class: "knopf knopf-klein", onclick: async (e) => {
             e.target.disabled = true; e.target.textContent = "Suche …";
             zeigeVersion(await api("programmupdate").catch(err => ({ fehler: err.message, eingerichtet: true })));
-          } }, "Nach neuer Version suchen")));
+          } }, "Nach neuer Version suchen")),
+        el("div", { class: "einst-zeile" },
+          el("div", {}, el("b", {}, "Beim Start nach neuer Version fragen"),
+            el("small", {}, "Eine kurze Anfrage bei GitHub, heruntergeladen wird nichts. Ausgeschaltet fragt Fieldbook nur, wenn du auf „Nach neuer Version suchen“ klickst oder die automatische Aktualisierung es tut.")),
+          el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.updateBeimStart !== false, onchange: async (e) => {
+            s.updateBeimStart = e.target.checked;
+            OW.status = await api("einstellungen", { updateBeimStart: e.target.checked });
+          } }), "an")));
       if (u.verfuegbar && u.notizen) pv.append(el("details", {}, el("summary", {}, "Was ist neu in " + u.neu + "?"), el("pre", { style: "white-space:pre-wrap;font-family:inherit" }, u.notizen)));
       if ((u.verfuegbar || u.bereit) && !u.entwicklung) {
         pv.append(el("div", { class: "knopfreihe" }, el("button", { class: "knopf knopf-haupt", onclick: async () => {
@@ -69,7 +76,7 @@ const Einstellungen = (() => {
       }
     };
     zeigeVersion({ eingerichtet: true, neu: s.programmNeu, verfuegbar: !!s.programmNeu, bereit: s.programmBereit });
-    api("programmupdate").then(zeigeVersion).catch(() => { });
+    if (s.updateBeimStart !== false) api("programmupdate").then(zeigeVersion).catch(() => { });
 
     // Automatische Aktualisierung
     const akt = await api("aktualisierung");
