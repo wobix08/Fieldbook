@@ -106,6 +106,8 @@ const Inhalte = (() => {
     }
   }
 
+  const JOB_REIHENFOLGE = { laeuft: 0, wartet: 1, fehler: 2, abgebrochen: 2, fertig: 3 };
+
   function zeichneFortschritt(box, f) {
     box.innerHTML = "";
     verlauf.push({ t: Date.now(), b: f.bytes });
@@ -134,7 +136,8 @@ const Inhalte = (() => {
           el("span", { class: "dl-tempo" }, tempo),
           el("span", { class: "dl-rest" }, rest))),
       el("div", { class: "balken" }, el("div", { style: "width:" + anteil + "%" })),
-      ...f.jobs.map(j => {
+      // Laufende oben, dann wartende, dann Fehler, fertige unten (innerhalb der Gruppen in Warteschlangen-Reihenfolge)
+      ...[...f.jobs].sort((a, b) => JOB_REIHENFOLGE[a.status] - JOB_REIHENFOLGE[b.status]).map(j => {
         const p = j.gesamt > 0 ? Math.min(100, j.bytes / j.gesamt * 100) : (j.status === "fertig" ? 100 : 0);
         const st = { wartet: "wartet", laeuft: j.gesamt > 0 ? Math.floor(p) + " %" : groesse(j.bytes), fertig: "✓ fertig", fehler: "✗ Fehler", abgebrochen: "abgebrochen" }[j.status];
         return el("div", { class: "job" },
