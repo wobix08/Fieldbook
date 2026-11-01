@@ -140,7 +140,9 @@ Jedes Kapitel lässt sich ausdrucken.
 ## 5. Strom sparen
 
 - Oben rechts siehst du den Akkustand.
-- Der **Sparmodus** schaltet die KI ab.\
+- Strom braucht die KI vor allem, während sie antwortet: Dann rechnet der Laptop mit voller Kraft.\
+  Wer Akku sparen will, stellt also lieber wenige, gezielte Fragen.
+- Der **Sparmodus** schaltet die KI ganz ab und gibt den Arbeitsspeicher frei, den sie belegt.\
   Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt.\
   Einschalten: auf das Feld „KI bereit“ oben rechts klicken.\
   Bei wenig Akku schlägt das Programm den Sparmodus selbst vor.

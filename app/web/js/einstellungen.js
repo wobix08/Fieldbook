@@ -21,7 +21,7 @@ const Einstellungen = (() => {
           el("button", { class: "knopf knopf-klein knopf-rot", onclick: () => entfernen("modell", m.id, m.name) }, "Löschen"))));
     }
     ki.append(el("div", { class: "einst-zeile" },
-      el("div", {}, el("b", {}, "Sparmodus"), el("small", {}, "Schaltet die KI ab und spart so Strom. Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt.")),
+      el("div", {}, el("b", {}, "Sparmodus"), el("small", {}, "Schaltet die KI ab und gibt den Arbeitsspeicher frei, den sie belegt. Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt.")),
       el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.sparmodus, onchange: (e) => schalteKi(!e.target.checked) }), "an")));
     if (s.ki.fehler) ki.append(el("p", { class: "fehlerbox" }, s.ki.fehler));
     c.append(ki);

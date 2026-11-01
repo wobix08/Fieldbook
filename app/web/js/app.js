@@ -78,7 +78,7 @@ function zeigeKopfStatus(s) {
     b.hidden = false;
     b.innerHTML = "";
     b.append(
-      sym("battery-low"), " Akku schwach (" + a.prozent + " %). Der Sparmodus schaltet die KI ab, damit der Akku länger hält.",
+      sym("battery-low"), " Akku schwach (" + a.prozent + " %). Antworten der KI brauchen viel Strom. Der Sparmodus schaltet sie ab, damit der Akku länger hält.",
       el("button", { class: "knopf knopf-klein", onclick: () => schalteKi(false) }, "Sparmodus einschalten"),
       el("button", { class: "knopf knopf-klein", onclick: () => { sessionStorage.setItem("akkuHinweis", "weg"); b.hidden = true; } }, "Später"),
     );
