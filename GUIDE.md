@@ -181,6 +181,11 @@ Ohne Automatik geht es jederzeit von Hand mit **Inhalte aktualisieren**.
   Deine Inhalte und Einstellungen bleiben erhalten.\
   Fieldbook fragt beim Start kurz nach einer neuen Version; das lässt sich dort mit **Beim Start nach neuer Fieldbook-Version fragen** abschalten.\
   Ist die automatische Aktualisierung der Inhalte eingeschaltet, kann sie neue Fieldbook-Versionen mitladen (Schalter **Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen**).
+- **Rückmeldung geben**\
+  In den Einstellungen im Kasten **Fieldbook-Programm** kannst du über **Schreiben** dem Entwickler schreiben, was gut läuft, was nicht klappt oder was dir fehlt.\
+  Eine Kontaktadresse ist freiwillig, gib sie an, wenn du eine Antwort möchtest.\
+  Bei Fehlern hilft der Haken **Logdateien mitschicken**; unter **Was wird mitgeschickt?** steht genau, was dabei ist.\
+  Ohne Internet merkt sich Fieldbook die Nachricht und schickt sie später.
 
 ## 8. Häufige Fragen
 
@@ -208,4 +213,6 @@ ZIM-Dateien von [library.kiwix.org](https://library.kiwix.org) in den Ordner `da
 **Wird etwas ins Internet geschickt?**\
 Deine Fragen, Chats und Einträge nicht, sie bleiben auf deinem Gerät.\
 Internet braucht Fieldbook nur für Downloads und um nach einer neuen Version zu fragen.\
+Eine **Rückmeldung** geht nur raus, wenn du sie selbst abschickst.\
+Was dabei übertragen wird, steht in der README auf GitHub im Abschnitt **Datenschutz**.\
 Fehlerberichte oder Nutzungsstatistiken verschickt Fieldbook nur, wenn du ausdrücklich zustimmst (in dieser Version gibt es das noch nicht).

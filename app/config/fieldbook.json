@@ -1,5 +1,6 @@
 {
-  "_hinweis": "Programm-Update: 'github' = Repository im Format 'besitzer/name'. Fieldbook fragt dort nach dem neuesten Release (Asset Fieldbook-<version>.zip und .sha256). 'updateApi' überschreibt die Adresse (nur zum Testen).",
+  "_hinweis": "Programm-Update: 'github' = Repository im Format 'besitzer/name'. Fieldbook fragt dort nach dem neuesten Release (Asset Fieldbook-<version>.zip und .sha256). 'updateApi' überschreibt die Adresse (nur zum Testen). 'feedback' = Adresse des Dienstes für Rückmeldungen (tools/feedback-worker.js, leer = Knopf aus).",
   "github": "wobix08/Fieldbook",
-  "updateApi": ""
+  "updateApi": "",
+  "feedback": "https://fieldbook-feedback.wobix08.workers.dev/"
 }

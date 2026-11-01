@@ -48,6 +48,8 @@ const Einstellungen = (() => {
         el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten")),
       aktInfo, autoTeil);
     c.prepend(programmBox, inhalteBox);
+    // Rückmeldung an den Entwickler, im Kasten Fieldbook-Programm (nur wenn in fieldbook.json ein Dienst eingetragen ist)
+    api("feedback").then(fb => { if (fb && fb.eingerichtet) programmBox.append(rueckmeldungTeil(fb)); }).catch(() => { });
     const zeigeVersion = (u) => {
       pv.innerHTML = "";
       pv.append(
@@ -146,6 +148,57 @@ const Einstellungen = (() => {
     c.append(d);
 
     c.append(el("p", { class: "hinweis klein" }, "Fieldbook " + s.version + " · Protokolle im Ordner daten\\logs · Beenden über den Aus-Knopf oben rechts"));
+  }
+
+  // „Rückmeldung geben“: eine Zeile mit Knopf, darunter klappt das Formular auf (Text, freiwillige
+  // Kontaktadresse, auf Wunsch Logdateien). Vor dem Absenden ist sichtbar, was genau mitgeht.
+  function rueckmeldungTeil(fb) {
+    const box = el("div", { class: "fb-formular", hidden: true });
+    const wartendText = fb.wartend ? (fb.wartend === 1 ? " Eine frühere Rückmeldung wartet noch auf Internet." : " " + fb.wartend + " frühere Rückmeldungen warten noch auf Internet.") : "";
+    const oeffnen = el("button", { class: "knopf knopf-klein", onclick: () => {
+      box.hidden = !box.hidden;
+      oeffnen.textContent = box.hidden ? "Schreiben" : "Schließen";
+      zeile.style.borderBottom = box.hidden ? "0" : "";
+      if (!box.hidden) text.focus();
+    } }, "Schreiben");
+    const zeile = el("div", { class: "einst-zeile", style: "border-bottom:0" },
+      el("div", {}, el("b", {}, "Rückmeldung geben"),
+        el("small", {}, "Fehler gefunden, eine Idee oder etwas, das dir gefällt? Schreib es direkt an den Entwickler. Ohne Internet schickt Fieldbook die Nachricht später." + wartendText)),
+      oeffnen);
+    const text = el("textarea", { rows: 5, maxlength: 5000, placeholder: "Was ist dir aufgefallen? Bei einem Fehler hilft: Was hast du gemacht, und was ist passiert?", "aria-label": "Deine Rückmeldung" });
+    const kontakt = el("input", { type: "text", maxlength: 200, autocomplete: "email", placeholder: "E-Mail-Adresse, falls du eine Antwort möchtest (freiwillig)", "aria-label": "Kontaktadresse", style: "margin-top:8px" });
+    const mitLogs = el("input", { type: "checkbox" });
+
+    // Was mitgeht, genau so, wie es der Server verschickt
+    const sys = fb.system || {};
+    const liste = el("ul", { class: "fb-liste" },
+      el("li", {}, "Dein Text und, falls angegeben, deine Kontaktadresse"),
+      el("li", {}, "Fieldbook " + fb.version + " · Windows " + (sys.Windows || "?") + " · " + (sys.Arbeitsspeicher || "?") + " Arbeitsspeicher · KI: " + (sys.KI || "keine")));
+    const logZeile = el("li", { hidden: true }, "Logdateien (jeweils das Ende): " +
+      (fb.logs.length ? fb.logs.map(l => l.name + " (" + groesse(l.bytes) + ")").join(", ") : "keine vorhanden"));
+    liste.append(logZeile);
+    mitLogs.addEventListener("change", () => { logZeile.hidden = !mitLogs.checked; });
+
+    const status = el("p", { class: "klein", style: "margin:8px 0 0" });
+    const senden = el("button", { class: "knopf knopf-haupt", onclick: async () => {
+      if (text.value.trim().length < 3) { status.className = "klein fehlerbox"; status.textContent = "Bitte schreib ein paar Worte."; text.focus(); return; }
+      senden.disabled = true; senden.textContent = "Wird gesendet …";
+      const r = await api("feedback/senden", { text: text.value, kontakt: kontakt.value, logs: mitLogs.checked }).catch(e => ({ fehler: e.message }));
+      senden.disabled = false; senden.textContent = "Absenden";
+      if (r.fehler) { status.className = "klein fehlerbox"; status.textContent = r.fehler; return; }
+      text.value = ""; kontakt.value = "";
+      status.className = "klein ok-text";
+      status.textContent = r.gesendet ? "✓ Danke! Deine Rückmeldung ist angekommen."
+        : r.zuViele ? "✓ Danke! Gerade kommen zu viele Rückmeldungen an. Fieldbook schickt deine später von selbst."
+        : "✓ Danke! Gerade gibt es keine Verbindung. Fieldbook schickt die Rückmeldung, sobald Internet da ist.";
+    } }, "Absenden");
+
+    box.append(text, kontakt,
+      el("label", { class: "schalter", style: "margin-top:10px" }, mitLogs, "Logdateien mitschicken (hilft bei Fehlern)"),
+      el("details", { class: "fb-details" }, el("summary", {}, "Was wird mitgeschickt?"), liste,
+        el("p", { class: "klein hinweis" }, "Chats, Fragen an die KI und deine Einträge (Erste Hilfe, Vorsorge) gehen nie mit. In den Logdateien werden dein Benutzername und deine Ordnerpfade unkenntlich gemacht. Die Rückmeldung läuft über einen kleinen Dienst bei Cloudflare und landet in einem privaten GitHub-Repository, das nur der Entwickler sieht. Sie wird nicht veröffentlicht.")),
+      el("div", { class: "knopfreihe" }, senden), status);
+    return el("div", {}, zeile, box);
   }
 
   async function entfernen(art, id, titel) {

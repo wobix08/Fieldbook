@@ -73,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.5.2";
+        public const string Version = "0.5.3";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -155,6 +155,8 @@ namespace OfflineWissen
                 // Einmal beim Start kurz nach einer neuen Fieldbook-Version fragen (eine kleine Anfrage, abschaltbar)
                 try { if (UpdateBeimStart() && UpdateApi() != null && !IstEntwicklungsordner()) ProgrammUpdateSuchen(); } catch { }
             }) { IsBackground = true }.Start();
+            // Gemerkte Rückmeldungen verschicken, sobald Internet da ist
+            new Thread(FeedbackHintergrund) { IsBackground = true }.Start();
 
             // Nach einem Neustart durch das Programm-Update ist der Browser schon offen
             string neustartMarke = Path.Combine(Daten, "cache", "neustart");
@@ -704,6 +706,8 @@ namespace OfflineWissen
                 case "verbindung":
                     SendeJson(ctx, Verbindung());
                     return;
+                case "feedback": SendeJson(ctx, FeedbackInfo()); return;
+                case "feedback/senden": SendeJson(ctx, FeedbackSenden(LeseBody(ctx))); return;
                 case "aktualisierung/laden":
                     SendeJson(ctx, UpdatesJetztLaden());
                     return;
@@ -1092,6 +1096,162 @@ namespace OfflineWissen
             using (var resp = req.GetResponse())
             using (var r = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
                 return r.ReadToEnd();
+        }
+
+        // ------------------------------------------------------------------ Rückmeldungen (Feedback)
+        // Der Nutzer schreibt in den Einstellungen eine Rückmeldung. Sie wird zuerst in daten\feedback gemerkt
+        // und dann an den Feedback-Dienst geschickt (Adresse "feedback" in fieldbook.json, ein Cloudflare
+        // Worker, siehe tools\feedback-worker.js). Ohne Internet bleibt sie liegen und geht beim nächsten
+        // Start oder spätestens nach 30 Minuten raus. Chats und Fragen an die KI gehen nie mit.
+
+        static readonly object FeedbackLk = new object();
+        static string FeedbackOrdner { get { return Path.Combine(Daten, "feedback"); } }
+
+        static string FeedbackUrl()
+        {
+            var k = LadeJson(Path.Combine(Config, "fieldbook.json"));
+            string u = (Str(k, "feedback") ?? "").Trim();
+            return u.StartsWith("https://") || u.StartsWith("http://localhost:") ? u : null; // localhost nur zum Testen
+        }
+
+        static string[] FeedbackWartend()
+        {
+            try { return Directory.Exists(FeedbackOrdner) ? Directory.GetFiles(FeedbackOrdner, "*.json").OrderBy(f => f).ToArray() : new string[0]; }
+            catch { return new string[0]; }
+        }
+
+        // Was außer dem Text mitgeht (wird im Formular genau so angezeigt)
+        static Dictionary<string, object> FeedbackSystem()
+        {
+            var ms = new MEMORYSTATUSEX();
+            double ram = GlobalMemoryStatusEx(ms) ? ms.ullTotalPhys / 1073741824.0 : 0;
+            return new Dictionary<string, object> {
+                { "Windows", Environment.OSVersion.Version.ToString() },
+                { "Arbeitsspeicher", Math.Round(ram) + " GB" },
+                { "KI", Str(einst, "modell") ?? "keine" } };
+        }
+
+        static List<string> FeedbackLogDateien()
+        {
+            try { return Directory.GetFiles(Logs, "*.log").Where(f => new FileInfo(f).Length > 0).OrderBy(f => f).ToList(); }
+            catch { return new List<string>(); }
+        }
+
+        // Ende einer Logdatei (höchstens 50 KB), Benutzername und Ordnerpfade ersetzt
+        static string LogEnde(string pfad)
+        {
+            string s;
+            using (var fs = new FileStream(pfad, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+                long start = Math.Max(0, fs.Length - 50000);
+                fs.Seek(start, SeekOrigin.Begin);
+                using (var r = new StreamReader(fs, Encoding.UTF8)) s = r.ReadToEnd();
+                if (start > 0) { int i = s.IndexOf('\n'); if (i >= 0) s = "… (nur das Ende)\n" + s.Substring(i + 1); }
+            }
+            s = Regex.Replace(s, Regex.Escape(Root.TrimEnd('\\')), "<Fieldbook>", RegexOptions.IgnoreCase);
+            string profil = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(profil)) s = Regex.Replace(s, Regex.Escape(profil), "<Benutzerordner>", RegexOptions.IgnoreCase);
+            if (Environment.UserName.Length >= 3) s = Regex.Replace(s, @"\\" + Regex.Escape(Environment.UserName) + @"(?=\\|\b)", "\\<Benutzer>", RegexOptions.IgnoreCase);
+            return s;
+        }
+
+        static Dictionary<string, object> FeedbackInfo()
+        {
+            return new Dictionary<string, object> {
+                { "eingerichtet", FeedbackUrl() != null },
+                { "version", Version },
+                { "system", FeedbackSystem() },
+                { "logs", FeedbackLogDateien().Select(f => (object)new Dictionary<string, object> { { "name", Path.GetFileName(f) }, { "bytes", new FileInfo(f).Length } }).ToList() },
+                { "wartend", FeedbackWartend().Length } };
+        }
+
+        static Dictionary<string, object> FeedbackSenden(Dictionary<string, object> b)
+        {
+            string text = (Str(b, "text") ?? "").Trim();
+            string kontakt = (Str(b, "kontakt") ?? "").Trim();
+            if (text.Length < 3) return new Dictionary<string, object> { { "fehler", "Bitte schreib ein paar Worte." } };
+            if (text.Length > 5000) text = text.Substring(0, 5000);
+            if (kontakt.Length > 200) kontakt = kontakt.Substring(0, 200);
+            if (FeedbackUrl() == null) return new Dictionary<string, object> { { "fehler", "Rückmeldungen sind in dieser Fieldbook-Version nicht eingerichtet." } };
+            // Höchstens eine Rückmeldung pro Minute (Doppelklick, versehentlich mehrfach gesendet)
+            lock (FeedbackLk)
+            {
+                if ((DateTime.UtcNow - feedbackZuletzt).TotalSeconds < 60)
+                    return new Dictionary<string, object> { { "fehler", "Bitte warte eine Minute bis zur nächsten Rückmeldung." } };
+                feedbackZuletzt = DateTime.UtcNow;
+            }
+
+            var logs = new List<object>();
+            if (Bool(b, "logs"))
+                foreach (var f in FeedbackLogDateien().Take(8))
+                    try { logs.Add(new Dictionary<string, object> { { "name", Path.GetFileName(f) }, { "inhalt", LogEnde(f) } }); } catch { }
+            var daten = new Dictionary<string, object> {
+                { "art", "feedback" }, { "text", text }, { "kontakt", kontakt }, { "version", Version },
+                { "system", FeedbackSystem() }, { "erstellt", DateTime.Now.ToString("yyyy-MM-dd HH:mm") }, { "logs", logs } };
+            Directory.CreateDirectory(FeedbackOrdner);
+            string datei = Path.Combine(FeedbackOrdner, DateTime.UtcNow.Ticks + ".json");
+            File.WriteAllText(datei, Json.Serialize(daten), Utf8);
+
+            int code = FeedbackAusgang();
+            bool gesendet = !File.Exists(datei);
+            return new Dictionary<string, object> { { "ok", true }, { "gesendet", gesendet }, { "zuViele", !gesendet && code == 429 }, { "wartend", FeedbackWartend().Length } };
+        }
+
+        static DateTime feedbackZuletzt = DateTime.MinValue;
+
+        // Schickt alle gemerkten Rückmeldungen. Bei Netzfehlern oder "zu viele" (429) bleibt der Rest
+        // für später liegen. Gibt den letzten Antwortcode zurück (0 = keine Verbindung).
+        static int FeedbackAusgang()
+        {
+            string url = FeedbackUrl();
+            if (url == null) return 0;
+            int code = 200;
+            lock (FeedbackLk)
+                foreach (var f in FeedbackWartend())
+                {
+                    code = SendePost(url, File.ReadAllText(f, Encoding.UTF8));
+                    if (code >= 200 && code < 300) { try { File.Delete(f); } catch { } Log("Rückmeldung gesendet."); }
+                    // Vom Dienst abgelehnt (fehlerhaft oder zu groß): nicht endlos wiederholen
+                    else if (code == 400 || code == 413) { try { File.Move(f, f + ".abgelehnt"); } catch { } Log("Rückmeldung abgelehnt (" + code + ")."); }
+                    else { Log("Rückmeldung wartet (" + (code == 0 ? "keine Verbindung" : "Dienst antwortet " + code) + ")."); return code; }
+                }
+            return code;
+        }
+
+        static void FeedbackHintergrund()
+        {
+            Thread.Sleep(20000);
+            while (true)
+            {
+                try { if (FeedbackWartend().Length > 0) FeedbackAusgang(); } catch { }
+                Thread.Sleep(30 * 60 * 1000);
+            }
+        }
+
+        static int SendePost(string url, string json)
+        {
+            try
+            {
+                var req = (HttpWebRequest)WebRequest.Create(url);
+                req.Method = "POST";
+                req.ContentType = "application/json; charset=utf-8";
+                req.UserAgent = "Fieldbook/" + Version;
+                req.Timeout = 20000;
+                req.ReadWriteTimeout = 20000;
+                byte[] b = Utf8.GetBytes(json);
+                req.ContentLength = b.Length;
+                using (var s = req.GetRequestStream()) s.Write(b, 0, b.Length);
+                using (var resp = (HttpWebResponse)req.GetResponse()) return (int)resp.StatusCode;
+            }
+            catch (WebException e)
+            {
+                var r = e.Response as HttpWebResponse;
+                if (r == null) return 0;
+                int c = (int)r.StatusCode;
+                r.Close();
+                return c;
+            }
+            catch { return 0; }
         }
 
         // ------------------------------------------------------------------ Proxy und Verbindungstest

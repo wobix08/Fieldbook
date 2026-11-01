@@ -585,6 +585,11 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .einst-zeile > :first-child { flex: 1; min-width: 0; overflow-wrap: break-word; }
 .einst-zeile > :not(:first-child) { flex: none; max-width: 60%; }
 .einst-zeile > select { width: auto; }
+.fb-formular { padding: 12px 0 4px; }
+.fb-details { margin-top: 10px; }
+.fb-details summary { cursor: pointer; color: var(--text2); }
+.fb-liste { margin: 8px 0 4px; padding-left: 20px; }
+.fb-liste li { margin: 3px 0; }
 .knopfreihe { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 
 /* Vorsorge */

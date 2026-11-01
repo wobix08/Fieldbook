@@ -22,6 +22,7 @@ Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und [Internet-in-a-
 - [Automatische Aktualisierung (optional)](#automatische-aktualisierung-optional)
 - [Programm-Updates (Fieldbook selbst)](#programm-updates-fieldbook-selbst)
 - [Länder und Sprachen](#länder-und-sprachen)
+- [Datenschutz](#datenschutz)
 - [Lizenz](#lizenz)
 
 ## Warum Fieldbook?
@@ -54,7 +55,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Schnellstart
 
-1. **[Fieldbook 0.5.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.5.2/Fieldbook-0.5.2.zip)** (ZIP-Datei, unter 1 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.5.3 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.5.3/Fieldbook-0.5.3.zip)** (ZIP-Datei, unter 1 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -93,9 +94,16 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   In der aktuellen Version ist so etwas noch gar nicht eingebaut.\
   Ganz ehrlich: Ich kann jeden verstehen, der das ausgeschaltet lässt, bei anderen Programmen mache ich es genauso.\
   Über jedes Ja würde ich mich trotzdem sehr freuen.\
-  Fieldbook läuft auf ganz unterschiedlicher Hardware, und ohne solche Rückmeldungen bekomme ich kaum mit, wo es hakt oder zu langsam ist.\
-  Zusammen mit den Nutzungsstatistiken kommt auch eine Feedback-Funktion.\
-  Dort kannst du mir selbst schreiben, was gut läuft und was nicht, als Alternative zur Statistik.
+  Fieldbook läuft auf ganz unterschiedlicher Hardware, und ohne solche Rückmeldungen bekomme ich kaum mit, wo es hakt oder zu langsam ist.
+- **Rückmeldungen nur, wenn du sie abschickst**\
+  Unter *Einstellungen → Rückmeldung geben* kannst du mir selbst schreiben, was gut läuft und was nicht.\
+  Die Nachricht geht erst raus, wenn du auf *Absenden* klickst.\
+  Sie läuft über einen kleinen Dienst bei Cloudflare (`fieldbook-feedback.wobix08.workers.dev`, Quellcode in [`tools/feedback-worker.js`](tools/feedback-worker.js)) und landet in einem privaten GitHub-Repository, das nur ich sehe.\
+  Mit geht nur, was im Formular unter *Was wird mitgeschickt?* steht.\
+  Logdateien schickt Fieldbook nur mit, wenn du den Haken dafür setzt, und macht darin deinen Benutzernamen und deine Ordnerpfade unkenntlich.\
+  Gegen Missbrauch nimmt der Dienst je Absender nur wenige Rückmeldungen pro Stunde an.\
+  Dafür merkt er sich eine Stunde lang einen unumkehrbaren Kurzwert, deine IP-Adresse selbst speichert er nicht.\
+  Alles Weitere steht unter [Datenschutz](#datenschutz).
 - **Downloads nur aus offiziellen Quellen**\
   Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien:
 
@@ -115,7 +123,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.5.2.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.5.3.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -156,6 +164,7 @@ Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbebloc
 | Übersetzer | `cdn.jsdelivr.net`, `storage.googleapis.com` |
 | Ortsnamen | `download.geonames.org` |
 | Wegedaten | `brouter.de` |
+| Rückmeldungen (nur wenn du eine abschickst) | `fieldbook-feedback.wobix08.workers.dev` |
 
 ## Welche KI passt zu meinem Gerät?
 
@@ -224,6 +233,7 @@ Zum Testen `app\Start.bat` starten.
 
 - Startdatei mit Symbol neu bauen: `powershell -ExecutionPolicy Bypass -File tools\starter-bauen.ps1`
 - Release-ZIP bauen: `powershell -ExecutionPolicy Bypass -File tools\release-bauen.ps1 -Version 0.1.0`
+- Rückmeldungen: `tools/feedback-worker.js` läuft als Cloudflare Worker, die Adresse steht unter `feedback` in `app/config/fieldbook.json` (leer = Formular aus)
 - Neue Wissenspakete: Eintrag in `app/config/pakete.json` mit `name` und `flavour` wie im [Kiwix-Katalog](https://library.kiwix.org)
 - Eigene ZIM-Dateien kann man einfach in `daten\wissen` legen.\
   Sie werden automatisch eingebunden.
@@ -284,6 +294,34 @@ Für andere Länder ist es vorbereitet:
 - Sprachen: Deutsch und Englisch.\
   Die Antwortsprache der KI folgt der Sprache des Landes.\
   Die Oberfläche selbst ist noch nicht übersetzt.
+
+## Datenschutz
+
+Fieldbook läuft auf deinem Gerät.\
+Fragen an die KI, Chats und alles, was du in Fieldbook einträgst, bleiben dort und werden nie übertragen.\
+Ins Internet geht Fieldbook nur für Downloads, für die Frage nach einer neuen Version und für Rückmeldungen, die du selbst abschickst.
+
+**Rückmeldungen**\
+Was übertragen wird, steht im Formular unter *Was wird mitgeschickt?*:\
+dein Text, auf Wunsch eine Kontaktadresse, die Fieldbook-Version, die Windows-Version, die Größe des Arbeitsspeichers, der Name der eingerichteten KI und, nur mit Haken, die Enden der Logdateien.\
+In den Logdateien macht Fieldbook deinen Benutzernamen und deine Ordnerpfade unkenntlich.\
+Schreib bitte nichts in den Text, was du nicht teilen möchtest.
+
+**Wohin die Daten gehen**\
+Die Rückmeldung läuft über einen kleinen Dienst bei Cloudflare (`fieldbook-feedback.wobix08.workers.dev`, Quellcode in [`tools/feedback-worker.js`](tools/feedback-worker.js)).\
+Cloudflare verarbeitet dabei wie jeder Internetdienst deine IP-Adresse, um die Anfrage zuzustellen ([Datenschutz bei Cloudflare](https://www.cloudflare.com/de-de/privacypolicy/)).\
+Der Dienst selbst speichert die IP-Adresse nicht.\
+Gegen Missbrauch zählt er nur einen unumkehrbaren Kurzwert, der nach spätestens einer Stunde von selbst gelöscht wird.\
+Die Rückmeldung landet als Eintrag in einem privaten GitHub-Repository, das nur der Entwickler sehen kann ([Datenschutz bei GitHub](https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement)).\
+Sie wird nicht veröffentlicht, nicht weitergegeben und nur genutzt, um Fieldbook zu verbessern und dir auf Wunsch zu antworten.
+
+**Wie lange und wie löschen**\
+Rückmeldungen werden gelöscht, sobald sie erledigt sind, spätestens nach zwei Jahren.\
+Möchtest du, dass eine Rückmeldung früher gelöscht wird, schreib das in eine neue Rückmeldung (am besten mit dem ungefähren Datum der alten) oder melde dich über das GitHub-Konto [wobix08](https://github.com/wobix08).
+
+**Ohne Rückmeldung**\
+Schickst du nichts ab, wird nichts übertragen.\
+Fehlerberichte oder Nutzungsstatistiken gibt es in dieser Version nicht.
 
 ## Lizenz
 
