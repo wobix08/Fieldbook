@@ -8,10 +8,19 @@ $app  = $PSScriptRoot
 $root = Split-Path -Parent $app
 $port = 8090
 
+# Das Fenster startet minimiert (Fieldbook.exe). Bei Fehlern wieder zeigen, damit man die Meldung sieht.
+function Fenster-Zeigen {
+    try {
+        Add-Type -Name Fenster -Namespace Fieldbook -MemberDefinition '[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow(); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n);'
+        [Fieldbook.Fenster]::ShowWindow([Fieldbook.Fenster]::GetConsoleWindow(), 9) | Out-Null
+    } catch {}
+}
+
+Clear-Host
 Write-Host ''
-Write-Host '  ==============================' -ForegroundColor Cyan
-Write-Host '        FIELDBOOK'          -ForegroundColor Cyan
-Write-Host '  ==============================' -ForegroundColor Cyan
+Write-Host '  Fieldbook' -ForegroundColor Green -NoNewline
+Write-Host '  ·  Wissen, wo kein Netz ist' -ForegroundColor DarkGray
+Write-Host '  ────────────────────────────────────' -ForegroundColor DarkGray
 Write-Host ''
 
 # Läuft das Programm schon? Dann nur den Browser öffnen.
@@ -19,7 +28,9 @@ try {
     $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 "http://localhost:$port/api/status"
     if ($r.StatusCode -eq 200) {
         Write-Host '  Fieldbook läuft bereits. Der Browser wird geöffnet.'
-        Start-Process "http://localhost:$port/"
+        # Fieldbook entscheidet selbst: offenen Tab nach vorne holen oder einen neuen öffnen
+        try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://localhost:$port/api/zeigen" | Out-Null }
+        catch { Start-Process "http://localhost:$port/" }
         Start-Sleep -Seconds 2
         exit 0
     }
@@ -55,6 +66,7 @@ if ((Test-Path (Join-Path $bereit 'app\Server.cs')) -and -not (Test-Path (Join-P
         $aktualisiert = $true
         Write-Host "  Aktualisiert auf Version $neu." -ForegroundColor Green
     } catch {
+        Fenster-Zeigen
         Write-Host "  Update fehlgeschlagen: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host '  Die bisherige Version wird wiederhergestellt.' -ForegroundColor Yellow
         if (Test-Path (Join-Path $sicherung 'app\Server.cs')) { Spiegeln (Join-Path $sicherung 'app') $app }
@@ -79,6 +91,7 @@ try {
         } catch { $fehler = $_.Exception.Message }
     }
     if ($fehler) {
+        Fenster-Zeigen
         Write-Host ''
         Write-Host '  Der Programmteil konnte nicht vorbereitet werden:' -ForegroundColor Red
         Write-Host "  $fehler" -ForegroundColor Red
@@ -86,9 +99,18 @@ try {
     }
 }
 
+Write-Host '  Fieldbook läuft im Browser: ' -NoNewline
+Write-Host "http://localhost:$port" -ForegroundColor Green
+Write-Host '  Dieses Fenster kann minimiert bleiben. Beenden: Aus-Knopf oben rechts' -ForegroundColor Gray
+Write-Host '  in Fieldbook oder dieses Fenster schließen.' -ForegroundColor Gray
+Write-Host ''
+# Meldungen des Servers dezent in Grau
+try { [Console]::ForegroundColor = 'DarkGray' } catch {}
 try {
     [OfflineWissen.App]::Start($root, $port)
 } catch {
+    Fenster-Zeigen
+    try { [Console]::ResetColor() } catch {}
     Write-Host ''
     Write-Host '  Fehler beim Start:' -ForegroundColor Red
     Write-Host "  $($_.Exception.InnerException.Message) $($_.Exception.Message)" -ForegroundColor Red

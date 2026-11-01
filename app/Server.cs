@@ -106,9 +106,6 @@ namespace OfflineWissen
             listener.Start();
 
             Log("Fieldbook " + Version + " läuft.");
-            Log("Adresse im Browser: http://localhost:" + Port + "/");
-            Log("Dieses Fenster offen lassen. Schließen beendet das Programm.");
-            Log("");
 
             new Thread(delegate ()
             {
@@ -127,8 +124,15 @@ namespace OfflineWissen
             string neustartMarke = Path.Combine(Daten, "cache", "neustart");
             bool nachNeustart = File.Exists(neustartMarke);
             if (nachNeustart) try { File.Delete(neustartMarke); } catch { }
+            // Ist vom letzten Mal noch ein Fieldbook-Tab offen, meldet er sich gleich wieder (alle 5 s).
+            // Dann diesen Tab nutzen statt einen neuen zu öffnen.
             if (Environment.GetEnvironmentVariable("OW_KEIN_BROWSER") == null && !nachNeustart)
-                try { Process.Start(new ProcessStartInfo("http://localhost:" + Port + "/") { UseShellExecute = true }); } catch { }
+                new Thread(delegate ()
+                {
+                    for (int i = 0; i < 14 && !TabOffen(10); i++) Thread.Sleep(500);
+                    if (TabOffen(10) && BrowserNachVorne()) Log("Der offene Fieldbook-Tab im Browser wird weiter benutzt.");
+                    else BrowserOeffnen();
+                }) { IsBackground = true }.Start();
 
             while (listener.IsListening)
             {
@@ -141,6 +145,55 @@ namespace OfflineWissen
         }
 
         static void Log(string s) { try { Console.WriteLine(s); } catch { } }
+
+        // ------------------------------------------------------------------ Browser-Tab wiederverwenden
+
+        static long tabZuletzt; // letzte Status-Anfrage aus einem Fieldbook-Tab (UTC-Ticks)
+        static readonly string StartKennung = DateTime.Now.Ticks.ToString(); // ändert sich bei jedem Start; offene Tabs laden dann neu
+
+        static bool TabOffen(int sekunden)
+        {
+            long t = Interlocked.Read(ref tabZuletzt);
+            return t > 0 && (DateTime.UtcNow - new DateTime(t, DateTimeKind.Utc)).TotalSeconds < sekunden;
+        }
+
+        static void BrowserOeffnen()
+        {
+            try { Process.Start(new ProcessStartInfo("http://localhost:" + Port + "/") { UseShellExecute = true }); } catch { }
+        }
+
+        delegate bool FensterRueckruf(IntPtr h, IntPtr l);
+        [DllImport("user32.dll")] static extern bool EnumWindows(FensterRueckruf f, IntPtr l);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+        [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+        [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
+        [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int n);
+        [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+        [DllImport("user32.dll")] static extern void keybd_event(byte k, byte s, uint f, UIntPtr e);
+
+        // Holt ein Browserfenster nach vorne, dessen aktiver Tab Fieldbook zeigt (Fenstertitel beginnt mit „Fieldbook“).
+        // Liegt Fieldbook nur in einem Hintergrund-Tab, findet Windows das Fenster nicht: dann false.
+        static bool BrowserNachVorne()
+        {
+            IntPtr gefunden = IntPtr.Zero;
+            EnumWindows(delegate (IntPtr h, IntPtr l)
+            {
+                if (!IsWindowVisible(h)) return true;
+                var titel = new StringBuilder(256); GetWindowText(h, titel, 256);
+                var klasse = new StringBuilder(256); GetClassName(h, klasse, 256);
+                string k = klasse.ToString();
+                bool browser = k == "Chrome_WidgetWin_1" || k == "MozillaWindowClass";
+                if (browser && titel.ToString().StartsWith("Fieldbook")) { gefunden = h; return false; }
+                return true;
+            }, IntPtr.Zero);
+            if (gefunden == IntPtr.Zero) return false;
+            if (IsIconic(gefunden)) ShowWindow(gefunden, 9);
+            // Windows lässt Hintergrundprogramme sonst nicht nach vorne; ein kurzer Alt-Tastendruck erlaubt es
+            keybd_event(0x12, 0, 0, UIntPtr.Zero); keybd_event(0x12, 0, 2, UIntPtr.Zero);
+            SetForegroundWindow(gefunden);
+            return true;
+        }
 
         static int FreierPort()
         {
@@ -532,7 +585,18 @@ namespace OfflineWissen
             Func<string, string> Q = k => q.ContainsKey(k) ? q[k] : null;
             switch (was)
             {
-                case "status": SendeJson(ctx, Status()); return;
+                case "status":
+                    // Nur Anfragen aus einem Fieldbook-Tab zählen (der Browser schickt die Herkunftsseite mit)
+                    if (ctx.Request.UrlReferrer != null) Interlocked.Exchange(ref tabZuletzt, DateTime.UtcNow.Ticks);
+                    SendeJson(ctx, Status()); return;
+                case "zeigen":
+                    // Fieldbook wurde nochmal gestartet: offenen Tab nach vorne holen, sonst einen neuen öffnen
+                    {
+                        bool vorne = TabOffen(70) && BrowserNachVorne();
+                        if (!vorne) BrowserOeffnen();
+                        SendeJson(ctx, new Dictionary<string, object> { { "vorhanden", vorne } });
+                    }
+                    return;
                 case "hardware": SendeJson(ctx, Hardware()); return;
                 case "katalog": SendeJson(ctx, Katalog(Q("neu") == "1")); return;
                 case "kartengroesse": SendeJson(ctx, KartenGroesse(Q("id"), Q("maxzoom"))); return;
@@ -729,6 +793,7 @@ namespace OfflineWissen
                 {"sprache", Str(einst, "sprache") ?? "de"},
                 {"programmNeu", progUpdate != null && Bool(progUpdate, "verfuegbar") ? Str(progUpdate, "neu") : null},
                 {"programmBereit", BereitVersion()},
+                {"start", StartKennung},
                 {"updateBeimStart", UpdateBeimStart()}
             };
         }

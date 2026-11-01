@@ -33,6 +33,8 @@ async function aktualisiereStatus() {
   try {
     const s = await api("status");
     const vorher = OW.status;
+    // Fieldbook wurde neu gestartet und nutzt diesen Tab weiter: einmal frisch laden
+    if (vorher && vorher.start && s.start && vorher.start !== s.start && !document.querySelector(".dialog-hinter[data-neustart]")) { location.reload(); return s; }
     OW.status = s;
     if (vorher && vorher.bibliothek !== s.bibliothek) OW.buecher = null;
     zeigeKopfStatus(s);

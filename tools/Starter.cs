@@ -30,11 +30,15 @@ static class Starter
                 "Fieldbook", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return 1;
         }
+        // Konsolenfenster minimiert starten; bei Fehlern holt start.ps1 es selbst nach vorne
         var psi = new ProcessStartInfo("cmd.exe", "/c \"\"" + bat + "\"\"")
         {
             WorkingDirectory = Path.Combine(ordner, "app"),
-            UseShellExecute = false
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Minimized
         };
+        // Läuft Fieldbook schon, holt es den offenen Browser-Tab nach vorne; das darf es nur mit dieser Erlaubnis
+        try { AllowSetForegroundWindow(-1); } catch { }
         Process.Start(psi);
         return 0;
     }
@@ -68,6 +72,7 @@ static class Starter
     [StructLayout(LayoutKind.Sequential)]
     struct EXT { public BASIC Basic; public IOC Io; public UIntPtr a, b, c, d; }
 
+    [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern IntPtr CreateJobObject(IntPtr a, string name);
     [DllImport("kernel32.dll")] static extern bool SetInformationJobObject(IntPtr job, int cls, IntPtr info, uint len);
     [DllImport("kernel32.dll")] static extern bool AssignProcessToJobObject(IntPtr job, IntPtr proc);

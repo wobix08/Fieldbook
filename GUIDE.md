@@ -45,10 +45,12 @@ Dann bitte abbrechen.
 
 ### Danach
 
-- Es öffnet sich ein schwarzes Fenster.\
-  **Lass es offen**, solange du das Programm benutzt.\
-  Schließt du es, wird Fieldbook beendet.
-- Der Browser öffnet sich automatisch mit dem Dashboard.
+- Unten in der Taskleiste erscheint ein kleines Fenster namens **Fieldbook**, es startet minimiert.\
+  Darin läuft Fieldbook.\
+  Lass es offen, solange du das Programm benutzt; schließt du es, wird Fieldbook beendet.\
+  Zum Beenden gibt es außerdem den Aus-Knopf oben rechts in Fieldbook.
+- Der Browser öffnet sich automatisch mit Fieldbook.\
+  Ist Fieldbook dort schon offen, nimmt Fieldbook diesen Tab, statt einen neuen zu öffnen.
 
 ## 3. Einrichten (einmalig, mit Internet)
 
