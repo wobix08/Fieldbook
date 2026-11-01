@@ -36,4 +36,7 @@ try {
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -Path "$zip.sha256" -Encoding ASCII -Value "$hash  $(Split-Path -Leaf $zip)"
 Write-Host "SHA256: $hash"
-Write-Host "Release erstellt: $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
+# Gleiche Datei ohne Versionsnummer für den festen Download-Link in der README
+# (github.com/<repo>/releases/latest/download/Fieldbook.zip), beim Release mit hochladen
+Copy-Item -Force $zip (Join-Path $dist 'Fieldbook.zip')
+Write-Host "Release erstellt: $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB) und dist\Fieldbook.zip"
