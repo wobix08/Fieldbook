@@ -141,7 +141,7 @@ Jedes Kapitel lässt sich ausdrucken.
 
 - Oben rechts siehst du den Akkustand.
 - Der **Sparmodus** schaltet die KI ab.\
-  Bibliothek, Karten, Kochen und Erste Hilfe funktionieren weiter.\
+  Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt.\
   Einschalten: auf das Feld „KI bereit“ oben rechts klicken.\
   Bei wenig Akku schlägt das Programm den Sparmodus selbst vor.
 - Oben rechts wechselt der Knopf mit Sonne bzw. Mond zwischen heller und dunkler Ansicht.\
