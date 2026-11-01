@@ -10,12 +10,17 @@
     { "id": "kinder", "icon": "puzzle", "titel": "Für Kinder", "text": "Kindgerecht erklärt, zum Entdecken" },
     { "id": "beschaeftigung", "icon": "book-heart", "titel": "Beschäftigung & Lesen", "text": "Bücher, Geschichten, Reiseführer zum Stöbern" }
   ],
+  "variantenGruppen": {
+    "wikipedia": { "titel": "Wikipedia Deutsch" },
+    "wikipedia-top": { "titel": "Das Beste von Wikipedia", "zusatz": "auch zusätzlich zur großen Wikipedia" },
+    "wikivoyage": { "titel": "Wikivoyage Deutsch (Reiseführer)" }
+  },
   "pakete": [
-    { "id": "wp-mini",  "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "mini",  "titel": "Wikipedia Deutsch, kompakt", "text": "Alle Artikel, aber nur die Einleitungen. Gut für kleine Festplatten.", "mb": 4686, "gruppeExklusiv": "wikipedia", "sprache": "de" },
-    { "id": "wp-nopic", "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "nopic", "titel": "Wikipedia Deutsch, vollständig ohne Bilder", "text": "Alle Artikel mit vollem Text. Empfohlen.", "mb": 18585, "gruppeExklusiv": "wikipedia", "sprache": "de" },
-    { "id": "wp-maxi",  "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "maxi",  "titel": "Wikipedia Deutsch, vollständig mit Bildern", "text": "Alles mit Bildern. Braucht viel Platz.", "mb": 48626, "gruppeExklusiv": "wikipedia", "sprache": "de" },
-    { "id": "wp-top-mini", "kategorien": ["grundwissen"], "name": "wikipedia_de_top", "flavour": "mini", "titel": "Das Beste von Wikipedia, kompakt", "text": "Die wichtigsten Artikel, nur die Einleitungen. Sehr klein, gut für schwache Laptops.", "mb": 130, "gruppeExklusiv": "wikipedia-top", "sprache": "de" },
-    { "id": "wp-top-maxi", "kategorien": ["grundwissen"], "name": "wikipedia_de_top", "flavour": "maxi", "titel": "Das Beste von Wikipedia, mit Bildern", "text": "Die wichtigsten Artikel vollständig mit Bildern. Gute Ergänzung zur Wikipedia ohne Bilder.", "mb": 4335, "gruppeExklusiv": "wikipedia-top", "sprache": "de" },
+    { "id": "wp-mini",  "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "mini",  "titel": "Wikipedia Deutsch, kompakt", "text": "Alle Artikel, aber nur die Einleitungen. Gut für kleine Festplatten.", "mb": 4686, "gruppeExklusiv": "wikipedia", "variante": "Kompakt", "sprache": "de" },
+    { "id": "wp-nopic", "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "nopic", "titel": "Wikipedia Deutsch, vollständig ohne Bilder", "text": "Alle Artikel mit vollem Text. Empfohlen.", "mb": 18585, "gruppeExklusiv": "wikipedia", "variante": "Vollständig ohne Bilder", "sprache": "de" },
+    { "id": "wp-maxi",  "kategorien": ["grundwissen"], "name": "wikipedia_de_all", "flavour": "maxi",  "titel": "Wikipedia Deutsch, vollständig mit Bildern", "text": "Alles mit Bildern. Braucht viel Platz.", "mb": 48626, "gruppeExklusiv": "wikipedia", "variante": "Vollständig mit Bildern", "sprache": "de" },
+    { "id": "wp-top-mini", "kategorien": ["grundwissen"], "name": "wikipedia_de_top", "flavour": "mini", "titel": "Das Beste von Wikipedia, kompakt", "text": "Die wichtigsten Artikel, nur die Einleitungen. Sehr klein, gut für schwache Laptops.", "mb": 130, "gruppeExklusiv": "wikipedia-top", "variante": "Kompakt", "sprache": "de" },
+    { "id": "wp-top-maxi", "kategorien": ["grundwissen"], "name": "wikipedia_de_top", "flavour": "maxi", "titel": "Das Beste von Wikipedia, mit Bildern", "text": "Die wichtigsten Artikel vollständig mit Bildern. Gute Ergänzung zur Wikipedia ohne Bilder.", "mb": 4335, "gruppeExklusiv": "wikipedia-top", "variante": "Mit Bildern", "sprache": "de" },
     { "id": "wiktionary", "kategorien": ["grundwissen", "lernen"], "name": "wiktionary_de_all", "flavour": "nopic", "titel": "Wiktionary Deutsch (Wörterbuch)", "text": "Bedeutung, Herkunft und Übersetzung von Wörtern.", "mb": 1603, "sprache": "de" },
 
     { "id": "wp-medizin", "kategorien": ["gesundheit"], "name": "wikipedia_de_medicine", "flavour": "maxi", "titel": "Medizin-Wikipedia Deutsch", "text": "Alle medizinischen Wikipedia-Artikel mit Bildern. Für den Notfall-Bereich wichtig.", "mb": 421, "sprache": "de" },
@@ -72,8 +77,8 @@
     { "id": "gutenberg-de", "kategorien": ["beschaeftigung"], "name": "gutenberg_de_all", "flavour": "", "titel": "Project Gutenberg Deutsch (Bücher)", "text": "Tausende freie Bücher, Klassiker und Märchen.", "mb": 11045, "sprache": "de", "keineSuche": true },
     { "id": "wikiquote-de", "kategorien": ["beschaeftigung"], "name": "wikiquote_de_all", "flavour": "nopic", "titel": "Wikiquote Deutsch (Zitate)", "text": "Zitate und Sprüche von bekannten Menschen, aus Filmen und Büchern.", "mb": 16, "sprache": "de" },
     { "id": "wikisource-de", "kategorien": ["beschaeftigung"], "name": "wikisource_de_all", "flavour": "nopic", "titel": "Wikisource Deutsch", "text": "Freie Texte, Gedichte und historische Quellen.", "mb": 1205, "sprache": "de", "keineSuche": true },
-    { "id": "wikivoyage-de-nopic", "kategorien": ["beschaeftigung", "grundwissen"], "name": "wikivoyage_de_all", "flavour": "nopic", "titel": "Wikivoyage Deutsch (Reiseführer), ohne Bilder", "text": "Reiseführer für Länder, Regionen und Städte. Ohne Karten, Flaggen und Fotos.", "mb": 207, "gruppeExklusiv": "wikivoyage", "sprache": "de" },
-    { "id": "wikivoyage-de", "kategorien": ["beschaeftigung", "grundwissen"], "name": "wikivoyage_de_all", "flavour": "maxi", "titel": "Wikivoyage Deutsch (Reiseführer), mit Bildern", "text": "Reiseführer mit Lagekarten, Regionenkarten, Flaggen und Fotos. Empfohlen.", "mb": 1072, "gruppeExklusiv": "wikivoyage", "sprache": "de" }
+    { "id": "wikivoyage-de-nopic", "kategorien": ["beschaeftigung", "grundwissen"], "name": "wikivoyage_de_all", "flavour": "nopic", "titel": "Wikivoyage Deutsch (Reiseführer), ohne Bilder", "text": "Reiseführer für Länder, Regionen und Städte. Ohne Karten, Flaggen und Fotos.", "mb": 207, "gruppeExklusiv": "wikivoyage", "variante": "Ohne Bilder", "sprache": "de" },
+    { "id": "wikivoyage-de", "kategorien": ["beschaeftigung", "grundwissen"], "name": "wikivoyage_de_all", "flavour": "maxi", "titel": "Wikivoyage Deutsch (Reiseführer), mit Bildern", "text": "Reiseführer mit Lagekarten, Regionenkarten, Flaggen und Fotos. Empfohlen.", "mb": 1072, "gruppeExklusiv": "wikivoyage", "variante": "Mit Bildern", "sprache": "de" }
   ],
   "vorlagen": [
     { "id": "reise", "titel": "Reise", "text": "Klein und leicht", "pakete": ["wp-mini", "wp-medizin", "wikivoyage-de-nopic"] },

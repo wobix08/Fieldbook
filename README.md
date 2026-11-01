@@ -54,7 +54,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Schnellstart
 
-1. **[Fieldbook 0.5.1 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.5.1/Fieldbook-0.5.1.zip)** (ZIP-Datei, unter 1 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.5.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.5.2/Fieldbook-0.5.2.zip)** (ZIP-Datei, unter 1 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -115,7 +115,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.5.1.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.5.2.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.

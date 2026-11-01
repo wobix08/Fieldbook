@@ -58,9 +58,16 @@ if ((Test-Path (Join-Path $bereit 'app\Server.cs')) -and -not (Test-Path (Join-P
         Spiegeln (Join-Path $bereit 'app') $app
         # Dateien im Hauptordner (Startdatei, Anleitung, Lizenzen); der Ordner "daten" bleibt unangetastet
         Get-ChildItem $bereit -File | Where-Object { $_.Name -ne 'version.txt' } | ForEach-Object { Copy-Item -Force $_.FullName (Join-Path $root $_.Name) }
-        # Seit 0.5.1 heißen Anleitung und Drittanbieter-Liste englisch; alte Namen entfernen
-        foreach ($alt in @('Anleitung.txt', 'Drittanbieter.txt')) {
-            if (Test-Path (Join-Path $root 'GUIDE.txt')) { Remove-Item -Force (Join-Path $root $alt) -ErrorAction SilentlyContinue }
+        # Seit 0.5.1 heißen die Textdateien englisch; alte Namen aufräumen
+        if (Test-Path (Join-Path $root 'GUIDE.txt')) {
+            foreach ($alt in @('Anleitung.txt', 'Drittanbieter.txt')) { Remove-Item -Force (Join-Path $root $alt) -ErrorAction SilentlyContinue }
+        }
+        $liesmich = Join-Path $root 'daten\liesmich.txt'
+        if (Test-Path $liesmich) {
+            try {
+                Set-Content -Path (Join-Path $root 'daten\README.txt') -Encoding UTF8 -Value 'Hier speichert Fieldbook Bibliotheken, KI-Modelle und Karten. Bitte nicht von Hand ändern.'
+                Remove-Item -Force $liesmich
+            } catch { }
         }
         Remove-Item -Recurse -Force $bereit
         $aktualisiert = $true

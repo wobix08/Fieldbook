@@ -528,6 +528,16 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .w-titel { font-weight: 600; }
 .w-groesse { flex: none; white-space: nowrap; color: var(--text2); font-variant-numeric: tabular-nums; }
 .wahl small { color: var(--text2); display: block; }
+/* Varianten eines Pakets (Inhalte): ein Kasten um alle, installierte mit Häkchen statt Kästchen */
+.varianten { border: 1px solid var(--linie); border-radius: 14px; background: var(--flaeche2); padding: 12px 12px 4px; margin-bottom: 12px; }
+.varianten-kopf { margin: 0 4px 10px; color: var(--text2); }
+.varianten-kopf b { color: var(--text); margin-right: 8px; }
+.varianten-kopf span { font-size: .85rem; }
+.varianten .wahl { margin-bottom: 8px; }
+/* Grauer Rahmen, damit "installiert" nicht wie "zum Herunterladen ausgewählt" (grüner Rahmen) aussieht */
+.wahl.installiert, .wahl.installiert:hover { cursor: default; background: var(--akzent-hell); border-color: var(--linie); }
+.w-haken { flex: none; width: 18px; margin-top: 1px; text-align: center; color: var(--gruen); font-weight: 700; }
+.wahl small.w-hinweis { color: var(--gelb); margin-top: 4px; }
 .marke-tag { display: inline-block; font-size: .75rem; padding: 1px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; font-weight: 600; white-space: nowrap; }
 .tag-empf { background: var(--akzent); color: var(--akzent-text); }
 .tag-warn { background: var(--gelb-hell); color: var(--gelb); }

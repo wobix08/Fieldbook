@@ -2,14 +2,18 @@
 "use strict";
 
 const Inhalte = (() => {
-  let kat = null, hw = null, timer = null, verlauf = [];
+  let kat = null, hw = null, timer = null, verlauf = [], gruppen = {};
   const auswahl = { modell: null, pakete: new Set(), karten: new Map(), routen: false, routenGroesse: null };
 
   async function zeigen() {
     clearInterval(timer);
     warAktiv = null; // Liste beim Öffnen immer neu zeichnen
     $("#inhalte-liste").innerHTML = '<p class="hinweis">Wird geladen …</p>';
-    try { [kat, hw] = await Promise.all([api("katalog"), api("hardware")]); }
+    try {
+      let konf;
+      [kat, hw, konf] = await Promise.all([api("katalog"), api("hardware"), ladeKonfig("pakete").catch(() => ({}))]);
+      gruppen = konf.variantenGruppen || {};
+    }
     catch (e) { $("#inhalte-liste").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
     await fortschritt();
     timer = setInterval(() => { if (!location.hash.startsWith("#inhalte")) { clearInterval(timer); return; } fortschritt(); }, 1000);
@@ -179,6 +183,7 @@ const Inhalte = (() => {
     const passend = kat.modelle.filter(m => ["gpu", "cpu"].includes(Setup.passung(m, hw, backend))).sort((a, b) => b.bytes - a.bytes);
     const emp = { modell: passend[0] ? passend[0].id : emp0.modell };
     const ki = abschnitt(c, "KI-Assistent");
+    ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Du kannst mehrere KIs laden und jederzeit mit „Benutzen“ zwischen ihnen wechseln.", el("br"), "Es läuft immer nur eine, die anderen belegen nur Platz auf der Festplatte."));
     for (const m of kat.modelle.slice().sort((a, b) => a.bytes - b.bytes)) {
       const aktivModell = s.modell === m.id;
       const p = Setup.passung(m, hw, backend);
@@ -187,7 +192,7 @@ const Inhalte = (() => {
       if (p === "zu-gross") tags.push(tag("zu groß für dein Gerät", "tag-warn"));
       if (p === "langsam") tags.push(tag("ohne Grafikkarte sehr langsam", "tag-warn"));
       if (m.installiert) {
-        ki.append(zeile([m.name + " · " + m.modell, ...tags, tag(aktivModell ? "✓ aktiv" : "✓ vorhanden", "tag-ok")], m.beschreibung, groesse(m.bytes),
+        ki.append(zeile([m.name + " · " + m.modell, ...tags, tag(aktivModell ? "Aktiv" : "Installiert", "tag-ok")], m.beschreibung, groesse(m.bytes),
           aktivModell ? null : knopf("Benutzen", async () => { await api("einstellungen", { modell: m.id }); await aktualisiereStatus(); zeichneListe(aktiv); }),
           knopf("Löschen", () => loeschen("modell", m.id, m.name), true)));
       } else {
@@ -205,32 +210,57 @@ const Inhalte = (() => {
       const pakete = kat.pakete.filter(p => (p.kategorien || [])[0] === gr.id);
       if (!pakete.length) continue;
       const g = abschnitt(c, [sym(gr.icon), gr.titel]);
+      const fertigeGruppen = new Set();
       for (const p of pakete) {
-        const tags = [];
-        if (p.sprache === "en") tags.push(tag("Englisch", "tag-en"));
-        const defekt = (s.defektePakete || []).some(d => d.startsWith(p.name + "_"));
-        if (defekt) tags.push(tag("beschädigt", "tag-warn"));
-        if (p.installiert && !p.update) {
-          g.append(zeile([p.titel, ...tags, tag("✓ Stand " + p.installiertDatum, "tag-ok")], p.text, groesse(p.bytes), null,
-            knopf("Löschen", () => loeschen("paket", p.id, p.titel), true)));
-        } else {
-          if (p.update) tags.push(tag("neue Version " + (p.datum || "").slice(0, 7), "tag-warn"));
-          const laedt = offen.pakete.has(p.name + "|" + (p.flavour || ""));
-          if (laedt) { tags.push(ladeTag()); auswahl.pakete.delete(p.id); }
-          g.append(auswahlZeile("checkbox", "inh-p-" + p.id, auswahl.pakete.has(p.id), laedt || (!p.verfuegbar && kat.katalogOnline), (e) => {
-            if (e.target.checked) auswahl.pakete.add(p.id); else auswahl.pakete.delete(p.id);
-            zeichneListe(aktiv);
-          }, [p.titel, ...tags], p.text, groesse(p.bytes),
-            p.installiert ? knopf("Löschen", () => loeschen("paket", p.id, p.titel), true) : null));
-        }
+        if (!p.gruppeExklusiv) { g.append(paketZeile(p, p.titel)); continue; }
+        // Varianten (z. B. Wikipedia kompakt, ohne und mit Bildern) stehen zusammen in einem Kasten
+        if (fertigeGruppen.has(p.gruppeExklusiv)) continue;
+        fertigeGruppen.add(p.gruppeExklusiv);
+        g.append(variantenKasten(p.gruppeExklusiv, pakete.filter(x => x.gruppeExklusiv === p.gruppeExklusiv)));
       }
+    }
+
+    function paketZeile(p, titel, hinweis) {
+      const tags = [];
+      if (p.sprache === "en") tags.push(tag("Englisch", "tag-en"));
+      const defekt = (s.defektePakete || []).some(d => d.startsWith(p.name + "_"));
+      if (defekt) tags.push(tag("beschädigt", "tag-warn"));
+      const loeschKnopf = p.installiert ? knopf("Löschen", () => loeschen("paket", p.id, p.titel), true) : null;
+      if (p.installiert && !p.update) return zeile([titel, ...tags, tag("Installiert · Stand " + p.installiertDatum, "tag-ok")], p.text, groesse(p.bytes), loeschKnopf);
+      if (p.update) tags.push(tag("neue Version " + (p.datum || "").slice(0, 7), "tag-warn"));
+      const laedt = offen.pakete.has(p.name + "|" + (p.flavour || ""));
+      if (laedt) { tags.push(ladeTag()); auswahl.pakete.delete(p.id); }
+      const z = auswahlZeile("checkbox", "inh-p-" + p.id, auswahl.pakete.has(p.id), laedt || (!p.verfuegbar && kat.katalogOnline), (e) => {
+        if (e.target.checked) auswahl.pakete.add(p.id); else auswahl.pakete.delete(p.id);
+        zeichneListe(aktiv);
+      }, [titel, ...tags], p.text, groesse(p.bytes), loeschKnopf);
+      if (hinweis) z.querySelector(".w-text").append(el("small", { class: "w-hinweis" }, hinweis));
+      return z;
+    }
+
+    function variantenKasten(id, varianten) {
+      const info = gruppen[id] || {};
+      const titel = info.titel || varianten[0].titel;
+      const name = (p) => p.variante || p.titel;
+      const da = varianten.filter(p => p.installiert);
+      const kopf = da.length
+        ? "Du hast: " + da.map(name).join(" und ") + ". Andere Varianten kannst du zusätzlich laden."
+        : "Eine Variante wählen" + (info.zusatz ? ", " + info.zusatz : "") + ".";
+      const kasten = el("div", { class: "varianten" }, el("div", { class: "varianten-kopf" }, el("b", {}, titel), el("span", {}, kopf)));
+      for (const p of varianten) {
+        // Kleinere Variante angekreuzt, obwohl eine größere schon da ist: kurzer Hinweis, laden geht trotzdem
+        const groesser = !p.installiert && auswahl.pakete.has(p.id) && da.find(x => x.bytes > p.bytes);
+        kasten.append(paketZeile(p, name(p), groesser
+          ? "Brauchst du meist nicht, „" + name(groesser) + "“ hast du schon. Sinnvoll zum Beispiel für einen USB-Stick." : null));
+      }
+      return kasten;
     }
 
     // Übersetzer
     const ue = abschnitt(c, "Übersetzer");
     const ueText = "Übersetzt englische Artikel beim Lesen offline ins Deutsche (Knopf „Auf Deutsch“). Technik von Mozilla, wie in Firefox.";
     if (s.uebersetzer) {
-      ue.append(zeile(["Übersetzer Englisch → Deutsch", tag("✓ vorhanden", "tag-ok")], ueText, groesse(27e6), null,
+      ue.append(zeile(["Übersetzer Englisch → Deutsch", tag("Installiert", "tag-ok")], ueText, groesse(27e6), null,
         knopf("Löschen", () => loeschen("uebersetzer", "", "Übersetzer"), true)));
     } else {
       const laedt = [...offen.titel].some(t => t.startsWith("Übersetzer"));
@@ -246,7 +276,7 @@ const Inhalte = (() => {
       el("span", {}, "Platz sparen (weniger Details beim starken Hineinzoomen)")));
     for (const r of kat.karten) {
       if (r.installiert) {
-        k.append(zeile([r.titel, tag("✓ vorhanden", "tag-ok")], null, groesse(r.bytesInstalliert), null, knopf("Löschen", () => loeschen("karte", r.id, r.titel), true)));
+        k.append(zeile([r.titel, tag("Installiert", "tag-ok")], null, groesse(r.bytesInstalliert), null, knopf("Löschen", () => loeschen("karte", r.id, r.titel), true)));
       } else {
         const laedt = offen.titel.has("Karte: " + r.titel);
         if (laedt) auswahl.karten.delete(r.id);
@@ -284,8 +314,9 @@ const Inhalte = (() => {
   function tag(text, klasse) { return el("span", { class: "marke-tag " + klasse }, text); }
   function knopf(text, fn, rot) { return el("button", { class: "knopf knopf-klein" + (rot ? " knopf-rot" : ""), onclick: fn }, text); }
 
+  // Installierter Inhalt: Rahmen wie die Auswahlzeilen, aber mit Häkchen statt Kästchen
   function zeile(titel, text, rechts, ...knoepfe) {
-    return el("div", { class: "einst-zeile" },
+    return el("div", { class: "wahl installiert" }, el("span", { class: "w-haken", "aria-hidden": "true" }, "✓"),
       el("div", { class: "w-text" }, el("div", { class: "w-titel" }, ...titel), text ? el("small", {}, text) : null),
       el("div", { class: "knopfreihe", style: "margin:0;align-items:center;flex-wrap:nowrap" }, el("span", { class: "w-groesse" }, rechts || ""), ...knoepfe.filter(Boolean)));
   }
