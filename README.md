@@ -180,7 +180,13 @@ daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.g
 
 Alles läuft auf `localhost`.\
 Deine Fragen, Chats und Einträge bleiben auf deinem Gerät.\
-Nach der Einrichtung verbindet sich Fieldbook nur noch mit dem Internet, um nach einer neuen Version zu fragen oder Inhalte zu laden, die du auswählst.
+Nach der Einrichtung geht Fieldbook nur noch in drei Fällen ins Internet:
+- **Beim Start** fragt es kurz bei GitHub nach, ob es eine neue Version gibt.\
+  Heruntergeladen wird sie erst, wenn du auf den Knopf klickst.
+- **Neue Inhalte** lädt es, wenn du sie auf der Seite *Inhalte* auswählst.
+- **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
+  Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte oder eine neue Version gibt, und fragt vorher oder lädt sie selbst, je nach Einstellung.\
+  Mehr dazu unter [Automatische Aktualisierung](#automatische-aktualisierung-optional).
 
 Verwendete Bausteine:
 - [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
