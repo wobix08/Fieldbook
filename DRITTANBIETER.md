@@ -20,6 +20,8 @@ die ihre eigenen Lizenzen haben.
 | [kiwix-tools](https://github.com/kiwix/kiwix-tools) (kiwix-serve) | GPL-3.0 |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) (llama-server) | MIT |
 | [go-pmtiles](https://github.com/protomaps/go-pmtiles) | BSD-3-Clause |
+| [BRouter](https://github.com/abrensch/brouter) (Routenplanung) | MIT |
+| [Eclipse Temurin](https://adoptium.net) (Java-Laufzeit für BRouter) | GPL-2.0 mit Classpath Exception |
 | [Protomaps Basemaps Assets](https://github.com/protomaps/basemaps-assets) (Schriften, Symbole) | Schriften: SIL Open Font License, Symbole: siehe Repository |
 | [Bergamot Translator](https://github.com/browsermt/bergamot-translator) 0.4.9 (Offline-Übersetzer) | MPL-2.0 |
 | Übersetzungsmodell Englisch → Deutsch aus [firefox-translations-models](https://github.com/mozilla/firefox-translations-models) (Mozilla) | siehe Repository (MPL-2.0) |
@@ -36,12 +38,13 @@ die ihre eigenen Lizenzen haben.
 | Kartendaten © [OpenStreetMap](https://www.openstreetmap.org/copyright)-Mitwirkende | ODbL 1.0 |
 | Kartenkacheln über [Protomaps](https://protomaps.com) | ODbL 1.0 |
 | Ortsnamen von [GeoNames](https://www.geonames.org) | CC BY 4.0 |
+| Wegedaten für die Routenplanung von [brouter.de](https://brouter.de) (aus OpenStreetMap) | ODbL 1.0 |
 
 ## KI-Modelle
 
 | Modell | Lizenz |
 |---|---|
-| Qwen 3.5 (Alibaba) | Apache 2.0 |
-| Gemma 4 (Google) | Lizenzbedingungen auf der Modellseite bei Hugging Face |
+| Qwen 3.5 (Alibaba) in den Größen 2B, 4B, 9B, 27B und 35B-A3B | Apache 2.0 |
+| Gemma 4 (Google) in der Größe 12B | Lizenzbedingungen auf der Modellseite bei Hugging Face |
 
 Die Modelle werden in der GGUF-Fassung von [Unsloth](https://huggingface.co/unsloth) geladen.
