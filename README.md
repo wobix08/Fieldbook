@@ -7,6 +7,23 @@ Fieldbook ist ein portables Windows-Programm für Stromausfall, Reisen ohne Netz
 Es braucht kein Linux, kein Docker und keine Installation: Ordner entpacken, Doppelklick, fertig.\
 Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und [Internet-in-a-Box](https://internet-in-a-box.org/).
 
+## Inhalt
+
+- [Warum Fieldbook?](#warum-fieldbook)
+- [Was drin ist](#was-drin-ist)
+- [Schnellstart](#schnellstart)
+- [Ist das sicher?](#ist-das-sicher)
+- [Systemanforderungen](#systemanforderungen)
+- [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
+- [Welche KI passt zu meinem Gerät?](#welche-ki-passt-zu-meinem-gerät)
+- [So funktioniert die Frage-Antwort-Funktion](#so-funktioniert-die-frage-antwort-funktion)
+- [Aufbau](#aufbau)
+- [Entwicklung](#entwicklung)
+- [Automatische Aktualisierung (optional)](#automatische-aktualisierung-optional)
+- [Programm-Updates (Fieldbook selbst)](#programm-updates-fieldbook-selbst)
+- [Länder und Sprachen](#länder-und-sprachen)
+- [Lizenz](#lizenz)
+
 ## Warum Fieldbook?
 
 Project NOMAD hat mich sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf einem Gerät und ohne Internet.\
