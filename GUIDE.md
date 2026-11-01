@@ -178,4 +178,4 @@ Ja. ZIM-Dateien von [library.kiwix.org](https://library.kiwix.org) in den Ordner
 legen und Fieldbook neu starten.
 
 **Wird etwas ins Internet geschickt?**
-Nein. Alles läuft auf deinem Gerät. Internet wird nur für Downloads im Assistenten benutzt.
+Deine Fragen, Chats und Einträge nicht, sie bleiben auf deinem Gerät. Internet braucht Fieldbook nur für Downloads und um nach einer neuen Version zu fragen. Fehlerberichte oder Nutzungsstatistiken verschickt Fieldbook nur, wenn du ausdrücklich zustimmst.

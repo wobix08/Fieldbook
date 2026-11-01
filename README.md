@@ -63,9 +63,11 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Zum Entfernen genügt es, den Ordner zu löschen.\
   Einzige Ausnahme: Die *optionale* automatische Aktualisierung legt zwei Aufgaben in der Windows-Aufgabenplanung an.\
   Ausschalten in den Einstellungen entfernt sie wieder.
-- **Keine Daten nach außen**\
-  Kein Konto, keine Werbung, keine Nutzungsstatistik.\
-  Alles läuft auf `localhost`, also nur auf deinem Gerät.
+- **Deine Daten bleiben bei dir**\
+  Kein Konto, keine Werbung.\
+  Alles läuft auf `localhost`, also nur auf deinem Gerät.\
+  Fragen an die KI, Chats und alles, was du in Fieldbook einträgst, verlassen dein Gerät nicht.\
+  Fehlerberichte oder Nutzungsstatistiken verschickt Fieldbook nur, wenn du ausdrücklich zustimmst, und du kannst das jederzeit wieder abschalten.
 - **Downloads nur aus offiziellen Quellen**\
   Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien:
 
@@ -171,8 +173,8 @@ daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.g
 ```
 
 Alles läuft auf `localhost`.\
-Es werden keine Daten ins Internet geschickt.\
-Nach der Einrichtung stellt das Programm keine Verbindung mehr her, außer man lädt im Assistenten neue Inhalte.
+Deine Fragen, Chats und Einträge bleiben auf deinem Gerät.\
+Nach der Einrichtung verbindet sich Fieldbook nur noch mit dem Internet, um nach einer neuen Version zu fragen oder Inhalte zu laden, die du auswählst.
 
 Verwendete Bausteine:
 - [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
