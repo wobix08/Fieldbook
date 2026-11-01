@@ -97,6 +97,7 @@ namespace OfflineWissen
         {
             Init(root);
             Port = port;
+            FensterSymbol();
             KiwixPort = FreierPort();
             LlmPort = FreierPort();
             RoutePort = FreierPort();
@@ -145,6 +146,26 @@ namespace OfflineWissen
         }
 
         static void Log(string s) { try { Console.WriteLine(s); } catch { } }
+
+        [DllImport("kernel32.dll")] static extern IntPtr GetConsoleWindow();
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)] static extern IntPtr ExtractIcon(IntPtr inst, string datei, int nr);
+        [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
+
+        // Fieldbook-Logo statt des Konsolen-Symbols im Fenster und unten in der Taskleiste (aus Fieldbook.exe)
+        static void FensterSymbol()
+        {
+            try
+            {
+                string exe = Path.Combine(Root, "Fieldbook.exe");
+                IntPtr fenster = GetConsoleWindow();
+                if (!File.Exists(exe) || fenster == IntPtr.Zero) return;
+                IntPtr symbol = ExtractIcon(IntPtr.Zero, exe, 0);
+                if ((long)symbol <= 1) return;
+                SendMessage(fenster, 0x80, new IntPtr(0), symbol); // WM_SETICON, klein
+                SendMessage(fenster, 0x80, new IntPtr(1), symbol); // WM_SETICON, groß
+            }
+            catch { }
+        }
 
         // ------------------------------------------------------------------ Browser-Tab wiederverwenden
 
