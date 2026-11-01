@@ -20,14 +20,14 @@ im Wald.
 
 ## Was drin ist
 
-| Bereich | Was es kann |
-|---|---|
-| <img src=".github/symbole/fragen.svg" width="32" height="32" alt=""> **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
-| <img src=".github/symbole/bibliothek.svg" width="32" height="32" alt=""> **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, mit Übersetzer Englisch → Deutsch |
-| <img src=".github/symbole/kochen.svg" width="32" height="32" alt=""> **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
-| <img src=".github/symbole/karten.svg" width="32" height="32" alt=""> **Karten** | OpenStreetMap-Karten offline, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
-| <img src=".github/symbole/erstehilfe.svg" width="32" height="32" alt=""> **Erste Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
-| <img src=".github/symbole/vorsorge.svg" width="32" height="32" alt=""> **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
+| | Bereich | Was es kann |
+|---|---|---|
+| <img src=".github/symbole/fragen.svg" width="32" height="32" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
+| <img src=".github/symbole/bibliothek.svg" width="32" height="32" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, mit Übersetzer Englisch → Deutsch |
+| <img src=".github/symbole/kochen.svg" width="32" height="32" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
+| <img src=".github/symbole/karten.svg" width="32" height="32" alt=""> | **Karten** | OpenStreetMap-Karten offline, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
+| <img src=".github/symbole/erstehilfe.svg" width="32" height="32" alt=""> | **Erste Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
+| <img src=".github/symbole/vorsorge.svg" width="32" height="32" alt=""> | **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
 
 ## Schnellstart
 
