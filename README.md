@@ -71,7 +71,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   In der aktuellen Version ist so etwas noch gar nicht eingebaut.\
   Ganz ehrlich: Ich kann jeden verstehen, der das ausgeschaltet lässt, bei anderen Programmen mache ich es genauso.\
   Über jedes Ja würde ich mich trotzdem sehr freuen.\
-  Fieldbook läuft auf ganz unterschiedlichen Laptops, und ohne solche Rückmeldungen bekomme ich kaum mit, wo es hakt oder zu langsam ist.
+  Fieldbook läuft auf ganz unterschiedlicher Hardware, und ohne solche Rückmeldungen bekomme ich kaum mit, wo es hakt oder zu langsam ist.
 - **Downloads nur aus offiziellen Quellen**\
   Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien:
 
