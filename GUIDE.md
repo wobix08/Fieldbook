@@ -150,19 +150,20 @@ Jedes Kapitel lässt sich ausdrucken.
   Standard ist dunkel; hell ist zum Lesen und Lernen oft angenehmer.
 - Bildschirmhelligkeit herunterdrehen spart am meisten.
 
-## 6. Daten aktuell halten
+## 6. Inhalte aktuell halten
 
-Im ersten Schritt des Assistenten (oder später in den Einstellungen) kannst du **Daten automatisch aktuell halten** einschalten.\
+Im ersten Schritt des Assistenten (oder später in den Einstellungen im Kasten **Inhalte**) kannst du **Inhalte automatisch aktuell halten** einschalten.\
+Dann sieht Windows einmal pro Woche nach, ob es neue Ausgaben deiner Wissenspakete, Karten oder Wegedaten gibt.\
 Wähle dann:
 
 - **Vorher fragen**\
-  Ein Fenster zeigt, welche neuen Daten es gibt, und fragt, ob sie geladen werden sollen.
+  Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll.
 - **Automatisch herunterladen**\
-  Ohne Nachfrage.
+  Ohne Nachfrage, aber nie über getaktete Verbindungen wie einen Handy-Hotspot.
 
-Geladen wird nur, wenn der Computer am Strom hängt und gerade nicht benutzt wird.\
-Sobald du ihn benutzt, pausiert der Download.\
-Dein Computer wird dadurch nicht langsamer.
+Außerdem wählst du, ob sofort im Hintergrund geladen wird oder nur, wenn der Computer am Strom hängt und gerade nicht benutzt wird.\
+Geladen wird immer mit niedrigster Priorität, damit du normal weiterarbeiten kannst.\
+Ohne Automatik geht es jederzeit von Hand mit **Inhalte aktualisieren**.
 
 ## 7. Später erweitern oder ändern
 
@@ -173,11 +174,11 @@ Dein Computer wird dadurch nicht langsamer.
 - **Einrichtung neu starten** (ebenfalls in den Einstellungen) führt noch einmal durch den ganzen Assistenten, zum Beispiel um die KI oder grundlegende Einstellungen zu ändern.\
   Bereits Installiertes bleibt erhalten und ist vorausgewählt.
 - **Fieldbook selbst aktualisieren**\
-  In den Einstellungen unter **Fieldbook-Version** steht, ob es eine neue Programmversion gibt.\
+  In den Einstellungen im Kasten **Fieldbook-Programm** steht, ob es eine neue Programmversion gibt.\
   Ein Klick lädt sie, Fieldbook startet kurz neu.\
-  Deine Daten bleiben erhalten.\
-  Mit eingeschalteter automatischer Aktualisierung passiert das auch im Hintergrund.\
-  Fieldbook fragt außerdem beim Start kurz nach einer neuen Version; das lässt sich dort mit **Beim Start nach neuer Version fragen** abschalten.
+  Deine Inhalte und Einstellungen bleiben erhalten.\
+  Fieldbook fragt beim Start kurz nach einer neuen Version; das lässt sich dort mit **Beim Start nach neuer Fieldbook-Version fragen** abschalten.\
+  Ist die automatische Aktualisierung der Inhalte eingeschaltet, kann sie neue Fieldbook-Versionen mitladen (Schalter **Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen**).
 
 ## 8. Häufige Fragen
 

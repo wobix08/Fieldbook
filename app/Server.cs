@@ -549,7 +549,7 @@ namespace OfflineWissen
                     else SendeJson(ctx, AktualisierungStatus());
                     return;
                 case "aktualisierung/pruefen":
-                    try { Pruefen(false); SendeJson(ctx, AktualisierungStatus()); }
+                    try { Pruefen(false, false); SendeJson(ctx, AktualisierungStatus()); }
                     catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", e.Message } }); }
                     return;
                 case "programmupdate":
@@ -2484,12 +2484,13 @@ namespace OfflineWissen
             return ParseKatalog(xml);
         }
 
-        static List<Dictionary<string, object>> SucheAktualisierungen()
+        // mitProgramm=false: nur Inhalte (Knopf „Inhalte aktualisieren“); Fieldbook selbst hat dort einen eigenen Knopf
+        static List<Dictionary<string, object>> SucheAktualisierungen(bool mitProgramm = true)
         {
             var liste = new List<Dictionary<string, object>>();
             // Fieldbook selbst (abschaltbar, nie im Entwicklungsordner)
             var ae = AktEinst();
-            if ((ae == null || !ae.ContainsKey("programm") || Bool(ae, "programm")) && UpdateApi() != null && !IstEntwicklungsordner())
+            if (mitProgramm && (ae == null || !ae.ContainsKey("programm") || Bool(ae, "programm")) && UpdateApi() != null && !IstEntwicklungsordner())
             {
                 try
                 {
@@ -2546,9 +2547,9 @@ namespace OfflineWissen
             return liste;
         }
 
-        static void Pruefen(bool popup)
+        static void Pruefen(bool popup, bool mitProgramm = true)
         {
-            var updates = SucheAktualisierungen();
+            var updates = SucheAktualisierungen(mitProgramm);
             var a = AktEinst();
             string modus = Str(a, "modus") ?? "fragen";
             var d = new Dictionary<string, object> { { "geprueft", DateTime.Now.ToString("yyyy-MM-dd HH:mm") }, { "updates", updates }, { "freigegeben", false } };

@@ -151,28 +151,37 @@ function landAuswahl(aktuell, onWahl) {
   return wrap;
 }
 
-// Einstellungen für die automatische Aktualisierung (Assistent und Einstellungen)
+// Einstellungen der automatischen Aktualisierung speichern (legt die Windows-Aufgaben an oder entfernt sie)
+async function aktualisierungSpeichern(akt, neu, sofort) {
+  Object.assign(akt, neu);
+  const r = await api("aktualisierung", { an: akt.an, modus: akt.modus, wann: akt.wann, mbit: akt.mbit || 0, programm: akt.programm !== false, sofort });
+  if (r.fehler) alert("Die Windows-Aufgabenplanung hat das nicht angenommen: " + r.fehler);
+  Object.assign(akt, r);
+}
+
+// Einstellungen für die automatische Aktualisierung der Inhalte (Assistent und Einstellungen)
 // sofort=true: Windows-Aufgaben direkt anlegen/entfernen, sonst erst beim Herunterladen im Assistenten.
-function aktualisierungBox(akt, sofort) {
-  const box = el("div", { class: "karte-box", style: "margin-top:16px" });
+// opt.eingebettet: ohne eigenen Kasten und Überschrift, ohne den Schalter für Fieldbook-Versionen
+// (der steht in den Einstellungen beim Programm); opt.geaendert: wird nach jeder Änderung aufgerufen.
+function aktualisierungBox(akt, sofort, opt) {
+  opt = opt || {};
+  const box = opt.eingebettet ? el("div") : el("div", { class: "karte-box", style: "margin-top:16px" });
   const zeichne = () => {
     box.innerHTML = "";
     const setze = async (neu) => {
-      Object.assign(akt, neu);
-      const r = await api("aktualisierung", { an: akt.an, modus: akt.modus, wann: akt.wann, mbit: akt.mbit || 0, programm: akt.programm !== false, sofort });
-      if (r.fehler) alert("Die Windows-Aufgabenplanung hat das nicht angenommen: " + r.fehler);
-      Object.assign(akt, r);
+      await aktualisierungSpeichern(akt, neu, sofort);
       zeichne();
+      if (opt.geaendert) opt.geaendert();
     };
+    if (!opt.eingebettet) box.append(el("h2", { style: "margin-top:0" }, "Automatische Aktualisierung"));
     box.append(
-      el("h2", { style: "margin-top:0" }, "Automatische Aktualisierung"),
       el("label", { class: "schalter" },
         el("input", { type: "checkbox", checked: akt.an, onchange: (e) => setze({ an: e.target.checked }) }),
-        el("b", {}, "Daten automatisch aktuell halten")),
+        el("b", {}, "Inhalte automatisch aktuell halten")),
       el("p", { class: akt.an ? "hinweis klein" : "warnung klein", style: "margin:10px 0" },
         "Empfohlen: Wikipedia, Medizin-Wissen, Karten und Wegedaten werden laufend verbessert und korrigiert. " +
         "Damit im Ernstfall aktuelle Informationen da sind, solltest du das einschalten. " +
-        "Es läuft kein Programm dauerhaft im Hintergrund: Windows prüft einmal pro Woche kurz nach neuen Daten " +
+        "Es läuft kein Programm dauerhaft im Hintergrund: Windows prüft einmal pro Woche kurz nach neuen Inhalten " +
         "und lädt sie mit niedrigster Priorität, damit du normal weiterarbeiten kannst. Über Handy-Hotspots wird nie ohne Nachfrage geladen."));
     if (akt.an) {
       const wahl = (name, feld, wert, titel, text) => {
@@ -180,11 +189,12 @@ function aktualisierungBox(akt, sofort) {
         return el("label", { class: "wahl" + (akt[feld] === wert ? " gewaehlt" : "") }, i,
           el("div", { class: "w-text" }, el("div", { class: "w-titel" }, titel), el("small", {}, text)));
       };
-      box.append(
+      if (!opt.eingebettet) box.append(
         el("label", { class: "schalter", style: "margin:4px 0 6px" },
           el("input", { type: "checkbox", checked: akt.programm !== false, onchange: (e) => setze({ programm: e.target.checked }) }),
-          el("span", {}, "Auch Fieldbook selbst aktualisieren (neue Programmversionen)")),
-        el("h3", {}, "Wenn neue Daten gefunden werden"),
+          el("span", {}, "Dabei auch neue Fieldbook-Versionen mitladen")));
+      box.append(
+        el("h3", {}, "Wenn es Neues gibt"),
         wahl("akt-modus", "modus", "fragen", "Vorher fragen", "Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll."),
         wahl("akt-modus", "modus", "auto", "Automatisch herunterladen", "Ohne Nachfrage, aber nie über getaktete Verbindungen wie Handy-Hotspots."),
         el("h3", {}, "Wann herunterladen"),
@@ -245,11 +255,11 @@ async function verbindungPruefen(knopf) {
 async function jetztAktualisieren(knopf) {
   const text = knopf.textContent;
   knopf.disabled = true;
-  knopf.textContent = "Suche nach neuen Daten …";
+  knopf.textContent = "Suche nach neuen Inhalten …";
   try {
     const a = await api("aktualisierung/pruefen", {});
-    if (a.fehler) { await dialog("Keine Verbindung", "Die Suche nach neuen Daten hat nicht geklappt. Bitte die Internetverbindung prüfen.", [{ text: "OK", wert: 1, haupt: true }]); return null; }
-    if (!a.anzahl) { await dialog("Alles aktuell", "Es gibt keine neuen Daten. Alles ist auf dem neuesten Stand.", [{ text: "OK", wert: 1, haupt: true }]); return a; }
+    if (a.fehler) { await dialog("Keine Verbindung", "Die Suche nach neuen Inhalten hat nicht geklappt. Bitte die Internetverbindung prüfen.", [{ text: "OK", wert: 1, haupt: true }]); return null; }
+    if (!a.anzahl) { await dialog("Alles aktuell", "Es gibt nichts Neues. Alles ist auf dem neuesten Stand.", [{ text: "OK", wert: 1, haupt: true }]); return a; }
     knopf.textContent = "Prüfe Verbindung …";
     const v = await api("verbindung").catch(() => ({ getaktet: false }));
     const liste = el("div", {},

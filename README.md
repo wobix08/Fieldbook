@@ -208,7 +208,7 @@ Nach der Einrichtung geht Fieldbook nur noch in drei Fällen ins Internet:
   Auch diese Anfrage kannst du in den Einstellungen abschalten.
 - **Neue Inhalte** lädt es, wenn du sie auf der Seite *Inhalte* auswählst.
 - **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
-  Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte oder eine neue Version gibt, und fragt vorher oder lädt sie selbst, je nach Einstellung.\
+  Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte gibt (auf Wunsch auch eine neue Fieldbook-Version), und fragt vorher oder lädt sie selbst, je nach Einstellung.\
   Mehr dazu unter [Automatische Aktualisierung](#automatische-aktualisierung-optional).
 
 Verwendete Bausteine:
@@ -230,7 +230,8 @@ Zum Testen `app\Start.bat` starten.
 
 ## Automatische Aktualisierung (optional)
 
-Im Assistenten ganz am Anfang einschaltbar, standardmäßig aus.\
+Hält die Inhalte aktuell (Wissenspakete, Karten, Wegedaten).\
+Im Assistenten ganz am Anfang einschaltbar oder später in den Einstellungen im Kasten *Inhalte*, standardmäßig aus.\
 Es gibt keinen Autostart und kein Programm, das dauerhaft im Hintergrund läuft.\
 Stattdessen legt Fieldbook zwei Aufgaben in der Windows-Aufgabenplanung an:
 
@@ -248,16 +249,16 @@ Protokoll: `daten\logs\aktualisierung.log`.
 
 **Du entscheidest über Updates**\
 Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
-Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen unter *Fieldbook-Version*).\
+Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen im Kasten *Fieldbook-Programm*).\
 Heruntergeladen und eingespielt wird sie erst, wenn du dies bestätigst.\
-Möchtest du auch diese kurze Anfrage nicht, schaltest du sie in den Einstellungen bei *Beim Start nach neuer Version fragen* aus.\
-Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach neuer Version suchen* klickst oder die automatische Aktualisierung eingeschaltet hast.
+Möchtest du auch diese kurze Anfrage nicht, schaltest du sie dort bei *Beim Start nach neuer Fieldbook-Version fragen* aus.\
+Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach neuer Version suchen* klickst oder die automatische Aktualisierung neue Versionen mitladen darf.
 
 **Mit automatischer Aktualisierung**\
-Hast du die automatische Aktualisierung eingeschaltet, sucht Fieldbook dabei auch nach neuen Versionen.\
-Im Modus „Vorher fragen“ fragt es dich, im Modus „Automatisch herunterladen“ lädt es die neue Version selbst und spielt sie beim nächsten Start ein.\
-Wer das nicht möchte, nimmt in den Einstellungen den Haken bei „Auch Fieldbook selbst aktualisieren“ heraus.\
-Dann aktualisiert die automatische Aktualisierung nur noch Inhalte.
+Die automatische Aktualisierung ist für die Inhalte gedacht (Wissenspakete, Karten, Wegedaten) und standardmäßig aus.\
+Ist sie eingeschaltet, kann sie auch neue Fieldbook-Versionen mitladen: Schalter *Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen* im Kasten *Fieldbook-Programm*.\
+Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch herunterladen“ lädt es die neue Version selbst und spielt sie beim nächsten Start ein.\
+Schaltest du das Mitladen aus, aktualisiert die Automatik nur noch Inhalte.
 
 **So läuft ein Update ab**\
 Fieldbook sucht in den GitHub-Releases nach den Dateien `Fieldbook-<version>.zip` und `Fieldbook-<version>.zip.sha256` (beide erzeugt `tools\release-bauen.ps1`).

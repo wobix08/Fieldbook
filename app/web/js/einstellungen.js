@@ -26,27 +26,28 @@ const Einstellungen = (() => {
     if (s.ki.fehler) ki.append(el("p", { class: "fehlerbox" }, s.ki.fehler));
     c.append(ki);
 
-    // Inhalte: Verwaltung ist auf einer eigenen Seite
-    const pk = kat.pakete.filter(p => p.installiert).length, kk = kat.karten.filter(r => r.installiert).length;
-    const upd = kat.pakete.filter(p => p.update).length;
-    c.append(el("div", { class: "karte-box", style: "margin-top:16px" },
-      el("div", { class: "einst-zeile", style: "border:0;padding:0" },
-        el("div", {}, el("b", {}, "Inhalte"),
-          el("small", {}, pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : "") + (upd ? " · " + upd + " neue Version(en) verfügbar" : ""))),
-        el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten"))));
-
-    // Ganz oben: Fieldbook und Inhalte aktualisieren, darunter die automatische Aktualisierung
-    const pv = el("div"), aktInfo = el("div");
-    const oben = el("div", { class: "karte-box", style: "margin-bottom:16px" },
-      el("h2", { style: "margin-top:0" }, "Aktualisieren"), pv, aktInfo,
+    // Ganz oben zwei getrennte Kästen: das Fieldbook-Programm und die Inhalte
+    const pv = el("div"), mitladen = el("div");
+    const programmBox = el("div", { class: "karte-box", style: "margin-bottom:16px" },
+      el("h2", { style: "margin-top:0" }, "Fieldbook-Programm"), pv,
       el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, "Beim Start nach neuer Version fragen"),
-          el("small", {}, "Eine kurze Anfrage bei GitHub, heruntergeladen wird nichts. Ausgeschaltet fragt Fieldbook nur, wenn du auf „Nach neuer Version suchen“ klickst oder die automatische Aktualisierung es tut.")),
+        el("div", {}, el("b", {}, "Beim Start nach neuer Fieldbook-Version fragen"),
+          el("small", {}, "Fieldbook fragt beim Start kurz bei GitHub, ob es eine neue Programmversion gibt. Heruntergeladen wird dabei nichts.")),
         el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.updateBeimStart !== false, onchange: async (e) => {
           s.updateBeimStart = e.target.checked;
           OW.status = await api("einstellungen", { updateBeimStart: e.target.checked });
-        } }), "an")));
-    c.prepend(oben);
+        } }), "an")),
+      mitladen);
+    const aktInfo = el("div"), autoTeil = el("div");
+    const pk = kat.pakete.filter(p => p.installiert).length, kk = kat.karten.filter(r => r.installiert).length;
+    const inhalteBox = el("div", { class: "karte-box", style: "margin-bottom:16px" },
+      el("h2", { style: "margin-top:0" }, "Inhalte"),
+      el("div", { class: "einst-zeile", style: "border:0;padding-top:0" },
+        el("div", {}, el("b", {}, "Installiert"),
+          el("small", {}, pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : ""))),
+        el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten")),
+      aktInfo, autoTeil);
+    c.prepend(programmBox, inhalteBox);
     const zeigeVersion = (u) => {
       pv.innerHTML = "";
       pv.append(
@@ -80,12 +81,12 @@ const Einstellungen = (() => {
     zeigeVersion({ eingerichtet: true, neu: s.programmNeu, verfuegbar: !!s.programmNeu, bereit: s.programmBereit });
     if (s.updateBeimStart !== false) api("programmupdate").then(zeigeVersion).catch(() => { });
 
-    // Inhalte aktualisieren (oben) und automatische Aktualisierung (direkt darunter)
+    // Inhalte aktualisieren und automatische Aktualisierung der Inhalte
     const akt = await api("aktualisierung");
     const zeigeAkt = (a) => {
       aktInfo.innerHTML = "";
       aktInfo.append(el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, "Inhalte"),
+        el("div", {}, el("b", {}, "Nach neuen Inhalten suchen"),
           el("small", {}, "Wissenspakete, Karten und Wegedaten · " +
             (a.geprueft ? "zuletzt geprüft: " + a.geprueft + " · " + (a.anzahl ? a.anzahl + " Aktualisierung(en), ca. " + groesse(a.bytes) + ": " + a.titel.join(", ") : "alles aktuell") : "noch nicht geprüft"))),
         el("button", { class: "knopf knopf-klein", onclick: async (e) => {
@@ -94,10 +95,20 @@ const Einstellungen = (() => {
         } }, "⟳ Inhalte aktualisieren")));
     };
     zeigeAkt(akt);
-    const autoBox = aktualisierungBox(akt, true);
-    autoBox.style.marginTop = "0";
-    autoBox.style.marginBottom = "16px";
-    oben.after(autoBox);
+    // Fieldbook-Versionen bei der wöchentlichen Aktualisierung mitladen (gehört zum Programm, wirkt nur mit eingeschalteter Automatik)
+    const zeigeMitladen = () => {
+      mitladen.innerHTML = "";
+      mitladen.append(el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, "Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen"),
+          el("small", {}, akt.an
+            ? "Sucht die wöchentliche Aktualisierung nach neuen Inhalten, sucht sie auch nach einer neuen Programmversion. Eingespielt wird sie beim nächsten Start."
+            : "Wirkt nur, wenn bei den Inhalten „Inhalte automatisch aktuell halten“ eingeschaltet ist.")),
+        el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: akt.programm !== false, disabled: !akt.an,
+          onchange: (e) => aktualisierungSpeichern(akt, { programm: e.target.checked }, true) }), "an")));
+    };
+    zeigeMitladen();
+    autoTeil.append(el("h3", { style: "margin-top:12px" }, "Automatische Aktualisierung"),
+      aktualisierungBox(akt, true, { eingebettet: true, geaendert: zeigeMitladen }));
 
     // Internetverbindung: Test und Proxy für Firmen- und Schulnetze
     const netz = el("div", { class: "karte-box", style: "margin-top:16px" }, el("h2", { style: "margin-top:0" }, "Internetverbindung"));
