@@ -182,7 +182,7 @@ Alles läuft auf `localhost`.\
 Deine Fragen, Chats und Einträge bleiben auf deinem Gerät.\
 Nach der Einrichtung geht Fieldbook nur noch in drei Fällen ins Internet:
 - **Beim Start** fragt es kurz bei GitHub nach, ob es eine neue Version gibt.\
-  Heruntergeladen wird sie erst, wenn du auf den Knopf klickst.
+  Heruntergeladen wird sie erst, wenn du dies bestätigst.
 - **Neue Inhalte** lädt es, wenn du sie auf der Seite *Inhalte* auswählst.
 - **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
   Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte oder eine neue Version gibt, und fragt vorher oder lädt sie selbst, je nach Einstellung.\
