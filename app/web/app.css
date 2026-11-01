@@ -98,6 +98,7 @@ h2 .sym, h3 .sym, summary .sym { color: var(--akzent); margin-right: .3em; }
   font-size: .85rem; cursor: pointer; white-space: nowrap;
 }
 .pill-still { cursor: default; }
+.pill .kurz { display: none; }
 .pill.ok { background: var(--akzent-hell); color: var(--akzent); border-color: transparent; }
 .pill.warn { background: var(--gelb-hell); color: var(--gelb); border-color: transparent; }
 .pill.fehler { background: var(--rot-hell); color: var(--rot); border-color: transparent; }
@@ -115,37 +116,35 @@ button.zahnrad { border: 0; background: none; cursor: pointer; line-height: 1; }
 .menue button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; border-radius: 8px; cursor: pointer; }
 .menue button:hover { background: var(--flaeche2); }
 .menue .menue-rot { color: var(--rot); font-weight: 600; }
-/* Schmale Fenster: Die Kopfzeile zeigt immer Symbol und Text, nur enger */
-@media (max-width: 1000px) {
+/* Schmale Fenster: Das Menü zeigt nur noch Text (nie nur Symbole), alles rückt enger */
+@media (max-width: 1400px) {
+  .kopf-status .pill .sym { display: none; }
+  .pill .lang { display: none; } .pill .kurz { display: inline; }
+}
+@media (max-width: 1250px) {
   .kopf { gap: 10px; padding: 10px 12px; }
   .hauptnav { gap: 2px; }
-  .hauptnav a { padding: 8px 9px; }
-  .marke span { display: none; }
+  .hauptnav a { padding: 8px 10px; }
+  .hauptnav .sym { display: none; }
 }
-@media (max-width: 760px) {
+@media (max-width: 1000px) {
+  .marke span { display: none; }
   .kopf { gap: 6px; padding: 8px 8px; }
-  .hauptnav a { padding: 6px 4px; font-size: .92rem; }
+  .hauptnav a { padding: 6px 7px; font-size: .92rem; }
   .kopf-status { gap: 4px; }
   .kopf-status .pill { padding: 3px 8px; font-size: .8rem; }
   .zahnrad { padding: 2px 3px; }
 }
-/* Noch schmaler: kleinere Symbole und Abstände, der Text bleibt immer stehen */
-@media (max-width: 700px) {
-  .kopf { gap: 4px; padding: 8px 6px; }
-  .hauptnav { gap: 0; }
-  .hauptnav a { gap: 3px; padding: 6px 3px; font-size: .86rem; }
-  .hauptnav .sym { width: .95em; height: .95em; }
-  .marke .logo { width: 22px; height: 22px; }
-  .kopf-status .pill { padding: 2px 6px; font-size: .76rem; }
-  .kopf-status .pill .sym { display: none; }
-  .zahnrad .sym { width: 1em; height: 1em; }
+/* Halbe Bildschirmbreite: Menü in einer eigenen zweiten Zeile, in der Mitte und gut lesbar,
+   statt seitlich abgeschnitten. Oben links wieder Logo und Name, rechts die Knöpfe. */
+@media (max-width: 760px) {
+  .kopf { grid-template-columns: auto 1fr; row-gap: 4px; padding: 6px 10px 4px; }
+  .marke { justify-self: start; font-size: 1.15rem; }
+  .marke span { display: inline; }
+  .marke .logo { width: 24px; height: 24px; }
+  .hauptnav { grid-column: 1 / -1; grid-row: 2; justify-content: center; flex-wrap: wrap; gap: 0 2px; }
+  .hauptnav a { padding: 5px 9px; font-size: .95rem; }
 }
-@media (max-width: 660px) {
-  .hauptnav a { gap: 2px; padding: 6px 2px; font-size: .8rem; }
-  .hauptnav .sym { width: .9em; height: .9em; }
-}
-.pill .kurz { display: none; }
-@media (max-width: 760px) { .pill .lang { display: none; } .pill .kurz { display: inline; } }
 
 .banner { padding: 10px 18px; background: var(--gelb-hell); color: var(--gelb); border-bottom: 1px solid var(--linie); }
 .banner button { margin-left: 10px; }

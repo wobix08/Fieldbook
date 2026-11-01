@@ -82,7 +82,7 @@ Danach öffnet sich die Seite **Inhalte** mit dem Fortschritt der Downloads.\
 Bis zu drei Downloads laufen gleichzeitig, kleine zuerst.\
 Fertige Pakete kannst du sofort benutzen, auch wenn der Rest noch lädt.\
 Du kannst das Fenster jederzeit schließen: Beim nächsten Start geht es an derselben Stelle weiter.\
-Läuft gerade ein Download, zeigt oben in der Kopfzeile „40 %“ mit einem Pfeil den Stand; ein Klick darauf führt zu den Downloads.
+Läuft gerade ein Download, zeigt oben in der Kopfzeile den Stand, etwa „40 %“; ein Klick darauf führt zu den Downloads.
 
 ## 4. Benutzen (offline)
 
