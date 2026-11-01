@@ -47,7 +47,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
 | <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
 
-> **Wichtig**\
+> [!WARNING]
 > Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
 > KI-Antworten können Fehler enthalten.\
 > Bei wichtigen Entscheidungen immer die Quellen lesen.
