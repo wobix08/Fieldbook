@@ -284,7 +284,8 @@ async function jetztAktualisieren(knopf) {
   }
 }
 
-// Neustart nach Programm-Update: warten, bis die neue Version antwortet, dann Seite neu laden
+// Neustart nach Programm-Update: warten, bis die neue Version antwortet, dann die Einstellungen
+// neu laden (dort steht die neue Versionsnummer)
 function neustartAnzeigen(neu) {
   const info = el("p", { class: "hinweis" }, "Fieldbook wird beendet und gleich wieder gestartet. Das dauert etwa 10 bis 30 Sekunden.");
   const hinter = el("div", { class: "dialog-hinter" },
@@ -296,11 +297,12 @@ function neustartAnzeigen(neu) {
   const start = Date.now();
   const alt = OW.status && OW.status.version;
   let warAus = false;
+  const neuLaden = () => { history.replaceState(null, "", location.pathname + "#einstellungen"); location.reload(); };
   const pruefe = async () => {
     try {
       const s = await fetch("/api/status", { cache: "no-store" }).then(r => r.json());
       // Neue Version da, Fieldbook war kurz weg, oder nach spätestens einer Minute wieder erreichbar
-      if ((neu && s.version === neu) || (alt && s.version !== alt) || warAus || Date.now() - start > 60000) { location.reload(); return; }
+      if ((neu && s.version === neu) || (alt && s.version !== alt) || warAus || Date.now() - start > 60000) { neuLaden(); return; }
     } catch { warAus = true; }
     if (Date.now() - start > 120000) {
       info.textContent = "Das dauert länger als erwartet. Falls sich nichts tut: Fieldbook über die Datei „Fieldbook“ im Programmordner neu öffnen.";

@@ -73,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.5.1.1";
+        public const string Version = "0.5.1.2";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
