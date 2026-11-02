@@ -6,10 +6,3 @@ programme/
 dist/
 /Fieldbook.exe
 tools/icon.ico
-
-# Eigene Notizen, Konzepte und Pläne (bleiben nur auf diesem Rechner)
-CLAUDE.md
-OFFEN.md
-KONZEPT-*.md
-STORYBOARD.md
-.claude/
