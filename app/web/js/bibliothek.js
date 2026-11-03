@@ -2,30 +2,16 @@
 "use strict";
 
 const Bibliothek = (() => {
-  // Darstellung: Kacheln oder Liste, gilt für Kategorien und Pakete
-  let ansicht = "kacheln";
-  try { if (localStorage.getItem("ow-bib-ansicht") === "liste") ansicht = "liste"; } catch { }
-  let letzteParams = new URLSearchParams();
-
-  function zeigeAnsichtKnoepfe() {
-    for (const b of document.querySelectorAll("[data-bib-ansicht]")) b.setAttribute("aria-pressed", String(b.dataset.bibAnsicht === ansicht));
-  }
-  for (const b of document.querySelectorAll("[data-bib-ansicht]")) {
-    b.addEventListener("click", () => {
-      ansicht = b.dataset.bibAnsicht;
-      try { localStorage.setItem("ow-bib-ansicht", ansicht); } catch { }
-      zeigeAnsichtKnoepfe();
-      zeichneRegal(letzteParams);
-    });
-  }
-  zeigeAnsichtKnoepfe();
+  // Welche Kategorien und Pakete aufgeklappt sind; bleibt erhalten, wenn man aus dem Lesefenster zurückkommt
+  const offen = new Set();
+  // Zuletzt gezeigter Bereich im iFixit-Baum je Paket
+  const ifixitStelle = {};
 
   const WEITERE = { id: "sonstiges", icon: "package", titel: "Weitere Pakete", text: "Selbst hinzugefügte Pakete" };
   const kategorien = () => (OW.kategorien || []).concat([WEITERE]);
   const anzahlText = (n) => n === 1 ? "1 Paket" : n + " Pakete";
 
   async function zeigen(params) {
-    letzteParams = params;
     const q = params.get("q") || "";
     $("#bib-suche-feld").value = q;
     const regal = $("#regal");
@@ -46,38 +32,45 @@ const Bibliothek = (() => {
       return;
     }
     if (q) suchen(q); else $("#bib-treffer").innerHTML = "";
-    zeichneRegal(params);
+    zeichneRegal(params, buecher);
   }
 
-  // Übersicht der Kategorien oder die Pakete einer Kategorie
-  async function zeichneRegal(params) {
-    const buecher = await Kiwix.buecher();
-    if (!buecher.length) return;
-    const regal = $("#regal");
-    const kopf = $("#bib-kopf");
+  // Zeile, die beim Anklicken nach unten aufklappt. Der Inhalt wird erst beim ersten Öffnen gebaut.
+  function klappe(schluessel, klasse, kopfInhalt, inhalt) {
+    const knopf = el("button", { type: "button", class: "eintrag klapp-kopf", "aria-expanded": "false" },
+      ...kopfInhalt, el("span", { class: "klapp-pfeil", "aria-hidden": "true" }));
+    const innen = el("div", { class: "klapp-innen" });
+    const box = el("div", { class: "klapp " + klasse }, knopf, el("div", { class: "klapp-huelle" }, innen));
+    let gebaut = false;
+    function setzen(auf) {
+      if (auf && !gebaut) { innen.append(inhalt()); gebaut = true; }
+      box.classList.toggle("auf", auf);
+      knopf.setAttribute("aria-expanded", String(auf));
+      if (auf) offen.add(schluessel); else offen.delete(schluessel);
+    }
+    knopf.addEventListener("click", () => setzen(!box.classList.contains("auf")));
+    if (offen.has(schluessel)) setzen(true);
+    return box;
+  }
+
+  // Alle Kategorien als Liste; jede klappt ihre Pakete auf, jedes Paket seine Suche und Einstiege
+  function zeichneRegal(params, buecher) {
+    const regal = $("#regal"), kopf = $("#bib-kopf");
     regal.innerHTML = "";
     kopf.innerHTML = "";
-    $("#bib-unten").innerHTML = "";
-    regal.className = "regal " + ansicht;
-    const katId = params.get("kat");
-    const k = katId && kategorien().find(x => x.id === katId);
-    const paket = params.get("paket") && buecher.find(x => x.id === params.get("paket"));
-
-    if (paket) { zeichnePaket(paket, params); return; }
-    if (k) {
-      kopf.append(el("a", { class: "knopf knopf-klein", href: "#bibliothek" }, "← Alle Kategorien"),
-        el("div", {}, el("h2", {}, sym(k.icon), k.titel), el("small", {}, k.text)));
-      for (const b of buecher.filter(x => x.kategorien.includes(k.id))) regal.append(paketEintrag(b));
-      return;
-    }
+    // Alte Links (#bibliothek?kat=… oder ?paket=…) öffnen die passende Stelle
+    if (params.get("kat")) offen.add("k:" + params.get("kat"));
+    const p = params.get("paket") && buecher.find(x => x.id === params.get("paket"));
+    if (p) { const k = p.kategorien[0] || "sonstiges"; offen.add("k:" + k); offen.add("p:" + k + ":" + p.id); }
     if (params.get("q")) kopf.append(el("h2", {}, "Kategorien"));
     for (const kat of kategorien()) {
-      const n = buecher.filter(x => x.kategorien.includes(kat.id)).length;
-      if (!n) continue;
-      regal.append(el("a", { class: "eintrag kat", href: "#bibliothek?kat=" + kat.id },
-        symFeld(kat.icon, "gross"),
-        el("div", { class: "e-text" }, el("b", {}, kat.titel), el("small", {}, kat.text)),
-        el("span", { class: "e-zahl" }, anzahlText(n))));
+      const pakete = buecher.filter(x => x.kategorien.includes(kat.id));
+      if (!pakete.length) continue;
+      regal.append(klappe("k:" + kat.id, "klapp-kat",
+        [symFeld(kat.icon, "gross"),
+         el("span", { class: "e-text" }, el("b", {}, kat.titel), el("small", {}, kat.text)),
+         el("span", { class: "e-zahl" }, anzahlText(pakete.length))],
+        () => el("div", { class: "klapp-liste" }, pakete.map(b => paketZeile(b, kat.id)))));
     }
   }
 
@@ -85,12 +78,16 @@ const Bibliothek = (() => {
   const leseLink = (b, pfad, titel, extra) =>
     "#lesen?url=" + encodeURIComponent(b.start + (pfad ? "/" + pfad : "")) + "&titel=" + encodeURIComponent(titel || b.titel) + (extra || "");
 
-  // Eigene Startseite eines Pakets: Suche, Zufall, Kacheln zu Übersichtsseiten und (iFixit) nur Zweige mit Anleitungen
-  function zeichnePaket(b, params) {
-    const kopf = $("#bib-kopf"), regal = $("#regal"), unten = $("#bib-unten");
-    const kat = kategorien().find(x => x.id === b.kategorien[0]);
-    kopf.append(el("a", { class: "knopf knopf-klein", href: kat ? "#bibliothek?kat=" + kat.id : "#bibliothek" }, "← " + (kat ? kat.titel : "Alle Kategorien")),
-      el("div", {}, el("h2", {}, b.titel), el("small", {}, b.text)));
+  function paketZeile(b, katId) {
+    return klappe("p:" + katId + ":" + b.id, "klapp-paket",
+      [el("img", { class: "e-bild", src: b.bild || "icon.svg", alt: "", loading: "lazy" }),
+       el("span", { class: "e-text" }, el("b", {}, b.titel), el("small", {}, (b.englisch ? "Englisch · " : "") + (b.text || "")))],
+      () => paketInhalt(b));
+  }
+
+  // Aufgeklapptes Paket: Suche, Öffnen, Zufall, Einstiege zu Übersichtsseiten und (iFixit) der Geräte-Baum
+  function paketInhalt(b) {
+    const box = el("div", { class: "paket-innen" });
     const aktionen = el("div", { class: "paket-aktionen" });
     if (b.durchsuchen) {
       const feld = el("input", { type: "search", placeholder: "In „" + b.titel.replace(/ \(.*\)$/, "") + "“ suchen …", "aria-label": "In diesem Paket suchen" });
@@ -98,60 +95,46 @@ const Bibliothek = (() => {
         e.preventDefault();
         const q = feld.value.trim();
         if (q) location.hash = leseLink(b, "", b.titel, "&suche=" + encodeURIComponent(q));
-      } }, feld, el("button", { class: "knopf knopf-haupt", type: "submit" }, "Suchen")));
+      } }, feld, el("button", { class: "knopf", type: "submit" }, "Suchen")));
     }
-    aktionen.append(el("a", { class: "knopf", href: leseLink(b, "", b.titel, "&zufall=1") }, sym("shuffle"), "Zufälliger Artikel"),
-      el("a", { class: "knopf", href: leseLink(b) }, sym("house"), "Startseite im Paket"));
-    kopf.append(aktionen);
-    regal.className = "regal kacheln";
-    for (const kachel of (b.startseite.kacheln || [])) {
-      regal.append(el("a", { class: "eintrag kat", href: leseLink(b, kachel.pfad, kachel.titel) },
-        kachel.icon ? symFeld(kachel.icon, "gross") : null,
-        el("div", { class: "e-text" }, el("b", {}, kachel.titel), kachel.text ? el("small", {}, kachel.text) : null)));
+    const st = b.startseite || {};
+    // Pakete mit eigener Fieldbook-Startseite (Klexikon) öffnen dort statt auf der Startseite des Pakets
+    aktionen.append(el("a", { class: "knopf knopf-haupt", href: st.eigene ? "#paketstart?buch=" + encodeURIComponent(b.id) : leseLink(b) }, sym("book-open"), "Öffnen"),
+      el("a", { class: "knopf", href: leseLink(b, "", b.titel, "&zufall=1") }, sym("shuffle"), "Zufälliger Artikel"));
+    box.append(aktionen);
+    if ((st.kacheln || []).length)
+      box.append(el("div", { class: "paket-themen" },
+        st.kacheln.map(k => el("a", { class: "knopf knopf-klein", href: leseLink(b, k.pfad, k.titel) }, k.icon ? sym(k.icon) : null, k.titel))));
+    if (st.ifixit) {
+      const baum = el("div", { class: "ifixit-baum" });
+      box.append(baum);
+      zeichneIfixit(b, baum, ifixitStelle[b.id] || "");
     }
-    if (b.startseite.ifixit) zeichneIfixit(b, params.get("knoten") || "");
+    return box;
   }
 
-  async function zeichneIfixit(b, knoten) {
-    const regal = $("#regal"), unten = $("#bib-unten");
-    const hier = location.hash;
+  // Geräte-Baum von iFixit, nur Zweige mit Anleitungen; man bewegt sich darin, ohne die Seite zu wechseln
+  async function zeichneIfixit(b, ziel, knoten) {
+    ifixitStelle[b.id] = knoten;
     const r = await api("ifixit?buch=" + encodeURIComponent(b.id) + "&pfad=" + encodeURIComponent(knoten)).catch(e => ({ fehler: e.message }));
-    if (location.hash !== hier) return;
-    unten.innerHTML = "";
+    if (ifixitStelle[b.id] !== knoten) return;
+    ziel.innerHTML = "";
     if (r.status === "laeuft") {
-      unten.append(el("p", { class: "hinweis" }, "Die Übersicht wird einmalig erstellt, das dauert ein paar Minuten … (" + (r.gelesen || 0) + " Seiten gelesen). Suche und Zufall gehen schon."));
-      setTimeout(() => { if (location.hash === hier) zeichneIfixit(b, knoten); }, 3000);
+      ziel.append(el("p", { class: "hinweis" }, "Die Übersicht wird einmalig erstellt, das dauert ein paar Minuten … (" + (r.gelesen || 0) + " Seiten gelesen). Suche und Zufall gehen schon."));
+      setTimeout(() => { if (ziel.isConnected) zeichneIfixit(b, ziel, knoten); }, 3000);
       return;
     }
-    if (r.fehler) { unten.append(el("p", { class: "fehlerbox" }, "Übersicht nicht verfügbar: " + r.fehler)); return; }
-    const link = (pfad) => "#bibliothek?paket=" + encodeURIComponent(b.id) + (pfad ? "&knoten=" + encodeURIComponent(pfad) : "");
+    if (r.fehler) { ziel.append(el("p", { class: "fehlerbox" }, "Übersicht nicht verfügbar: " + r.fehler)); return; }
+    const gehe = (pfad, ...inhalt) => el("button", { type: "button", onclick: () => zeichneIfixit(b, ziel, pfad) }, ...inhalt);
     const anz = (n) => n === 1 ? "1 Anleitung" : n.toLocaleString("de-DE") + " Anleitungen";
-    unten.append(el("h3", { class: "ifixit-weg" },
-      el("a", { href: link("") }, "Alle Bereiche"), ...r.weg.flatMap(w => [" › ", w.pfad === r.pfad ? w.titel : el("a", { href: link(w.pfad) }, w.titel)])));
-    if (r.kinder.length) {
-      const liste = el("div", { class: "regal kacheln" });
-      for (const k of r.kinder)
-        liste.append(el("a", { class: "eintrag", href: link(k.pfad) },
-          el("div", { class: "e-text" }, el("b", {}, k.titel), el("small", {}, anz(k.anzahl)))));
-      unten.append(liste);
-    }
-    if (r.anleitungen.length) {
-      unten.append(el("h3", {}, r.kinder.length ? "Anleitungen direkt hier" : anz(r.anleitungen.length)),
+    ziel.append(el("h3", { class: "ifixit-weg" },
+      gehe("", "Alle Bereiche"), ...r.weg.flatMap(w => [" › ", w.pfad === r.pfad ? w.titel : gehe(w.pfad, w.titel)])));
+    if (r.kinder.length)
+      ziel.append(el("div", { class: "ifixit-zweige" },
+        r.kinder.map(k => gehe(k.pfad, el("b", {}, k.titel), el("small", {}, anz(k.anzahl))))));
+    if (r.anleitungen.length)
+      ziel.append(el("h3", {}, r.kinder.length ? "Anleitungen direkt hier" : anz(r.anleitungen.length)),
         ...r.anleitungen.map(a => el("a", { class: "treffer", href: leseLink(b, a.pfad, a.titel) }, el("b", {}, a.titel))));
-    }
-    // Kacheln aus pakete.json nur auf der obersten Ebene zeigen
-    if (knoten) regal.innerHTML = "";
-  }
-
-  function paketEintrag(b) {
-    const liste = ansicht === "liste";
-    const text = b.text || "";
-    const ziel = b.startseite ? "#bibliothek?paket=" + encodeURIComponent(b.id) : "#lesen?url=" + encodeURIComponent(b.start) + "&titel=" + encodeURIComponent(b.titel);
-    return el("a", { class: "eintrag", href: ziel },
-      el("img", { class: "e-bild", src: b.bild || "icon.svg", alt: "", loading: "lazy" }),
-      el("div", { class: "e-text" }, el("b", {}, b.titel),
-        el("small", {}, (b.englisch ? "Englisch · " : "") + (liste ? text : text.slice(0, 90) + (text.length > 90 ? " …" : "")))),
-      liste ? el("span", { class: "e-zahl" }, "Öffnen") : null);
   }
 
   async function suchen(q) {
@@ -259,7 +242,12 @@ const Bibliothek = (() => {
       if (innen) { innen.addEventListener("load", () => pdfImLesefenster(innen)); pdfImLesefenster(innen); }
     } catch { }
   });
-  $("#lese-start").addEventListener("click", () => { const w = viewer(); if (w) w.gotoMainPageOfCurrentBook(); });
+  $("#lese-start").addEventListener("click", async () => {
+    const id = aktuellesPaket();
+    const b = id && (await Kiwix.buecher()).find(x => x.id === id);
+    if (b && b.startseite && b.startseite.eigene) { location.hash = "#paketstart?buch=" + encodeURIComponent(id); return; }
+    const w = viewer(); if (w) w.gotoMainPageOfCurrentBook();
+  });
   $("#lese-zufall").addEventListener("click", () => { const w = viewer(); if (w) w.gotoRandomPage(); });
   $("#lese-suche").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -282,6 +270,7 @@ const Bibliothek = (() => {
     let aktuell = null;
     try { const l = rahmen.contentWindow.location; aktuell = l.href === "about:blank" ? null : l.pathname + l.search + l.hash; } catch { }
     if (aktuell !== url) {
+      verdeckenBisGeladen(rahmen);
       if (aktuell) rahmen.contentWindow.location.replace(url);
       else rahmen.setAttribute("src", url);
     }
@@ -293,6 +282,31 @@ const Bibliothek = (() => {
       if (zufall) w.gotoRandomPage();
       else { w.document.getElementById("kiwixsearchbox").value = suche; w.performSearch(); }
     });
+  }
+
+  // Bis der neue Artikel da ist, das Lesefenster ausblenden: Sonst blitzt erst die leere weiße Seite
+  // (oder kurz der vorige Artikel) auf. Im Kiwix-Viewer wird auf den Artikel im inneren Rahmen gewartet.
+  // Ändert sich im Viewer nur der Hash, gibt es kein "load" des äußeren Rahmens, dafür eines des inneren.
+  let verdeckt = 0;
+  function verdeckenBisGeladen(rahmen) {
+    const lauf = ++verdeckt;
+    rahmen.style.visibility = "hidden";
+    const zeigen = () => { if (lauf === verdeckt) rahmen.style.visibility = ""; };
+    setTimeout(zeigen, 5000);
+    const pruefe = (n) => {
+      if (lauf !== verdeckt) return;
+      let fertig = true;
+      try {
+        const innen = rahmen.contentDocument.getElementById("content_iframe");
+        if (innen) fertig = innen.contentDocument.readyState === "complete" && innen.contentWindow.location.href !== "about:blank";
+      } catch { }
+      if (fertig || n > 50) zeigen(); else setTimeout(() => pruefe(n + 1), 100);
+    };
+    const geladen = () => { rahmen.removeEventListener("load", geladen); if (innenAlt) innenAlt.removeEventListener("load", geladen); pruefe(0); };
+    rahmen.addEventListener("load", geladen);
+    let innenAlt = null;
+    try { innenAlt = rahmen.contentDocument.getElementById("content_iframe"); } catch { }
+    if (innenAlt) innenAlt.addEventListener("load", geladen);
   }
 
   function wennViewerBereit(fn, versuche) {

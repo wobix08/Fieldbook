@@ -1,9 +1,11 @@
-// Einrichtungs-Assistent: Gerät prüfen, KI wählen, Wissen wählen, Karten wählen, abschließen.
+// Einrichtungs-Assistent: Gerät prüfen, KI wählen, Wissen, Karten und Sprachen wählen, abschließen.
 // Die Downloads selbst laufen danach auf der Seite "Inhalte" (inhalte.js).
 "use strict";
 
 const Setup = (() => {
-  const SCHRITTE = ["Dein Gerät", "KI-Assistent", "Wissen", "Karten", "Übersicht"];
+  const SCHRITTE = ["Dein Gerät", "KI-Assistent", "Wissen", "Karten", "Sprachen", "Übersicht"];
+  const UEBERSICHT = SCHRITTE.length - 1;
+  let sprachen = [], stimmen = [], alleSprachen = false;
   const STUFEN = [
     { name: "Sehr schwaches Gerät", text: "Nur eine winzige KI ist möglich." },
     { name: "Einsteiger-Gerät", text: "Kleine KI, rechnet auf dem Prozessor." },
@@ -13,8 +15,11 @@ const Setup = (() => {
   ];
   let schritt = 0, hw = null, kat = null, akt = { an: false, modus: "fragen", wann: "sofort", mbit: 0 }, downloadAktiv = false;
   let wahl = neueWahl();
+  // Aufgeklappte Kategorien im Schritt „Wissen“ (bleiben beim Neuzeichnen offen)
+  const aufgeklappt = new Set();
   function neueWahl() {
-    return { modell: undefined, backend: "cpu", pakete: new Set(), karten: new Map(), sparen: false, routen: true, routenGroesse: null, desktop: undefined, uebersetzer: true };
+    return { modell: undefined, backend: "cpu", pakete: new Set(), karten: new Map(), sparen: false, routen: true, routenGroesse: null, desktop: undefined, uebersetzer: true,
+      sprachen: new Set(), stimmen: new Set(), spracheingabe: false };
   }
 
   // ------------------------------------------------ Hardware-Einstufung
@@ -58,7 +63,11 @@ const Setup = (() => {
       $("#setup-knoepfe").innerHTML = "";
       zeichneSchritte();
       try {
-        [hw, kat, akt] = await Promise.all([api("hardware"), api("katalog"), api("aktualisierung")]);
+        let sk, st;
+        [hw, kat, akt, sk, st] = await Promise.all([api("hardware"), api("katalog"), api("aktualisierung"),
+          ladeKonfig("sprachen").catch(() => ({})), ladeKonfig("stimmen").catch(() => ({}))]);
+        sprachen = sk.sprachen || [];
+        stimmen = st.stimmen || [];
       } catch (e) {
         $("#setup-inhalt").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>";
         return;
@@ -67,7 +76,7 @@ const Setup = (() => {
     }
     const f = await api("fortschritt").catch(() => null);
     downloadAktiv = !!(f && f.aktiv);
-    schritt = !isNaN(start) ? Math.min(4, start) : (neu ? 0 : schritt);
+    schritt = !isNaN(start) ? Math.min(UEBERSICHT, start) : (neu ? 0 : schritt);
     zeichne();
   }
 
@@ -94,7 +103,13 @@ const Setup = (() => {
   function zeichneSchritte() {
     const s = $("#schritte");
     s.innerHTML = "";
-    SCHRITTE.forEach((t, i) => s.append(el("div", { class: "schritt" + (i === schritt ? " aktiv" : i < schritt ? " fertig" : "") }, (i + 1) + ". " + t)));
+    // Jeder Schritt ist ein Link; die Auswahl bleibt beim Springen erhalten (solange das Gerät geprüft ist)
+    const bereit = !!(hw && kat);
+    SCHRITTE.forEach((t, i) => s.append(el(bereit && i !== schritt ? "a" : "div", {
+      class: "schritt" + (i === schritt ? " aktiv" : i < schritt ? " fertig" : ""),
+      href: bereit && i !== schritt ? "#setup?schritt=" + i : null,
+      "aria-current": i === schritt ? "step" : null,
+    }, (i + 1) + ". " + t)));
   }
 
   function knoepfe(zurueck, weiter, weiterText) {
@@ -108,7 +123,7 @@ const Setup = (() => {
 
   function zeichne() {
     zeichneSchritte();
-    [schrittGeraet, schrittKi, schrittWissen, schrittKarten, zeigeUebersicht][schritt]();
+    [schrittGeraet, schrittKi, schrittWissen, schrittKarten, schrittSprachen, zeigeUebersicht][schritt]();
   }
 
   // ------------------------------------------------ 1. Gerät
@@ -213,19 +228,26 @@ const Setup = (() => {
     c.innerHTML = "";
     c.append(el("h1", {}, "Wissen auswählen"),
       el("p", {}, "Wähle, welche Offline-Bibliotheken auf das Gerät sollen. Mit „Englisch“ markierte Pakete kann die KI trotzdem auf Deutsch erklären."));
-    const vl = el("div", { class: "vorlagen" }, el("span", { class: "hinweis", style: "align-self:center" }, "Schnellwahl:"));
-    for (const v of kat.vorlagen) {
-      vl.append(el("button", { class: "knopf knopf-klein", title: v.text, onclick: () => { wahl.pakete = new Set(v.pakete); kat.pakete.filter(p => p.installiert).forEach(p => wahl.pakete.add(p.id)); schrittWissen(); } }, v.titel));
-    }
-    vl.append(el("button", { class: "knopf knopf-klein", onclick: () => { wahl.pakete = new Set(kat.pakete.filter(p => p.installiert).map(p => p.id)); schrittWissen(); } }, "Nichts"));
-    c.append(vl);
+    // Nur „Alles“ und „Nichts“ (Vorlage „alles“ wählt je Variantengruppe die größte); Installiertes bleibt immer gewählt
+    const installiert = () => kat.pakete.filter(p => p.installiert).map(p => p.id);
+    const alles = kat.vorlagen.find(v => v.id === "alles");
+    c.append(el("div", { class: "vorlagen" }, el("span", { class: "hinweis", style: "align-self:center" }, "Schnellwahl:"),
+      alles ? el("button", { class: "knopf knopf-klein", onclick: () => { wahl.pakete = new Set(alles.pakete.concat(installiert())); schrittWissen(); } }, "Alles") : null,
+      el("button", { class: "knopf knopf-klein", onclick: () => { wahl.pakete = new Set(installiert()); schrittWissen(); } }, "Nichts")));
     if (!kat.katalogOnline) c.append(el("p", { class: "warnung" }, "Der Kiwix-Katalog ist gerade nicht erreichbar. Größen sind geschätzt."));
 
     // Jedes Paket unter seiner Hauptkategorie (der ersten), damit es nur einmal zur Wahl steht
+    // Jede Kategorie klappt auf; zugeklappt steht darunter, was schon da und was ausgewählt ist
+    const liste = el("div", { class: "klapp-liste-abschnitte", style: "margin-top:16px" });
+    c.append(liste);
     for (const gr of kat.kategorien) {
       const pakete = kat.pakete.filter(p => (p.kategorien || [])[0] === gr.id);
       if (!pakete.length) continue;
-      c.append(el("h2", {}, sym(gr.icon), gr.titel));
+      const gewaehlt = pakete.filter(p => wahl.pakete.has(p.id));
+      const unter = gewaehlt.length ? gewaehlt.map(p => p.titel + (p.installiert ? " (vorhanden)" : "")).join(", ") : "Nichts ausgewählt";
+      const a = klappAbschnitt(aufgeklappt, gr.id, gr.icon, gr.titel, unter, gewaehlt.length + " von " + pakete.length + " ausgewählt");
+      liste.append(a.box);
+      const c = a.innen;
       for (const p of pakete) {
         const an = wahl.pakete.has(p.id);
         const tags = [];
@@ -242,14 +264,92 @@ const Setup = (() => {
         }, [p.titel, ...tags], p.text, groesse(p.bytes), p.installiert && !p.update));
       }
     }
-    // Übersetzer für die englischen Pakete
-    const ueDa = !!(OW.status && OW.status.uebersetzer);
-    c.append(el("h2", {}, "Übersetzer"),
-      wahlZeile("checkbox", "uebersetzer", ueDa || wahl.uebersetzer, (e) => { wahl.uebersetzer = e.target.checked; schrittWissen(); },
-        ["Übersetzer Englisch → Deutsch", ...(ueDa ? [el("span", { class: "marke-tag tag-ok" }, "✓ vorhanden")] : [])],
-        "Englische Artikel beim Lesen offline ins Deutsche übersetzen. Empfohlen.", groesse(27e6), ueDa));
     c.append(summenZeile());
     knoepfe(() => geheZu(1), () => geheZu(3));
+  }
+
+  // ------------------------------------------------ 5. Sprachen
+
+  function schrittSprachen() {
+    const c = $("#setup-inhalt");
+    const s = OW.status || {};
+    c.innerHTML = "";
+    c.append(el("h1", {}, "Sprachen auswählen"),
+      el("p", {}, "Der Übersetzer hilft bei Gesprächen mit Menschen, die eine andere Sprache sprechen, und übersetzt englische Artikel aus der Bibliothek ins Deutsche. Alles läuft offline, die Technik stammt von Mozilla (wie in Firefox)."));
+
+    // Artikel übersetzen (Englisch → Deutsch)
+    const ueDa = !!(s.uebersetzer && !s.uebersetzerAlt);
+    c.append(wahlZeile("checkbox", "uebersetzer", ueDa || wahl.uebersetzer, (e) => { wahl.uebersetzer = e.target.checked; schrittSprachen(); },
+      ["Artikel übersetzen (Englisch → Deutsch)", ...(ueDa ? [el("span", { class: "marke-tag tag-ok" }, "✓ vorhanden")] : [el("span", { class: "marke-tag tag-empf" }, "Empfohlen")])],
+      "Englische Artikel in der Bibliothek beim Lesen ins Deutsche übersetzen.", groesse(42e6), ueDa));
+
+    // Sprachen für Gespräche: je Sprache „Nur Text“ oder „Text + Sprache“ (mit Stimme zum Vorlesen)
+    c.append(el("h2", {}, "Sprachen für Gespräche"),
+      el("p", { class: "hinweis" }, "Jede Sprache übersetzt in beide Richtungen. Übersetzt wird über Englisch, deshalb kommen Englisch und „Artikel übersetzen“ automatisch mit. Mit „Text + Sprache“ liest Fieldbook die Übersetzungen auch vor."));
+    const da = new Set(s.sprachen || []), stimmenDa = new Set(s.stimmen || []);
+    const knopf = (an, text, bytes, fn) => el("button", { class: "knopf knopf-klein" + (an ? " knopf-haupt" : ""), type: "button", "aria-pressed": String(an), onclick: fn }, text + " · " + groesse(bytes));
+    const zeigeAlle = alleSprachen || sprachen.length <= 23;
+    let versteckt = 0;
+    sprachen.forEach((sp, i) => {
+      const code = sp.code;
+      const titel = sp.name === sp.eigen ? sp.name : sp.name + " · " + sp.eigen;
+      const stimme = stimmeBytes(code);
+      if (da.has(code)) {
+        c.append(el("div", { class: "wahl installiert" }, el("span", { class: "w-haken", "aria-hidden": "true" }, "✓"),
+          el("div", { class: "w-text" }, el("div", { class: "w-titel" }, titel, el("span", { class: "marke-tag tag-ok" }, stimmenDa.has(code) ? "vorhanden · Text + Sprache" : "vorhanden · Text")))));
+        return;
+      }
+      if (!zeigeAlle && i >= 21 && !wahl.sprachen.has(code)) { versteckt++; return; }
+      const w = !wahl.sprachen.has(code) ? null : wahl.stimmen.has(code) ? "sprache" : "text";
+      const setze = (neu) => {
+        if (w === neu) { wahl.sprachen.delete(code); wahl.stimmen.delete(code); }
+        else { wahl.sprachen.add(code); if (neu === "sprache") wahl.stimmen.add(code); else wahl.stimmen.delete(code); }
+        schrittSprachen();
+      };
+      c.append(el("div", { class: "wahl" + (w ? " gewaehlt" : ""), style: "align-items:center;cursor:default" },
+        el("span", { class: "w-haken", "aria-hidden": "true" }),
+        el("div", { class: "w-text" }, el("div", { class: "w-titel" }, titel), stimme ? null : el("small", {}, "Keine Stimme zum Vorlesen")),
+        el("div", { class: "knopfreihe", style: "margin:0;flex-wrap:nowrap" },
+          knopf(w === "text", "Nur Text", sp.mb * 1048576, () => setze("text")),
+          stimme ? knopf(w === "sprache", "Text + Sprache", sp.mb * 1048576 + stimme, () => setze("sprache")) : null)));
+    });
+    if (versteckt) c.append(el("button", { class: "knopf knopf-klein", onclick: () => { alleSprachen = true; schrittSprachen(); } }, "Alle " + sprachen.length + " Sprachen zeigen"));
+
+    // Spracheingabe
+    const sprechDa = !!(s.spracheingabe && s.spracheingabeKomplett);
+    c.append(el("h2", {}, "Spracheingabe"),
+      wahlZeile("checkbox", "spracheingabe", sprechDa || wahl.spracheingabe, (e) => { wahl.spracheingabe = e.target.checked; schrittSprachen(); },
+        ["Spracheingabe", ...(sprechDa ? [el("span", { class: "marke-tag tag-ok" }, "✓ vorhanden")] : [])],
+        "Im Übersetzer sprechen statt tippen, für alle Sprachen. Erkennt europäische Sprachen schnell und gut (Parakeet von NVIDIA), alle anderen mit Whisper von OpenAI.",
+        groesse(s.spracheingabe ? Inhalte.SPRECHEN_ZUSATZ : Inhalte.SPRECHEN_BYTES), sprechDa));
+    c.append(summenZeile());
+    knoepfe(() => geheZu(3), () => geheZu(UEBERSICHT), "Weiter zur Übersicht →");
+  }
+
+  const stimmeBytes = (code) => { const v = stimmen.find(x => x.code === code); return v ? v.bytes : 0; };
+
+  // Neue Sprachen (Englisch kommt mit, falls es fehlt) und ihre Größe samt Stimmen
+  function sprachenNeu() {
+    const da = new Set((OW.status || {}).sprachen || []);
+    const neu = [...wahl.sprachen].filter(c => !da.has(c));
+    if (neu.length && !da.has("en") && !neu.includes("en")) neu.push("en");
+    return neu;
+  }
+  function sprachenBytes() {
+    const s = OW.status || {};
+    let b = 0;
+    for (const c of sprachenNeu()) { const sp = sprachen.find(x => x.code === c); if (sp) b += sp.mb * 1048576; }
+    // Stimmen: Deutsch und das Vorleseprogramm (22 MB) kommen mit, falls sie fehlen
+    const stDa = new Set(s.stimmen || []);
+    const fehlen = [...wahl.stimmen].filter(c => stimmeBytes(c) && !stDa.has(c));
+    if (fehlen.length) {
+      if (!stDa.has("de") && !fehlen.includes("de")) fehlen.push("de");
+      b += fehlen.reduce((x, c) => x + stimmeBytes(c), stDa.size ? 0 : 22477236);
+    }
+    if (wahl.spracheingabe && !(s.spracheingabe && s.spracheingabeKomplett)) b += s.spracheingabe ? Inhalte.SPRECHEN_ZUSATZ : Inhalte.SPRECHEN_BYTES;
+    // Die Sprachen brauchen „Artikel übersetzen“
+    if (!wahl.uebersetzer && sprachenNeu().length && !(s.uebersetzer && !s.uebersetzerAlt)) b += 42e6;
+    return b;
   }
 
   function neueBytes() {
@@ -257,10 +357,10 @@ const Setup = (() => {
     const m = kat.modelle.find(x => x.id === wahl.modell);
     if (m && !m.installiert) b += m.bytes;
     for (const p of kat.pakete) if (wahl.pakete.has(p.id) && (!p.installiert || p.update)) b += p.bytes || 0;
-    for (const [id, k] of wahl.karten) { const r = kat.karten.find(x => x.id === id); if (r && !r.installiert) b += k.bytes || 0; }
+    for (const [id, k] of wahl.karten) { const r = kat.karten.find(x => x.id === id); if (r && !r.installiert) b += k.bytes > 0 ? k.bytes : kartenSchaetzung(r, wahl.sparen); }
     if (wahl.routen && wahl.routenGroesse && wahl.routenGroesse.bytes > 0) b += wahl.routenGroesse.bytes + (OW.status && OW.status.routen ? 0 : 56e6);
-    if (wahl.uebersetzer && !(OW.status && OW.status.uebersetzer)) b += 27e6;
-    return b;
+    if (wahl.uebersetzer && !(OW.status && OW.status.uebersetzer)) b += 42e6;
+    return b + sprachenBytes();
   }
 
   function summenZeile() {
@@ -277,7 +377,16 @@ const Setup = (() => {
     const c = $("#setup-inhalt");
     c.innerHTML = "";
     c.append(el("h1", {}, "Karten auswählen"),
-      el("p", {}, "Offline-Karten von OpenStreetMap mit Ortssuche. Du kannst mehrere Regionen wählen, zum Beispiel für eine Reise."),
+      el("p", {}, "Offline-Karten von OpenStreetMap mit Ortssuche. Du kannst mehrere Regionen wählen, zum Beispiel für eine Reise."));
+    // Routenplanung ganz oben, für alle gewählten bzw. vorhandenen Kartenregionen
+    const rg = wahl.routenGroesse;
+    const routenText = !wahl.karten.size ? "Erst eine Karte auswählen." :
+      rg == null ? "Größe wird berechnet …" :
+      rg.bytes > 0 ? "Wegedaten ca. " + groesse(rg.bytes + (OW.status && OW.status.routen ? 0 : 56e6)) + " (inkl. Java-Laufzeit)" :
+      "Wegedaten schon vorhanden.";
+    c.append(wahlZeile("checkbox", "routen", wahl.routen && wahl.karten.size > 0, (e) => { wahl.routen = e.target.checked; schrittKarten(); },
+      ["Routenplanung"], "Routen zu Fuß, mit dem Rad und mit dem Auto, offline auf der Karte. " + routenText, "", !wahl.karten.size),
+      el("h2", {}, "Regionen"),
       el("p", {}, el("label", { class: "schalter" },
         el("input", { type: "checkbox", checked: wahl.sparen, onchange: (e) => { wahl.sparen = e.target.checked; for (const k of wahl.karten.values()) k.bytes = null; schrittKarten(); } }),
         el("span", {}, "Platz sparen (weniger Details beim starken Hineinzoomen)"))));
@@ -285,23 +394,14 @@ const Setup = (() => {
       const an = wahl.karten.has(r.id);
       const info = wahl.karten.get(r.id);
       const tags = r.installiert ? [el("span", { class: "marke-tag tag-ok" }, "✓ vorhanden")] : [];
-      const g = r.installiert ? groesse(r.bytesInstalliert) : (info && info.bytes ? "ca. " + groesse(info.bytes) : an ? "wird berechnet …" : "");
+      const g = r.installiert ? groesse(r.bytesInstalliert) : (info && info.bytes > 0 ? "ca. " + groesse(info.bytes) : kartenSchaetzung(r, wahl.sparen) ? "ca. " + groesse(kartenSchaetzung(r, wahl.sparen)) : an ? "wird berechnet …" : "");
       c.append(wahlZeile("checkbox", "k-" + r.id, an, (e) => {
         if (e.target.checked) { wahl.karten.set(r.id, { bytes: null }); } else wahl.karten.delete(r.id);
         schrittKarten();
       }, [r.titel, ...tags], null, g, r.installiert));
     }
-    // Routenplanung für alle gewählten bzw. vorhandenen Kartenregionen
-    const rg = wahl.routenGroesse;
-    const routenText = !wahl.karten.size ? "Erst eine Karte auswählen." :
-      rg == null ? "Größe wird berechnet …" :
-      rg.bytes > 0 ? "Wegedaten ca. " + groesse(rg.bytes + (OW.status && OW.status.routen ? 0 : 56e6)) + " (inkl. Java-Laufzeit)" :
-      "Wegedaten schon vorhanden.";
-    c.append(el("h2", {}, "Routenplanung"),
-      wahlZeile("checkbox", "routen", wahl.routen && wahl.karten.size > 0, (e) => { wahl.routen = e.target.checked; schrittKarten(); },
-        ["Routen berechnen: zu Fuß, mit dem Rad, mit dem Auto"], "Funktioniert offline auf der Karte. " + routenText, "", !wahl.karten.size));
     c.append(summenZeile());
-    knoepfe(() => geheZu(2), () => geheZu(4), "Weiter zur Übersicht →");
+    knoepfe(() => geheZu(2), () => geheZu(4));
     berechneKartengroessen();
     berechneRoutengroesse();
   }
@@ -343,22 +443,43 @@ const Setup = (() => {
     const c = $("#setup-inhalt");
     c.innerHTML = "";
     c.append(el("h1", {}, "Übersicht"));
-    const liste = el("ul");
+    // Tabelle: links das Thema (Link zum Schritt), rechts die Auswahl; Wissen und Karten als Liste, eine Zeile je Eintrag
+    const tabelle = el("table", { class: "hw-tabelle uebersicht" });
+    const zeile = (titel, schrittNr, ...inhalt) => tabelle.append(el("tr", {},
+      el("td", {}, schrittNr == null ? titel : el("a", { href: "#setup?schritt=" + schrittNr }, titel)), el("td", {}, ...inhalt)));
+    const vorhanden = () => el("span", { class: "marke-tag tag-ok" }, "✓ vorhanden");
     const m = kat.modelle.find(x => x.id === wahl.modell);
-    liste.append(el("li", {}, "KI: " + (m ? m.name + " · " + m.modell + (m.installiert ? " (vorhanden)" : " – " + groesse(m.bytes)) + (wahl.backend === "vulkan" ? ", mit Grafikkarte" : ", auf dem Prozessor") : "keine")));
+    zeile("KI-Assistent", 1, m ? m.name + " · " + m.modell : "keine",
+      m ? el("div", { class: "hinweis klein" }, (wahl.backend === "vulkan" ? "mit Grafikkarte" : "auf dem Prozessor") + (m.installiert ? "" : " · " + groesse(m.bytes))) : null,
+      m && m.installiert ? vorhanden() : null);
     const pk = kat.pakete.filter(p => wahl.pakete.has(p.id));
-    liste.append(el("li", {}, "Wissen: " + (pk.length ? pk.map(p => p.titel + (p.installiert && !p.update ? " ✓" : "")).join(", ") : "keine")));
+    const wissen = el("div");
+    if (!pk.length) wissen.append("keine");
+    // Nach Hauptkategorie gruppiert, wie im Schritt „Wissen“
+    for (const gr of kat.kategorien) {
+      const inGr = pk.filter(p => (p.kategorien || [])[0] === gr.id);
+      if (!inGr.length) continue;
+      wissen.append(el("div", { class: "uebersicht-gruppe" }, gr.titel),
+        el("ul", { class: "uebersicht-liste" }, ...inGr.map(p => el("li", {}, p.titel, " ",
+          p.installiert && !p.update ? vorhanden() : el("span", { class: "hinweis klein" }, groesse(p.bytes))))));
+    }
+    const ohneGr = pk.filter(p => !kat.kategorien.some(g => g.id === (p.kategorien || [])[0]));
+    if (ohneGr.length) wissen.append(el("ul", { class: "uebersicht-liste" }, ...ohneGr.map(p => el("li", {}, p.titel))));
+    zeile("Wissen (" + pk.length + " Pakete)", 2, wissen);
     const kk = kat.karten.filter(r => wahl.karten.has(r.id));
-    liste.append(el("li", {}, "Karten: " + (kk.length ? kk.map(r => r.titel + (r.installiert ? " ✓" : "")).join(", ") : "keine")));
-    liste.append(el("li", {}, "Routenplanung: " + (wahl.routen && kk.length ? "ja" : "nein")));
-    liste.append(el("li", {}, "Übersetzer Englisch → Deutsch: " + (OW.status && OW.status.uebersetzer ? "vorhanden" : wahl.uebersetzer ? "ja" : "nein")));
-    liste.append(el("li", {}, "Desktop-Symbol: " + (wahl.desktop ? "ja" : "nein")));
-    liste.append(el("li", {}, "Automatische Aktualisierung: " + (akt.an ? (akt.modus === "auto" ? "an, automatisch" : "an, mit Nachfrage") + (akt.wann === "leerlauf" ? ", nur im Leerlauf" : ", sofort im Hintergrund") + (akt.mbit ? ", höchstens " + akt.mbit + " MBit/s" : "") : "aus")));
-    c.append(el("div", { class: "karte-box" }, liste), summenZeile());
+    zeile("Karten", 3, kk.length ? el("ul", { class: "uebersicht-liste" }, ...kk.map(r => el("li", {}, r.titel, " ", r.installiert ? vorhanden() : null))) : "keine");
+    zeile("Routenplanung", 3, wahl.routen && kk.length ? "ja" : "nein");
+    zeile("Artikel übersetzen", 4, OW.status && OW.status.uebersetzer ? vorhanden() : wahl.uebersetzer || sprachenNeu().length ? "ja" : "nein");
+    const spNamen = [...wahl.sprachen].map(c => { const sp = sprachen.find(x => x.code === c); return sp ? sp.name + (wahl.stimmen.has(c) ? " (Text + Sprache)" : "") : c; });
+    zeile("Sprachen", 4, spNamen.length ? el("ul", { class: "uebersicht-liste" }, ...spNamen.map(n => el("li", {}, n))) : "keine neuen");
+    zeile("Spracheingabe", 4, OW.status && OW.status.spracheingabe && OW.status.spracheingabeKomplett ? vorhanden() : wahl.spracheingabe ? "ja" : "nein");
+    zeile("Desktop-Symbol", 0, wahl.desktop ? "ja" : "nein");
+    zeile("Automatische Aktualisierung", 0, akt.an ? (akt.modus === "auto" ? "an, automatisch" : "an, mit Nachfrage") + (akt.wann === "leerlauf" ? ", nur im Leerlauf" : ", sofort im Hintergrund") + (akt.mbit ? ", höchstens " + akt.mbit + " MBit/s" : "") : "aus");
+    c.append(el("div", { class: "karte-box" }, tabelle), summenZeile());
     if (downloadAktiv) {
       c.append(el("p", { class: "warnung" }, "Gerade laufen noch Downloads. Bitte warte, bis sie fertig sind, oder brich sie unter ",
         el("a", { href: "#inhalte" }, "Inhalte"), " ab. Danach kannst du die Einrichtung abschließen."));
-      knoepfe(() => geheZu(3), () => { location.hash = "#inhalte"; }, "Zu den Downloads →");
+      knoepfe(() => geheZu(UEBERSICHT - 1), () => { location.hash = "#inhalte"; }, "Zu den Downloads →");
       return;
     }
     // Bitte um Zustimmung zur Nutzungsstatistik (Standard aus)
@@ -367,7 +488,7 @@ const Setup = (() => {
       c.append(el("h2", {}, "Eine Bitte"), el("div", { class: "karte-box" }, statistikBitte(wahl.statistik)));
     }
     c.append(el("p", { class: "hinweis" }, "Nach dem Abschließen startet der Download. Den Fortschritt siehst du unter „Inhalte“. Das Dashboard kannst du währenddessen schon benutzen: Fertige Pakete stehen sofort zur Verfügung."));
-    knoepfe(() => geheZu(3), abschliessen, "✓ Einrichtung abschließen und herunterladen");
+    knoepfe(() => geheZu(UEBERSICHT - 1), abschliessen, "✓ Einrichtung abschließen und herunterladen");
   }
 
   async function abschliessen() {
@@ -378,7 +499,8 @@ const Setup = (() => {
     }
     const pakete = kat.pakete.filter(p => wahl.pakete.has(p.id) && (!p.installiert || p.update)).map(p => p.id);
     const routen = wahl.routen ? [...wahl.karten.keys()] : [];
-    const r = await api("installieren", { modell: wahl.modell || "", backend: wahl.backend, pakete, karten, routen, uebersetzer: !!wahl.uebersetzer, abschliessen: true });
+    const r = await api("installieren", { modell: wahl.modell || "", backend: wahl.backend, pakete, karten, routen, uebersetzer: !!wahl.uebersetzer,
+      sprachen: [...wahl.sprachen], stimmen: [...wahl.stimmen], spracheingabe: !!wahl.spracheingabe, abschliessen: true });
     if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
     if (wahl.statistik) await api("statistik/einstellen", wahl.statistik).catch(() => { });
     // Desktop-Symbol anlegen oder entfernen (nebenbei, blockiert den Download nicht)

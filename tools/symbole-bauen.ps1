@@ -9,7 +9,7 @@ $namen = @(
   'download', 'plug', 'battery', 'battery-low', 'flame',
   # Bibliothek und Lesen
   'book-open', 'heart-pulse', 'wrench', 'tent', 'sprout', 'graduation-cap', 'puzzle', 'book-heart', 'package',
-  'file-text', 'layout-grid', 'list', 'house', 'shuffle', 'languages',
+  'file-text', 'house', 'shuffle', 'languages',
   # Fragen
   'plus', 'history', 'x',
   # Karten und Routen
@@ -22,7 +22,9 @@ $namen = @(
   # Vorsorge
   'shield-check', 'box', 'backpack', 'printer', 'calculator', 'warehouse',
   # Inhalte und Einstellungen
-  'folder', 'usb', 'refresh-cw', 'rotate-ccw'
+  'folder', 'usb', 'refresh-cw', 'rotate-ccw',
+  # Übersetzen
+  'arrow-left-right', 'maximize-2', 'send', 'mic', 'square', 'volume-2'
 )
 
 $js = [IO.File]::ReadAllText($Lucide)

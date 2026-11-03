@@ -2,20 +2,34 @@
 "use strict";
 
 const Inhalte = (() => {
-  let kat = null, hw = null, timer = null, verlauf = [], gruppen = {};
-  const auswahl = { modell: null, pakete: new Set(), karten: new Map(), routen: false, routenGroesse: null };
+  let kat = null, hw = null, timer = null, verlauf = [], gruppen = {}, sprachen = [], stimmen = [], alleSprachen = false, sprachSort = "standard";
+  try { if (localStorage.getItem("fb-sprachen-sortierung") === "nord") sprachSort = "nord"; } catch { }
+  // Aufgeklappte Abschnitte (bleiben beim Neuzeichnen offen)
+  const aufgeklappt = new Set();
+  const auswahl = { modell: null, pakete: new Set(), karten: new Map(), routen: false, routenGroesse: null, sprachen: new Set(), stimmen: new Set() };
 
-  async function zeigen() {
+  async function zeigen(params) {
     clearInterval(timer);
     warAktiv = null; // Liste beim Öffnen immer neu zeichnen
     $("#inhalte-liste").innerHTML = '<p class="hinweis">Wird geladen …</p>';
     try {
-      let konf;
-      [kat, hw, konf] = await Promise.all([api("katalog"), api("hardware"), ladeKonfig("pakete").catch(() => ({}))]);
+      let konf, sk, st;
+      [kat, hw, konf, sk, st] = await Promise.all([api("katalog"), api("hardware"), ladeKonfig("pakete").catch(() => ({})), ladeKonfig("sprachen").catch(() => ({})), ladeKonfig("stimmen").catch(() => ({}))]);
       gruppen = konf.variantenGruppen || {};
+      sprachen = sk.sprachen || [];
+      stimmen = st.stimmen || [];
     }
     catch (e) { $("#inhalte-liste").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
+    // Vom Übersetzer aus den Abschnitt „Übersetzer“ gleich aufgeklappt zeigen
+    const zuUe = params && params.get("zu");
+    if (zuUe === "sprachen" || zuUe === "sprechen" || zuUe === "vorlesen") aufgeklappt.add("uebersetzer");
+    if (zuUe === "karten") aufgeklappt.add("karten");
     await fortschritt();
+    // Vom Übersetzer aus („Sprachen hinzufügen“) direkt zu den Sprachen springen, von der Karte aus zu den Karten
+    const zu = params && params.get("zu");
+    const ziel = zu === "sprachen" ? $("#inh-sprachen") : zu === "sprechen" ? $("#inh-sprechen") : zu === "vorlesen" ? $("#inh-sprachen")
+      : zu === "karten" ? $("#inh-bereich-karten") : null;
+    if (ziel) ziel.scrollIntoView({ block: "start" });
     timer = setInterval(() => { if (!location.hash.startsWith("#inhalte")) { clearInterval(timer); return; } fortschritt(); }, 1000);
   }
 
@@ -182,8 +196,36 @@ const Inhalte = (() => {
     // Empfehlung passend zum eingestellten Rechenweg (Prozessor oder Grafikkarte)
     const passend = kat.modelle.filter(m => ["gpu", "cpu"].includes(Setup.passung(m, hw, backend))).sort((a, b) => b.bytes - a.bytes);
     const emp = { modell: passend[0] ? passend[0].id : emp0.modell };
-    const ki = abschnitt(c, "KI-Assistent");
+    // Alle Bereiche als aufklappbare Zeilen; zugeklappt steht darunter, was schon installiert ist
+    const liste = el("div", { class: "klapp-liste-abschnitte" });
+    c.append(liste);
+    const abschnitt = (schluessel, icon, titel, namen, ausgewaehlt, rechts) => {
+      const a = klappAbschnitt(aufgeklappt, schluessel, icon, titel, klappZusammenfassung(namen, ausgewaehlt), rechts);
+      a.box.id = "inh-bereich-" + schluessel;
+      a.box.style.scrollMarginTop = "110px";
+      liste.append(a.box);
+      return a.innen;
+    };
+    const vonInst = (n, gesamt) => n + " von " + gesamt + " installiert";
+    const kiDa = kat.modelle.filter(m => m.installiert);
+    const ki = abschnitt("ki", "message-circle", "KI-Assistent",
+      kiDa.map(m => m.name + " · " + m.modell + (s.modell === m.id && kiDa.length > 1 ? " (aktiv)" : "")), auswahl.modell ? 1 : 0, vonInst(kiDa.length, kat.modelle.length));
     ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Du kannst mehrere KIs laden und jederzeit mit „Benutzen“ zwischen ihnen wechseln.", el("br"), "Es läuft immer nur eine, die anderen belegen nur Platz auf der Festplatte."));
+    // Rechenweg: Grafikkarte oder Prozessor. Fehlt das Grafikkarten-Programm, lädt Fieldbook es nach.
+    const gpu = Setup.besteGpu(hw);
+    if (gpu && gpu.vramGB >= 4) {
+      ki.append(el("label", { class: "schalter", style: "margin-bottom:12px" },
+        el("input", { type: "checkbox", checked: backend === "vulkan", onchange: async (e) => {
+          e.target.disabled = true;
+          await rechenwegSetzen(e.target.checked ? "vulkan" : "cpu");
+          kat = await api("katalog");
+          await aktualisiereStatus();
+          warAktiv = null;
+          fortschritt();
+        } }),
+        el("span", {}, "Grafikkarte für die KI nutzen (" + gpu.name + ", " + gpu.vramGB + " GB)",
+          el("small", { class: "hinweis", style: "display:block" }, "Antwortet viel schneller und erlaubt größere KIs. Ohne Häkchen rechnet der Prozessor."))));
+    }
     for (const m of kat.modelle.slice().sort((a, b) => a.bytes - b.bytes)) {
       const aktivModell = s.modell === m.id;
       const p = Setup.passung(m, hw, backend);
@@ -209,7 +251,16 @@ const Inhalte = (() => {
     for (const gr of kat.kategorien) {
       const pakete = kat.pakete.filter(p => (p.kategorien || [])[0] === gr.id);
       if (!pakete.length) continue;
-      const g = abschnitt(c, [sym(gr.icon), gr.titel]);
+      // Varianten einer Gruppe (z. B. Wikipedia) zählen als ein Eintrag
+      const eintraege = [], namen = [];
+      for (const p of pakete) {
+        if (!p.gruppeExklusiv) { eintraege.push(p.id); if (p.installiert) namen.push(p.titel); continue; }
+        if (eintraege.includes("g:" + p.gruppeExklusiv)) continue;
+        eintraege.push("g:" + p.gruppeExklusiv);
+        const da = pakete.filter(x => x.gruppeExklusiv === p.gruppeExklusiv && x.installiert);
+        if (da.length) namen.push(((gruppen[p.gruppeExklusiv] || {}).titel || p.titel) + " (" + da.map(x => x.variante || x.titel).join(", ") + ")");
+      }
+      const g = abschnitt("k:" + gr.id, gr.icon, gr.titel, namen, pakete.filter(p => auswahl.pakete.has(p.id)).length, vonInst(namen.length, eintraege.length));
       const fertigeGruppen = new Set();
       for (const p of pakete) {
         if (!p.gruppeExklusiv) { g.append(paketZeile(p, p.titel)); continue; }
@@ -257,19 +308,134 @@ const Inhalte = (() => {
     }
 
     // Übersetzer
-    const ue = abschnitt(c, "Übersetzer");
-    const ueText = "Übersetzt englische Artikel beim Lesen offline ins Deutsche (Knopf „Auf Deutsch“). Technik von Mozilla, wie in Firefox.";
-    if (s.uebersetzer) {
-      ue.append(zeile(["Übersetzer Englisch → Deutsch", tag("Installiert", "tag-ok")], ueText, groesse(27e6), null,
-        knopf("Löschen", () => loeschen("uebersetzer", "", "Übersetzer"), true)));
+    const spDa = sprachen.filter(sp => (s.sprachen || []).includes(sp.code));
+    const ueNamen = [];
+    if (s.uebersetzer) ueNamen.push("Artikel übersetzen");
+    if (spDa.length) ueNamen.push(spDa.length === 1 ? "Sprache " + spDa[0].name : spDa.length + " Sprachen (" + spDa.map(sp => sp.name).join(", ") + ")");
+    if (s.spracheingabe) ueNamen.push("Spracheingabe");
+    const ueGewaehlt = (auswahl.uebersetzer ? 1 : 0) + auswahl.sprachen.size + [...auswahl.stimmen].filter(x => !auswahl.sprachen.has(x)).length + (auswahl.spracheingabe ? 1 : 0);
+    const ue = abschnitt("uebersetzer", "languages", "Übersetzer", ueNamen, ueGewaehlt, spDa.length + " von " + sprachen.length + " Sprachen");
+    const ueText = "Übersetzt englische Artikel in der Bibliothek beim Lesen ins Deutsche (Knopf „Auf Deutsch“). Für Gespräche brauchst du eine der Sprachen unten. Technik von Mozilla, wie in Firefox.";
+    const ueLoeschen = () => knopf("Löschen", () => loeschen("uebersetzer", "", "Artikel übersetzen"), true);
+    if (s.uebersetzer && !s.uebersetzerAlt) {
+      ue.append(zeile(["Artikel übersetzen (Englisch → Deutsch)", tag("Installiert", "tag-ok")], ueText, groesse(42e6), null, ueLoeschen()));
     } else {
-      const laedt = [...offen.titel].some(t => t.startsWith("Übersetzer"));
+      // Nicht installiert, oder ältere Version aus früheren Fieldbook-Versionen (dann zum Ersetzen auswählbar)
+      const laedt = basisLaedt();
+      const tags = s.uebersetzerAlt ? [tag("Installiert · ältere Version", "tag-ok"), tag("bessere Version verfügbar", "tag-warn")] : [];
       ue.append(auswahlZeile("checkbox", "inh-uebersetzer", auswahl.uebersetzer && !laedt, laedt, (e) => { auswahl.uebersetzer = e.target.checked; zeichneListe(aktiv); },
-        ["Übersetzer Englisch → Deutsch", ...(laedt ? [ladeTag()] : [])], ueText, groesse(27e6)));
+        ["Artikel übersetzen (Englisch → Deutsch)", ...tags, ...(laedt ? [ladeTag()] : [])], ueText, groesse(42e6), s.uebersetzerAlt ? ueLoeschen() : null));
     }
 
+    // Sprachen für Gespräche (Menü „Übersetzer“), sortiert nach Entfernung
+    const da = new Set(s.sprachen || []);
+    ue.append(el("h3", { id: "inh-sprachen", style: "margin:18px 0 4px;scroll-margin-top:110px" }, "Sprachen für Gespräche"),
+      el("p", { class: "hinweis klein", style: "margin:0 0 10px" }, "Für Gespräche mit Menschen, die eine andere Sprache sprechen (Menü „Übersetzer“).", el("br"), "Jede Sprache übersetzt in beide Richtungen.", el("br"),
+        "Übersetzt wird über Englisch, deshalb laden Englisch und „Artikel übersetzen“ automatisch mit.", el("br"),
+        "Mit „Text + Sprache“ liest Fieldbook die Übersetzungen auch vor. Die deutsche Stimme kommt dann einmal mit."));
+    // Zwei Sortierungen: wie in sprachen.json (erst die häufigsten, dann nach Entfernung) oder von Nord nach Süd (erst Europa, dann der Rest)
+    const sortKnopf = (wert, text) => el("button", { class: "knopf knopf-klein" + (sprachSort === wert ? " knopf-haupt" : ""), type: "button", "aria-pressed": String(sprachSort === wert),
+      onclick: () => { sprachSort = wert; try { localStorage.setItem("fb-sprachen-sortierung", wert); } catch { } zeichneListe(aktiv); } }, text);
+    ue.append(el("div", { class: "knopfreihe", style: "margin:0 0 10px;align-items:center" }, el("span", { class: "hinweis klein" }, "Sortieren:"),
+      sortKnopf("standard", "Häufige zuerst"), sortKnopf("nord", "Von Nord nach Süd")));
+    const sortiert = sprachSort === "nord"
+      ? sprachen.slice().sort((a, b) => (b.europa ? 1 : 0) - (a.europa ? 1 : 0) || b.lat - a.lat)
+      : sprachen;
+    // Zuerst nur die ersten 21 (die häufigen Sprachen), der Rest auf Knopfdruck
+    const zeigeAlle = alleSprachen || sprachen.length <= 23;
+    let versteckt = 0, gruppe = null;
+    // Zwischenüberschrift Europa / außerhalb, direkt vor der ersten sichtbaren Zeile der Gruppe
+    const kopf = (sp) => {
+      if (sprachSort !== "nord" || gruppe === !!sp.europa) return;
+      gruppe = !!sp.europa;
+      ue.append(el("div", { class: "hinweis klein", style: "font-weight:600;margin:12px 0 6px" }, gruppe ? "Europa" : "Außerhalb Europas"));
+    };
+    // Je Sprache zwei Knöpfe: „Nur Text“ oder „Text + Sprache“ (mit Stimme zum Vorlesen); nochmal klicken hebt die Wahl auf
+    const stimmenDa = new Set(s.stimmen || []);
+    const wahlKnopf = (an, gesperrt, text, bytes, fn) => el("button", { class: "knopf knopf-klein" + (an ? " knopf-haupt" : ""), type: "button",
+      "aria-pressed": String(an), disabled: gesperrt, onclick: fn }, text + " · " + groesse(bytes));
+    sortiert.forEach((sp, i) => {
+      const c = sp.code;
+      const titel = sp.name === sp.eigen ? sp.name : sp.name + " · " + sp.eigen;
+      const stimme = stimmeBytes(c);
+      const stimmeLaedt = offen.titel.has("Stimme: " + sp.name);
+      if (stimmeLaedt) auswahl.stimmen.delete(c);
+      if (da.has(c)) {
+        kopf(sp);
+        const mitStimme = stimmenDa.has(c);
+        // Stimme nachträglich dazu
+        const dazu = stimme && !mitStimme && !stimmeLaedt ? wahlKnopf(auswahl.stimmen.has(c), false, "+ Sprache", stimme, () => {
+          if (auswahl.stimmen.has(c)) auswahl.stimmen.delete(c); else auswahl.stimmen.add(c);
+          zeichneListe(aktiv);
+        }) : null;
+        ue.append(zeile([titel, tag(mitStimme ? "Installiert · Text + Sprache" : "Installiert · Text", "tag-ok"), ...(stimmeLaedt ? [ladeTag()] : [])],
+          stimme ? null : "Keine Stimme zum Vorlesen", groesse(sp.mb * 1048576 + (mitStimme ? stimme : 0)), dazu, knopf("Löschen", () => loeschen("sprache", c, sp.name), true)));
+        return;
+      }
+      const laedt = offen.titel.has("Sprache: " + sp.name);
+      if (laedt) { auswahl.sprachen.delete(c); auswahl.stimmen.delete(c); }
+      if (!zeigeAlle && i >= 21 && !auswahl.sprachen.has(c) && !laedt) { versteckt++; return; }
+      kopf(sp);
+      const wahl = !auswahl.sprachen.has(c) ? null : auswahl.stimmen.has(c) ? "sprache" : "text";
+      const setze = (w) => {
+        if (wahl === w) { auswahl.sprachen.delete(c); auswahl.stimmen.delete(c); }
+        else { auswahl.sprachen.add(c); if (w === "sprache") auswahl.stimmen.add(c); else auswahl.stimmen.delete(c); }
+        zeichneListe(aktiv);
+      };
+      ue.append(el("div", { class: "wahl" + (wahl ? " gewaehlt" : ""), style: "margin-bottom:8px;align-items:center;cursor:default" },
+        el("span", { class: "w-haken", "aria-hidden": "true" }),
+        el("div", { class: "w-text" }, el("div", { class: "w-titel" }, titel, ...(laedt ? [ladeTag()] : [])), stimme ? null : el("small", {}, "Keine Stimme zum Vorlesen")),
+        el("div", { class: "knopfreihe", style: "margin:0;flex-wrap:nowrap" },
+          wahlKnopf(wahl === "text", laedt, "Nur Text", sp.mb * 1048576, () => setze("text")),
+          stimme ? wahlKnopf(wahl === "sprache", laedt, "Text + Sprache", sp.mb * 1048576 + stimme, () => setze("sprache")) : null)));
+    });
+    if (versteckt) ue.append(el("button", { class: "knopf knopf-klein", onclick: () => { alleSprachen = true; zeichneListe(aktiv); } }, "Alle " + sprachen.length + " Sprachen zeigen"));
+
+    // Spracheingabe (Sprechen statt Tippen im Übersetzer)
+    ue.append(el("h3", { id: "inh-sprechen", style: "margin:18px 0 8px;scroll-margin-top:110px" }, "Spracheingabe"));
+    const sprechText = "Im Übersetzer sprechen statt tippen, für alle Sprachen. Erkennt europäische Sprachen schnell und gut (Parakeet von NVIDIA), alle anderen mit Whisper von OpenAI.";
+    if (s.spracheingabe && s.spracheingabeKomplett) {
+      ue.append(zeile(["Spracheingabe", tag("Installiert", "tag-ok")], sprechText, groesse(SPRECHEN_BYTES), null, knopf("Löschen", () => loeschen("spracheingabe", "", "Spracheingabe"), true)));
+    } else if (s.spracheingabe) {
+      // Ältere Installation ohne das kleine Modell für den Sprechmodus
+      const laedt = sprechenLaedt();
+      if (laedt) auswahl.spracheingabe = false;
+      ue.append(auswahlZeile("checkbox", "inh-spracheingabe", auswahl.spracheingabe, laedt, (e) => { auswahl.spracheingabe = e.target.checked; zeichneListe(aktiv); },
+        ["Spracheingabe", tag("Installiert", "tag-ok"), tag("Ergänzung verfügbar", "tag-warn"), ...(laedt ? [ladeTag()] : [])],
+        "Ergänzung für den Sprechmodus: erkennt schneller, wer gerade spricht.", groesse(SPRECHEN_ZUSATZ), knopf("Löschen", (e) => { e.preventDefault(); loeschen("spracheingabe", "", "Spracheingabe"); }, true)));
+    } else {
+      const laedt = sprechenLaedt();
+      if (laedt) auswahl.spracheingabe = false;
+      ue.append(auswahlZeile("checkbox", "inh-spracheingabe", auswahl.spracheingabe, laedt, (e) => { auswahl.spracheingabe = e.target.checked; zeichneListe(aktiv); },
+        ["Spracheingabe", ...(laedt ? [ladeTag()] : [])], sprechText, groesse(SPRECHEN_BYTES)));
+    }
+
+
     // Karten
-    const k = abschnitt(c, "Karten");
+    const kDa = kat.karten.filter(r => r.installiert);
+    const k = abschnitt("karten", "map", "Karten und Routen", kDa.map(r => r.titel).concat(s.routen ? ["Wegedaten für Routen"] : []),
+      auswahl.karten.size + (auswahl.routen ? 1 : 0), vonInst(kDa.length, kat.karten.length));
+    // Routenplanung ganz oben: gilt für alle vorhandenen und ausgewählten Karten
+    const regionen = kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id);
+    const rg = auswahl.routenGroesse;
+    const routenText = "Routen zu Fuß, mit dem Rad und mit dem Auto.";
+    if (s.routen) {
+      // Installiert: wie die anderen installierten Inhalte. Nur wenn Wegedaten fehlen (für eine installierte
+      // oder eine gerade ausgewählte Karte), wird daraus eine Auswahl zum Nachladen.
+      const fehlen = (auswahl.routenFehlen || []).concat(kat.karten.filter(r => auswahl.karten.has(r.id) && r.routen !== false).map(r => r.titel));
+      if (!fehlen.length || (rg && rg.bytes === 0)) k.append(zeile(["Routenplanung", tag("Installiert", "tag-ok")], ["Wegedaten für alle installierten Karten.", el("br"), routenText], null));
+      else k.append(auswahlZeile("checkbox", "inh-routen", auswahl.routen, false, (e) => { auswahl.routen = e.target.checked; zeichneListe(aktiv); },
+        ["Routenplanung", tag("Installiert", "tag-ok"), tag("Ergänzung verfügbar", "tag-warn")],
+        "Wegedaten nachladen für " + fehlen.join(", ") + ".",
+        rg == null ? "wird berechnet …" : "ca. " + groesse(rg.bytes)));
+    } else {
+      k.append(auswahlZeile("checkbox", "inh-routen", auswahl.routen && regionen.length > 0, !regionen.length, (e) => { auswahl.routen = e.target.checked; zeichneListe(aktiv); groessen(); },
+        ["Routenplanung"],
+        !regionen.length ? "Erst eine Karte installieren oder auswählen." : ["Wegedaten für alle vorhandenen und ausgewählten Karten.", el("br"), routenText],
+        !regionen.length ? "" : rg == null ? "wird berechnet …" : "ca. " + groesse(rg.bytes + 56e6)));
+    }
+    if (regionen.length && rg == null) groessen();
+    k.append(el("h3", { style: "margin:18px 0 8px" }, "Regionen"));
     const sparen = auswahl.sparen;
     k.append(el("label", { class: "schalter", style: "margin-bottom:8px" },
       el("input", { type: "checkbox", checked: sparen, onchange: (e) => { auswahl.sparen = e.target.checked; for (const v of auswahl.karten.values()) v.bytes = null; zeichneListe(aktiv); groessen(); } }),
@@ -283,34 +449,27 @@ const Inhalte = (() => {
         const info = auswahl.karten.get(r.id);
         k.append(auswahlZeile("checkbox", "inh-k-" + r.id, !!info, laedt, (e) => {
           if (e.target.checked) auswahl.karten.set(r.id, { bytes: null }); else auswahl.karten.delete(r.id);
+          // Wer schon Routen hat, will sie für neue Karten meist auch: vorausgewählt, abwählbar.
+          // Ist keine neue Karte mehr ausgewählt, fällt die Vorauswahl wieder weg.
+          if (s.routen) {
+            if (e.target.checked && auswahl.karten.size === 1) auswahl.routen = true;
+            if (!auswahl.karten.size) auswahl.routen = false;
+          }
           auswahl.routenGroesse = null;
           zeichneListe(aktiv); groessen();
-        }, [r.titel, ...(laedt ? [ladeTag()] : [])], null, info ? (info.bytes > 0 ? "ca. " + groesse(info.bytes) : info.bytes === -1 ? "?" : "wird berechnet …") : ""));
+        }, [r.titel, ...(laedt ? [ladeTag()] : [])], null, info && info.bytes > 0 ? "ca. " + groesse(info.bytes) : kartenSchaetzung(r, sparen) ? "ca. " + groesse(kartenSchaetzung(r, sparen)) : info && info.bytes === -1 ? "?" : info ? "wird berechnet …" : ""));
       }
     }
 
-    // Routenplanung
-    const ro = abschnitt(c, "Routenplanung");
-    const regionen = kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id);
-    const rg = auswahl.routenGroesse;
-    ro.append(auswahlZeile("checkbox", "inh-routen", auswahl.routen && regionen.length > 0, !regionen.length, (e) => { auswahl.routen = e.target.checked; zeichneListe(aktiv); groessen(); },
-      ["Wegedaten für alle vorhandenen und ausgewählten Karten"],
-      !regionen.length ? "Erst eine Karte installieren oder auswählen." : "Routen zu Fuß, mit dem Rad und mit dem Auto.",
-      !auswahl.routen ? "" : rg == null ? "wird berechnet …" : rg.bytes > 0 ? "ca. " + groesse(rg.bytes + (s.routen ? 0 : 56e6)) : "✓ vorhanden"));
 
     // Leiste zum Herunterladen
     const bytes = auswahlBytes();
-    const anzahl = (auswahl.modell ? 1 : 0) + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (auswahl.uebersetzer && !s.uebersetzer ? 1 : 0);
+    const anzahl = (auswahl.modell ? 1 : 0) + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (basisNoetig() ? 1 : 0) + sprachenNeu().length + (auswahl.spracheingabe ? 1 : 0) + [...auswahl.stimmen].filter(c => !auswahl.sprachen.has(c)).length;
     c.append(el("div", { class: "summe inhalte-leiste" },
       el("span", {}, anzahl ? anzahl + " ausgewählt · " + groesse(bytes) + " · frei: " + groesse(hw.freiGB * 1e9) : "Nichts ausgewählt"),
       el("button", { class: "knopf knopf-haupt", disabled: !anzahl, onclick: herunterladen }, sym("download"), aktiv ? "Zu den Downloads hinzufügen" : "Auswahl herunterladen")));
   }
 
-  function abschnitt(c, titel) {
-    const b = el("div", { class: "karte-box", style: "margin-bottom:14px" }, el("h2", { style: "margin-top:0" }, titel));
-    c.append(b);
-    return b;
-  }
   function tag(text, klasse) { return el("span", { class: "marke-tag " + klasse }, text); }
   function knopf(text, fn, rot) { return el("button", { class: "knopf knopf-klein" + (rot ? " knopf-rot" : ""), onclick: fn }, text); }
 
@@ -343,8 +502,16 @@ const Inhalte = (() => {
         if (auswahl.karten.has(id)) auswahl.karten.get(id).bytes = erg.bytes > 0 ? erg.bytes : -1;
       }
       const ids = kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id);
-      if (auswahl.routen && ids.length && auswahl.routenGroesse == null)
+      if (ids.length && auswahl.routenGroesse == null) {
         auswahl.routenGroesse = await api("routengroesse?ids=" + encodeURIComponent(ids.join(","))).catch(() => ({ bytes: 0 }));
+        const fehlen = [];
+        if ((OW.status || {}).routen)
+          for (const r of kat.karten.filter(x => x.installiert && x.routen !== false)) {
+            const erg = await api("routengroesse?ids=" + encodeURIComponent(r.id)).catch(() => ({ bytes: 0 }));
+            if (erg.bytes > 0) fehlen.push(r.titel);
+          }
+        auswahl.routenFehlen = fehlen;
+      }
     } finally { rechnet = false; }
     if (location.hash.startsWith("#inhalte")) zeichneListe(warAktiv);
   }
@@ -354,20 +521,54 @@ const Inhalte = (() => {
     const m = kat.modelle.find(x => x.id === auswahl.modell);
     if (m) b += m.bytes;
     for (const p of kat.pakete) if (auswahl.pakete.has(p.id)) b += p.bytes || 0;
-    for (const v of auswahl.karten.values()) if (v.bytes > 0) b += v.bytes;
+    for (const [id, v] of auswahl.karten) b += v.bytes > 0 ? v.bytes : kartenSchaetzung(kat.karten.find(x => x.id === id) || {}, auswahl.sparen);
     if (auswahl.routen && auswahl.routenGroesse && auswahl.routenGroesse.bytes > 0) b += auswahl.routenGroesse.bytes;
-    if (auswahl.uebersetzer && !(OW.status || {}).uebersetzer) b += 27e6;
+    if (basisNoetig()) b += 42e6;
+    for (const c of sprachenNeu()) { const sp = sprachen.find(x => x.code === c); if (sp) b += sp.mb * 1048576; }
+    if (auswahl.spracheingabe) b += (OW.status || {}).spracheingabe ? SPRECHEN_ZUSATZ : SPRECHEN_BYTES;
+    b += stimmenBytes([...auswahl.stimmen]);
     return b;
+  }
+
+  // Stimmen zum Vorlesen für diese Sprachen, Deutsch und das Programm (22 MB) kommen mit, falls sie fehlen
+  const stimmeBytes = (code) => { const v = stimmen.find(x => x.code === code); return v ? v.bytes : 0; };
+  function stimmenBytes(codes) {
+    const da = new Set((OW.status || {}).stimmen || []);
+    const fehlen = [...new Set(codes)].filter(c => stimmeBytes(c) && !da.has(c));
+    if (!fehlen.length) return 0;
+    if (!da.has("de") && !fehlen.includes("de")) fehlen.push("de");
+    return fehlen.reduce((b, c) => b + stimmeBytes(c), da.size ? 0 : 22477236);
+  }
+
+  // Programm (9 MB) plus Parakeet und Whisper small (siehe config/spracheingabe.json)
+  const SPRECHEN_ZUSATZ = 43537433;   // Whisper tiny für den Sprechmodus
+  const SPRECHEN_BYTES = 9e6 + 668757119 + 264464607 + SPRECHEN_ZUSATZ;
+  const sprechenLaedt = () => [...offen.titel].some(t => t.startsWith("Spracheingabe") || t.includes("(Spracheingabe)"));
+
+  // „Artikel übersetzen“ wird geladen, wenn ausgewählt oder wenn Sprachen dazukommen (die brauchen die neue Version)
+  function basisNoetig() {
+    const s = OW.status || {};
+    if (basisLaedt() || (s.uebersetzer && !s.uebersetzerAlt)) return false;
+    return !!auswahl.uebersetzer || sprachenNeu().length > 0;
+  }
+  const basisLaedt = () => [...offen.titel].some(t => t.startsWith("Artikel übersetzen") || t.startsWith("Übersetzer"));
+
+  // Ausgewählte Sprachen plus Englisch, falls es noch fehlt (wird über den Server automatisch mitgeladen)
+  function sprachenNeu() {
+    const da = new Set((OW.status || {}).sprachen || []);
+    const neu = [...auswahl.sprachen].filter(c => !da.has(c));
+    if (neu.length && !da.has("en") && !neu.includes("en") && !offen.titel.has("Sprache: Englisch")) neu.push("en");
+    return neu;
   }
 
   async function herunterladen() {
     const karten = [...auswahl.karten].map(([id, v]) => ({ id, maxzoom: String(maxzoom(kat.karten.find(x => x.id === id))), bytes: v.bytes > 0 ? v.bytes : 0 }));
     const routen = auswahl.routen ? kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id) : [];
-    const body = { modell: auswahl.modell || "", pakete: [...auswahl.pakete], karten, routen, uebersetzer: !!auswahl.uebersetzer };
+    const body = { modell: auswahl.modell || "", pakete: [...auswahl.pakete], karten, routen, uebersetzer: !!auswahl.uebersetzer, sprachen: [...auswahl.sprachen], spracheingabe: !!auswahl.spracheingabe, stimmen: [...auswahl.stimmen] };
     if (auswahl.modell) body.backend = (kat.einstellungen && kat.einstellungen.backend) || Setup.empfehlung(hw, kat.modelle).backend;
     const r = await api("installieren", body);
     if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
-    auswahl.modell = null; auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false;
+    auswahl.modell = null; auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false; auswahl.sprachen.clear(); auswahl.spracheingabe = false; auswahl.stimmen.clear();
     warAktiv = null;
     window.scrollTo(0, 0);
     fortschritt();
@@ -385,5 +586,6 @@ const Inhalte = (() => {
     zeichneListe(warAktiv);
   }
 
-  return { zeigen };
+  // Größen der Spracheingabe auch für den Assistenten
+  return { zeigen, SPRECHEN_BYTES, SPRECHEN_ZUSATZ };
 })();

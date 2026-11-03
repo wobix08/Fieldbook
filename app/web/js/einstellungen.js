@@ -5,7 +5,7 @@ const Einstellungen = (() => {
   async function zeigen() {
     const c = $("#einst-inhalt");
     c.innerHTML = '<p class="hinweis">Wird geladen …</p>';
-    const [kat, s] = await Promise.all([api("katalog"), api("status")]);
+    const [kat, s, hw] = await Promise.all([api("katalog"), api("status"), api("hardware").catch(() => ({}))]);
     c.innerHTML = "";
 
     // KI
@@ -20,6 +20,14 @@ const Einstellungen = (() => {
           aktiv ? el("span", { class: "ok-text" }, "✓ aktiv") : el("button", { class: "knopf knopf-klein", onclick: async () => { await api("einstellungen", { modell: m.id }); zeigen(); } }, "Benutzen"),
           el("button", { class: "knopf knopf-klein knopf-rot", onclick: () => entfernen("modell", m.id, m.name) }, "Löschen"))));
     }
+    const gpu = Setup.besteGpu(hw);
+    if (gpu && gpu.vramGB >= 4) ki.append(el("div", { class: "einst-zeile" },
+      el("div", {}, el("b", {}, "Grafikkarte nutzen"), el("small", {}, gpu.name + ", " + gpu.vramGB + " GB. Die KI antwortet damit viel schneller und es passen größere KIs. Ohne rechnet der Prozessor.")),
+      el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.backend === "vulkan", onchange: async (e) => {
+        e.target.disabled = true;
+        await rechenwegSetzen(e.target.checked ? "vulkan" : "cpu");
+        zeigen();
+      } }), "an")));
     ki.append(el("div", { class: "einst-zeile" },
       el("div", {}, el("b", {}, "Sparmodus"), el("small", {}, "Schaltet die KI ab und gibt den Arbeitsspeicher frei, den sie belegt. Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt.")),
       el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.sparmodus, onchange: (e) => schalteKi(!e.target.checked) }), "an")));

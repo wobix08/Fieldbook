@@ -29,7 +29,13 @@ const Fragen = (() => {
     if (!s.wissen) box.append("Es ist noch keine Bibliothek installiert. ", el("a", { href: "#inhalte" }, "Wissen herunterladen"));
     else if (!s.modell) box.append("Es ist keine KI eingerichtet. Du kannst trotzdem fragen: Dann zeige ich passende Artikel. ", el("a", { href: "#inhalte" }, "KI einrichten"));
     else if (s.sparmodus) box.append("Der Sparmodus ist an, die KI ist aus. Ich zeige dir passende Artikel. ", el("button", { class: "knopf knopf-klein", onclick: () => schalteKi(true) }, "KI einschalten"));
-    else box.append("Stell eine Frage. Ich suche in der Offline-Bibliothek und antworte mit Quellen.");
+    else {
+      box.append("Stell eine Frage. Ich suche in der Offline-Bibliothek und antworte mit Quellen.");
+      // Kleine Modelle (bis 9B): Hinweis, dass genaue Fragen viel bessere Antworten bringen
+      if (/-(0\.\d+|\d)b$/i.test(s.modell || ""))
+        box.append(el("p", { class: "hinweis klein", style: "margin:8px 0 0" }, "Tipp: Die KI auf deinem Gerät ist viel kleiner als große Online-KIs (z. B. Claude oder ChatGPT). " +
+          "Je genauer du fragst, desto besser die Antwort. Also lieber „Radio lässt sich nicht einschalten, was kann ich prüfen?“ als „Radio reparieren“."));
+    }
     $("#chat").append(box);
   }
 
@@ -128,8 +134,19 @@ const Fragen = (() => {
     else if (e.hinweis) text.textContent = e.hinweis;
     if (e.ohneKi) { text.append("Passende Artikel (die KI ist aus):"); box.append(quellenListe(quellen, true)); }
     else if (quellen.length) box.append(quellenListe(quellen));
+    if (e.suche && e.suche.length) box.append(weitersuchen(e.suche));
     if (e.medizin) box.append(medizinHinweis());
     $("#chat").append(box);
+  }
+
+  // Suchbegriffe zum Selbst-Weiterlesen: die deutschen Begriffe der KI und Modellnummern, höchstens drei
+  function weiterBegriffe(b) {
+    return [...new Set((b.codes || []).concat(b.de || []).map(s => String(s).trim()).filter(Boolean))].slice(0, 3);
+  }
+  function weitersuchen(begriffe) {
+    if (!begriffe.length) return null;
+    return el("div", { class: "weitersuchen" }, el("span", { class: "hinweis klein" }, "Selbst weiterlesen, in der Bibliothek suchen nach:"),
+      ...begriffe.map(w => el("a", { class: "knopf knopf-klein", href: "#bibliothek?q=" + encodeURIComponent(w) }, sym("search"), w)));
   }
 
   function medizinHinweis() {
@@ -141,7 +158,7 @@ const Fragen = (() => {
 
   // Lage des Nutzers: bestimmt, welche Mittel die KI voraussetzen darf
   const LAGEN = {
-    normal: "Lage: zu Hause. Strom und einfaches Werkzeug sind vermutlich da, Läden und Fachleute aber nicht unbedingt erreichbar.",
+    normal: "Lage: zu Hause. Strom und einfaches Werkzeug sind vermutlich da.",
     strom: "Lage: Stromausfall. Kein Netzstrom, kein Internet, vielleicht kein Handynetz. Schlage nichts vor, das eine Steckdose braucht. Möglich sind z. B. Batterien, Autobatterie, Powerbank, Solarpanel, Gaskocher, Feuer.",
     draussen: "Lage: draußen oder unterwegs. Es gibt nur, was man dabei hat oder in der Natur findet. Keine Steckdose, kein Werkzeugkasten.",
     krise: "Lage: Krise. Keine Läden, keine Handwerker, keine Lieferungen, Hilfe ist vielleicht nicht erreichbar. Es gibt nur, was vorhanden ist oder sich finden, ausbauen (z. B. aus einem Auto) oder improvisieren lässt.",
@@ -189,7 +206,13 @@ const Fragen = (() => {
     const kontext = !ergaenzung && vorher && vorher.antwort ? vorher : null;
 
     try {
-      const buecher = (await Kiwix.buecher()).filter(b => b.durchsuchen);
+      let buecher = (await Kiwix.buecher()).filter(b => b.durchsuchen);
+      // Die Bibliothek startet gerade neu (z. B. nach einem Absturz von kiwix-serve): kurz warten, noch einmal versuchen
+      if (!buecher.length) {
+        await new Promise(r => setTimeout(r, 4000));
+        await aktualisiereStatus();
+        buecher = (await Kiwix.buecher(true)).filter(b => b.durchsuchen);
+      }
       if (!buecher.length) throw new Error("Keine durchsuchbare Bibliothek installiert.");
       const mitKi = KI.bereit();
       const hatEnglisch = buecher.some(b => b.englisch);
@@ -205,6 +228,10 @@ const Fragen = (() => {
           begriffe = { de: [kurzfassung(suchFrage)], en: [] };
         }
         begriffe.codes = nummern;
+        // Dazu die Hauptwörter der Frage selbst: Die KI erfindet manchmal Wörter, die es als Artikel nicht gibt
+        // („Kerzenheizung“), die Wörter des Nutzers („Kerzen“, „Zimmer“) finden dann trotzdem etwas
+        begriffe.extra = hauptwoerter(suchFrage).filter(w => !begriffe.de.some(d => d.toLowerCase() === w.toLowerCase()));
+        begriffe.de = begriffe.de.concat(begriffe.extra).slice(0, 6);
         fertig(s1, "Suchbegriffe: " + [...new Set(nummern.concat(begriffe.de, begriffe.en))].join(" · "));
       } else begriffe = { de: [kurzfassung(suchFrage)], en: [], codes: nummern };
 
@@ -233,9 +260,38 @@ const Fragen = (() => {
       fertig(s2, "Gefunden: " + treffer.length + " Artikel in " + pakete.join(", "));
 
       // 3. Artikel lesen
-      const s3 = schritt("Artikel werden gelesen …");
-      const quellen = await lesen(treffer, suchFrage, begriffe, budget());
-      fertig(s3, quellen.length + " Artikel gelesen");
+      const s3 = schritt(mitKi ? "Artikel werden gelesen und geprüft …" : "Artikel werden gelesen …");
+      let quellen = await lesen(treffer, suchFrage, begriffe, budget(), mitKi);
+      fertig(s3, quellen.length + (quellen.length === 1 ? " passender Artikel" : " passende Artikel") + " gelesen");
+      // Passt keiner: ein zweiter Versuch mit anderen Begriffen (Oberbegriffe, Namen von Verfahren)
+      if (!quellen.length && mitKi) {
+        fertig(s3, "Keiner der gefundenen Artikel passt.");
+        const s3b = schritt("Zweite Suche mit anderen Begriffen …");
+        try {
+          const neu = await suchbegriffe(suchFrage, hatEnglisch, kontext, lage, begriffe.de.concat(begriffe.en));
+          // Nur Begriffe, die noch nicht gesucht wurden
+          const schon = new Set(begriffe.de.concat(begriffe.en).map(s => s.toLowerCase()));
+          neu.de = neu.de.filter(s => !schon.has(s.toLowerCase()));
+          neu.en = neu.en.filter(s => !schon.has(s.toLowerCase()));
+          if (!neu.de.length && !neu.en.length) throw new Error("keine neuen Begriffe");
+          neu.codes = nummern;
+          neu.frage = suchFrage;
+          const bekannt = new Set(treffer.map(t => t.url));
+          const t2 = (await suchen(buecher, neu, einfach, praxis)).filter(t => !bekannt.has(t.url));
+          if (t2.length) quellen = await lesen(t2, suchFrage, neu, budget(), true);
+          if (quellen.length) begriffe = neu;
+          fertig(s3b, "Zweite Suche: " + neu.de.concat(neu.en).join(" · ") + " · " + quellen.length + " passend");
+        } catch { fertig(s3b, "Zweite Suche hat nicht geklappt.", true); }
+      }
+      if (!quellen.length) {
+        text.textContent = "Dazu habe ich in der Bibliothek nichts Passendes gefunden. Versuche es mit anderen Wörtern, zum Beispiel dem Namen der Sache oder des Verfahrens, oder such selbst in der Bibliothek:";
+        const suche = weiterBegriffe(begriffe);
+        box.append(weitersuchen(suche));
+        verlauf.push({ frage: suchFrage, antwort: null });
+        if (verlauf.length > 3) verlauf.shift();
+        merke({ frage, suchFrage, antwort: null, hinweis: text.textContent, quellen: [], suche });
+        return;
+      }
 
       if (!mitKi) {
         text.append("Passende Artikel (die KI ist aus):");
@@ -252,11 +308,13 @@ const Fragen = (() => {
       zeigeAntwort(text, antwort, quellen);
       fertig(s4, "Antwort fertig");
       box.append(quellenListe(quellen));
-      const medizin = quellen.some(q => /medicine|mdwiki|medizin/i.test(q.buch.name)) || /wunde|blut|schmerz|vergift|fieber|verbrenn|bruch|medikament|krank|atem|herz/i.test(frage);
+      const suche = weiterBegriffe(begriffe);
+      box.append(weitersuchen(suche));
+      const medizin =quellen.some(q => /medicine|mdwiki|medizin/i.test(q.buch.name)) || /wunde|blut|schmerz|vergift|fieber|verbrenn|bruch|medikament|krank|atem|herz/i.test(frage);
       if (medizin) box.append(medizinHinweis());
       verlauf.push({ frage: suchFrage, antwort });
       if (verlauf.length > 3) verlauf.shift();
-      merke({ frage, suchFrage, antwort, medizin, quellen: kurzQuellen(quellen) });
+      merke({ frage, suchFrage, antwort, medizin, quellen: kurzQuellen(quellen), suche });
     } catch (e) {
       text.classList.remove("cursor");
       text.append(el("div", { class: "fehlerbox" }, "Fehler: " + e.message));
@@ -274,6 +332,14 @@ const Fragen = (() => {
     return k || f;
   }
 
+  // Hauptwörter (großgeschrieben, nicht am Satzanfang), die längsten zuerst, höchstens zwei
+  function hauptwoerter(f) {
+    // Wörter nach „ohne“ beschreiben die Lage („ohne Strom“), nicht das Thema
+    const w = f.replace(/[?!.,;:„“"()]/g, " ").replace(/\bohne\s+\S+/gi, " ").split(/\s+/).filter(Boolean).slice(1)
+      .filter(x => /^[A-ZÄÖÜ][a-zäöüß-]{3,}$/.test(x) && !/^(Hilfe|Frage|Sache|Dinge?)$/.test(x));
+    return [...new Set(w)].sort((a, b) => b.length - a.length).slice(0, 2);
+  }
+
   // Kurze Nachricht ohne eigene Frage, z. B. "LFX25973" oder "Modell von LG": ergänzt die vorherige Frage
   function istErgaenzung(f) {
     const woerter = f.trim().split(/\s+/);
@@ -287,10 +353,16 @@ const Fragen = (() => {
     return [...new Set(m.filter(w => /\d/.test(w) && /[A-Za-z]/.test(w) && w.replace(/[^0-9]/g, "").length >= 2))].slice(0, 2);
   }
 
-  async function suchbegriffe(frage, englisch, vorher, lage) {
-    const kontext = vorher ? "Vorherige Frage im Gespräch (nur beachten, wenn sich die neue Frage darauf bezieht, z. B. mit \"das\", \"dazu\", \"und wenn …\"): " + vorher.frage + "\n" : "";
+  async function suchbegriffe(frage, englisch, vorher, lage, ohneErfolg) {
+    let kontext = vorher ? "Vorherige Frage im Gespräch (nur beachten, wenn sich die neue Frage darauf bezieht, z. B. mit \"das\", \"dazu\", \"und wenn …\"): " + vorher.frage + "\n" : "";
+    // Zweiter Versuch: Die ersten Begriffe fanden nichts Passendes
+    if (ohneErfolg && ohneErfolg.length) kontext += "Diese Suchbegriffe haben nichts Passendes gefunden: " + ohneErfolg.join(", ") +
+      ". Nenne andere: Oberbegriffe, Fachbegriffe oder Namen von Verfahren und Geräten, die als Titel eines Lexikonartikels vorkommen.\n";
     const sys = "Du erzeugst Suchbegriffe für eine Offline-Bibliothek (Wikipedia, Lehrbücher, Reparatur- und Selbsthilfe-Anleitungen). " +
-      "Gib 1 bis 3 kurze deutsche Suchbegriffe zurück, die wie Artikeltitel klingen (Substantive, z. B. \"Schnittwunde\", \"Radioempfänger\", \"Wundversorgung\"). " +
+      "Benenne zuerst unter \"thema\" in zwei bis vier Wörtern, worum es im Kern geht: das Sachgebiet und was der Nutzer erreichen will " +
+      "(z. B. bei einer Frage nach einem verstauchten Fuß: \"Verstauchung Erste Hilfe\"). Leite die Suchbegriffe aus diesem Thema ab, nicht aus einzelnen Wörtern der Frage. " +
+      "Gib dann 1 bis 3 kurze deutsche Suchbegriffe zurück, die wie Artikeltitel klingen (Substantive, z. B. \"Schnittwunde\", \"Radioempfänger\", \"Wundversorgung\"). " +
+      "Jeder Begriff ist ein Wort oder höchstens zwei, ohne Verb und ohne \"ohne\", so wie ein Lexikonartikel heißt. Die Lage der Frage (z. B. ohne Strom) steckt nicht im Suchbegriff. " +
       "Modellnummern, Marken und Eigennamen übernimmst du wörtlich, z. B. \"LG Kühlschrank\". " +
       "Der Nutzer will Dinge selbst und mit einfachen Mitteln lösen. Suche nach den Verfahren und Techniken, mit denen man es selbst schafft, " +
       "nicht nach dem Gerät oder der Dienstleistung, die fehlt. Gute Suchbegriffe sind Fachbegriffe für die Methode, zum Beispiel: " +
@@ -303,21 +375,28 @@ const Fragen = (() => {
       "Antworte nur mit JSON.";
     const schema = {
       type: "object",
+      // "thema" steht zuerst: Das Modell schreibt es vor den Begriffen und richtet sie danach aus
       properties: {
+        thema: { type: "string" },
         de: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 3 },
         en: { type: "array", items: { type: "string" }, maxItems: 2 },
       },
-      required: englisch ? ["de", "en"] : ["de"],
+      required: englisch ? ["thema", "de", "en"] : ["thema", "de"],
     };
     const roh = await KI.chat([
       { role: "system", content: sys },
       { role: "user", content: kontext + "Frage: " + frage },
-    ], { max_tokens: 120, temperature: 0.1, response_format: { type: "json_schema", json_schema: { name: "suche", schema } } });
+    ], { max_tokens: 120, temperature: ohneErfolg ? 0.7 : 0.1, response_format: { type: "json_schema", json_schema: { name: "suche", schema } } });
     let j;
     try { j = JSON.parse(roh); } catch { const m = roh.match(/\{[\s\S]*\}/); j = m ? JSON.parse(m[0]) : null; }
     if (!j || !Array.isArray(j.de) || !j.de.length) throw new Error("keine Begriffe");
-    const sauber = (a) => (a || []).map(s => String(s).trim()).filter(s => s && s.length < 60).slice(0, 3);
-    return { de: sauber(j.de), en: englisch ? sauber(j.en).slice(0, 2) : [] };
+    // Die Lage gehört nicht in den Suchbegriff („Reis kochen ohne Strom“ → „Reis kochen“), sonst findet die Titelsuche nichts
+    const sauber = (a) => [...new Set((a || []).map(s => String(s).replace(/\s+(ohne|without)\s.*$/i, "").trim()).filter(s => s && s.length < 60))].slice(0, 3);
+    // Das Thema selbst wird mitgesucht (Volltext findet auch zwei, drei Wörter) und hilft der Quellenprüfung
+    const thema = String(j.thema || "").replace(/\s+(ohne|without)\s.*$/i, "").trim();
+    const de = sauber(j.de);
+    if (thema && thema.split(/\s+/).length <= 4 && !de.some(d => d.toLowerCase() === thema.toLowerCase())) de.push(thema);
+    return { de, en: englisch ? sauber(j.en).slice(0, 2) : [], thema };
   }
 
   // Titel-Treffer und Volltext-Treffer kombinieren und bewerten
@@ -337,18 +416,22 @@ const Fragen = (() => {
       const gemischt = /ifixit/.test(b.name);
       const liste = (gemischt ? begriffe.en.concat(begriffe.de) : b.englisch ? begriffe.en : begriffe.de).filter(x => !nummern.includes(x));
       liste.forEach((begriff, bi) => {
+        // Einzelne Wörter aus der Frage („Fisch“) nur als Ergänzung: Ihr Lexikonartikel (das Tier) soll
+        // die Treffer zu den eigentlichen Begriffen („Fischfang“) nicht verdrängen
+        const faktor = (begriffe.extra || []).includes(begriff) ? 0.5 : 1;
         auftraege.push(Kiwix.vorschlaege(b, begriff, 3).then(r => r.map((t, i) => {
           const exakt = t.titel.toLowerCase() === begriff.toLowerCase();
-          return Object.assign(t, { punkte: (exakt ? 12 : 6 - i * 1.5) - bi, begriff });
+          return Object.assign(t, { punkte: ((exakt ? 12 : 6 - i * 1.5) - bi) * faktor, begriff });
         })).catch(() => []));
-        auftraege.push(Kiwix.suche(b, begriff, 4).then(r => r.map((t, i) => Object.assign(t, { punkte: 5 - i - bi, begriff }))).catch(() => []));
+        auftraege.push(Kiwix.suche(b, begriff, 4).then(r => r.map((t, i) => Object.assign(t, { punkte: (5 - i - bi) * faktor, begriff }))).catch(() => []));
       });
     }
     const alle = (await Promise.all(auftraege)).flat();
     // Gleiche Artikel zusammenfassen
     const nachUrl = new Map();
     for (const t of alle) {
-      const key = decodeURIComponent(t.url).toLowerCase();
+      // Dasselbe Buch steckt manchmal in zwei PDF-Paketen: gleiche Stelle nur einmal
+      const key = t.pdf ? "pdf:" + (t.auszug || "").slice(0, 120) : decodeURIComponent(t.url).toLowerCase();
       const v = nachUrl.get(key);
       if (v) v.punkte += t.punkte * 0.6; else nachUrl.set(key, Object.assign({}, t));
     }
@@ -356,10 +439,15 @@ const Fragen = (() => {
     const liste = [...nachUrl.values()].map(t => {
       if (/medicine/.test(t.buch.name)) t.punkte += 1;
       if (t.buch.englisch) t.punkte -= 1.5;
+      // Fundstellen in PDF-Büchern (Handbücher): Volltext über das ganze Buch, aber ohne Titeltreffer wie bei
+      // Lexikonartikeln. Der Ausgleich bringt sie in die Auswahl; ob sie passen, prüft danach die KI
+      if (t.pdf) t.punkte += 4;
       // Kinderlexikon nur im Modus "Einfach erklären" bevorzugen
       if (/klexikon/.test(t.buch.name)) t.punkte += einfach ? 3 : -3;
-      // Wörterbuch nur bei Fragen nach Wortbedeutungen
-      if (/wiktionary/.test(t.buch.name) && !/bedeut|heißt|wort|übersetz|herkunft/i.test(begriffe.frage || "")) t.punkte -= 4;
+      // Wörterbuch nur bei Fragen nach Wortbedeutungen (sonst ganz weglassen, siehe unten)
+      if (/wiktionary/.test(t.buch.name) && !/bedeut|heißt|wort|übersetz|herkunft/i.test(begriffe.frage || "")) t.weg = true;
+      // Forenfragen, wer etwas repariert oder wo man es kauft, helfen beim Selbermachen nicht
+      if (/\b(anyone|anybody|where (can|do|to)|recommend|buy|purchase|wer repariert|wo kaufe|wo bekomme)\b/i.test(t.titel)) t.punkte -= 4;
       // Bei Anleitungsfragen und besonderer Lage: Praxis-Pakete vor dem allgemeinen Lexikon
       if (praxis && PRAXIS_PAKET.test(t.buch.name)) t.punkte += 2.5;
       // Titel mit der gesuchten Modellnummer stark bevorzugen
@@ -371,7 +459,7 @@ const Fragen = (() => {
         else if (/\/Device\//.test(t.url) && !zumModell) t.punkte -= 8;
       }
       return t;
-    }).sort((a, b) => b.punkte - a.punkte);
+    }).filter(t => !t.weg).sort((a, b) => b.punkte - a.punkte);
     if (!liste.length) return [];
     // Schwache Treffer weglassen, höchstens 2 Artikel pro Buch
     const grenze = Math.max(1, liste[0].punkte * 0.4);
@@ -389,7 +477,7 @@ const Fragen = (() => {
     return [...new Set(text.toLowerCase().split(/[^a-zäöüß0-9]+/).filter(w => w.length > 3).map(w => w.slice(0, 6)))];
   }
 
-  async function lesen(treffer, frage, begriffe, budgetZeichen) {
+  async function lesen(treffer, frage, begriffe, budgetZeichen, mitPruefung) {
     const woerter = staemme(frage + " " + begriffe.de.join(" ") + " " + begriffe.en.join(" "));
     const anleitung = ANLEITUNG.test(frage);
     const texte = await Promise.all(treffer.map(t => Kiwix.artikelText(t.url).then(a => ({ t, a })).catch(() => null)));
@@ -405,9 +493,18 @@ const Fragen = (() => {
       if (gesehen.has(k)) return false;
       gesehen.add(k);
       return true;
-    }).slice(0, 4);
-    const proArtikel = Math.floor(budgetZeichen / Math.max(1, gueltig.length));
-    return gueltig.map(({ t, a }, i) => {
+    });
+    // Die KI sortiert Artikel aus, die zur Frage nicht passen (z. B. Winter-Tipps bei einer Radio-Frage)
+    let auswahl = gueltig;
+    if (mitPruefung && gueltig.length > 1) {
+      try {
+        // Passt nichts, bleibt die Liste leer: Dann lieber ehrlich „nichts gefunden“ als eine Antwort aus unpassenden Artikeln
+        auswahl = (await quellenPruefen(frage, gueltig.map(x => x.a), begriffe.thema)).map(i => gueltig[i]);
+      } catch { /* Prüfung fehlgeschlagen: alle behalten */ }
+    }
+    auswahl = auswahl.slice(0, 4);
+    const proArtikel = Math.floor(budgetZeichen / Math.max(1, auswahl.length));
+    return auswahl.map(({ t, a }, i) => {
       // Einleitung immer, dann die Abschnitte mit den meisten Suchwörtern
       const anker = (a.anker || "").toLowerCase();
       const bewertet = a.abschnitte.map((s, idx) => {
@@ -429,28 +526,82 @@ const Fragen = (() => {
       gewaehlt.sort((x, y) => x.idx - y.idx);
       let text = gewaehlt.map(b => (b.s.ueberschrift ? "[" + b.s.ueberschrift + "] " : "") + b.s.text).join("\n");
       if (text.length > proArtikel) text = text.slice(0, proArtikel) + " …";
-      return { nr: i + 1, titel: a.titel || t.titel, url: a.url || t.url, buch: t.buch, text };
+      // Fundstellen in PDF-Büchern verweisen auf die Seite im PDF selbst
+      return { nr: i + 1, titel: a.titel || t.titel, url: t.pdf || a.url || t.url, buch: t.buch, text };
     });
   }
 
+  // Quellen prüfen: Die KI bekommt Titel, Anfang und Abschnittsüberschriften jedes Artikels und nennt die,
+  // die bei genau dieser Frage helfen. Ergebnis: Positionen in der Liste, in der Reihenfolge der Liste.
+  async function quellenPruefen(frage, artikel, thema) {
+    const liste = artikel.map((a, i) => {
+      const anfang = (a.abschnitte[0] ? a.abschnitte[0].text : "").replace(/\s+/g, " ").slice(0, 280);
+      const kapitel = a.abschnitte.map(s => s.ueberschrift).filter(Boolean).slice(0, 10).join(", ");
+      return "[" + (i + 1) + "] " + (a.titel || "") + "\nAnfang: " + anfang + (kapitel ? "\nAbschnitte: " + kapitel : "");
+    }).join("\n\n");
+    const sys = "Du prüfst Suchergebnisse. Für jeden Artikel entscheidest du: Enthält er Wissen, das hilft, diese Frage zu beantworten? " +
+      "Er hilft auch, wenn er nur einen Teil beantwortet oder das passende Gerät, Verfahren oder Grundwissen erklärt. " +
+      "Er hilft nicht, wenn es um ein anderes Gerät, eine andere Sache oder ein anderes Thema geht, auch wenn einzelne Wörter gleich sind. " +
+      "Allgemeine Artikel und Anleitungen, die das Thema im Ganzen erklären, kommen vor Einzelversuchen, Sonderfällen und Forenfragen. " +
+      "Antworte nur mit JSON: die Nummern der hilfreichen Artikel, der hilfreichste zuerst.";
+    const schema = { type: "object", properties: { passend: { type: "array", items: { type: "integer" }, maxItems: 7 } }, required: ["passend"] };
+    const roh = await KI.chat([{ role: "system", content: sys }, { role: "user", content: "FRAGE: " + frage + (thema ? "\nKERN DER FRAGE: " + thema : "") + "\n\nARTIKEL:\n" + liste }],
+      { max_tokens: 60, temperature: 0, response_format: { type: "json_schema", json_schema: { name: "pruefung", schema } } });
+    const j = JSON.parse(roh);
+    return [...new Set((j.passend || []).map(n => n - 1).filter(i => i >= 0 && i < artikel.length))];
+  }
+
+  function landName() {
+    const l = Land.aktuell() || {};
+    return (l.name && (l.name.de || l.name.en)) || l.code || "Deutschland";
+  }
+
+  // Grobe Einordnung der Frage, damit nur die passenden Regeln in die Anweisung kommen
+  function fragenArt(frage) {
+    const f = frage.toLowerCase();
+    return {
+      reparatur: /reparier|kaputt|defekt|geht nicht|nicht mehr an|lässt sich nicht|funktioniert nicht|springt nicht|lädt nicht|rauscht|tropft|undicht|klemmt|wird nicht|abgesprungen|platten|flick|loch im|sohle|sicherung/.test(f),
+      gesundheit: /verletz|wunde|blut|schmerz|stich|biss|zecke|vergift|fieber|krank|durchfall|erbrech|verbrenn|verbrüh|bruch|gebrochen|schiene|unterkühl|erfrier|sonnenstich|hitzschlag|bewusstlos|atem|herz|allerg|blase|nasenbluten|medikament|tablette|notfall|notruf/.test(f),
+      trinkwasser: /trink|pfütze|bachwasser|regenwasser|flusswasser|quellwasser|brunnen|wasserfilter|wasser.*(desinfiz|keim|aufbereit|filtern|sauber)|chlortablett/.test(f),
+    };
+  }
+
   async function antworten(frage, quellen, einfach, vorher, lage, onText) {
+    // Regeln für bestimmte Fragen nur dann mitgeben, wenn die Frage dazu passt. Das kleine Modell wendet
+    // jede Regel sonst auch auf andere Fragen an (Abkochen beim Heizen, Fehlerbilder bei Eicheln).
+    const art = fragenArt(frage);
     const sys =
       "Du bist ein hilfsbereiter Assistent in einer Offline-Bibliothek für Selbsthilfe. Antworte immer auf " + (Land.sprache() === "en" ? "Englisch" : "Deutsch") + ". " +
-      "Notrufnummer im Land des Nutzers: " + Land.notruf() + ". " +
+      "Der Nutzer lebt in " + landName() + ", Notrufnummer: " + Land.notruf() + ". " +
+      "Bei Fragen zu Recht, Regeln und Behörden gilt, was in diesem Land gilt; beschreibt eine Quelle ein anderes Land, sag das deutlich dazu. " +
       LAGEN[lage || "normal"] + " " +
-      "Der Nutzer will es selbst tun, mit dem, was er hat oder findet. Gib eine praktische Anleitung zum Selbermachen. " +
+      "Bei praktischen Problemen will der Nutzer es selbst lösen, mit dem, was er hat oder findet: Gib dann eine Anleitung, wie er es selbst schafft. " +
       "Empfiehl nicht, eine Firma, einen Handwerker oder Fachleute zu beauftragen oder etwas zu kaufen. " +
-      "Die naheliegende Standardlösung (z. B. Feuerzeug, Steckdose) erwähnst du höchstens in einem kurzen Satz und erklärst dann die Wege ohne sie. " +
-      "Nenne kurz die wichtigsten Sicherheitsregeln (z. B. Kurzschluss, richtige Polung, Gase, Brandgefahr). " +
-      "Bei Reparaturen erklärst du in ein bis zwei Sätzen, wie das Gerät grundsätzlich funktioniert, und gehst dann die häufigsten Ursachen der Reihe nach durch, " +
-      "vom Einfachen zum Schwierigen, jeweils mit: woran man es erkennt und was man tun kann. Anleitungen für andere Modelle oder Marken sind oft übertragbar. " +
-      "Ausnahme: Ist ein Mensch in Lebensgefahr oder schwer verletzt, nennst du zuerst den Notruf. Bei Geräten, Technik und Reparaturen nennst du keinen Notruf. " +
-      "Bei Arbeiten an 230-Volt-Netzstrom oder Gasleitungen schreibst du einen kurzen Sicherheitshinweis, z. B. \"Vorher den Stecker ziehen\". " +
-      "Bei reinen Wissensfragen (z. B. Geschichte, Tiere, Begriffe) antwortest du einfach sachlich, ohne Anleitung. " +
+      "Gibt es einen einfachen üblichen Weg, nenne ihn kurz zuerst und danach die Wege, wenn er nicht geht. " +
+      "Nenne nur Sicherheitsregeln, die zu genau dieser Sache passen; erfinde keine Gefahren, die es bei dieser Sache nicht gibt. " +
+      (art.reparatur
+        ? "Erkläre in ein bis zwei Sätzen, wie das Gerät grundsätzlich funktioniert. Nennt die Frage keinen bestimmten Fehler, " +
+          "gliederst du nach den typischen Fehlerbildern dieses Geräts (was der Nutzer bemerkt) und gibst zu jedem die häufigsten Ursachen und was man prüfen und tun kann, " +
+          "vom Einfachen zum Schwierigen. Anleitungen für andere Modelle oder Marken sind oft übertragbar. "
+        : "Bei praktischen Fragen nennst du die bewährten Wege, den sichersten und einfachsten zuerst. ") +
+      (art.gesundheit
+        ? "Erkläre, was man selbst tun kann (Erste Hilfe), und sag kurz, wann man Hilfe holen muss. Ist ein Mensch in Lebensgefahr oder schwer verletzt, nennst du zuerst den Notruf. "
+        : "Den Notruf nennst du nur, wenn ein Mensch in Gefahr ist, nie bei Geräten und Reparaturen. ") +
+      (art.trinkwasser
+        ? "Filtern, Absetzen oder Pflanzenmittel machen Wasser nicht keimfrei. Nenne zuerst Abkochen (mindestens 1 Minute sprudelnd kochen) als sicheren Weg, " +
+          "auch wenn die Quellen es nicht erwähnen, und Filtern nur als Vorstufe gegen Schmutz. "
+        : "") +
+      "Nur wenn deine Anleitung selbst Arbeiten am Netzstrom oder an Gasleitungen enthält, schreibst du dazu einen kurzen passenden Sicherheitshinweis. " +
+      "Beschreibt eine Quelle einen anderen Fall (anderer Ort, anderes Gerät, andere Lage), übernimm nur, was sich übertragen lässt, nicht die Einzelheiten dieses Falls. " +
+      "Bei Wissensfragen, Rat oder Beschäftigung (z. B. Geschichte, Natur, Begriffe, Spiele) antwortest du einfach direkt und passend, ohne Anleitung und ohne Sicherheitsregeln. " +
+      "Gedichte, Zitate, Liedtexte und Zahlen gibst du nur wieder, wenn sie wörtlich in den QUELLEN stehen; schreib nie selbst ein Gedicht und schreib nie etwas einem Autor zu, das nicht so in den Quellen steht. " +
       "Diese Regeln befolgst du still: Erwähne sie nicht in der Antwort. Sprich den Nutzer mit \"du\" an. " +
       "Nutze nur die Informationen aus den QUELLEN und erfinde nichts. " +
-      "Wenn die Quellen die Frage nur teilweise beantworten, gib trotzdem die passenden praktischen Informationen daraus wieder und sag kurz, was fehlt. " +
+      "Wenn die Quellen die Frage nur teilweise beantworten, gib trotzdem die passenden praktischen Informationen daraus wieder. " +
       "Nur wenn gar nichts Passendes in den Quellen steht, sag ehrlich, dass du dazu nichts gefunden hast. " +
+      "Schreib nie, dass etwas ohne Fachwissen zu schwierig ist: Die Bibliothek ist dazu da, sich das Wissen anzueignen. " +
+      "Ist die Frage so allgemein, dass eine genauere Angabe deutlich bessere Hilfe brächte, endest du mit einem kurzen Satz, was du dafür wissen müsstest (bei Geräten z. B. was genau passiert). " +
+      "Passt keine Rückfrage, lässt du sie weg. Schreib keine Überschriften wie \"Rückfrage\" oder \"Grundprinzip\". " +
       "Kennzeichne Aussagen mit der Quellennummer in eckigen Klammern, z. B. [1]. Englische Quellen übersetzt du sinngemäß. " +
       "Antworte klar und praktisch, bei Anleitungen in nummerierten Schritten. Halte dich kurz (höchstens etwa 250 Wörter). " +
       (einfach ? "Erkläre es so einfach, dass ein Kind mit 8 bis 10 Jahren es versteht: kurze Sätze, keine Fachwörter, ein anschauliches Beispiel. " : "");

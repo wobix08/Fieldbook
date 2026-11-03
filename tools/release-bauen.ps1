@@ -1,6 +1,6 @@
 ﻿# Baut das Release-Paket dist\Fieldbook-<Version>.zip
 # Inhalt: Startdatei, app\, Anleitung (GUIDE.txt), Lizenzen (LICENSE.txt, THIRD-PARTY.txt). Keine Downloads (daten\, programme\).
-param([string]$Version = '0.6.0')
+param([string]$Version = '0.7.0')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $dist = Join-Path $root 'dist'

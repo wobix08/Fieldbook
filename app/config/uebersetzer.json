@@ -1,14 +1,14 @@
 {
-  "_hinweis": "Offline-Übersetzer Englisch → Deutsch (Bergamot von Mozilla, läuft im Browser). Die Modelldateien prüft der Übersetzer beim Laden selbst über ihre SHA-256-Prüfsumme (siehe web/uebersetzer-modelle.json).",
-  "titel": "Übersetzer Englisch → Deutsch",
-  "mb": 27,
+  "_hinweis": "Artikel übersetzen (Englisch → Deutsch): Bergamot-Bibliothek von Mozilla (läuft im Browser) plus das Firefox-Modell Englisch → Deutsch. Die Modell-Adressen holt der Server beim Laden aus der Modellliste von Mozilla (siehe sprachen.json, \"quelle\") und vergleicht die Prüfsumme. Die Sprachen für Gespräche nutzen Bibliothek und Modell mit.",
+  "titel": "Artikel übersetzen (Englisch → Deutsch)",
+  "mb": 41,
   "dateien": [
     { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/translator.js", "ziel": "lib/translator.js" },
     { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/translator-worker.js", "ziel": "lib/worker/translator-worker.js" },
     { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/bergamot-translator-worker.js", "ziel": "lib/worker/bergamot-translator-worker.js" },
-    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/bergamot-translator-worker.wasm", "ziel": "lib/worker/bergamot-translator-worker.wasm" },
-    { "url": "https://storage.googleapis.com/bergamot-models-sandbox/0.3.3/ende/model.ende.intgemm.alphas.bin", "ziel": "ende/model.ende.intgemm.alphas.bin" },
-    { "url": "https://storage.googleapis.com/bergamot-models-sandbox/0.3.3/ende/lex.50.50.ende.s2t.bin", "ziel": "ende/lex.50.50.ende.s2t.bin" },
-    { "url": "https://storage.googleapis.com/bergamot-models-sandbox/0.3.3/ende/vocab.deen.spm", "ziel": "ende/vocab.deen.spm" }
+    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/bergamot-translator-worker.wasm", "ziel": "lib/worker/bergamot-translator-worker.wasm" }
+  ],
+  "modelle": [
+    { "von": "en", "nach": "de", "version": "2.1", "schluessel": "ende" }
   ]
 }

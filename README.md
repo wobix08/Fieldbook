@@ -42,9 +42,10 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 | | Bereich | Was es kann |
 |---|---|---|
 | <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
-| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, mit Übersetzer Englisch → Deutsch |
+| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, alles im Fieldbook-Design (hell oder dunkel), mit Übersetzer Englisch → Deutsch |
 | <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
-| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
+| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
+| <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
 | <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
 
@@ -55,7 +56,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Schnellstart
 
-1. **[Fieldbook 0.6.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.6.0/Fieldbook-0.6.0.zip)** (ZIP-Datei, unter 1 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.7.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.0/Fieldbook-0.7.0.zip)** (ZIP-Datei, etwa 1,3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -110,20 +111,20 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   | Was | Woher |
   |---|---|
   | Wissenspakete, kiwix-serve | download.kiwix.org (Kiwix / Wikimedia) |
-  | KI-Modelle | huggingface.co |
-  | llama.cpp, BRouter, PMTiles, Java (Eclipse Temurin) | github.com (offizielle Releases der Projekte) |
+  | KI-Modelle, Modelle für die Spracheingabe, Stimmen zum Vorlesen | huggingface.co |
+  | llama.cpp, whisper.cpp, Piper, BRouter, PMTiles, Java (Eclipse Temurin) | github.com (offizielle Releases der Projekte) |
   | Karten | build.protomaps.com (OpenStreetMap-Daten) |
   | Wegedaten | brouter.de |
   | Ortsnamen | download.geonames.org |
   | Übersetzer (Bergamot) | cdn.jsdelivr.net (npm-Paket `@browsermt/bergamot-translator`, feste Version) |
-  | Übersetzungsmodell Englisch → Deutsch | storage.googleapis.com (Mozilla, Prüfsumme wird beim Laden kontrolliert) |
+  | Übersetzungsmodelle (Artikel und Gespräche) | firefox.settings.services.mozilla.com und firefox-settings-attachments.cdn.mozilla.net (Mozilla, dieselben Modelle wie in Firefox, Prüfsumme wird nach dem Download kontrolliert) |
 
 - **Prüfsumme**\
   Zu jedem Release gibt es eine Datei `.sha256`.\
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.6.0.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.7.0.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -159,9 +160,9 @@ Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbebloc
 |---|---|
 | Wissenspakete | `library.kiwix.org`, `download.kiwix.org` und dessen Spiegelserver (z. B. `ftp.fau.de`, `mirror.download.kiwix.org`) |
 | Karten | `build-metadata.protomaps.dev`, `build.protomaps.com` |
-| KI-Modelle | `huggingface.co`, `*.hf.co` (Download-Server von Hugging Face) |
+| KI-Modelle, Spracheingabe und Stimmen | `huggingface.co`, `*.hf.co` (Download-Server von Hugging Face) |
 | Hilfsprogramme und Updates | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `objects.githubusercontent.com` |
-| Übersetzer | `cdn.jsdelivr.net`, `storage.googleapis.com` |
+| Übersetzer | `cdn.jsdelivr.net`, `firefox.settings.services.mozilla.com`, `firefox-settings-attachments.cdn.mozilla.net` |
 | Ortsnamen | `download.geonames.org` |
 | Wegedaten | `brouter.de` |
 | Rückmeldungen, Fehlerberichte und Statistik (nur mit Zustimmung) | `fieldbook-feedback.wobix08.workers.dev` |
@@ -181,6 +182,7 @@ Der Assistent misst Arbeitsspeicher und Grafikkarte und schlägt automatisch vor
 
 Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt.\
 Es ist keine Treiber-Zusatzinstallation wie CUDA nötig.\
+Ob die Grafikkarte genutzt wird, lässt sich jederzeit in den Einstellungen oder unter *Inhalte* umschalten.\
 Die Liste steht in [`app/config/modelle.json`](app/config/modelle.json) und lässt sich leicht erweitern.
 
 ## So funktioniert die Frage-Antwort-Funktion
@@ -193,6 +195,9 @@ Antwort mit Quellen [1] [2] ◄── KI liest die besten Abschnitte
 
 Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
 Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
+Pakete aus PDF-Büchern (z. B. die Medizin-Handbücher) kann Kiwix nicht durchsuchen.\
+Deshalb liest Fieldbook ihren Text nach der Installation einmal im Hintergrund aus (mit pdf.js) und legt ihn unter `daten\wissen\pdf-texte` ab.\
+Eingescannte Bücher ohne Text bleiben dabei außen vor.\
 Im **Sparmodus** ist die KI aus.\
 Dann zeigt der Bereich „Fragen“ die passenden Artikel direkt an.
 
@@ -211,7 +216,7 @@ daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.g
 
 Alles läuft auf `localhost`.\
 Deine Fragen, Chats und Einträge bleiben auf deinem Gerät.\
-Nach der Einrichtung geht Fieldbook nur noch in drei Fällen ins Internet:
+Nach der Einrichtung geht Fieldbook nur noch in vier Fällen ins Internet:
 - **Beim Start** fragt es kurz bei GitHub nach, ob es eine neue Version gibt.\
   Heruntergeladen wird sie erst, wenn du dies bestätigst.\
   Auch diese Anfrage kannst du in den Einstellungen abschalten.
@@ -219,11 +224,16 @@ Nach der Einrichtung geht Fieldbook nur noch in drei Fällen ins Internet:
 - **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
   Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte gibt (auf Wunsch auch eine neue Fieldbook-Version), und fragt vorher oder lädt sie selbst, je nach Einstellung.\
   Mehr dazu unter [Automatische Aktualisierung](#automatische-aktualisierung-optional).
+- **Links ins Internet** in einem Artikel: Fieldbook fragt die Adresse kurz an.\
+  Mit Internet öffnet sie sich in einem neuen Tab, ohne erscheint ein kurzer Hinweis.
 
 Verwendete Bausteine:
 - [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`) für die KI
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) mit Parakeet (NVIDIA) und Whisper (OpenAI) für die Spracheingabe
+- [Piper](https://github.com/rhasspy/piper) mit freien Stimmen zum Vorlesen im Übersetzer
 - [Protomaps / PMTiles](https://protomaps.com) und [MapLibre](https://maplibre.org) für die Karten
+- [pdf.js](https://mozilla.github.io/pdf.js/) für den Text aus PDF-Büchern
 - [GeoNames](https://www.geonames.org) für die Ortssuche
 
 ## Entwicklung
@@ -299,7 +309,10 @@ Für andere Länder ist es vorbereitet:
 
 Fieldbook läuft auf deinem Gerät.\
 Fragen an die KI, Chats und alles, was du in Fieldbook einträgst, bleiben dort und werden nie übertragen.\
-Ins Internet geht Fieldbook nur für Downloads, für die Frage nach einer neuen Version, für Rückmeldungen, die du selbst abschickst, und für Fehlerberichte und Nutzungsstatistik, wenn du zugestimmt hast.
+Aufnahmen der Spracheingabe werden auf deinem Gerät erkannt und gleich danach gelöscht.\
+Ins Internet geht Fieldbook nur für Downloads, für die Frage nach einer neuen Version, für Rückmeldungen, die du selbst abschickst, und für Fehlerberichte und Nutzungsstatistik, wenn du zugestimmt hast.\
+Klickst du in einem Artikel auf einen Link ins Internet, fragt Fieldbook diese Adresse kurz an, um zu sehen, ob es Internet gibt.\
+Ohne Internet erscheint dann ein kurzer Hinweis statt einer Fehlerseite.
 
 **Rückmeldungen**\
 Was übertragen wird, steht im Formular unter *Was wird mitgeschickt?*:\

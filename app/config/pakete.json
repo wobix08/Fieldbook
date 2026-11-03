@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Wissenspakete von Kiwix. name + flavour wie im Kiwix-Katalog (library.kiwix.org). Grösse und Download-Adresse holt das Setup live aus dem Katalog; mb ist nur ein Ersatzwert. Pakete mit gleicher 'gruppeExklusiv' schliessen sich gegenseitig aus. 'kategorien': Ein Paket darf in mehreren Kategorien stehen; die erste ist die Hauptkategorie (dort erscheint es im Assistenten und unter Inhalte). 'startseite': eigene Fieldbook-Startseite in der Bibliothek mit Suche, Zufall und 'kacheln' (Pfad im Paket); 'ifixit': true zeigt den Geräte-Baum nur mit Zweigen, die Anleitungen enthalten.",
+  "_hinweis": "Wissenspakete von Kiwix. name + flavour wie im Kiwix-Katalog (library.kiwix.org). Grösse und Download-Adresse holt das Setup live aus dem Katalog; mb ist nur ein Ersatzwert. Pakete mit gleicher 'gruppeExklusiv' schliessen sich gegenseitig aus. 'kategorien': Ein Paket darf in mehreren Kategorien stehen; die erste ist die Hauptkategorie (dort erscheint es im Assistenten und unter Inhalte). 'startseite': eigene Fieldbook-Startseite in der Bibliothek mit Suche, Zufall und 'kacheln' (Pfad im Paket); 'eigene': true öffnet statt der Startseite des Pakets eine Fieldbook-Seite mit Themen, zwölf zufälligen und allen Artikeln von A bis Z ('ueber': Linktext zur Original-Startseite); 'ifixit': true zeigt den Geräte-Baum nur mit Zweigen, die Anleitungen enthalten.",
   "kategorien": [
     { "id": "grundwissen", "icon": "book-open", "titel": "Grundwissen", "text": "Nachschlagen: Was ist …? Wer war …?" },
     { "id": "gesundheit", "icon": "heart-pulse", "titel": "Gesundheit & Erste Hilfe", "text": "Verletzungen, Krankheiten, Medikamente" },
@@ -50,7 +50,8 @@
     { "id": "phet-de", "kategorien": ["lernen", "kinder"], "name": "phet_de_all", "flavour": "", "titel": "PhET Simulationen (Deutsch)", "text": "Interaktive Experimente zu Physik, Chemie und Mathe.", "mb": 109, "sprache": "de", "keineSuche": true },
 
     { "id": "klexikon", "kategorien": ["kinder"], "name": "klexikon_de_all", "flavour": "maxi", "titel": "Klexikon (Kinderlexikon)", "text": "Die Wikipedia für Kinder, mit Bildern.", "mb": 135, "sprache": "de",
-      "startseite": { "kacheln": [
+      "startseite": { "eigene": true, "ueber": "das Klexikon",
+        "kacheln": [
         { "titel": "Säugetiere", "pfad": "Säugetiere_(Übersicht)" },
         { "titel": "Vögel", "pfad": "Vögel_(Übersicht)" },
         { "titel": "Tiere", "pfad": "Tiere" },

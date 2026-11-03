@@ -15,6 +15,16 @@
     "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12020/llama-b12020-bin-win-vulkan-x64.zip",
     "exe": "llama-server.exe"
   },
+  "whisper": {
+    "titel": "whisper.cpp (Spracheingabe)",
+    "url": "https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-x64.zip",
+    "exe": "whisper-cli.exe"
+  },
+  "piper": {
+    "titel": "Piper (Vorlesen)",
+    "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip",
+    "exe": "piper.exe"
+  },
   "pmtiles": {
     "titel": "PMTiles (Karten-Werkzeug)",
     "url": "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Windows_x86_64.zip",

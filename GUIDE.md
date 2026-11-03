@@ -54,7 +54,7 @@ Dann bitte abbrechen.
 
 ## 3. Einrichten (einmalig, mit Internet)
 
-Der Assistent führt in fünf Schritten durch die Einrichtung:
+Der Assistent führt in sechs Schritten durch die Einrichtung:
 
 1. **Dein Gerät**\
    Das Programm prüft Prozessor, Arbeitsspeicher, Grafikkarte und freien Platz.\
@@ -65,17 +65,18 @@ Der Assistent führt in fünf Schritten durch die Einrichtung:
    „Keine KI“ geht auch.
 3. **Wissen**\
    Wähle die Bibliotheken aus.\
-   Die Schnellwahl hilft:
-   - **Reise**\
-     Klein, etwa 5 GB (Wikipedia kompakt, Medizin, Reiseführer)
-   - **Zuhause**\
-     Empfohlen, etwa 30 GB (vollständige Wikipedia, Medizin, Reparaturanleitungen, Lehrbücher, Kinderlexikon …)
-   - **Alles**\
-     Über 100 GB
+   Ein Klick auf eine Kategorie klappt ihre Pakete auf.\
+   Vorausgewählt ist eine empfohlene Auswahl von etwa 30 GB (vollständige Wikipedia, Medizin, Reparaturanleitungen, Lehrbücher, Kinderlexikon …).\
+   Mit **Alles** (über 100 GB) oder **Nichts** änderst du die Auswahl auf einen Klick.
 4. **Karten**\
-   Wähle eine oder mehrere Regionen.\
-   Die Größe wird automatisch berechnet.
-5. **Übersicht**\
+   Wähle ein oder mehrere Länder, ganz oben die Routenplanung.\
+   Mehrere Länder werden auf der Karte nahtlos zusammen angezeigt.\
+   Neben jedem Land steht die ungefähre Größe.
+5. **Sprachen**\
+   **Artikel übersetzen** übersetzt englische Artikel aus der Bibliothek ins Deutsche (empfohlen).\
+   Darunter wählst du Sprachen für Gespräche, jeweils **Nur Text** oder **Text + Sprache** (mit Vorlesen), und die **Spracheingabe**.\
+   Das geht auch später unter **Inhalte**.
+6. **Übersicht**\
    Prüfe deine Auswahl.\
    Darunter steht eine Bitte: Mit zwei Haken kannst du **Fehlerberichte** und eine **Nutzungsstatistik** erlauben, beide sind am Anfang aus.\
    Dann klicke auf **Einrichtung abschließen und herunterladen**.
@@ -91,8 +92,14 @@ Läuft gerade ein Download, zeigt oben in der Kopfzeile den Stand, etwa „40 %�
 ### Fragen
 Schreib eine Frage, zum Beispiel „Wie versorge ich eine Schnittwunde?“.\
 Die KI sucht passende Artikel und antwortet mit Quellennummern wie [1].\
-Klick auf eine Nummer öffnet den Artikel.
+Klick auf eine Nummer öffnet den Artikel.\
+Unter der Antwort stehen Suchbegriffe, mit denen du in der Bibliothek selbst weiterlesen kannst.\
+Pakete aus PDF-Büchern (z. B. die Medizin-Handbücher) bereitet Fieldbook nach der Installation einmal für die KI vor.\
+Das dauert ein, zwei Minuten, solange Fieldbook offen ist; oben im Bereich steht dann ein Hinweis.
 
+- **Genau fragen:** Die KI auf deinem Gerät ist viel kleiner als große Online-KIs wie Claude oder ChatGPT.\
+  Je genauer die Frage, desto besser die Antwort.\
+  Also lieber „Radio lässt sich nicht einschalten, was kann ich prüfen?“ als „Radio reparieren“.
 - **Neuer Chat** (links) beginnt ein neues Thema.\
   Im selben Chat versteht die KI Rückfragen wie „Und wenn ich kein Feuerzeug habe?“.\
   Für ein ganz anderes Thema lieber einen neuen Chat starten.
@@ -108,10 +115,18 @@ Klick auf eine Nummer öffnet den Artikel.
 
 ### Bibliothek
 Die Pakete sind nach Themen sortiert: Grundwissen, Gesundheit & Erste Hilfe, Reparieren & Technik, Draußen & Überleben, Selbstversorgung & Haushalt, Lernen & Schule, Für Kinder sowie Beschäftigung & Lesen.\
-Ein Klick auf eine Kategorie zeigt ihre Pakete.\
+Ein Klick auf eine Kategorie klappt ihre Pakete darunter auf, ein zweiter Klick klappt sie wieder zu.\
+Ein Klick auf ein Paket klappt es ebenfalls auf: mit Suche im Paket, **Öffnen** und **Zufälliger Artikel**, bei manchen Paketen auch mit Themen zum direkten Einstieg.\
 Manche Pakete stehen in mehreren Kategorien.\
-Oben rechts wechselst du zwischen **Kacheln** und **Liste** (mit Beschreibung).\
-Über dem Regal kannst du in allen Paketen gleichzeitig suchen.
+Über der Liste kannst du in allen Paketen gleichzeitig suchen.\
+Das Klexikon öffnet eine eigene Startseite mit Themen, zwölf zufälligen Artikeln und allen Artikeln von A bis Z.\
+Beim ersten Öffnen stellt Fieldbook die Liste einmal zusammen, das dauert etwa eine Minute.
+
+**Lesen**\
+Oben in der Mitte stehen **Startseite**, die Suche im geöffneten Paket und **Zufall**.\
+Alle Artikel erscheinen in den Schriften und Farben von Fieldbook, hell oder dunkel wie der Rest.\
+Links ins Internet öffnen sich in einem neuen Tab.\
+Gibt es gerade kein Internet, zeigt Fieldbook stattdessen einen kurzen Hinweis.
 
 **Englische Artikel auf Deutsch lesen**\
 Beim Lesen oben auf **Auf Deutsch** klicken.\
@@ -119,11 +134,43 @@ Der Artikel wird offline übersetzt, meist in wenigen Sekunden.\
 Solange die Übersetzung an ist, werden auch weitere Artikel automatisch übersetzt, wenn du auf Links klickst.\
 **Original** zeigt wieder den englischen Text.\
 Die Übersetzung macht ein Programm, keine Person: Bei Fachbegriffen und Zahlen im Zweifel das Original prüfen.\
-Den Übersetzer (27 MB) wählst du im Assistenten oder unter **Inhalte** aus.
+Dafür brauchst du **Artikel übersetzen** (42 MB), das wählst du im Assistenten oder unter **Inhalte** aus.
+
+### Übersetzer
+Hier führst du ein Gespräch in zwei Sprachen.\
+Oben wählst du deine Sprache und die deines Gegenübers.\
+Du schreibst links, dein Gegenüber rechts, jeweils mit **Übersetzen** oder der Eingabetaste.\
+Mit der **Spracheingabe** (990 MB, unter **Inhalte** im Abschnitt **Übersetzer**) könnt ihr auch sprechen:\
+Auf **Sprechen** klicken, sprechen, auf **Fertig** klicken.\
+Der erkannte Text steht dann im Feld, du kannst ihn prüfen und mit **Übersetzen** abschicken.\
+Beim ersten Mal fragt der Browser, ob Fieldbook das Mikrofon benutzen darf.\
+Bei manchen Sprachen liegt die Erkennung oft daneben, darauf weist ein gelber Hinweis hin.\
+Mit dem Schiebeschalter ganz oben wechselst du von **Schreiben** zu **Sprechen**, dann geht es ohne Tippen und Klicken:\
+Fieldbook hört zu, erkennt nach einer kurzen Sprechpause, wer welche Sprache gesprochen hat, übersetzt und liest die Übersetzung vor.\
+Sprecht abwechselnd und macht nach jedem Satz eine kurze Pause.\
+Während Fieldbook vorliest, hört es nicht zu; mit **Stop** schaltest du das Zuhören ab, mit **Weiter** wieder an.\
+Beim Erkennen und Übersetzen hört es weiter zu: Redet jemand weiter, wird der neue Teil an seinen Satz angehängt und alles zusammen übersetzt und vorgelesen.\
+Daneben stellst du die **Sprechpause** ein: **kurz** übersetzt schneller, schneidet aber bei Denkpausen ab; **lang** wartet geduldiger.\
+Korrigieren kann man vorher nichts, deshalb im Sprechmodus besonders auf die Rückübersetzung achten.\
+Das Mikrofon ist nur an, solange der Sprechmodus offen ist; beim nächsten Öffnen beginnt der Übersetzer wieder mit **Schreiben**.\
+Unter jedem Satz steht eine **Rückübersetzung** in der Sprache dessen, der ihn geschrieben hat: Daran sehen beide, ob der Sinn angekommen ist.\
+**Groß zeigen** zeigt die Übersetzung bildschirmfüllend, dann kannst du den Laptop umdrehen.\
+**Vorlesen** spricht die Übersetzung laut aus, ein zweiter Klick hält an.\
+Dafür lädst du die Sprache unter **Inhalte** mit **Text + Sprache** statt **Nur Text** (die Stimme braucht etwa 60 bis 75 MB, Deutsch kommt einmal mit).\
+Bei einer schon geladenen Sprache holst du die Stimme mit **+ Sprache** dazu.\
+Für manche Sprachen gibt es keine freie Stimme, zum Beispiel Türkisch, Kroatisch und Arabisch; dort fehlt der Knopf.\
+Weitere Sprachen lädst du mit **Sprachen hinzufügen** oben rechts (oder unter **Inhalte** im Abschnitt **Übersetzer**).\
+Oben stehen die häufig gebrauchten, mit **Von Nord nach Süd** sortierst du um (erst Europa, dann der Rest).\
+Eine Sprache braucht etwa 40 bis 75 MB, mit Stimme etwa 100 bis 150 MB (beides steht auf den Knöpfen).\
+Englisch und **Artikel übersetzen** laden immer mit, weil über Englisch übersetzt wird.\
+Japanisch, Koreanisch und Chinesisch gibt es noch nicht.\
+Die Übersetzung macht ein Programm, keine Person: Bei kurzen Sätzen, Medikamenten und wichtigen Dingen lieber noch einmal anders nachfragen.
 
 ### Karten
 Zoomen mit dem Mausrad, verschieben mit gedrückter Maustaste.\
 Oben links nach Orten suchen.\
+Alle installierten Länder sind zusammen zu sehen, mit **Springen zu …** kommst du schnell zu einem davon.\
+Am Rand der geladenen Karten hält die Karte an, und ein Hinweis sagt, wie es weitergeht.\
 Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.\
 Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.
 
@@ -172,6 +219,7 @@ Ohne Automatik geht es jederzeit von Hand mit **Inhalte aktualisieren**.
 ## 7. Später erweitern oder ändern
 
 - Einstellungen (Zahnrad oben rechts) → **Inhalte hinzufügen oder aktualisieren** öffnet die Seite **Inhalte**.\
+  Jeder Bereich klappt per Klick auf; zugeklappt steht darunter, was schon installiert ist.\
   Dort hakst du an, was neu dazukommen soll (Pakete, Karten für eine Reise, ein anderes KI-Modell, Routenplanung), und klickst auf **Auswahl herunterladen**.\
   Dort kannst du Inhalte auch löschen.\
   Neue Versionen werden markiert.
@@ -219,6 +267,7 @@ ZIM-Dateien von [library.kiwix.org](https://library.kiwix.org) in den Ordner `da
 **Wird etwas ins Internet geschickt?**\
 Deine Fragen, Chats und Einträge nicht, sie bleiben auf deinem Gerät.\
 Internet braucht Fieldbook nur für Downloads und um nach einer neuen Version zu fragen.\
+Klickst du in einem Artikel auf einen Link ins Internet, fragt Fieldbook diese Adresse kurz an, um zu sehen, ob es Internet gibt.\
 Eine **Rückmeldung** geht nur raus, wenn du sie selbst abschickst.\
 Fehlerberichte und Nutzungsstatistik verschickt Fieldbook nur, wenn du zugestimmt hast, einmal pro Woche und nie über einen Handy-Hotspot.\
 Was dabei übertragen wird, steht in der README auf GitHub im Abschnitt **Datenschutz**.

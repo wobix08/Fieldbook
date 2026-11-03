@@ -73,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.6.0";
+        public const string Version = "0.7.0";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -273,6 +273,8 @@ namespace OfflineWissen
             {
                 if (pfad == "/kiwix" || pfad.StartsWith("/kiwix/"))
                 {
+                    // Abgestürzt (Prozess beendet, ohne dass Fieldbook ihn gestoppt hat): gleich neu starten
+                    if (kiwix != null && kiwix.HasExited) KiwixWiederbeleben();
                     if (kiwix == null || kiwix.HasExited) { SendeText(ctx, 503, "Die Bibliothek ist nicht gestartet (keine Wissenspakete installiert?)."); return; }
                     // RawUrl statt Url.PathAndQuery: Url entschlüsselt "%25" zu "%", dann findet Kiwix
                     // Dateien mit Sonderzeichen im Namen nicht mehr (z. B. "%252C" für ein Komma)
@@ -424,6 +426,19 @@ namespace OfflineWissen
                 if (loc != null) res.RedirectLocation = loc.Replace("http://127.0.0.1:" + port, "");
                 byte[] zusatz = resp.StatusCode == HttpStatusCode.OK ? KiwixZusatz(rq.Url.AbsolutePath) : null;
                 if (zusatz != null) { res.Headers.Remove("ETag"); res.Headers.Set("Cache-Control", "no-cache"); }
+                // Artikel aus Kiwix bekommen das Fieldbook-Design (Schriften, dunkle Farben), schon vor dem ersten Zeichnen
+                if (rq.HttpMethod != "HEAD" && rq.Url.AbsolutePath.StartsWith("/kiwix/")
+                    && resp.ContentType != null && resp.ContentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+                {
+                    byte[] html;
+                    using (var s = resp.GetResponseStream())
+                    using (var ms = new MemoryStream()) { s.CopyTo(ms); html = ArtikelDesign(ms.ToArray()); }
+                    res.Headers.Remove("ETag");
+                    res.Headers.Set("Cache-Control", "no-cache");
+                    res.ContentLength64 = html.Length;
+                    res.OutputStream.Write(html, 0, html.Length);
+                    return;
+                }
                 if (resp.ContentLength >= 0) res.ContentLength64 = resp.ContentLength + (zusatz == null ? 0 : zusatz.Length);
                 else res.SendChunked = true;
                 if (rq.HttpMethod == "HEAD") return;
@@ -439,6 +454,34 @@ namespace OfflineWissen
                 }
                 if (zusatz != null) res.OutputStream.Write(zusatz, 0, zusatz.Length);
             }
+        }
+
+        // Stylesheet und Skript des Artikel-Designs direkt hinter <head> einsetzen (vor dem Doctype ginge die Seite
+        // in den Quirks-Modus). Ohne <head> bleibt die Seite unverändert. Das kleine Skript vorne setzt Design und
+        // Farbschema sofort, noch bevor ein Stylesheet geladen ist: sonst malt Chrome beim Seitenwechsel im
+        // Lesefenster kurz eine weiße Fläche (neue Seite noch „hell“, Fenster drumherum dunkel).
+        static readonly byte[] ArtikelKopf = Encoding.UTF8.GetBytes(
+            "<script>(function(){var t='dark';try{t=localStorage.getItem('thema')||'dark';}catch(e){}" +
+            "if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';" +
+            "var h=document.documentElement;h.setAttribute('data-fb',t==='light'?'hell':'dunkel');h.style.colorScheme=t==='light'?'light':'dark';" +
+            "h.style.background=t==='light'?'#fff':'#1c1d1b';})();</script>" +
+            "<link rel=\"stylesheet\" href=\"/artikel/design.css\"><script src=\"/artikel/design.js\"></script>");
+        static byte[] ArtikelDesign(byte[] html)
+        {
+            int ende = Math.Min(html.Length, 8192);
+            for (int i = 0; i + 5 < ende; i++)
+            {
+                if (html[i] != '<' || (html[i + 1] | 32) != 'h' || (html[i + 2] | 32) != 'e' || (html[i + 3] | 32) != 'a' || (html[i + 4] | 32) != 'd') continue;
+                if (html[i + 5] != '>' && html[i + 5] != ' ') continue;
+                int zu = Array.IndexOf(html, (byte)'>', i);
+                if (zu < 0) break;
+                var neu = new byte[html.Length + ArtikelKopf.Length];
+                Buffer.BlockCopy(html, 0, neu, 0, zu + 1);
+                Buffer.BlockCopy(ArtikelKopf, 0, neu, zu + 1, ArtikelKopf.Length);
+                Buffer.BlockCopy(html, zu + 1, neu, zu + 1 + ArtikelKopf.Length, html.Length - zu - 1);
+                return neu;
+            }
+            return html;
         }
 
         // Ergänzungen für fehlerhafte Kiwix-Pakete, an bestimmte Dateien angehängt (Dateien in app/web/kiwix-zusatz)
@@ -599,6 +642,425 @@ namespace OfflineWissen
             }
         }
 
+        // ------------------------------------------------------------------ Externe Links in Artikeln
+        // Klickt man in einem Artikel auf einen Link ins Internet, fragt die Seite hier nach, ob die Adresse
+        // erreichbar ist (die Seiten selbst dürfen wegen der Sicherheitsregeln von Kiwix nichts von außen laden).
+        // Jede Antwort des Servers, auch ein Fehlercode, heißt: Internet ist da. Nur die Adresse wird angefragt.
+        static Dictionary<string, object> InternetDa(string url)
+        {
+            Uri u;
+            if (url == null || !Uri.TryCreate(url, UriKind.Absolute, out u) || (u.Scheme != "http" && u.Scheme != "https") || u.IsLoopback)
+                return new Dictionary<string, object> { { "fehler", "Ungültige Adresse" } };
+            bool da = false;
+            try
+            {
+                var req = (HttpWebRequest)WebRequest.Create(u);
+                req.Method = "HEAD";
+                req.Timeout = 4000;
+                req.AllowAutoRedirect = false;
+                using (req.GetResponse()) da = true;
+            }
+            catch (WebException we) { da = we.Response != null; if (we.Response != null) we.Response.Close(); }
+            catch { da = false; }
+            return new Dictionary<string, object> { { "online", da } };
+        }
+
+        // ------------------------------------------------------------------ Artikelliste (Klexikon-Startseite)
+        // Kiwix kann die Artikel eines Pakets nicht auflisten, und die Vorschlagsliste ist unvollständig. Deshalb
+        // werden alle Seiten einmal im Hintergrund über ihre Links eingelesen (Titel, Pfad, erstes Bild) und in
+        // daten/cache/artikel-<paket>.json gespeichert. Nur Seiten im Hauptbereich (ohne "Datei:", "Klexikon:" …).
+
+        public class ArtikelEintrag { public string T, P, B; }
+
+        static readonly object ArtikelLk = new object();
+        static readonly Dictionary<string, List<ArtikelEintrag>> artikelListen = new Dictionary<string, List<ArtikelEintrag>>();
+        static readonly Dictionary<string, int> artikelGelesen = new Dictionary<string, int>();
+
+        static Dictionary<string, object> Artikelliste(string buch)
+        {
+            if (!PdfPaketOk(buch)) return new Dictionary<string, object> { { "fehler", "Unbekanntes Paket" } };
+            lock (ArtikelLk)
+            {
+                List<ArtikelEintrag> liste;
+                if (!artikelListen.TryGetValue(buch, out liste))
+                {
+                    string cache = Path.Combine(Daten, "cache", "artikel-" + buch + ".json");
+                    if (File.Exists(cache))
+                        try { liste = Json.Deserialize<List<ArtikelEintrag>>(File.ReadAllText(cache, Utf8)); artikelListen[buch] = liste; } catch { liste = null; }
+                }
+                if (liste != null) return new Dictionary<string, object> { { "status", "fertig" }, { "artikel", liste } };
+                if (!artikelGelesen.ContainsKey(buch))
+                {
+                    artikelGelesen[buch] = 0;
+                    new Thread(delegate () { ArtikelEinlesen(buch); }) { IsBackground = true, Priority = ThreadPriority.BelowNormal }.Start();
+                }
+                return new Dictionary<string, object> { { "status", "laeuft" }, { "gelesen", artikelGelesen[buch] } };
+            }
+        }
+
+        // Seite holen; liefert den Pfad nach Weiterleitungen (z. B. "Hund" → "Hunde")
+        static string KiwixSeiteMitPfad(string buch, string pfad, out string endPfad)
+        {
+            var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + KiwixPort + "/kiwix/content/" + buch + "/" + pfad);
+            req.Proxy = null;
+            req.Timeout = 30000;
+            using (var r = req.GetResponse())
+            using (var s = new StreamReader(r.GetResponseStream(), Encoding.UTF8))
+            {
+                string p = r.ResponseUri.AbsolutePath, vorne = "/kiwix/content/" + buch + "/";
+                endPfad = p.StartsWith(vorne) ? Uri.UnescapeDataString(p.Substring(vorne.Length)) : pfad;
+                return s.ReadToEnd();
+            }
+        }
+
+        static void ArtikelEinlesen(string buch)
+        {
+            try
+            {
+                var gefunden = new Dictionary<string, ArtikelEintrag>();
+                var bilder = new Dictionary<string, List<string>>();
+                var besucht = new HashSet<string>();
+                string start;
+                string html = KiwixSeiteMitPfad(buch, "", out start);
+                besucht.Add(start);
+                var ebene = ArtikelLinks(html).Where(besucht.Add).ToList();
+                int fehlgeschlagen = 0;
+                while (ebene.Count > 0)
+                {
+                    var naechste = new List<string>();
+                    // Höchstens 4 gleichzeitig: bei 6 parallelen Anfragen ist kiwix-serve schon abgestürzt
+                    var opt = new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 4 };
+                    System.Threading.Tasks.Parallel.ForEach(ebene, opt, pfad =>
+                    {
+                        string seite, ziel;
+                        try { seite = KiwixSeiteMitPfad(buch, Uri.EscapeDataString(pfad), out ziel); } catch { Interlocked.Increment(ref fehlgeschlagen); return; }
+                        var links = ArtikelLinks(seite);
+                        var t = Regex.Match(seite, "<h1[^>]*>([\\s\\S]*?)</h1>");
+                        string titel = WebUtility.HtmlDecode(Regex.Replace(t.Success ? t.Groups[1].Value : ziel.Replace('_', ' '), "<[^>]+>", "")).Trim();
+                        var seitenBilder = Regex.Matches(seite, "<img[^>]+src=\"\\.?/?(_assets_/[^\"]+)\"[^>]*>").Cast<Match>().Take(4)
+                            .Select(m => WebUtility.HtmlDecode(m.Groups[1].Value)).ToList();
+                        lock (gefunden)
+                        {
+                            if (!ziel.Contains(":") && !gefunden.ContainsKey(ziel) && titel != "")
+                            {
+                                gefunden[ziel] = new ArtikelEintrag { T = titel, P = ziel };
+                                bilder[ziel] = seitenBilder;
+                            }
+                            besucht.Add(ziel);
+                            foreach (var l in links) if (besucht.Add(l)) naechste.Add(l);
+                        }
+                        lock (ArtikelLk) artikelGelesen[buch] = gefunden.Count;
+                    });
+                    ebene = naechste;
+                }
+                var liste = gefunden.Values.OrderBy(x => x.T, StringComparer.Create(new CultureInfo("de-DE"), true)).ToList();
+                // Bilder, die in vielen Artikeln vorkommen, sind Symbole (z. B. das Klexikon-„K“): das erste andere nehmen
+                var haeufig = new HashSet<string>(bilder.Values.SelectMany(b => b.Distinct()).GroupBy(b => b).Where(g => g.Count() > 5).Select(g => g.Key));
+                foreach (var a in liste) a.B = bilder[a.P].FirstOrDefault(b => !haeufig.Contains(b));
+                if (fehlgeschlagen <= gefunden.Count / 100)
+                {
+                    Directory.CreateDirectory(Path.Combine(Daten, "cache"));
+                    File.WriteAllText(Path.Combine(Daten, "cache", "artikel-" + buch + ".json"), Json.Serialize(liste), Utf8);
+                }
+                lock (ArtikelLk) { artikelListen[buch] = liste; artikelGelesen.Remove(buch); }
+                Log("Artikelliste " + buch + ": " + liste.Count + " Artikel, " + fehlgeschlagen + " Seiten nicht lesbar.");
+            }
+            catch (Exception e)
+            {
+                lock (ArtikelLk) artikelGelesen.Remove(buch);
+                Log("Artikelliste " + buch + ": " + e.Message);
+            }
+        }
+
+        // Links auf andere Seiten im Hauptbereich des Pakets (gleiche Ebene, ohne Namensraum, ohne Dateien)
+        static List<string> ArtikelLinks(string html)
+        {
+            var liste = new List<string>();
+            foreach (Match m in Regex.Matches(html, "<a\\s[^>]*href=\"(?:\\./)?([^\"#?/]+)\""))
+            {
+                string pfad;
+                try { pfad = Uri.UnescapeDataString(WebUtility.HtmlDecode(m.Groups[1].Value)); } catch { continue; }
+                if (pfad.Contains(":") || pfad.StartsWith(".") || Regex.IsMatch(pfad, @"\.(css|js|png|jpe?g|svg|webp|gif|pdf)$", RegexOptions.IgnoreCase)) continue;
+                liste.Add(pfad);
+            }
+            return liste;
+        }
+
+        // ------------------------------------------------------------------ Text aus PDF-Büchern
+        // Manche Pakete (Medizin-Handbücher, Ratgeber nach Katastrophen) bestehen aus PDF-Büchern, in denen
+        // Kiwix nichts findet. Die Seite liest jedes Buch einmal mit pdf.js aus und schickt den Text hierher.
+        // Er bleibt dauerhaft beim Paket: daten/wissen/pdf-texte/<Paket>.json, solange noch Bücher fehlen
+        // <Paket>.teil.jsonl (eine Zeile je Buch). Verschwindet das Paket, wird der Text mit gelöscht.
+
+        class PdfDatei { public string Datei; public string Titel; public string[] Seiten; }
+        class PdfBuch { public List<PdfDatei> Dateien = new List<PdfDatei>(); public DateTime Stand; public double Schnitt = 1; }
+
+        static readonly object PdfLk = new object();
+        static readonly Dictionary<string, PdfBuch> pdfBuecher = new Dictionary<string, PdfBuch>();
+
+        static string TexteOrdner { get { return Path.Combine(Daten, "wissen", "pdf-texte"); } }
+        static string PdfFertigDatei(string buch) { return Path.Combine(TexteOrdner, buch + ".json"); }
+        static string PdfTeilDatei(string buch) { return Path.Combine(TexteOrdner, buch + ".teil.jsonl"); }
+
+        // Nur Namen installierter Pakete (Dateiname ohne .zim, so heißen sie auch in Kiwix), keine Pfade
+        static bool PdfPaketOk(string buch)
+        {
+            return !string.IsNullOrEmpty(buch) && Regex.IsMatch(buch, @"^[A-Za-z0-9._-]+$") && File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"));
+        }
+
+        // Pakete mit ausgelesenem Text: Name → fertig (true) oder erst teilweise (false)
+        static Dictionary<string, object> PdfTexte()
+        {
+            var d = new Dictionary<string, object>();
+            if (!Directory.Exists(TexteOrdner)) return d;
+            foreach (var f in Directory.GetFiles(TexteOrdner))
+            {
+                string n = Path.GetFileName(f);
+                if (n.EndsWith(".teil.jsonl")) { string b = n.Substring(0, n.Length - 11); if (!d.ContainsKey(b)) d[b] = false; }
+                else if (n.EndsWith(".json")) d[n.Substring(0, n.Length - 5)] = true;
+            }
+            return d;
+        }
+
+        // Bücher aus der Teil-Datei (eine JSON-Zeile je Buch)
+        static List<Dictionary<string, object>> PdfTeilLesen(string buch)
+        {
+            var liste = new List<Dictionary<string, object>>();
+            string f = PdfTeilDatei(buch);
+            if (!File.Exists(f)) return liste;
+            foreach (var z in File.ReadAllLines(f, Utf8))
+            {
+                if (z.Trim().Length == 0) continue;
+                try { var d = Json.DeserializeObject(z) as Dictionary<string, object>; if (d != null) liste.Add(d); } catch { }
+            }
+            // Doppelt ausgelesene Bücher nur einmal (das zuletzt gespeicherte gilt)
+            return liste.Where((d, i) => !liste.Skip(i + 1).Any(x => Str(x, "datei") == Str(d, "datei"))).ToList();
+        }
+
+        // Lädt den Text eines Pakets (fertig oder teilweise) und hält ihn im Speicher, bis sich die Datei ändert
+        static PdfBuch PdfLaden(string buch)
+        {
+            string f = PdfFertigDatei(buch);
+            bool fertig = File.Exists(f);
+            if (!fertig) f = PdfTeilDatei(buch);
+            if (!File.Exists(f)) return null;
+            DateTime stand = File.GetLastWriteTimeUtc(f);
+            lock (PdfLk)
+            {
+                PdfBuch b;
+                if (pdfBuecher.TryGetValue(buch, out b) && b.Stand == stand) return b;
+                b = new PdfBuch { Stand = stand };
+                var dateien = fertig ? Arr(LadeJson(f), "dateien").OfType<Dictionary<string, object>>().ToList() : PdfTeilLesen(buch);
+                long zeichen = 0, seiten = 0;
+                foreach (var d in dateien)
+                {
+                    var s = Arr(d, "seiten").Select(x => x as string ?? "").ToArray();
+                    b.Dateien.Add(new PdfDatei { Datei = Str(d, "datei"), Titel = Str(d, "titel") ?? Str(d, "datei"), Seiten = s });
+                    foreach (var x in s) zeichen += x.Length;
+                    seiten += s.Length;
+                }
+                if (seiten > 0) b.Schnitt = Math.Max(1.0, (double)zeichen / seiten);
+                pdfBuecher[buch] = b;
+                return b;
+            }
+        }
+
+        // Welche Bücher eines Pakets schon ausgelesen sind (zum Weitermachen nach einer Unterbrechung)
+        static Dictionary<string, object> PdfStand(string buch)
+        {
+            if (!PdfPaketOk(buch)) return new Dictionary<string, object> { { "fehler", "Unbekanntes Paket." } };
+            if (File.Exists(PdfFertigDatei(buch))) return new Dictionary<string, object> { { "fertig", true }, { "dateien", new string[0] } };
+            lock (PdfLk)
+                return new Dictionary<string, object> { { "fertig", false }, { "dateien", PdfTeilLesen(buch).Select(d => Str(d, "datei")).ToArray() } };
+        }
+
+        // Ein Buch anhängen ({buch, datei, titel, seiten}) oder das Paket abschließen ({buch, fertig: true})
+        static Dictionary<string, object> PdfSpeichern(Dictionary<string, object> b)
+        {
+            string buch = Str(b, "buch");
+            if (!PdfPaketOk(buch)) return new Dictionary<string, object> { { "fehler", "Unbekanntes Paket." } };
+            lock (PdfLk)
+            {
+                Directory.CreateDirectory(TexteOrdner);
+                if (Bool(b, "fertig"))
+                {
+                    // Mit schon fertigem Text zusammenführen (falls zwei Tabs gleichzeitig ausgelesen haben)
+                    var alle = File.Exists(PdfFertigDatei(buch)) ? Arr(LadeJson(PdfFertigDatei(buch)), "dateien").OfType<Dictionary<string, object>>().ToList() : new List<Dictionary<string, object>>();
+                    var neu = PdfTeilLesen(buch);
+                    alle = alle.Where(a => !neu.Any(n => Str(n, "datei") == Str(a, "datei"))).Concat(neu).ToList();
+                    File.WriteAllText(PdfFertigDatei(buch), Json.Serialize(new Dictionary<string, object> { { "buch", buch }, { "dateien", alle } }), Utf8);
+                    try { File.Delete(PdfTeilDatei(buch)); } catch { }
+                    Log("PDF-Text für " + buch + ": " + alle.Count + " Bücher ausgelesen.");
+                    return new Dictionary<string, object> { { "ok", true } };
+                }
+                string datei = Str(b, "datei");
+                if (string.IsNullOrEmpty(datei)) return new Dictionary<string, object> { { "fehler", "Datei fehlt." } };
+                var zeile = new Dictionary<string, object> { { "datei", datei }, { "titel", Str(b, "titel") ?? datei }, { "seiten", Arr(b, "seiten") } };
+                File.AppendAllText(PdfTeilDatei(buch), Json.Serialize(zeile) + "\n", Utf8);
+                return new Dictionary<string, object> { { "ok", true } };
+            }
+        }
+
+        // Text gelöschter oder ersetzter Pakete entfernen (beim Start der Bibliothek, also nach jeder Änderung)
+        static void PdfTexteAufraeumen()
+        {
+            try
+            {
+                foreach (var kv in PdfTexte())
+                {
+                    if (File.Exists(Path.Combine(Daten, "wissen", kv.Key + ".zim"))) continue;
+                    lock (PdfLk)
+                    {
+                        try { File.Delete(PdfFertigDatei(kv.Key)); } catch { }
+                        try { File.Delete(PdfTeilDatei(kv.Key)); } catch { }
+                        pdfBuecher.Remove(kv.Key);
+                    }
+                    Log("PDF-Text von " + kv.Key + " gelöscht (Paket nicht mehr da).");
+                }
+            }
+            catch { }
+        }
+
+        static readonly Regex PdfWort = new Regex(@"[\p{L}\p{N}]{3,}");
+        static readonly HashSet<string> PdfStopp = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "the", "and", "for", "with", "without", "from", "that", "this", "how", "what", "when", "your", "der", "die", "das", "und", "mit", "ohne", "von", "wie", "was" };
+
+        // Wie oft ein Wort auf der Seite vorkommt (nur am Wortanfang: "bleed" zählt in "bleeding", nicht "art" in "heart")
+        static int PdfVorkommen(string text, string wort)
+        {
+            int n = 0, i = 0;
+            while (n < 20 && (i = text.IndexOf(wort, i, StringComparison.OrdinalIgnoreCase)) >= 0)
+            {
+                if (i == 0 || !char.IsLetterOrDigit(text[i - 1])) n++;
+                i += wort.Length;
+            }
+            return n;
+        }
+
+        // Volltextsuche über die Seiten (BM25). Seiten mit allen Suchwörtern zählen mehr; von zwei
+        // benachbarten Seiten derselben Stelle kommt nur die bessere, die nächste Seite liest die KI ohnehin mit.
+        static List<object> PdfSuche(string buch, string q, int max)
+        {
+            var erg = new List<object>();
+            if (!PdfPaketOk(buch) || string.IsNullOrWhiteSpace(q)) return erg;
+            var b = PdfLaden(buch);
+            if (b == null) return erg;
+            var woerter = PdfWort.Matches(q).Cast<Match>().Select(m => m.Value).Where(w => !PdfStopp.Contains(w))
+                .Distinct(StringComparer.OrdinalIgnoreCase).Take(6).ToList();
+            if (woerter.Count == 0) return erg;
+            int gesamt = 0;
+            var stellen = new List<int[]>();   // {Buch, Seite, Anzahl je Wort …}
+            var df = new int[woerter.Count];
+            for (int di = 0; di < b.Dateien.Count; di++)
+                for (int si = 0; si < b.Dateien[di].Seiten.Length; si++)
+                {
+                    gesamt++;
+                    int[] z = null;
+                    for (int w = 0; w < woerter.Count; w++)
+                    {
+                        int n = PdfVorkommen(b.Dateien[di].Seiten[si], woerter[w]);
+                        if (n == 0) continue;
+                        if (z == null) { z = new int[woerter.Count + 2]; z[0] = di; z[1] = si; }
+                        z[w + 2] = n;
+                        df[w]++;
+                    }
+                    if (z != null) stellen.Add(z);
+                }
+            string satz = string.Join(" ", woerter);
+            var wertung = new List<KeyValuePair<double, int[]>>();
+            foreach (var z in stellen)
+            {
+                string s = b.Dateien[z[0]].Seiten[z[1]];
+                double norm = 1.2 * (0.25 + 0.75 * s.Length / b.Schnitt);
+                double p = 0;
+                int abgedeckt = 0;
+                for (int w = 0; w < woerter.Count; w++)
+                {
+                    int tf = z[w + 2];
+                    if (tf == 0) continue;
+                    abgedeckt++;
+                    double idf = Math.Log(1 + (gesamt - df[w] + 0.5) / (df[w] + 0.5));
+                    p += idf * tf * 2.2 / (tf + norm);
+                }
+                p *= (double)abgedeckt / woerter.Count;
+                if (woerter.Count > 1 && s.IndexOf(satz, StringComparison.OrdinalIgnoreCase) >= 0) p *= 1.5;
+                // Inhaltsverzeichnisse und Stichwortlisten nennen das Wort, erklären aber nichts
+                if (Regex.Matches(s, @"(\. ?){5,}").Count > 4) p *= 0.3;
+                wertung.Add(new KeyValuePair<double, int[]>(p, z));
+            }
+            var genommen = new List<int[]>();
+            foreach (var kv in wertung.OrderByDescending(x => x.Key))
+            {
+                var z = kv.Value;
+                if (genommen.Any(g => g[0] == z[0] && Math.Abs(g[1] - z[1]) <= 1)) continue;
+                genommen.Add(z);
+                var d = b.Dateien[z[0]];
+                int seite = z[1] + 1;
+                erg.Add(new Dictionary<string, object> {
+                    { "titel", d.Titel + ", Seite " + seite },
+                    { "url", "/api/pdftext/seite/" + buch + "/" + z[0] + "/" + seite },
+                    { "pdf", "/kiwix/content/" + buch + "/files/" + Uri.EscapeDataString(d.Datei) + "#page=" + seite },
+                    { "auszug", PdfAuszug(d.Seiten[z[1]], woerter) },
+                    { "punkte", Math.Round(kv.Key, 2) } });
+                if (erg.Count >= max) break;
+            }
+            return erg;
+        }
+
+        static string PdfAuszug(string s, List<string> woerter)
+        {
+            int i = -1;
+            foreach (var w in woerter) { int k = s.IndexOf(w, StringComparison.OrdinalIgnoreCase); if (k >= 0 && (i < 0 || k < i)) i = k; }
+            int start = Math.Max(0, i - 80);
+            return Regex.Replace(s.Substring(start, Math.Min(300, s.Length - start)), @"\s+", " ").Trim();
+        }
+
+        // Zeilen einer PDF-Seite zu Absätzen zusammensetzen: getrennte Wörter am Zeilenende verbinden,
+        // nach einem Satzende ab etwa 400 Zeichen einen neuen Absatz beginnen
+        static List<string> PdfAbsaetze(string seite)
+        {
+            var erg = new List<string>();
+            var sb = new StringBuilder();
+            var zeilen = seite.Split('\n').Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
+            for (int i = 0; i < zeilen.Count; i++)
+            {
+                string z = zeilen[i];
+                // Kurze Zeilen ohne Satzzeichen (Überschriften, Kopfzeilen) stehen für sich, aber nur, wenn danach
+                // etwas Neues beginnt; sonst ist es eine Zeile aus einem schmalen Kasten mitten im Satz
+                bool neu = i + 1 >= zeilen.Count || char.IsUpper(zeilen[i + 1][0]) || char.IsDigit(zeilen[i + 1][0]);
+                bool fuerSich = z.Length < 60 && neu && (char.IsUpper(z[0]) || char.IsDigit(z[0])) && !Regex.IsMatch(z, @"[.,;:!?\-]$");
+                if (fuerSich && sb.Length > 0) { erg.Add(sb.ToString()); sb.Clear(); }
+                if (sb.Length > 0 && sb[sb.Length - 1] == '-' && char.IsLower(z[0])) sb.Length--;
+                else if (sb.Length > 0) sb.Append(' ');
+                sb.Append(z);
+                if (fuerSich || (sb.Length > 400 && Regex.IsMatch(z, @"[.!?]$"))) { erg.Add(sb.ToString()); sb.Clear(); }
+            }
+            if (sb.Length > 0) erg.Add(sb.ToString());
+            return erg;
+        }
+
+        // Eine Fundstelle als einfache HTML-Seite (diese Seite und die nächste), damit die KI sie wie einen Artikel liest
+        static void PdfSeite(HttpListenerContext ctx, string rest)
+        {
+            var t = rest.Split('/');
+            int di = -1, seite = 0;
+            PdfBuch b = null;
+            if (t.Length == 3 && PdfPaketOk(t[0]) && int.TryParse(t[1], out di) && int.TryParse(t[2], out seite)) b = PdfLaden(t[0]);
+            if (b == null || di < 0 || di >= b.Dateien.Count || seite < 1 || seite > b.Dateien[di].Seiten.Length) { SendeText(ctx, 404, "Nicht gefunden"); return; }
+            var d = b.Dateien[di];
+            var html = new StringBuilder("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>");
+            string titel = WebUtility.HtmlEncode(d.Titel + ", Seite " + seite);
+            html.Append(titel).Append("</title></head><body><h1>").Append(titel).Append("</h1>");
+            for (int s = seite; s <= Math.Min(seite + 1, d.Seiten.Length); s++)
+                foreach (var a in PdfAbsaetze(d.Seiten[s - 1])) html.Append("<p>").Append(WebUtility.HtmlEncode(a)).Append("</p>");
+            html.Append("</body></html>");
+            var bytes = Utf8.GetBytes(html.ToString());
+            ctx.Response.ContentType = "text/html; charset=utf-8";
+            ctx.Response.AddHeader("Cache-Control", "no-store");
+            ctx.Response.ContentLength64 = bytes.Length;
+            ctx.Response.OutputStream.Write(bytes, 0, bytes.Length);
+        }
+
         static void SendeText(HttpListenerContext ctx, int code, string text)
         {
             var b = Utf8.GetBytes(text);
@@ -643,8 +1105,18 @@ namespace OfflineWissen
                 q[k] = v;
             }
             Func<string, string> Q = k => q.ContainsKey(k) ? q[k] : null;
+            if (was.StartsWith("pdftext/seite/")) { PdfSeite(ctx, was.Substring(14)); return; }
             switch (was)
             {
+                case "pdftext/stand": SendeJson(ctx, PdfStand(Q("buch"))); return;
+                case "pdftext/speichern": SendeJson(ctx, PdfSpeichern(LeseBody(ctx))); return;
+                case "pdftext/suche":
+                    {
+                        int n;
+                        if (!int.TryParse(Q("n"), out n)) n = 5;
+                        SendeJson(ctx, PdfSuche(Q("buch"), Q("q"), Math.Min(20, Math.Max(1, n))));
+                        return;
+                    }
                 case "status":
                     // Nur Anfragen aus einem Fieldbook-Tab zählen (der Browser schickt die Herkunftsseite mit)
                     if (ctx.Request.UrlReferrer != null) Interlocked.Exchange(ref tabZuletzt, DateTime.UtcNow.Ticks);
@@ -661,8 +1133,11 @@ namespace OfflineWissen
                 case "katalog": SendeJson(ctx, Katalog(Q("neu") == "1")); return;
                 case "kartengroesse": SendeJson(ctx, KartenGroesse(Q("id"), Q("maxzoom"))); return;
                 case "fortschritt": SendeJson(ctx, Fortschritt()); return;
+                case "uebersetzer/modelle": SendeJson(ctx, UebersetzerRegister()); return;
                 case "orte": SendeJson(ctx, OrteSuchen(Q("q") ?? "", 25)); return;
                 case "ifixit": SendeJson(ctx, Ifixit(Q("buch"), Q("pfad") ?? "")); return;
+                case "artikelliste": SendeJson(ctx, Artikelliste(Q("buch"))); return;
+                case "internet": SendeJson(ctx, InternetDa(Q("url"))); return;
                 case "verbindungstest": SendeJson(ctx, Verbindungstest()); return;
                 case "fortsetzen": SendeJson(ctx, Fortsetzen()); return;
                 case "import/ordner": { string o = OrdnerWaehlen(); SendeJson(ctx, new Dictionary<string, object> { { "ordner", o ?? "" } }); return; }
@@ -769,6 +1244,8 @@ namespace OfflineWissen
                     }
                 case "routengroesse": SendeJson(ctx, RoutenGroesse((Q("ids") ?? "").Split(','))); return;
                 case "installieren": SendeJson(ctx, Installieren(LeseBody(ctx))); return;
+                case "sprechen": Sprechen(ctx, Q("sprache"), Q("paar"), Q("erwartet")); return;
+                case "vorlesen": Vorlesen(ctx); return;
                 case "abbrechen":
                     abbrechen = true;
                     AlleDownloadsStoppen();
@@ -843,7 +1320,14 @@ namespace OfflineWissen
                 {"proxy", Str(einst, "proxy") ?? ""},
                 {"unterbrochen", unterbrochen},
                 {"uebersetzer", UebersetzerBereit()},
+                {"uebersetzerAlt", UebersetzerBereit() && !UebersetzerNeu()},
+                {"sprachen", InstallierteSprachen()},
+                {"spracheingabe", SpracheingabeBereit()},
+                {"spracheingabeKomplett", SpracheingabeBereit() && SprachModelle().All(m => File.Exists(SprachModellPfad(m)))},
+                {"stimmen", Stimmen()},
+                {"stimmenFehlen", StimmenJobs(InstallierteSprachen()).Where(x => x.Art == "stimme").Select(x => x.Ziel).ToArray()},
                 {"defektePakete", kiwixDefekt.ToArray()},
+                {"pdfTexte", PdfTexte()},
                 {"ki", new Dictionary<string, object> { {"status", llmStatus}, {"fehler", llmFehler}, {"modell", llmModell}, {"kontext", AktuellesModellKontext()} }},
                 {"modell", Str(einst, "modell")},
                 {"backend", Str(einst, "backend") ?? "cpu"},
@@ -1688,7 +2172,9 @@ namespace OfflineWissen
                 new[] { "Karten (Daten)", "https://build.protomaps.com/" },
                 new[] { "KI-Modelle", "https://huggingface.co/" },
                 new[] { "Hilfsprogramme und Updates", "https://github.com/" },
-                new[] { "Übersetzer", "https://storage.googleapis.com/" },
+                new[] { "Übersetzer (Programm)", "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/translator.js" },
+                new[] { "Übersetzer (Verzeichnis)", "https://firefox.settings.services.mozilla.com/v1/" },
+                new[] { "Übersetzer (Sprachen)", "https://firefox-settings-attachments.cdn.mozilla.net/" },
                 new[] { "Ortsnamen", "https://download.geonames.org/export/dump/" },
                 new[] { "Wegedaten", SegmentBasis },
             };
@@ -1994,11 +2480,36 @@ namespace OfflineWissen
                     }
                     einst["routen"] = true;
                 }
-                // Offline-Übersetzer Englisch → Deutsch: ein Job für alle Dateien
-                if (Bool(b, "uebersetzer") && !UebersetzerBereit())
+                // Sprachen für Gespräche; übersetzt wird über Englisch, deshalb kommt "en" immer mit
+                var sprachen = Arr(b, "sprachen").Select(x => Convert.ToString(x)).Where(c => SprachInfo(c) != null).Distinct().ToList();
+                var sprachenDa = new HashSet<string>(InstallierteSprachen());
+                sprachen = sprachen.Where(c => !sprachenDa.Contains(c)).ToList();
+                if (sprachen.Count > 0 && !sprachenDa.Contains("en") && !sprachen.Contains("en")) sprachen.Insert(0, "en");
+                // Artikel übersetzen (Englisch → Deutsch): ein Job für alle Dateien. Die Sprachen brauchen die neue
+                // Version (eine ältere aus früheren Fieldbook-Versionen wird dabei ersetzt).
+                if ((Bool(b, "uebersetzer") && !UebersetzerBereit()) || ((Bool(b, "uebersetzer") || sprachen.Count > 0) && !UebersetzerNeu()))
                 {
                     var u = LadeJson(Path.Combine(Config, "uebersetzer.json"));
                     jobs.Add(new Job { Art = "uebersetzer", Titel = Str(u, "titel") ?? "Übersetzer", Gesamt = (long)(Num(u, "mb") * 1048576) });
+                }
+                foreach (var c in sprachen)
+                {
+                    if (sprachenDa.Contains(c)) continue;
+                    var si = SprachInfo(c);
+                    jobs.Add(new Job { Art = "sprache", Titel = "Sprache: " + Str(si, "name"), Ziel = c, Gesamt = (long)(Num(si, "mb") * 1048576) });
+                }
+                // Stimmen zum Vorlesen nur auf Wunsch („Text + Sprache“), für neue oder schon installierte Sprachen;
+                // Deutsch kommt mit der ersten Stimme mit
+                var mitStimme = Arr(b, "stimmen").Select(x => Convert.ToString(x))
+                    .Where(c => sprachen.Contains(c) || sprachenDa.Contains(c)).ToList();
+                if (mitStimme.Count > 0) jobs.AddRange(StimmenJobs(mitStimme).Where(x => x.Art != "programm" || !jobs.Any(y => y.Art == "programm" && y.Ziel == x.Ziel)));
+                // Spracheingabe: Programm (whisper.cpp) und die beiden Modelle
+                if (Bool(b, "spracheingabe"))
+                {
+                    if (ProgrammPfad("whisper") == null) jobs.Add(ProgrammJob("whisper"));
+                    foreach (var m in SprachModelle())
+                        if (!File.Exists(SprachModellPfad(m)))
+                            jobs.Add(new Job { Art = "sprachmodell", Titel = Str(m, "titel"), Url = Str(m, "url"), Ziel = SprachModellPfad(m), Gesamt = (long)Num(m, "bytes"), Extra = Str(m, "id") });
                 }
                 foreach (var cc in orteNoetig)
                 {
@@ -2162,6 +2673,15 @@ namespace OfflineWissen
                         break;
                     case "uebersetzer":
                         UebersetzerLaden(j);
+                        break;
+                    case "sprache":
+                        SpracheLaden(j);
+                        break;
+                    case "sprachmodell":
+                        SprachmodellLaden(j);
+                        break;
+                    case "stimme":
+                        StimmeLaden(j);
                         break;
                     case "orte":
                         OrteLaden(j);
@@ -2617,34 +3137,179 @@ namespace OfflineWissen
             return Arr(LadeJson(Path.Combine(Config, "uebersetzer.json")), "dateien").OfType<Dictionary<string, object>>().ToList();
         }
 
-        static bool UebersetzerBereit()
+        // "Artikel übersetzen": Bibliothek (lib\) plus Modell Englisch → Deutsch von Mozilla. Fertig geladen liegt
+        // artikel.json mit dem Registereintrag daneben. Ältere Fieldbook-Versionen luden ein älteres Modell nach
+        // ende\ (Register in web\uebersetzer-modelle.json); das gilt weiter als installiert, bis es ersetzt wird.
+        static string ArtikelMarke { get { return Path.Combine(UebersetzerDir, "artikel.json"); } }
+
+        static bool UebersetzerLibDa()
         {
             var d = UebersetzerDateien();
             return d.Count > 0 && d.All(f => { string z = SichererPfad(UebersetzerDir, Str(f, "ziel")); return z != null && File.Exists(z); });
         }
 
+        static bool UebersetzerNeu() { return UebersetzerLibDa() && File.Exists(ArtikelMarke); }
+
+        static bool UebersetzerBereit()
+        {
+            return UebersetzerLibDa() && (File.Exists(ArtikelMarke) || File.Exists(Path.Combine(UebersetzerDir, "ende", "model.ende.intgemm.alphas.bin")));
+        }
+
         static void UebersetzerLaden(Job j)
         {
-            long fertig = 0;
-            foreach (var f in UebersetzerDateien())
+            var konf = LadeJson(Path.Combine(Config, "uebersetzer.json"));
+            ModelleLaden(j, Arr(konf, "modelle").OfType<Dictionary<string, object>>(), "artikel", ArtikelMarke);
+            // Älteres Modell ist jetzt überflüssig
+            string alt = Path.Combine(UebersetzerDir, "ende");
+            if (Directory.Exists(alt)) try { Directory.Delete(alt, true); } catch { }
+        }
+
+        // ------------------------------------------------------------------ Sprachen für den Gesprächs-Übersetzer
+        // Je Sprache zwei Modelle von Mozilla (dieselben wie in Firefox): Sprache → Englisch und Englisch → Sprache.
+        // Übersetzt wird über Englisch, deshalb brauchen alle Sprachen das Paket "en" (nur Deutsch → Englisch)
+        // und "Artikel übersetzen" (Englisch → Deutsch).
+        // Welche Modellversion, steht in config\sprachen.json (mit der Bergamot-Bibliothek geprüft). Die Adressen
+        // holt Fieldbook beim Laden aus der Modellliste von Mozilla und vergleicht danach die Prüfsumme.
+        // Fertig geladen: programme\uebersetzer\sprachen\<code>.json mit den Einträgen für das Modellregister.
+
+        static readonly object SprachLibLk = new object();
+        static string SprachenDir { get { return Path.Combine(UebersetzerDir, "sprachen"); } }
+
+        static Dictionary<string, object> SprachenKonfig()
+        {
+            return LadeJson(Path.Combine(Config, "sprachen.json")) ?? new Dictionary<string, object>();
+        }
+
+        static Dictionary<string, object> SprachInfo(string code)
+        {
+            return Arr(SprachenKonfig(), "sprachen").OfType<Dictionary<string, object>>().FirstOrDefault(s => Str(s, "code") == code);
+        }
+
+        static string[] InstallierteSprachen()
+        {
+            if (!Directory.Exists(SprachenDir)) return new string[0];
+            var bekannt = new HashSet<string>(Arr(SprachenKonfig(), "sprachen").OfType<Dictionary<string, object>>().Select(s => Str(s, "code")));
+            return Directory.GetFiles(SprachenDir, "*.json").Select(f => Path.GetFileNameWithoutExtension(f)).Where(c => bekannt.Contains(c)).ToArray();
+        }
+
+        // Modellregister für die Bergamot-Bibliothek: Englisch → Deutsch aus dem Grundpaket, dazu alle Sprachen
+        static Dictionary<string, object> UebersetzerRegister()
+        {
+            var reg = new Dictionary<string, object>();
+            if (UebersetzerBereit())
             {
-                string ziel = SichererPfad(UebersetzerDir, Str(f, "ziel"));
-                if (ziel == null) continue;
+                var basis = LadeJson(File.Exists(ArtikelMarke) ? ArtikelMarke : Path.Combine(Web, "uebersetzer-modelle.json"));
+                if (basis != null) foreach (var kv in basis) reg[kv.Key] = kv.Value;
+            }
+            foreach (var c in InstallierteSprachen())
+            {
+                var r = LadeJson(Path.Combine(SprachenDir, c + ".json"));
+                if (r != null) foreach (var kv in r) reg[kv.Key] = kv.Value;
+            }
+            return reg;
+        }
+
+        static bool VersionOk(string v)
+        {
+            return v != null && Regex.IsMatch(v, @"^\d+(\.\d+)+$");
+        }
+
+        // Dateien eines Modells aus der Liste von Mozilla: genau die geprüfte Version, sonst die neueste mit
+        // derselben Hauptversion (neuere Hauptversionen laufen evtl. nicht mit unserer Bibliothek)
+        static List<Dictionary<string, object>> ModellDateien(List<Dictionary<string, object>> liste, string von, string nach, string version)
+        {
+            var passend = liste.Where(r => Str(r, "fromLang") == von && Str(r, "toLang") == nach && VersionOk(Str(r, "version"))
+                && (string.IsNullOrEmpty(Str(r, "filter_expression")) || Str(r, "filter_expression") == "env.appinfo.OS != 'Android' || env.channel != 'release'")).ToList();
+            var genau = passend.Where(r => Str(r, "version") == version).ToList();
+            if (genau.Count > 0) return genau;
+            string haupt = (version ?? "").Split('.')[0];
+            var gleich = passend.Where(r => Str(r, "version").Split('.')[0] == haupt).ToList();
+            if (gleich.Count == 0) return gleich;
+            var neueste = gleich.Select(r => new Version(Str(r, "version"))).Max();
+            return gleich.Where(r => new Version(Str(r, "version")) == neueste).ToList();
+        }
+
+        static string Sha256Datei(string pfad)
+        {
+            using (var s = File.OpenRead(pfad))
+            using (var h = System.Security.Cryptography.SHA256.Create())
+                return BitConverter.ToString(h.ComputeHash(s)).Replace("-", "").ToLowerInvariant();
+        }
+
+        static void SpracheLaden(Job j)
+        {
+            string code = j.Ziel;
+            var info = SprachInfo(code);
+            if (info == null) throw new Exception("Unbekannte Sprache: " + code);
+            ModelleLaden(j, Arr(info, "modelle").OfType<Dictionary<string, object>>(), "sprachen", Path.Combine(SprachenDir, code + ".json"));
+        }
+
+        // Bibliothek (falls sie fehlt) und Modelle von Mozilla laden, Prüfsummen vergleichen, zum Schluss die
+        // Marke mit den Registereinträgen schreiben. Die Modelle landen in programme\uebersetzer\<ordner>\<schluessel>.
+        static void ModelleLaden(Job j, IEnumerable<Dictionary<string, object>> modelle, string ordner, string marke)
+        {
+            var konf = SprachenKonfig();
+            var liste = Arr(Json.DeserializeObject(HoleText(Str(konf, "quelle"), 60000)) as Dictionary<string, object>, "data")
+                .OfType<Dictionary<string, object>>().ToList();
+            // Was zu laden ist: Adresse, Ziel unter programme\uebersetzer, Prüfsumme
+            var dateien = new List<string[]>();
+            var register = new Dictionary<string, object>();
+            foreach (var m in modelle)
+            {
+                string von = Str(m, "von"), nach = Str(m, "nach"), schluessel = Str(m, "schluessel");
+                var recs = ModellDateien(liste, von, nach, Str(m, "version"));
+                if (recs.Count == 0) throw new Exception("Mozilla bietet das Modell " + von + " → " + nach + " gerade nicht an.");
+                var eintrag = new Dictionary<string, object>();
+                foreach (var r in recs)
+                {
+                    var anh = r["attachment"] as Dictionary<string, object>;
+                    string name = Path.GetFileName(Str(r, "name") ?? "");
+                    if (anh == null || name == "") continue;
+                    string ziel = ordner + "/" + schluessel + "/" + name;
+                    dateien.Add(new[] { Str(konf, "dateien") + Str(anh, "location"), ziel, Str(anh, "hash") });
+                    eintrag[Str(r, "fileType")] = new Dictionary<string, object> { { "name", "/uebersetzer/" + ziel }, { "size", (long)Num(anh, "size") }, { "expectedSha256Hash", Str(anh, "hash") } };
+                }
+                register[schluessel] = eintrag;
+            }
+            j.Gesamt = Math.Max(j.Gesamt, 1);
+            long fertig = 0;
+            // Die Bibliothek (Bergamot) ist für alle Sprachen gleich; fehlt sie, zuerst laden (nur einer zur Zeit)
+            lock (SprachLibLk)
+            {
+                foreach (var f in UebersetzerDateien())
+                {
+                    string ziel = SichererPfad(UebersetzerDir, Str(f, "ziel"));
+                    if (ziel == null || File.Exists(ziel)) continue;
+                    TeilLaden(j, fertig, Str(f, "url"), ziel);
+                }
+            }
+            foreach (var d in dateien)
+            {
+                string ziel = SichererPfad(UebersetzerDir, d[1]);
+                if (ziel == null) throw new Exception("Ungültiger Dateiname: " + d[1]);
                 if (!File.Exists(ziel))
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(ziel));
-                    var teil = new Job { Titel = j.Titel };
-                    bool laeuft = true;
-                    long basis = fertig;
-                    var anzeige = new Thread(delegate () { while (laeuft) { j.Bytes = basis + teil.Bytes; Thread.Sleep(300); } }) { IsBackground = true };
-                    anzeige.Start();
-                    try { Herunterladen(teil, Str(f, "url"), ziel); }
-                    finally { laeuft = false; }
+                    TeilLaden(j, fertig, d[0], ziel);
+                    if (Sha256Datei(ziel) != d[2]) { File.Delete(ziel); throw new Exception("Die Prüfsumme von " + Path.GetFileName(ziel) + " stimmt nicht. Bitte erneut versuchen."); }
                 }
                 fertig += new FileInfo(ziel).Length;
                 j.Bytes = fertig;
             }
+            Directory.CreateDirectory(Path.GetDirectoryName(marke));
+            File.WriteAllText(marke, Json.Serialize(register), Utf8);
             j.Gesamt = fertig;
+        }
+
+        // Eine Datei laden und den Fortschritt im Job weiterzählen (basis = was davor schon fertig war)
+        static void TeilLaden(Job j, long basis, string url, string ziel)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(ziel));
+            var teil = new Job { Titel = j.Titel };
+            bool laeuft = true;
+            var anzeige = new Thread(delegate () { while (laeuft) { j.Bytes = basis + teil.Bytes; Thread.Sleep(300); } }) { IsBackground = true };
+            anzeige.Start();
+            try { Herunterladen(teil, url, ziel); }
+            finally { laeuft = false; }
         }
 
         static void ProgrammLaden(Job j)
@@ -2822,7 +3487,42 @@ namespace OfflineWissen
                 }
                 else if (art == "uebersetzer")
                 {
+                    // Die Sprachen brauchen Englisch → Deutsch und die Bibliothek
+                    if (InstallierteSprachen().Length > 0)
+                        return new Dictionary<string, object> { { "fehler", "Die Sprachen für Gespräche brauchen „Artikel übersetzen“, weil darin Englisch → Deutsch steckt. Lösche zuerst die Sprachen." } };
                     if (Directory.Exists(UebersetzerDir)) Directory.Delete(UebersetzerDir, true);
+                }
+                else if (art == "sprache")
+                {
+                    var da = InstallierteSprachen();
+                    if (id == "en" && da.Any(c => c != "en"))
+                        return new Dictionary<string, object> { { "fehler", "Englisch brauchen die anderen Sprachen, weil über Englisch übersetzt wird. Lösche zuerst die anderen Sprachen." } };
+                    var si = SprachInfo(id);
+                    if (si != null)
+                        foreach (var m in Arr(si, "modelle").OfType<Dictionary<string, object>>())
+                        {
+                            string d = SichererPfad(SprachenDir, Str(m, "schluessel"));
+                            if (d != null && Directory.Exists(d)) Directory.Delete(d, true);
+                        }
+                    string f = SichererPfad(SprachenDir, id + ".json");
+                    if (f != null && File.Exists(f)) File.Delete(f);
+                    // Die Stimme gehört zur Sprache; ohne Sprachen auch Deutsch und das Programm weg
+                    if (id != "de") StimmeLoeschen(id);
+                    if (InstallierteSprachen().Length == 0)
+                    {
+                        StimmeLoeschen("de");
+                        string pd = Path.Combine(Prog, "piper");
+                        lock (vorlesenLk) if (Directory.Exists(pd)) Directory.Delete(pd, true);
+                    }
+                }
+                else if (art == "spracheingabe")
+                {
+                    lock (sprechenLk)
+                    {
+                        foreach (var m in SprachModelle()) if (File.Exists(SprachModellPfad(m))) File.Delete(SprachModellPfad(m));
+                        string d = Path.Combine(Prog, "whisper");
+                        if (Directory.Exists(d)) Directory.Delete(d, true);
+                    }
                 }
                 return new Dictionary<string, object> { { "ok", true } };
             }
@@ -2868,6 +3568,7 @@ namespace OfflineWissen
         // wird sie aussortiert und die Bibliothek mit den übrigen Paketen gestartet.
         static void StarteKiwix()
         {
+            PdfTexteAufraeumen();
             lock (KiwixLk)
             {
                 StoppeKiwix();
@@ -2900,6 +3601,23 @@ namespace OfflineWissen
                     kiwixFehler = "Die Bibliothek konnte nicht starten. Details in daten\\logs\\kiwix.log";
                 if (defekt.Count > 0 && kiwixFehler == "") kiwixFehler = "Diese Pakete sind beschädigt und wurden ausgelassen: " + string.Join(", ", kiwixDefekt) + ". Bitte unter Inhalte löschen und neu laden.";
                 if (kiwixFehler != "") StatFehler("bibliothek", kiwixFehler);
+            }
+        }
+
+        // kiwix-serve kann unter vielen gleichzeitigen Suchanfragen abstürzen. Dann beim nächsten Zugriff neu
+        // starten, höchstens einmal in 30 Sekunden (falls es sofort wieder abstürzt, nicht endlos).
+        static DateTime kiwixWiederbelebt = DateTime.MinValue;
+        static void KiwixWiederbeleben()
+        {
+            lock (KiwixLk)
+            {
+                if (kiwix == null || !kiwix.HasExited) return;
+                if ((DateTime.Now - kiwixWiederbelebt).TotalSeconds < 30) return;
+                kiwixWiederbelebt = DateTime.Now;
+                int code = -1;
+                try { code = kiwix.ExitCode; } catch { }
+                Log("Bibliothek war abgestürzt (Code " + code + "), wird neu gestartet.");
+                StarteKiwix();
             }
         }
 
@@ -3625,6 +4343,322 @@ namespace OfflineWissen
             }
         }
 
+        // ------------------------------------------------------------------ Spracheingabe
+
+        // Sprechen statt Tippen im Übersetzer: Parakeet für europäische Sprachen, Whisper small für den Rest.
+        // Beide laufen pro Aufnahme als eigenes Programm (laden in unter einer Sekunde, danach ist der Speicher frei).
+        static readonly object sprechenLk = new object();
+
+        static Dictionary<string, object> SpracheingabeKonfig() { return LadeJson(Path.Combine(Config, "spracheingabe.json")); }
+
+        static List<Dictionary<string, object>> SprachModelle() { return Arr(SpracheingabeKonfig(), "modelle").OfType<Dictionary<string, object>>().ToList(); }
+
+        static string SprachModellPfad(Dictionary<string, object> m) { return Path.Combine(Daten, "modelle", "sprache", Str(m, "datei")); }
+
+        static bool SpracheingabeBereit()
+        {
+            return ProgrammPfad("whisper") != null && SprachModelle().Where(m => !Bool(m, "zusatz")).All(m => File.Exists(SprachModellPfad(m)));
+        }
+
+        static void SprachmodellLaden(Job j)
+        {
+            var m = SprachModelle().FirstOrDefault(x => Str(x, "id") == j.Extra);
+            if (m == null) throw new Exception("Unbekanntes Sprachmodell");
+            Directory.CreateDirectory(Path.GetDirectoryName(j.Ziel));
+            Herunterladen(j, j.Url, j.Ziel);
+            if (Sha256Datei(j.Ziel) != Str(m, "sha256")) { File.Delete(j.Ziel); throw new Exception("Die Prüfsumme von " + Path.GetFileName(j.Ziel) + " stimmt nicht. Bitte erneut versuchen."); }
+        }
+
+        // Eine Aufnahme erkennen. Mit "sprache" in genau dieser Sprache. Im Sprechmodus mit "paar" (zwei Sprachen)
+        // bestimmt Fieldbook selbst, welche es war; "erwartet" ist die Sprache, die nach dem Sprecherwechsel dran wäre.
+        static void Sprechen(HttpListenerContext ctx, string sprache, string paar, string erwartet)
+        {
+            if (!SpracheingabeBereit()) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Die Spracheingabe ist nicht eingerichtet." } }, 503); return; }
+            string[] zwei = null;
+            if (paar != null)
+            {
+                zwei = paar.Split(',');
+                if (zwei.Length != 2 || zwei.Any(c => !Regex.IsMatch(c, "^[a-z]{2,3}$"))) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Unbekannte Sprachen" } }, 400); return; }
+                if (!zwei.Contains(erwartet)) erwartet = zwei[0];
+            }
+            else if (sprache == null || !Regex.IsMatch(sprache, "^[a-z]{2,3}$")) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Unbekannte Sprache" } }, 400); return; }
+            var konf = SpracheingabeKonfig();
+
+            // Aufnahme (WAV, 16 kHz mono) in eine Datei, höchstens etwa eine Minute
+            byte[] daten;
+            using (var ms = new MemoryStream())
+            {
+                ctx.Request.InputStream.CopyTo(ms);
+                daten = ms.ToArray();
+            }
+            if (daten.Length < 1000 || daten.Length > 4000000) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Die Aufnahme ist zu kurz oder zu lang." } }, 400); return; }
+            string wav = Path.Combine(Daten, "cache", "sprechen-" + Guid.NewGuid().ToString("N") + ".wav");
+            File.WriteAllBytes(wav, daten);
+            try
+            {
+                double sekunden = (daten.Length - 44) / 32000.0;
+                var uhr = Stopwatch.StartNew();
+                string text = null, gewaehlt = sprache, gehoert = null, modell;
+                bool sicher = true;
+                lock (sprechenLk)
+                {
+                    if (zwei != null)
+                    {
+                        // 1. Sprache am Klang bestimmen (tiny: 0,5 s; ohne tiny das größere Modell)
+                        var tiny = SprachModelle().FirstOrDefault(m => Str(m, "id") == "tiny");
+                        var lidModell = tiny != null && File.Exists(SprachModellPfad(tiny)) ? tiny : SprachModelle().First(m => Str(m, "id") == "whisper");
+                        var lid = WhisperStarten(new[] { "-m", SprachModellPfad(lidModell), "-f", wav, "-l", "auto", "-dl" });
+                        gehoert = WhisperSprache(lid[0] + lid[1]);
+                        gewaehlt = PaarSprache(gehoert, zwei, konf);
+                        if (gewaehlt == null)
+                        {
+                            if (zwei.All(c => IstParakeet(c, konf))) { /* Parakeet erkennt selbst, der Browser entscheidet am Text */ }
+                            else
+                            {
+                                // 2. Whisper small mit eigener Spracherkennung, liefert Sprache und Text in einem Durchgang
+                                var r = WhisperStarten(new[] { "-m", SprachModellPfad(SprachModelle().First(m => Str(m, "id") == "whisper")), "-f", wav, "-l", "auto", "-nt", "-sns" });
+                                gewaehlt = PaarSprache(WhisperSprache(r[1]), zwei, konf);
+                                if (gewaehlt != null) text = r[0];
+                                else { gewaehlt = erwartet; sicher = false; }
+                            }
+                        }
+                    }
+                    modell = gewaehlt == null || IstParakeet(gewaehlt, konf) ? "parakeet" : "whisper";
+                    if (text == null) text = SpracheErkennen(wav, gewaehlt, sekunden, konf);
+                }
+                // Zeilen zusammenfügen, Geräuschmarken wie [Musik] oder (Lachen) weglassen
+                text = string.Join(" ", text.Split('\n').Select(z => z.Trim()).Where(z => z.Length > 0));
+                text = Regex.Replace(text, @"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*", " ");
+                text = Regex.Replace(text, @"\s+", " ").Trim();
+                SendeJson(ctx, new Dictionary<string, object> { { "text", text }, { "sprache", gewaehlt }, { "sicher", sicher }, { "gehoert", gehoert },
+                    { "sekunden", Math.Round(uhr.Elapsed.TotalSeconds, 1) }, { "modell", modell } });
+            }
+            catch (Exception e)
+            {
+                Log("Spracheingabe: " + e.Message);
+                StatFehler("sprechen", e.Message);
+                SendeJson(ctx, new Dictionary<string, object> { { "fehler", e.Message } }, 500);
+            }
+            finally { try { File.Delete(wav); } catch { } }
+        }
+
+        static bool IstParakeet(string code, Dictionary<string, object> konf)
+        {
+            return Arr(konf, "parakeet").Select(x => Convert.ToString(x)).Contains(code);
+        }
+
+        // Text einer Aufnahme; sprache == null: Parakeet bestimmt die Sprache selbst
+        static string SpracheErkennen(string wav, string sprache, double sekunden, Dictionary<string, object> konf)
+        {
+            bool para = sprache == null || IstParakeet(sprache, konf);
+            var modell = SprachModelle().First(m => Str(m, "id") == (para ? "parakeet" : "whisper"));
+            var args = new List<string> { "-m", SprachModellPfad(modell), "-f", wav };
+            if (!para)
+            {
+                var codes = konf["whisperCodes"] as Dictionary<string, object>;
+                string code = codes != null && codes.ContainsKey(sprache) ? Convert.ToString(codes[sprache]) : sprache;
+                // Kürzeres Rechenfenster für kurze Aufnahmen (Whisper rechnet sonst immer 30 Sekunden)
+                int ac = Math.Max(384, Math.Min(1500, (int)(sekunden * 50) + 128));
+                args.AddRange(new[] { "-l", code, "-nt", "-sns" });
+                if (ac < 1500) args.AddRange(new[] { "-ac", ac.ToString() });
+            }
+            return WhisperStarten(args.ToArray(), para)[0];
+        }
+
+        // whisper-cli oder parakeet-cli starten; Ergebnis: Ausgabe und Fehlerausgabe (dort steht die erkannte Sprache)
+        static string[] WhisperStarten(string[] args, bool parakeet = false)
+        {
+            string whisper = ProgrammPfad("whisper");
+            string exe = parakeet ? Path.Combine(Path.GetDirectoryName(whisper), "parakeet-cli.exe") : whisper;
+            int threads = Math.Max(2, Math.Min(8, Environment.ProcessorCount / 2));
+            string zeile = string.Join(" ", args.Select(a => a.StartsWith("-") ? a : "\"" + a + "\"")) + " -t " + threads + (args.Contains("auto") ? "" : " -np");   // -np verschluckt auch die erkannte Sprache
+            var psi = new ProcessStartInfo(exe, zeile)
+            {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true,
+                StandardOutputEncoding = Utf8, StandardErrorEncoding = Utf8,
+                WorkingDirectory = Path.GetDirectoryName(exe)
+            };
+            using (var p = new Process { StartInfo = psi })
+            {
+                var fehler = new StringBuilder();
+                p.ErrorDataReceived += (s, e) => { if (e.Data != null) lock (fehler) fehler.AppendLine(e.Data); };
+                p.Start();
+                ChildJob.Add(p);
+                p.BeginErrorReadLine();
+                var lesen = p.StandardOutput.ReadToEndAsync();
+                if (!p.WaitForExit(120000)) { try { p.Kill(); } catch { } throw new Exception("Die Erkennung hat zu lange gedauert."); }
+                p.WaitForExit();
+                string aus = lesen.Result, err;
+                lock (fehler) err = fehler.ToString();
+                if (p.ExitCode != 0 && aus.Trim().Length == 0) throw new Exception("Die Erkennung ist fehlgeschlagen (Code " + p.ExitCode + ").");
+                return new[] { aus, err };
+            }
+        }
+
+        // "auto-detected language: no (p = 0.51)" → "nb" (Codes von Whisper in unsere zurück)
+        static string WhisperSprache(string stderr)
+        {
+            var m = Regex.Match(stderr ?? "", @"auto-detected language: ([a-z]+)");
+            if (!m.Success) return null;
+            string c = m.Groups[1].Value;
+            var codes = SpracheingabeKonfig()["whisperCodes"] as Dictionary<string, object>;
+            if (codes != null) foreach (var kv in codes) if (Convert.ToString(kv.Value) == c) return kv.Key;
+            return c;
+        }
+
+        // Welche der beiden Sprachen passt zur erkannten? Bei verwandten Sprachen die gewählte aus derselben Gruppe.
+        static string PaarSprache(string erkannt, string[] zwei, Dictionary<string, object> konf)
+        {
+            if (erkannt == null) return null;
+            if (zwei.Contains(erkannt)) return erkannt;
+            foreach (var g in Arr(konf, "verwandt").OfType<object[]>().Select(x => x.Select(y => Convert.ToString(y)).ToArray())
+                .Concat(Arr(konf, "verwandt").OfType<System.Collections.ArrayList>().Select(x => x.Cast<object>().Select(y => Convert.ToString(y)).ToArray())))
+            {
+                if (!g.Contains(erkannt)) continue;
+                var drin = zwei.Where(c => g.Contains(c)).ToArray();
+                if (drin.Length == 1) return drin[0];
+            }
+            return null;
+        }
+
+        // ------------------------------------------------------------------ Vorlesen
+
+        // Übersetzungen vorlesen mit Piper: je Sprache eine Stimme (config\stimmen.json), je Aufruf ein eigenes
+        // Programm (lädt in unter einer Sekunde). Stimmen liegen in daten\modelle\stimmen.
+        static readonly object vorlesenLk = new object();
+
+        static Dictionary<string, object> StimmenKonfig() { return LadeJson(Path.Combine(Config, "stimmen.json")) ?? new Dictionary<string, object>(); }
+
+        static Dictionary<string, object> StimmeInfo(string code)
+        {
+            return Arr(StimmenKonfig(), "stimmen").OfType<Dictionary<string, object>>().FirstOrDefault(s => Str(s, "code") == code);
+        }
+
+        static string StimmePfad(Dictionary<string, object> s) { return Path.Combine(Daten, "modelle", "stimmen", Str(s, "stimme") + ".onnx"); }
+
+        static bool StimmeDa(string code)
+        {
+            var s = StimmeInfo(code);
+            return s != null && File.Exists(StimmePfad(s)) && File.Exists(StimmePfad(s) + ".json");
+        }
+
+        // Sprachen, die vorlesen können (Programm und Stimme da)
+        static string[] Stimmen()
+        {
+            if (ProgrammPfad("piper") == null) return new string[0];
+            return Arr(StimmenKonfig(), "stimmen").OfType<Dictionary<string, object>>().Select(s => Str(s, "code")).Where(StimmeDa).ToArray();
+        }
+
+        // Fehlende Stimmen für diese Sprachen (Deutsch immer dazu) samt Programm als Jobs
+        static List<Job> StimmenJobs(IEnumerable<string> sprachen)
+        {
+            var jobs = new List<Job>();
+            foreach (var c in new[] { "de" }.Concat(sprachen).Distinct())
+            {
+                var s = StimmeInfo(c);
+                if (s == null || StimmeDa(c)) continue;
+                var si = SprachInfo(c);
+                jobs.Add(new Job { Art = "stimme", Titel = "Stimme: " + (c == "de" ? "Deutsch" : Str(si, "name") ?? c), Url = Str(StimmenKonfig(), "basis") + Str(s, "pfad") + "/" + Str(s, "stimme") + ".onnx", Ziel = c, Gesamt = (long)Num(s, "bytes") });
+            }
+            if (jobs.Count > 0 && ProgrammPfad("piper") == null) jobs.Insert(0, ProgrammJob("piper"));
+            return jobs;
+        }
+
+        static void StimmeLaden(Job j)
+        {
+            var s = StimmeInfo(j.Ziel);
+            if (s == null) throw new Exception("Keine Stimme für " + j.Ziel);
+            string onnx = StimmePfad(s), json = onnx + ".json";
+            Directory.CreateDirectory(Path.GetDirectoryName(onnx));
+            if (!File.Exists(onnx) || Sha256Datei(onnx) != Str(s, "sha256"))
+            {
+                Herunterladen(j, j.Url, onnx);
+                if (Sha256Datei(onnx) != Str(s, "sha256")) { File.Delete(onnx); throw new Exception("Die Prüfsumme der Stimme stimmt nicht. Bitte erneut versuchen."); }
+            }
+            string tmp = json + ".neu";
+            if (File.Exists(tmp)) File.Delete(tmp);
+            Herunterladen(new Job { Titel = j.Titel }, j.Url + ".json", tmp);
+            if (Sha256Datei(tmp) != Str(s, "jsonSha256")) { File.Delete(tmp); throw new Exception("Die Prüfsumme der Stimme stimmt nicht. Bitte erneut versuchen."); }
+            // Neuere Stimmen enthalten Einträge aus mehreren Zeichen (Doppellaute wie "aɪ"), die das
+            // Windows-Programm von Piper nicht lesen kann. Das Programm erzeugt sie ohnehin nie, also weg damit.
+            string text = File.ReadAllText(tmp, Encoding.UTF8);
+            text = Regex.Replace(text, @",\s*""[^""\\]{2,}""\s*:\s*\[\s*\d+\s*\]", "");
+            File.WriteAllText(json, text, new UTF8Encoding(false));
+            File.Delete(tmp);
+        }
+
+        static void StimmeLoeschen(string code)
+        {
+            var s = StimmeInfo(code);
+            if (s == null) return;
+            lock (vorlesenLk)
+            {
+                string onnx = StimmePfad(s);
+                if (File.Exists(onnx)) File.Delete(onnx);
+                if (File.Exists(onnx + ".json")) File.Delete(onnx + ".json");
+            }
+        }
+
+        static void Vorlesen(HttpListenerContext ctx)
+        {
+            var b = LeseBody(ctx);
+            string sprache = Str(b, "sprache"), text = Str(b, "text") ?? "";
+            var s = sprache == null ? null : StimmeInfo(sprache);
+            string exe = ProgrammPfad("piper");
+            if (s == null || exe == null || !StimmeDa(sprache)) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Für diese Sprache ist keine Stimme da." } }, 404); return; }
+            // Eine Zeile pro Aufruf (Piper liest zeilenweise), höchstens etwa eine Bildschirmseite
+            text = Regex.Replace(text, @"\s+", " ").Trim();
+            if (text.Length == 0 || text.Length > 3000) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Der Text ist leer oder zu lang." } }, 400); return; }
+            string wav = Path.Combine(Daten, "cache", "vorlesen-" + Guid.NewGuid().ToString("N") + ".wav");
+            try
+            {
+                lock (vorlesenLk)
+                {
+                    var psi = new ProcessStartInfo(exe, "-m \"" + StimmePfad(s) + "\" -f \"" + wav + "\" -q")
+                    {
+                        UseShellExecute = false, CreateNoWindow = true,
+                        RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                        WorkingDirectory = Path.GetDirectoryName(exe)
+                    };
+                    using (var p = new Process { StartInfo = psi })
+                    {
+                        var fehler = new StringBuilder();
+                        p.ErrorDataReceived += (o, e) => { if (e.Data != null) lock (fehler) fehler.AppendLine(e.Data); };
+                        p.OutputDataReceived += (o, e) => { };
+                        p.Start();
+                        ChildJob.Add(p);
+                        p.BeginErrorReadLine();
+                        p.BeginOutputReadLine();
+                        // Text als UTF-8 ohne BOM (.NET Framework kennt keine Kodierung für die Eingabe)
+                        var bytes = new UTF8Encoding(false).GetBytes(text + "\n");
+                        p.StandardInput.BaseStream.Write(bytes, 0, bytes.Length);
+                        p.StandardInput.Close();
+                        if (!p.WaitForExit(60000)) { try { p.Kill(); } catch { } throw new Exception("Das Vorlesen hat zu lange gedauert."); }
+                        p.WaitForExit();
+                        if (p.ExitCode != 0 || !File.Exists(wav))
+                        {
+                            string f; lock (fehler) f = fehler.ToString().Trim();
+                            Log("Vorlesen: Code " + p.ExitCode + " " + f);
+                            throw new Exception("Das Vorlesen ist fehlgeschlagen (Code " + p.ExitCode + ").");
+                        }
+                    }
+                }
+                var daten = File.ReadAllBytes(wav);
+                ctx.Response.StatusCode = 200;
+                ctx.Response.ContentType = "audio/wav";
+                ctx.Response.AddHeader("Cache-Control", "no-store");
+                ctx.Response.ContentLength64 = daten.Length;
+                ctx.Response.OutputStream.Write(daten, 0, daten.Length);
+            }
+            catch (Exception e)
+            {
+                StatFehler("vorlesen", e.Message);
+                SendeJson(ctx, new Dictionary<string, object> { { "fehler", e.Message } }, 500);
+            }
+            finally { try { File.Delete(wav); } catch { } }
+        }
+
         // ------------------------------------------------------------------ KI
 
         static Dictionary<string, object> AktuellesModell()
@@ -3660,7 +4694,12 @@ namespace OfflineWissen
                 exe = ProgrammPfad("llama-" + backend);
                 if (exe == null && backend != "cpu") { backend = "cpu"; exe = ProgrammPfad("llama-cpu"); }
                 if (exe == null) { llmStatus = "fehler"; llmFehler = "llama.cpp fehlt. Bitte im Setup die KI neu einrichten."; return; }
-                args = "-m \"" + datei + "\" --host 127.0.0.1 --port " + LlmPort + " -c " + (int)Num(m, "kontext") + " --parallel 1 --jinja";
+                // Nur zum Testen vieler Fragen: OW_KI_PARALLEL=4 lässt die KI mehrere Fragen gleichzeitig bearbeiten
+                // (jede mit dem vollen Kontext). Normal ist eine Frage zur Zeit.
+                int parallel = 1;
+                int.TryParse(Environment.GetEnvironmentVariable("OW_KI_PARALLEL") ?? "1", out parallel);
+                parallel = Math.Max(1, Math.Min(8, parallel));
+                args = "-m \"" + datei + "\" --host 127.0.0.1 --port " + LlmPort + " -c " + ((int)Num(m, "kontext") * parallel) + " --parallel " + parallel + " --jinja";
                 if (backend != "cpu") args += " -ngl 999";
                 llmModell = Str(m, "name") + " (" + Str(m, "modell") + ")";
                 llmStatus = "laedt";

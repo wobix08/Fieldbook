@@ -6,15 +6,17 @@ const Ansichten = {
   fragen: { zeigen: (p) => Fragen.zeigen(p) },
   bibliothek: { zeigen: (p) => Bibliothek.zeigen(p) },
   lesen: { zeigen: (p) => Bibliothek.lesen(p) },
+  paketstart: { zeigen: (p) => Paketstart.zeigen(p) },
   kochen: { zeigen: () => Kochen.zeigen() },
   karten: { zeigen: () => Karten.zeigen() },
   erstehilfe: { zeigen: (p) => ErsteHilfe.zeigen(p) },
   vorsorge: { zeigen: (p) => Vorsorge.zeigen(p) },
+  uebersetzen: { zeigen: () => Gespraech.zeigen() },
   // Alte Adresse des Notfall-Bereichs
   notfall: { zeigen: (p) => location.replace("#erstehilfe" + (String(p) ? "?" + p : "")) },
   setup: { zeigen: (p) => Setup.zeigen(p) },
   einstellungen: { zeigen: () => Einstellungen.zeigen() },
-  inhalte: { zeigen: () => Inhalte.zeigen() },
+  inhalte: { zeigen: (p) => Inhalte.zeigen(p) },
 };
 
 function navigiere() {
@@ -24,7 +26,8 @@ function navigiere() {
   const ziel = Ansichten[name] ? name : "start";
   if (ziel !== "lesen") Bibliothek.anhalten();
   $$(".ansicht").forEach(a => a.classList.toggle("sichtbar", a.dataset.ansicht === ziel));
-  $$("#hauptnav a").forEach(a => a.classList.toggle("aktiv", a.getAttribute("href") === "#" + ziel));
+  const menue = ziel === "paketstart" ? "bibliothek" : ziel;   // Paket-Startseiten gehören zur Bibliothek
+  $$("#hauptnav a").forEach(a => a.classList.toggle("aktiv", a.getAttribute("href") === "#" + menue));
   try { Ansichten[ziel].zeigen(params); } catch (e) { console.error(e); Statistik.fehler("Ansicht " + ziel + ": " + e.message); }
   Statistik.bereich(ziel);
   if (ziel !== "lesen") window.scrollTo(0, 0);
@@ -40,6 +43,7 @@ async function aktualisiereStatus() {
     if (vorher && vorher.bibliothek !== s.bibliothek) OW.buecher = null;
     zeigeKopfStatus(s);
     statistikNachfragen(s);
+    PdfText.pruefen();
     return s;
   } catch (e) {
     const p = $("#ki-pill");

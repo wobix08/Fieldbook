@@ -21,7 +21,7 @@ const Uebersetzer = (() => {
         // Ein bis zwei Rechenkerne: schnell genug, ohne den Laptop zu blockieren
         const kerne = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
         translator = new mod.BatchTranslator({
-          registryUrl: "/uebersetzer-modelle.json", pivotLanguage: null, downloadTimeout: 0,
+          registryUrl: "/api/uebersetzer/modelle", pivotLanguage: null, downloadTimeout: 0,
           workers: kerne, batchSize: 8, cacheSize: 4000,
         });
         return translator;

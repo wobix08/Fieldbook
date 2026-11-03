@@ -2,7 +2,7 @@
 "use strict";
 
 const Karten = (() => {
-  let karte = null, region = null, markierung = null, poiMarker = [];
+  let karte = null, markierung = null, poiMarker = [];
   let libsGeladen = null;
 
   const KATEGORIEN = [
@@ -33,14 +33,118 @@ const Karten = (() => {
       $("#karte-wrap").hidden = true;
       leer.hidden = false;
       leer.innerHTML = "";
-      leer.append(el("h1", {}, "Karten"), el("div", { class: "karte-box" }, "Es sind noch keine Karten installiert. ", el("a", { href: "#inhalte" }, "Karten herunterladen")));
+      leer.append(el("h1", {}, "Karten"), el("div", { class: "karte-box" }, "Es sind noch keine Karten installiert.", el("br"), el("a", { href: "#inhalte?zu=karten" }, "Karten herunterladen")));
       return;
     }
     leer.hidden = true;
     $("#karte-wrap").hidden = false;
     await ladeBibliotheken();
-    if (!karte) erstelle(s);
-    else setTimeout(() => karte.resize(), 50);
+    const stand = s.karten.map(k => k.id).join(","), geaendert = stand !== kartenStand;
+    if (geaendert) { await ladeKartenliste(s); kartenStand = stand; }
+    if (!karte) erstelle();
+    else { if (geaendert) neuZeichnen(); setTimeout(() => karte.resize(), 50); }
+  }
+
+  // Alle installierten Karten bilden zusammen eine nahtlose Karte: Für jede Kachel wird die erste Datei
+  // genommen, die sie enthält. pmtiles extract kopiert ganze Kacheln, deshalb ist jede gefundene Kachel
+  // vollständig, auch an den Grenzen. Gezeichnet wird nur eine Quelle, also nicht mehr als mit einer Karte.
+  let kartenStand = "", kartenListe = [], maxZoom = 15, sprung = false;
+  const originale = {};
+  async function ladeKartenliste(s) {
+    const flaeche = (k) => (k.bbox[2] - k.bbox[0]) * (k.bbox[3] - k.bbox[1]);
+    // Kleinste Karten zuerst (meist das Land, in dem man gerade ist), die Weltkarte zuletzt
+    const neu = s.karten.slice().sort((a, b) => flaeche(a) - flaeche(b));
+    await Promise.all(neu.map(async (k) => {
+      const h = await kartenDatei(k.id).getHeader().catch(() => null);
+      k.minZoom = h ? h.minZoom : 0; k.maxZoom = h ? h.maxZoom : (k.maxzoom || 15);
+    }));
+    kartenListe = neu;
+    maxZoom = Math.max(...kartenListe.map(k => k.maxZoom));
+  }
+
+  // Kacheln, die keine Datei enthält, sind leer (dort ist dann nur der Hintergrund zu sehen)
+  async function holeKachel(z, x, y) {
+    const n = 2 ** z, lon = (v) => v / n * 360 - 180;
+    const lat = (v) => Math.atan(Math.sinh(Math.PI * (1 - 2 * v / n))) * 180 / Math.PI;
+    const w = lon(x), o = lon(x + 1), nord = lat(y), sued = lat(y + 1);
+    for (const k of kartenListe) {
+      if (z > k.maxZoom || z < k.minZoom || o < k.bbox[0] || w > k.bbox[2] || nord < k.bbox[1] || sued > k.bbox[3]) continue;
+      const r = await kartenDatei(k.id).getZxy(z, x, y).catch(() => null);
+      if (r && r.data) return r.data;
+    }
+    return null;
+  }
+
+  function neuZeichnen() {
+    karte.setStyle(stil());
+    fuelleSprungliste();
+    zoomGrenze();
+  }
+
+  // Unsichtbare Wand: Beim Verschieben bleibt die Kartenmitte in Karten, die die aktuelle Zoomstufe haben.
+  // So ist höchstens der halbe Bildschirm grau, statt dass die Karte herauszoomt. Die Mitte wird direkt
+  // im Transform gesetzt, nicht mit jumpTo: jumpTo würde das Ziehen mit gedrückter Maus abbrechen.
+  // Unter Zoom 8 gilt die Wand nicht je Land, sondern für das Rechteck um alle Länder: Lücken zwischen Ländern
+  // (z. B. Deutschland und Schweden ohne Dänemark) sind dort nur ein schmaler grauer Streifen, und man soll
+  // herausgezoomt von einem Land ins andere kommen. Mit Weltkarte gibt es dort keine Wand.
+  let wandBis = 0, wandTimer = null, wandArt = "";
+  function wand() {
+    const z = karte.getZoom(), c = karte.getCenter();
+    if (sprung || !originale.jumpTo) return;
+    const drin = (b) => c.lng >= b[0] && c.lng <= b[2] && c.lat >= b[1] && c.lat <= b[3];
+    let rechtecke;
+    if (z < 8) {
+      if (!kartenListe.length || kartenListe.some(k => k.id === "welt")) return;
+      rechtecke = [[Math.min(...kartenListe.map(k => k.bbox[0])), Math.min(...kartenListe.map(k => k.bbox[1])),
+        Math.max(...kartenListe.map(k => k.bbox[2])), Math.max(...kartenListe.map(k => k.bbox[3]))]];
+    } else {
+      rechtecke = kartenListe.filter(k => k.maxZoom >= maxZoom || z < k.maxZoom + 0.99).map(k => k.bbox);
+    }
+    if (!rechtecke.length || rechtecke.some(drin)) return;
+    let best = null, abstand = Infinity;
+    for (const b of rechtecke) {
+      const lng = Math.min(Math.max(c.lng, b[0]), b[2]), lat = Math.min(Math.max(c.lat, b[1]), b[3]);
+      const d = (lng - c.lng) ** 2 + (lat - c.lat) ** 2;
+      if (d < abstand) { abstand = d; best = [lng, lat]; }
+    }
+    if (karte.transform && karte.transform.setCenter) { karte.transform.setCenter(new maplibregl.LngLat(best[0], best[1])); karte.triggerRepaint(); }
+    else originale.jumpTo({ center: best });
+    // Hinweis zeigen, solange man gegen die Wand drückt, und noch kurz danach (nicht beim Zoomen am Rand)
+    if (karte.isZooming()) return;
+    wandArt = z < 8 ? "rand" : "wand";
+    wandBis = Date.now() + 4000;
+    clearTimeout(wandTimer);
+    wandTimer = setTimeout(zeigeHinweis, 4100);
+    zeigeHinweis();
+  }
+
+  // Wo nur eine gröbere Karte liegt (Weltkarte, „Platz sparen“), wäre beim Hineinzoomen alles grau.
+  // Deshalb dort nur bis knapp unter die nächste Zoomstufe zoomen lassen und einen Hinweis zeigen.
+  let amZoomEnde = false;
+  function zoomGrenze() {
+    const c = karte.getCenter();
+    const hier = kartenListe.filter(k => c.lng >= k.bbox[0] && c.lng <= k.bbox[2] && c.lat >= k.bbox[1] && c.lat <= k.bbox[3]);
+    const genau = hier.length ? Math.max(...hier.map(k => k.maxZoom)) : maxZoom;
+    const grenze = genau >= maxZoom ? 22 : genau + 0.99;
+    if (karte.getZoom() > grenze) originale.jumpTo({ zoom: grenze });
+    if (karte.getMaxZoom() !== grenze) karte.setMaxZoom(grenze);
+    amZoomEnde = grenze < 22 && karte.getZoom() >= grenze - 0.1;
+    zeigeHinweis();
+  }
+
+  let hinweisArt = "";
+  function zeigeHinweis() {
+    const hinweis = $("#karte-zoomhinweis");
+    const art = Date.now() < wandBis ? wandArt : amZoomEnde ? "zoom" : "";
+    hinweis.hidden = !art;
+    if (art === hinweisArt) return;
+    hinweisArt = art;
+    hinweis.innerHTML = "";
+    const inhalte = el("a", { href: "#inhalte?zu=karten" }, "Inhalte");
+    if (art === "wand" && kartenListe.some(k => k.id === "welt"))
+      hinweis.append("Hier endet die genaue Karte.", el("br"), "Zoom etwas heraus, um weiterzuschieben,", el("br"), "oder lade das Land unter ", inhalte, ".");
+    else if (art === "wand" || art === "rand") hinweis.append("Hier endet die geladene Karte.", el("br"), "Weitere Länder kannst du unter ", inhalte, " herunterladen.");
+    if (art === "zoom") hinweis.append("Für diese Gegend gibt es keine genauere Karte.", el("br"), "Unter ", inhalte, " kannst du das Land herunterladen.");
   }
 
   function dunkel() {
@@ -48,7 +152,7 @@ const Karten = (() => {
     return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   }
 
-  function stil(regionId) {
+  function stil() {
     const flavor = dunkel() ? "dark" : "light";
     return {
       version: 8,
@@ -57,7 +161,9 @@ const Karten = (() => {
       sources: {
         protomaps: {
           type: "vector",
-          url: "pmtiles://" + location.origin + "/karten/" + regionId + ".pmtiles",
+          // Die Zahl hinter "fieldbook://" ändert sich mit den installierten Karten, damit keine alten Kacheln bleiben
+          tiles: ["fieldbook://" + encodeURIComponent(kartenStand || "x") + "/{z}/{x}/{y}"],
+          minzoom: 0, maxzoom: maxZoom,
           attribution: '© <a href="https://openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> · Protomaps',
         },
       },
@@ -65,43 +171,47 @@ const Karten = (() => {
     };
   }
 
-  function erstelle(s) {
-    const protokoll = new pmtiles.Protocol();
-    maplibregl.addProtocol("pmtiles", protokoll.tile);
+  function erstelle() {
+    maplibregl.addProtocol("fieldbook", async (params) => {
+      const [z, x, y] = params.url.split("/").slice(-3).map(Number);
+      const data = await holeKachel(z, x, y);
+      return { data: data ? new Uint8Array(data) : new Uint8Array(0) };
+    });
 
     let gemerkt = null;
     try { gemerkt = JSON.parse(localStorage.getItem("karteAnsicht") || "null"); } catch { }
-    region = (gemerkt && s.karten.find(k => k.id === gemerkt.region)) || s.karten[0];
-    const [w, sd, o, n] = region.bbox;
+    const start = kartenListe.find(k => k.id !== "welt") || kartenListe[0];
+    const [w, sd, o, n] = start.bbox;
 
     karte = new maplibregl.Map({
       container: "karte",
-      style: stil(region.id),
-      bounds: gemerkt && gemerkt.region === region.id ? undefined : [[w, sd], [o, n]],
-      center: gemerkt && gemerkt.region === region.id ? gemerkt.center : undefined,
-      zoom: gemerkt && gemerkt.region === region.id ? gemerkt.zoom : undefined,
-      maxBounds: region.id === "welt" ? undefined : [[w - 3, sd - 3], [o + 3, n + 3]],
+      style: stil(),
+      bounds: gemerkt ? undefined : [[w, sd], [o, n]],
+      center: gemerkt ? gemerkt.center : undefined,
+      zoom: gemerkt ? gemerkt.zoom : undefined,
       attributionControl: { compact: true },
     });
     Routen.verbinden(karte);
     karte.addControl(new maplibregl.NavigationControl(), "bottom-right");
     karte.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     karte.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }), "bottom-right");
+    // Sprünge per Ortssuche, Springen zu …, Route: Zoomgrenze vorher lösen (sonst bliebe man z. B. beim
+    // Sprung von der Weltkarte nach München auf grober Stufe hängen); geprüft wird erst am Ziel
+    for (const f of ["flyTo", "fitBounds", "jumpTo"]) {
+      const original = originale[f] = karte[f].bind(karte);
+      karte[f] = (...a) => { sprung = true; karte.setMaxZoom(22); return original(...a); };
+    }
+    karte.on("load", zoomGrenze);
+    karte.on("zoom", () => { if (!sprung) zoomGrenze(); });
+    karte.on("move", wand);
     karte.on("moveend", () => {
-      passendeKarteZeigen();
-      try { localStorage.setItem("karteAnsicht", JSON.stringify({ region: region.id, center: karte.getCenter().toArray(), zoom: karte.getZoom() })); } catch { }
+      sprung = false;
+      zoomGrenze();
+      try { localStorage.setItem("karteAnsicht", JSON.stringify({ center: karte.getCenter().toArray(), zoom: karte.getZoom() })); } catch { }
     });
     // Bei aktiver Umkreissuche nach dem Verschieben neu suchen
     karte.on("moveend", nachBewegung);
-
-    // Region wählen, wenn mehrere Karten installiert sind
-    const sel = $("#karten-region");
-    sel.hidden = s.karten.length < 2;
-    if (s.karten.length > 1) {
-      sel.innerHTML = "";
-      for (const k of s.karten) sel.append(el("option", { value: k.id, selected: k.id === region.id }, "Karte: " + k.titel));
-      sel.onchange = () => wechsleRegion(s.karten.find(k => k.id === sel.value));
-    }
+    fuelleSprungliste();
 
     // Kategorien
     const chips = $("#poi-chips");
@@ -111,29 +221,18 @@ const Karten = (() => {
     }
   }
 
-  // Verlässt die Kartenmitte die angezeigte Karte (z. B. von Deutschland in die Schweiz), zur installierten
-  // Karte wechseln, die dort Daten hat. Der Ausschnitt bleibt. Die Weltkarte wurde bewusst gewählt, bleibt also.
-  function passendeKarteZeigen() {
-    const karten = (OW.status && OW.status.karten) || [];
-    if (karten.length < 2 || region.id === "welt") return;
-    const c = karte.getCenter();
-    const drin = (k) => c.lng >= k.bbox[0] && c.lng <= k.bbox[2] && c.lat >= k.bbox[1] && c.lat <= k.bbox[3];
-    if (drin(region)) return;
-    const flaeche = (k) => (k.bbox[2] - k.bbox[0]) * (k.bbox[3] - k.bbox[1]);
-    const neu = karten.filter(k => k.id !== "welt" && drin(k)).sort((a, b) => flaeche(a) - flaeche(b))[0];
-    if (!neu) return;
-    region = neu;
-    karte.setStyle(stil(neu.id));
-    karte.setMaxBounds([[neu.bbox[0] - 3, neu.bbox[1] - 3], [neu.bbox[2] + 3, neu.bbox[3] + 3]]);
-    $("#karten-region").value = neu.id;
-  }
-
-  function wechsleRegion(r) {
-    if (!r) return;
-    region = r;
-    karte.setStyle(stil(r.id));
-    karte.setMaxBounds(r.id === "welt" ? null : [[r.bbox[0] - 3, r.bbox[1] - 3], [r.bbox[2] + 3, r.bbox[3] + 3]]);
-    karte.fitBounds([[r.bbox[0], r.bbox[1]], [r.bbox[2], r.bbox[3]]], { animate: false });
+  // Bei mehreren Karten: zu einem Land springen (alle sind ohnehin gleichzeitig zu sehen)
+  function fuelleSprungliste() {
+    const sel = $("#karten-region");
+    sel.hidden = kartenListe.length < 2;
+    sel.innerHTML = "";
+    sel.append(el("option", { value: "" }, "Springen zu …"));
+    for (const k of kartenListe.slice().sort((a, b) => a.titel.localeCompare(b.titel, "de"))) sel.append(el("option", { value: k.id }, k.titel));
+    sel.onchange = () => {
+      const r = kartenListe.find(k => k.id === sel.value);
+      sel.value = "";
+      if (r) karte.fitBounds([[r.bbox[0], r.bbox[1]], [r.bbox[2], r.bbox[3]]], { animate: false });
+    };
   }
 
   // ------------------------------------------------ Ortssuche
@@ -159,8 +258,6 @@ const Karten = (() => {
 
   function geheZu(o) {
     $("#ort-treffer").innerHTML = "";
-    const passend = OW.status.karten.find(k => o.lon >= k.bbox[0] && o.lon <= k.bbox[2] && o.lat >= k.bbox[1] && o.lat <= k.bbox[3] && k.id !== "welt");
-    if (passend && passend.id !== region.id) { wechsleRegion(passend); $("#karten-region").value = passend.id; }
     const zoom = o.art === "Hauptstadt" || o.art === "Stadt" ? 11 : o.art === "Ort" ? 13 : 14;
     karte.flyTo({ center: [o.lon, o.lat], zoom, speed: 1.6 });
     if (markierung) markierung.remove();
@@ -235,20 +332,19 @@ const Karten = (() => {
       }
       return [...m.values()];
     };
-    // In der Karte suchen, die die Mitte enthält (bei mehreren die kleinste), nicht unbedingt in der angezeigten
-    const flaeche = (k) => (k.bbox[2] - k.bbox[0]) * (k.bbox[3] - k.bbox[1]);
-    const quelle = (OW.status.karten || []).filter(k => k.id !== "welt" && mitte.lng >= k.bbox[0] && mitte.lng <= k.bbox[2] && mitte.lat >= k.bbox[1] && mitte.lat <= k.bbox[3])
-      .sort((a, b) => flaeche(a) - flaeche(b))[0] || region;
+    // Zoomstufe der Karte, die die Mitte enthält (die Liste ist nach Größe sortiert, kleinste zuerst);
+    // die Kacheln selbst kommen wie beim Zeichnen aus der ersten Datei, die sie hat
+    const quelle = kartenListe.find(k => k.id !== "welt" && mitte.lng >= k.bbox[0] && mitte.lng <= k.bbox[2] && mitte.lat >= k.bbox[1] && mitte.lat <= k.bbox[3])
+      || kartenListe.find(k => k.id === "welt") || kartenListe[0];
     try {
-      const datei = kartenDatei(quelle.id);
-      z = (await datei.getHeader()).maxZoom;
-      liste = passend(await poisImBereich(datei, z, quelle.id, w, s, o, n)).filter(p => p.lon >= w && p.lon <= o && p.lat >= s && p.lat <= n);
+      z = quelle.maxZoom;
+      liste = passend(await poisImBereich(z, w, s, o, n)).filter(p => p.lon >= w && p.lon <= o && p.lat >= s && p.lat <= n);
       // Im Ausschnitt nichts: in Ringen um die Mitte weitersuchen
       if (!liste.length) {
         for (radius of RINGE_KM) {
           if (lauf !== suchLauf) return;
           const rLat = radius / 111.32, rLon = radius / (111.32 * Math.cos(mitte.lat * Math.PI / 180));
-          liste = passend(await poisImBereich(datei, z, quelle.id, mitte.lng - rLon, mitte.lat - rLat, mitte.lng + rLon, mitte.lat + rLat)).filter(p => p.dist <= radius);
+          liste = passend(await poisImBereich(z, mitte.lng - rLon, mitte.lat - rLat, mitte.lng + rLon, mitte.lat + rLat)).filter(p => p.dist <= radius);
           if (liste.length) break;
         }
       }
@@ -305,7 +401,7 @@ const Karten = (() => {
   const kachelSpeicher = new Map();
 
   // Alle Einrichtungen (Ebene "pois") aus den Kacheln, die den Bereich abdecken
-  async function poisImBereich(datei, z, kartenId, w, s, o, n) {
+  async function poisImBereich(z, w, s, o, n) {
     const anzahl = 2 ** z, rad = Math.PI / 180;
     const kx = (l) => Math.floor((l + 180) / 360 * anzahl);
     const ky = (b) => Math.floor((1 - Math.log(Math.tan(b * rad) + 1 / Math.cos(b * rad)) / Math.PI) / 2 * anzahl);
@@ -313,17 +409,17 @@ const Karten = (() => {
     const pois = [], fehlend = [];
     for (let x = kx(w); x <= kx(o); x++)
       for (let y = ky(n); y <= ky(s); y++) {
-        const key = kartenId + "/" + z + "/" + x + "/" + y;
+        const key = kartenStand + "/" + z + "/" + x + "/" + y;
         if (kachelSpeicher.has(key)) pois.push(...kachelSpeicher.get(key));
         else fehlend.push([x, y, key]);
       }
     // Nicht alle auf einmal anfragen, sonst stauen sich hunderte Anfragen
     for (let i = 0; i < fehlend.length; i += 12) {
       await Promise.all(fehlend.slice(i, i + 12).map(async ([x, y, key]) => {
-        const r = await datei.getZxy(z, x, y).catch(() => null);
-        const liste = r && r.data ? kachelPois(new Uint8Array(r.data), z, x, y) : [];
-        kachelSpeicher.set(key, liste);
-        pois.push(...liste);
+        const data = await holeKachel(z, x, y);
+        const gefunden = data ? kachelPois(new Uint8Array(data), z, x, y) : [];
+        kachelSpeicher.set(key, gefunden);
+        pois.push(...gefunden);
       }));
     }
     return pois;
@@ -398,7 +494,7 @@ const Karten = (() => {
   }
 
   // Hell/Dunkel gewechselt: Kartenstil anpassen
-  function themaGeaendert() { if (karte && region) karte.setStyle(stil(region.id)); }
+  function themaGeaendert() { if (karte) karte.setStyle(stil()); }
 
   return { zeigen, sucheOrt, themaGeaendert, get karte() { return karte; } };
 })();

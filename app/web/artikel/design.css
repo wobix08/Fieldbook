@@ -1,0 +1,176 @@
+/* Fieldbook-Design für Artikel aus Kiwix: Schriften und Farben wie im Rest von Fieldbook.
+   Wird direkt hinter <head> eingesetzt, also vor den Stylesheets der Pakete; deshalb oft !important.
+   Allgemeine Regeln zuerst, darunter Anpassungen je Paketfamilie. */
+
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-display: swap; src: url(/schrift/barlow-semi-condensed-600.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 700; font-display: swap; src: url(/schrift/barlow-semi-condensed-700.woff2) format("woff2"); }
+
+html[data-fb] {
+  --fb-bg: #ffffff; --fb-flaeche: #f6f5f3; --fb-flaeche2: #eeede9; --fb-text: #1c1e1b; --fb-text2: #585d55;
+  --fb-linie: #dbd9d3; --fb-akzent: #3b4d34; --fb-besucht: #5b6e52; --fb-rot: #9a3f2c; --fb-gelb: #9a6700; --fb-gelb-hell: #fff3d1;
+  --fb-schrift: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --fb-titel: "Barlow Semi Condensed", "Segoe UI", system-ui, sans-serif;
+  --fb-mono: Consolas, "Cascadia Mono", "Courier New", monospace;
+}
+html[data-fb="dunkel"] {
+  --fb-bg: #1c1d1b; --fb-flaeche: #252725; --fb-flaeche2: #2c2e2b; --fb-text: #f7f5f1; --fb-text2: #e6e2dc;
+  --fb-linie: #363836; --fb-akzent: #9fb78f; --fb-besucht: #b9c9ad; --fb-rot: #db8b73; --fb-gelb: #f2c14e; --fb-gelb-hell: #3a301a;
+  color-scheme: dark;
+}
+
+/* Hinweis „Kein Internet“ (design.js), wie eine eigene Seite über dem Artikel */
+#fb-offline {
+  position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center;
+  background: var(--fb-bg, #1c1d1b) !important; color: var(--fb-text, #f7f5f1) !important; padding: 24px;
+}
+#fb-offline .fb-offline-box { max-width: 460px; text-align: center; background: transparent !important; }
+#fb-offline h1 { font-family: var(--fb-titel) !important; font-weight: 600 !important; font-size: 2rem !important; margin: 0 0 12px !important; border: 0 !important; color: inherit !important; }
+#fb-offline p { font-family: var(--fb-schrift) !important; font-size: 1.05rem !important; line-height: 1.55; margin: 0 0 22px !important; color: var(--fb-text2, #e6e2dc) !important; }
+#fb-offline button {
+  font-family: var(--fb-schrift) !important; font-size: 1rem !important; padding: 9px 20px !important; border-radius: 10px !important; cursor: pointer;
+  background: var(--fb-akzent) !important; color: var(--fb-bg) !important; border: 0 !important; font-weight: 600;
+}
+
+/* Leiste des Kiwix-Viewers ausblenden: Suche, Startseite und Zufall hat Fieldbook in der eigenen Leseleiste */
+html[data-fb] #kiwixtoolbarwrapper { display: none !important; }
+/* Der Viewer gibt seinem inneren Rahmen und der Ladeanzeige selbst Weiß: beim Seitenwechsel sah man das kurz */
+html[data-fb] #content_iframe { background: var(--fb-bg) !important; color-scheme: light; }
+html[data-fb] #kiwix__loader { background: var(--fb-flaeche) !important; color: var(--fb-text) !important; }
+
+/* ---------------------------------------------------------------- Schriften (beide Designs) */
+
+html[data-fb] body,
+html[data-fb] :is(p, li, dd, dt, td, th, caption, blockquote, figcaption, label, div, section, article, a, span, small, input, button, select, textarea, center, font)
+  :not([class^="fa"]):not([class*=" fa-"]):not([class*="icon"]):not([class*="glyph"]):not([class*="material"]) {
+  font-family: var(--fb-schrift) !important;
+}
+html[data-fb] :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--fb-titel) !important; font-weight: 600 !important; letter-spacing: 0 !important;
+}
+html[data-fb] :is(pre, code, kbd, samp, tt) { font-family: var(--fb-mono) !important; }
+html[data-fb] body { line-height: 1.55; }
+
+/* ---------------------------------------------------------------- Farben */
+
+html[data-fb], html[data-fb] body { background: var(--fb-bg) !important; color: var(--fb-text) !important; }
+html[data-fb] a:link { color: var(--fb-akzent) !important; }
+html[data-fb] a:visited { color: var(--fb-besucht) !important; }
+
+/* Dunkel: alle Flächen der Pakete durchsichtig, Schrift und Linien einheitlich. Farbige Hervorhebungen
+   gehen dabei verloren, dafür ist alles gut lesbar und sieht aus wie Fieldbook. */
+html[data-fb="dunkel"] :is(div, section, article, main, header, footer, nav, aside, table, thead, tbody, tfoot, tr, td, ul, ol, li, dl, dt, dd,
+  p, span, a, blockquote, figure, figcaption, details, summary, form, fieldset, center, font, label, small, b, strong, i, em, abbr, cite, sup, sub, h1, h2, h3, h4, h5, h6, hr) {
+  background-color: transparent !important; color: inherit !important; border-color: var(--fb-linie) !important; box-shadow: none !important;
+}
+html[data-fb="dunkel"] body { background-image: none !important; }
+html[data-fb="dunkel"] :is(th, caption) { background-color: var(--fb-flaeche) !important; color: var(--fb-text) !important; border-color: var(--fb-linie) !important; }
+html[data-fb="dunkel"] :is(pre, code, kbd, samp) { background-color: var(--fb-flaeche) !important; color: var(--fb-text) !important; border-color: var(--fb-linie) !important; }
+html[data-fb="dunkel"] mark { background-color: var(--fb-gelb-hell) !important; color: var(--fb-gelb) !important; }
+html[data-fb="dunkel"] hr { background-color: var(--fb-linie) !important; }
+html[data-fb="dunkel"] :is(input, select, textarea, button) {
+  background-color: var(--fb-flaeche) !important; color: var(--fb-text) !important; border: 1px solid var(--fb-linie) !important;
+}
+html[data-fb="dunkel"] ::placeholder { color: var(--fb-text2) !important; opacity: .8; }
+html[data-fb="dunkel"] :is(svg text) { fill: currentColor; }
+html[data-fb="dunkel"] a:link { color: var(--fb-akzent) !important; }
+html[data-fb="dunkel"] a:visited { color: var(--fb-besucht) !important; }
+
+/* Dialoge der Pakete (SweetAlert bei PhET, Bootstrap bei den PDF-Bibliotheken, jQuery UI): eigene Fläche
+   und abgedunkelter Hintergrund, sonst schwebt der Text durchsichtig über der Seite */
+html[data-fb="dunkel"] .swal2-container.swal2-backdrop-show { background-color: rgba(0, 0, 0, .65) !important; }
+html[data-fb="dunkel"] :is(.swal2-popup, .modal-content, .ui-dialog, .ui-widget-content) {
+  background-color: var(--fb-flaeche) !important; border: 1px solid var(--fb-linie) !important; border-radius: 14px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .5) !important;
+}
+html[data-fb="dunkel"] :is(.modal-header, .modal-footer, .ui-dialog-titlebar) { border-color: var(--fb-linie) !important; }
+html[data-fb="dunkel"] .modal-backdrop { background-color: #000 !important; }
+html[data-fb="dunkel"] :is(.swal2-confirm, .modal-footer .btn-primary) { background-color: var(--fb-akzent) !important; color: var(--fb-bg) !important; border: 0 !important; font-weight: 600; }
+html[data-fb="dunkel"] .swal2-cancel { background-color: var(--fb-flaeche2) !important; color: var(--fb-text) !important; border: 1px solid var(--fb-linie) !important; }
+html[data-fb="dunkel"] .swal2-close { background-color: transparent !important; border: 0 !important; }
+
+/* Tabellen mit Hervorhebung beim Überfahren (DataTables, z. B. Bücherliste bei Gutenberg): Deren Regel ist
+   stärker als die allgemeine, deshalb mit :not(#fb_) (zählt wie eine ID) dunkel statt fast weiß */
+html[data-fb="dunkel"]:not(#fb_) table.dataTable tbody tr:hover,
+html[data-fb="dunkel"]:not(#fb_) table.dataTable tbody tr:hover > td { background-color: var(--fb-flaeche2) !important; color: var(--fb-text) !important; box-shadow: none !important; }
+
+/* ---------------------------------------------------------------- MediaWiki (Wikipedia, Wikibooks, Koch-Wiki, Klexikon, Appropedia, MDWiki …) */
+
+html[data-fb] :is(.mw-body-content, .mw-parser-output, #mw-content-text) { font-size: 1rem !important; }
+html[data-fb] :is(.mw-body h1, .mw-body-content h1, .mw-body-content h2, h1.firstHeading, #firstHeading) { font-family: var(--fb-titel) !important; }
+html[data-fb] a.new:link, html[data-fb] a.new:visited { color: var(--fb-rot) !important; }
+/* Klexikon (Oberfläche „timis“): Text klebt sonst am Fensterrand, leicht einrücken */
+html[data-fb] body.skin-timis #content { padding-left: 28px !important; padding-right: 28px !important; box-sizing: border-box; }
+/* Durchsichtige Grafiken (Strichzeichnungen, Formeln) wären auf Dunkel unsichtbar: heller Grund wie Papier.
+   Platzhalter in Paketen ohne Bilder (leere data:-Grafiken) bleiben durchsichtig. */
+html[data-fb="dunkel"] :is(.mw-parser-output, .mw-body-content) img:not(.mwe-math-fallback-image-inline):not(.mwe-math-fallback-image-display):not([src^="data:"]) { background-color: #f7f5f1 !important; }
+html[data-fb="dunkel"] :is(.mwe-math-fallback-image-inline, .mwe-math-fallback-image-display) { filter: invert(1) hue-rotate(180deg); background: transparent !important; }
+
+/* Startseiten der Pakete: Kiwix nimmt dafür oft eine Wiki-Unterseite (z. B. „Benutzer:The other Kiwix guy/Landing“
+   oder „Hauptseite“). Deren Seitenname und der Rückverweis darunter gehören nicht zum Inhalt. */
+html[data-fb] body:is(.page-Main_Page, [class*="_Landing"], .page-App_IntroPage, .page-Wiktionary_Offline, .page-Wikipedia_Redaktion_Medizin_Open_Textbook_of_Medicine)
+  :is(#firstHeading, .mw-first-heading, #contentSub, #siteSub) { display: none !important; }
+/* Knöpfe, die nur online gehen (Spenden, Newsletter, Anmelden) */
+html[data-fb] .main-page-intro-buttons,
+html[data-fb] body.page-Main_Page p:has(> span.button-link) { display: none !important; }
+/* „Das Beste von Wikipedia“: Namen auf den Kacheln */
+html[data-fb="dunkel"] body.page-list-home a.item figcaption { background-color: rgba(28, 29, 27, .88) !important; color: var(--fb-text) !important; }
+
+/* ---------------------------------------------------------------- Stack Exchange (Fragen und Antworten) */
+
+html[data-fb="dunkel"] :is(.post-tag, .s-tag) {
+  background-color: var(--fb-flaeche) !important; color: var(--fb-akzent) !important; border: 1px solid var(--fb-linie) !important; border-radius: 6px !important;
+}
+html[data-fb="dunkel"] .s-navigation--item.is-selected { background-color: var(--fb-flaeche2) !important; color: var(--fb-text) !important; }
+html[data-fb="dunkel"] :is(.s-badge, .badge1, .badge2, .badge3, .vote-count-post) { color: inherit !important; }
+
+/* ---------------------------------------------------------------- Low-tech Magazine: gerasterte Bilder sind durchsichtig und brauchen einen hellen Grund */
+
+html[data-fb="dunkel"] :is(.featured-img, img[src*="dithers"]) { background-color: #d8d4cb !important; }
+/* Im Menü nur, was offline geht: „Donate“ und die Schwesterseite „NTM“ (nur online) fallen weg */
+html[data-fb] #menu-list li:has(> a[href^="donate"], > a[href^="http"]) { display: none !important; }
+
+/* ---------------------------------------------------------------- Projekt Gutenberg: beschriftete Knöpfe statt
+   HTML5-Logo und Pfeil (Symbole wie in Fieldbook, Lucide „book-open“ und „download“) */
+
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-html5),
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-download) {
+  display: inline-flex !important; align-items: center; gap: 6px; margin: 3px 0 3px 8px; padding: 6px 12px !important;
+  border: 1px solid var(--fb-linie) !important; border-radius: 10px !important; background-color: var(--fb-flaeche) !important;
+  color: var(--fb-text) !important; text-decoration: none !important; font-family: var(--fb-schrift) !important; font-size: .95rem !important;
+  font-weight: 600; white-space: nowrap; vertical-align: middle;
+}
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-html5) { background-color: var(--fb-akzent) !important; color: var(--fb-bg) !important; border-color: var(--fb-akzent) !important; }
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-html5):hover,
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-download):hover { filter: brightness(1.1); }
+html[data-fb] .pure-skin-gutenberg :is(i.fa-html5, i.fa-download) { display: none !important; }
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-html5)::before,
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-download)::before {
+  content: ""; width: 18px; height: 18px; flex: none; background-color: currentColor;
+  -webkit-mask: var(--fb-symbol) center / contain no-repeat; mask: var(--fb-symbol) center / contain no-repeat;
+}
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-html5)::after { content: "Lesen"; }
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-download)::after { content: "Herunterladen"; }
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-html5) {
+  --fb-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E");
+}
+html[data-fb] .pure-skin-gutenberg a:has(> i.fa-download) {
+  --fb-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' x2='12' y1='15' y2='3'/%3E%3C/svg%3E");
+}
+html[data-fb] .pure-skin-gutenberg td.table-icons { white-space: nowrap; text-align: right; }
+
+/* ---------------------------------------------------------------- PhET: Titelleiste auf den Vorschaubildern */
+
+html[data-fb="dunkel"] .sim-card .overlay h2 { background-color: rgba(28, 29, 27, .88) !important; color: var(--fb-text) !important; }
+
+/* ---------------------------------------------------------------- iFixit */
+
+html[data-fb="dunkel"] .featured-category-item { border-radius: 10px !important; overflow: hidden; }
+html[data-fb="dunkel"] .featured-category-item .shadow-overlay { background: linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.15) 60%) !important; }
+html[data-fb="dunkel"] .featured-category-title { color: #fff !important; }
+/* Weitere Kategorien unter den Bildern: jede als eigene Kachel wie in Fieldbook */
+html[data-fb="dunkel"] .sub-categories a.sub-category {
+  background-color: var(--fb-flaeche) !important; border: 1px solid var(--fb-linie) !important; border-radius: 10px !important;
+  display: flex !important; align-items: center; justify-content: center; text-align: center; padding: 10px 12px !important; text-decoration: none !important;
+}
+html[data-fb="dunkel"] .sub-categories a.sub-category:hover { background-color: var(--fb-flaeche2) !important; border-color: var(--fb-akzent) !important; }
+html[data-fb="dunkel"] .banner-content { background: var(--fb-flaeche) !important; border-radius: 10px; }

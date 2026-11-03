@@ -41,7 +41,7 @@ const Routen = (() => {
     if (!s.routen) {
       p.append(el("div", { class: "routen-hinweis" },
         (s.routenKacheln && s.routenKacheln.length) ? "Die Routenplanung startet gerade oder konnte nicht starten (siehe daten\\logs\\routen.log)." :
-          "Die Routenplanung ist noch nicht eingerichtet. ", el("a", { href: "#inhalte" }, "Jetzt einrichten")));
+          "Die Routenplanung ist noch nicht eingerichtet. ", el("a", { href: "#inhalte?zu=karten" }, "Jetzt einrichten")));
       return;
     }
     p.append(el("div", { class: "profile" }, ...PROFILE.map(pr =>

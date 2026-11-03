@@ -42,6 +42,41 @@ function symFeld(name, klasse) {
   return el("span", { class: "feld" + (klasse ? " " + klasse : ""), "aria-hidden": "true" }, sym(name));
 }
 
+// Abschnitt, der beim Anklicken nach unten aufklappt (Inhalte und Einrichtung). „offen“ merkt sich die
+// aufgeklappten Schlüssel, damit sie beim Neuzeichnen offen bleiben. Gibt { box, innen } zurück.
+function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts) {
+  const auf = offen.has(schluessel);
+  const knopf = el("button", { type: "button", class: "eintrag klapp-kopf", "aria-expanded": String(auf) },
+    symFeld(icon, "gross"),
+    el("span", { class: "e-text" }, el("b", {}, titel), unter ? el("small", { class: "klapp-unter" }, unter) : null),
+    rechts ? el("span", { class: "e-zahl" }, rechts) : null,
+    el("span", { class: "klapp-pfeil", "aria-hidden": "true" }));
+  const innen = el("div", { class: "klapp-abschnitt-innen" });
+  const box = el("div", { class: "klapp klapp-kat klapp-abschnitt" + (auf ? " auf" : "") }, knopf,
+    el("div", { class: "klapp-huelle" }, el("div", { class: "klapp-innen" }, innen)));
+  knopf.addEventListener("click", () => {
+    const jetzt = !box.classList.contains("auf");
+    box.classList.toggle("auf", jetzt);
+    knopf.setAttribute("aria-expanded", String(jetzt));
+    if (jetzt) offen.add(schluessel); else offen.delete(schluessel);
+  });
+  return { box, innen };
+}
+
+// Zusammenfassung für einen zugeklappten Abschnitt: was installiert ist und was gerade ausgewählt ist
+function klappZusammenfassung(namen, ausgewaehlt) {
+  const teile = [];
+  teile.push(namen.length ? namen.join(", ") : "Noch nichts installiert");
+  if (ausgewaehlt) teile.push(ausgewaehlt + " zum Laden ausgewählt");
+  return teile.join(" · ");
+}
+
+// Ungefähre Kartengröße aus config/karten.json, solange die genaue noch nicht berechnet ist
+function kartenSchaetzung(r, sparen) {
+  const mb = sparen && !r.maxzoom ? r.mbSparen : r.mb;
+  return mb > 0 ? mb * 1e6 : 0;
+}
+
 // Zahl und Einheit mit geschütztem Leerzeichen ( ), damit „27 MB“ nie auf zwei Zeilen landet
 function groesse(bytes) {
   if (bytes == null || bytes < 0 || isNaN(bytes)) return "?";
@@ -70,6 +105,14 @@ async function api(pfad, daten) {
   const r = await fetch("/api/" + pfad, opt);
   if (!r.ok) throw new Error("Server antwortet mit " + r.status);
   return r.json();
+}
+
+// KI auf Grafikkarte ("vulkan") oder Prozessor ("cpu") umstellen. Fehlt das Programm für die Grafikkarte,
+// lädt Fieldbook es nach (bis dahin rechnet weiter der Prozessor). Danach startet die KI neu.
+async function rechenwegSetzen(backend) {
+  const s = OW.status || {};
+  if (backend === "vulkan" && s.modell) await api("installieren", { modell: s.modell, backend }).catch(() => { });
+  OW.status = await api("einstellungen", { backend });
 }
 
 async function ladeKonfig(name) {
@@ -369,6 +412,7 @@ const Kiwix = {
 
   // Titelvorschläge (schnell, für exakte Artikelnamen)
   async vorschlaege(buch, begriff, anzahl) {
+    if (OW.status && OW.status.pdfTexte && buch.id in OW.status.pdfTexte) return [];   // PDF-Bücher: siehe suche()
     const q = "term=" + encodeURIComponent(begriff) + "&count=" + (anzahl || 5);
     let r = await fetch("/kiwix/suggest?content=" + encodeURIComponent(buch.id) + "&" + q);
     if (!r.ok) r = await fetch("/kiwix/suggest?books.name=" + encodeURIComponent(buch.id) + "&" + q);
@@ -384,6 +428,13 @@ const Kiwix = {
 
   // Volltextsuche. Pakete ohne Volltext-Index (z. B. iFixit) durchsucht Kiwix trotzdem über die Titel
   async suche(buch, begriff, anzahl) {
+    // PDF-Bücher (z. B. Medizin-Handbücher): Kiwix findet darin nichts, gesucht wird im ausgelesenen Text
+    const pdf = OW.status && OW.status.pdfTexte;
+    if (pdf && buch.id in pdf) {
+      const r = await fetch("/api/pdftext/suche?buch=" + encodeURIComponent(buch.id) + "&q=" + encodeURIComponent(begriff) + "&n=" + (anzahl || 5));
+      if (!r.ok) return [];
+      return (await r.json()).map(t => Object.assign(t, { buch }));
+    }
     const q = "pattern=" + encodeURIComponent(begriff) + "&format=xml&pageLength=" + (anzahl || 5);
     let r = await fetch("/kiwix/search?books.name=" + encodeURIComponent(buch.id) + "&" + q);
     if (!r.ok) r = await fetch("/kiwix/search?content=" + encodeURIComponent(buch.id) + "&" + q);
@@ -454,9 +505,9 @@ function statistikBitte(wahl) {
     el("input", { type: "checkbox", checked: !!wahl[feld], onchange: (e) => { wahl[feld] = e.target.checked; } }),
     el("span", {}, el("b", {}, titel), el("small", {}, text)));
   return el("div", { class: "stat-bitte" },
-    el("p", {}, "Ehrlich gesagt finde ich es selbst ziemlich blöd, wenn Programme Nutzungsdaten sammeln. Bei anderen Programmen schalte ich das auch meistens aus. Deshalb ist hier alles aus, solange du nichts anhakst."),
-    el("p", {}, "Trotzdem bitte ich dich, die beiden Haken zu setzen. Fieldbook läuft auf ganz unterschiedlichen Geräten, und ohne diese Zahlen bekomme ich kaum mit, wo es hakt, was zu langsam ist und welche Bereiche wirklich genutzt werden. Nur so kann ich Fieldbook gezielt besser machen."),
-    el("p", { class: "hinweis klein" }, "Es geht nie um Inhalte: Deine Fragen, Chats, Suchbegriffe und Einträge bleiben immer auf deinem Gerät. Einmal pro Woche geht ein kleines Paket raus, nie über einen Handy-Hotspot. Was genau drinsteht, siehst du jederzeit in den Einstellungen, und dort kannst du alles wieder abschalten."),
+    el("p", {}, "Ich mag es selbst nicht, wenn Programme ungefragt Nutzungsdaten sammeln, und schalte das bei anderen Programmen meist aus. Deshalb ist hier alles aus, solange du nichts anhakst."),
+    el("p", {}, "Trotzdem bitte ich dich, die beiden Haken zu setzen. Fieldbook läuft auf sehr unterschiedlichen Geräten. Ohne diese Angaben erfahre ich kaum, wo Fehler auftreten, was zu langsam ist und welche Bereiche tatsächlich genutzt werden. Mit ihnen kann ich Fieldbook gezielt verbessern."),
+    el("p", { class: "hinweis klein" }, "Inhalte werden nie gesendet: Deine Fragen, Chats, Suchbegriffe und Einträge bleiben auf deinem Gerät. Einmal pro Woche wird ein kleines Paket gesendet, nie über einen Handy-Hotspot. Was genau darin steht, siehst du jederzeit in den Einstellungen. Dort kannst du beides auch wieder abschalten."),
     haken("fehler", "Fehlerberichte und Technik", "Fehler, die in Fieldbook auftreten, dein Gerät (Prozessor, Arbeitsspeicher, Grafik) und wie schnell die KI antwortet"),
     haken("nutzung", "Nutzungsstatistik", "Wie oft du die einzelnen Bereiche öffnest, welche Pakete und Karten installiert sind und dein Land"));
 }

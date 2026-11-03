@@ -19,6 +19,7 @@
     <a href="#bibliothek"><svg class="sym" aria-hidden="true"><use href="symbole.svg#library"/></svg><span>Bibliothek</span></a>
     <a href="#kochen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#cooking-pot"/></svg><span>Kochen</span></a>
     <a href="#karten"><svg class="sym" aria-hidden="true"><use href="symbole.svg#map"/></svg><span>Karten</span></a>
+    <a href="#uebersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg><span>Übersetzer</span></a>
     <a href="#erstehilfe" class="nav-notfall"><svg class="sym" aria-hidden="true"><use href="symbole.svg#briefcase-medical"/></svg><span>Erste Hilfe</span></a>
     <a href="#vorsorge"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shield-check"/></svg><span>Vorsorge</span></a>
   </nav>
@@ -46,7 +47,7 @@
   <section class="ansicht" data-ansicht="start">
     <div class="start-wrap">
       <form class="suche-gross" id="start-suche">
-        <input type="search" id="start-suche-feld" placeholder="Stichwort suchen oder Frage stellen, z. B. wie repariere ich ein Radio" autocomplete="off">
+        <input type="search" id="start-suche-feld" placeholder="Stichwort suchen oder Frage stellen, z. B. Wie mache ich Wasser ohne Strom trinkbar?" autocomplete="off">
         <button type="submit">Suchen</button>
       </form>
       <div class="kacheln-start">
@@ -54,8 +55,9 @@
         <a class="kachel" href="#bibliothek"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#library"/></svg></span><span class="k-titel">Bibliothek</span><span class="k-text">Alle Wissenspakete lesen</span></a>
         <a class="kachel" href="#kochen"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#cooking-pot"/></svg></span><span class="k-titel">Kochen</span><span class="k-text">Was kann ich mit meinen Vorräten kochen?</span></a>
         <a class="kachel" href="#karten"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#map"/></svg></span><span class="k-titel">Karten</span><span class="k-text">Offline-Karten und Ortssuche</span></a>
+        <a class="kachel" href="#uebersetzen"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#languages"/></svg></span><span class="k-titel">Übersetzer</span><span class="k-text">Gespräche in 52 Sprachen</span></a>
+        <a class="kachel" href="#vorsorge"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#shield-check"/></svg></span><span class="k-titel">Vorsorge</span><span class="k-text">Vorräte, Stromausfall, Notgepäck</span></a>
         <a class="kachel kachel-notfall" href="#erstehilfe"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#briefcase-medical"/></svg></span><span class="k-titel">Erste Hilfe</span><span class="k-text">Kurs zum Vorbereiten, Spickzettel für den Ernstfall</span></a>
-        <a class="kachel" href="#vorsorge"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#shield-check"/></svg></span><span class="k-titel">Vorsorge</span><span class="k-text">Vorräte, Stromausfall, Notfallkiste: was du vorbereiten kannst</span></a>
       </div>
       <p class="start-info" id="start-info"></p>
     </div>
@@ -74,6 +76,7 @@
         <h1>Fragen</h1>
         <button type="button" id="verlauf-knopf" class="knopf verlauf-knopf" aria-expanded="false"><svg class="sym" aria-hidden="true"><use href="symbole.svg#history"/></svg>Verlauf</button>
       </div>
+      <p id="pdf-hinweis" class="hinweis klein" hidden></p>
       <div id="chat" class="chat"></div>
       <form id="frage-form" class="frage-form">
         <textarea id="frage-feld" rows="2" placeholder="Zum Beispiel: Wie versorge ich eine Schnittwunde?"></textarea>
@@ -102,10 +105,6 @@
     <div class="spalte breit">
       <div class="titel-zeile">
         <h1>Bibliothek</h1>
-        <div class="ansicht-wahl" role="group" aria-label="Darstellung">
-          <button type="button" data-bib-ansicht="kacheln" aria-pressed="true" title="Als Kacheln anzeigen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#layout-grid"/></svg>Kacheln</button>
-          <button type="button" data-bib-ansicht="liste" aria-pressed="false" title="Als Liste mit Details anzeigen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#list"/></svg>Liste</button>
-        </div>
       </div>
       <form class="suche-gross" id="bib-suche">
         <input type="search" id="bib-suche-feld" placeholder="In allen Paketen suchen …" autocomplete="off">
@@ -113,22 +112,33 @@
       </form>
       <div id="bib-treffer"></div>
       <div id="bib-kopf" class="bib-kopf"></div>
-      <div id="regal" class="regal kacheln"></div>
-      <div id="bib-unten"></div>
+      <div id="regal" class="regal liste"></div>
     </div>
+  </section>
+
+  <!-- EIGENE STARTSEITE EINES PAKETS (z. B. Klexikon) -->
+  <section class="ansicht" data-ansicht="paketstart">
+    <div class="spalte breit" id="paketstart-inhalt"></div>
   </section>
 
   <!-- LESEN -->
   <section class="ansicht ansicht-voll" data-ansicht="lesen">
     <div class="lese-leiste">
-      <button class="knopf" id="lese-zurueck">← Zurück</button>
-      <span id="lese-titel" class="lese-titel"></span>
-      <form id="lese-suche" class="lese-suche" role="search"><input type="search" id="lese-suche-feld" placeholder="In diesem Paket suchen …" aria-label="In diesem Paket suchen"></form>
-      <button class="knopf" id="lese-start" title="Startseite dieses Pakets"><svg class="sym" aria-hidden="true"><use href="symbole.svg#house"/></svg><span>Startseite</span></button>
-      <button class="knopf" id="lese-zufall" title="Zufälliger Artikel aus diesem Paket"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shuffle"/></svg><span>Zufall</span></button>
-      <span id="uebersetzen-status" class="uebersetzen-status" aria-live="polite"></span>
-      <button class="knopf" id="uebersetzen-knopf" hidden title="Englische Artikel offline ins Deutsche übersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg>Auf Deutsch</button>
-      <a id="lese-neu" class="knopf" target="_blank" rel="noopener">In neuem Tab öffnen</a>
+      <!-- Drei Spalten: links Zurück und Titel, mittig Startseite · Suche · Zufall, rechts Übersetzen und neuer Tab -->
+      <div class="lese-links">
+        <button class="knopf" id="lese-zurueck">← Zurück</button>
+        <span id="lese-titel" class="lese-titel"></span>
+      </div>
+      <div class="lese-mitte">
+        <button class="knopf" id="lese-start" title="Startseite dieses Pakets"><svg class="sym" aria-hidden="true"><use href="symbole.svg#house"/></svg><span>Startseite</span></button>
+        <form id="lese-suche" class="lese-suche" role="search"><input type="search" id="lese-suche-feld" placeholder="In diesem Paket suchen …" aria-label="In diesem Paket suchen"></form>
+        <button class="knopf" id="lese-zufall" title="Zufälliger Artikel aus diesem Paket"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shuffle"/></svg><span>Zufall</span></button>
+      </div>
+      <div class="lese-rechts">
+        <span id="uebersetzen-status" class="uebersetzen-status" aria-live="polite"></span>
+        <button class="knopf" id="uebersetzen-knopf" hidden title="Englische Artikel offline ins Deutsche übersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg>Auf Deutsch</button>
+        <a id="lese-neu" class="knopf" target="_blank" rel="noopener">In neuem Tab öffnen</a>
+      </div>
     </div>
     <iframe id="lese-rahmen" title="Artikel"></iframe>
   </section>
@@ -138,6 +148,7 @@
     <div id="karte-leer" class="spalte" hidden></div>
     <div id="karte-wrap" class="karte-wrap">
       <div id="karte"></div>
+      <div id="karte-zoomhinweis" class="karte-zoomhinweis" hidden></div>
       <div class="karte-panel">
         <!-- Nur sichtbar, wenn mehr als eine Karte installiert ist -->
         <select id="karten-region" aria-label="Karte wählen" hidden></select>
@@ -168,9 +179,20 @@
     </div>
   </section>
 
+  <!-- ÜBERSETZEN (Gespräch) -->
+  <section class="ansicht" data-ansicht="uebersetzen">
+    <div class="spalte breit">
+      <div class="titel-zeile">
+        <h1>Übersetzer</h1>
+        <a class="knopf" href="#inhalte?zu=sprachen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#plus"/></svg>Sprachen hinzufügen</a>
+      </div>
+      <div id="gs-inhalt"></div>
+    </div>
+  </section>
+
   <!-- VORSORGE -->
   <section class="ansicht" data-ansicht="vorsorge">
-    <div class="spalte">
+    <div class="spalte breit">
       <h1>Vorsorge</h1>
       <div id="vs-inhalt"></div>
     </div>
@@ -178,7 +200,7 @@
 
   <!-- KOCHEN -->
   <section class="ansicht" data-ansicht="kochen">
-    <div class="spalte">
+    <div class="spalte breit">
       <h1>Kochen</h1>
       <p id="koch-start" class="hinweis" hidden>Die Bibliothek wird gerade gestartet …</p>
       <p id="koch-fehlt" class="warnung" hidden>Für die Rezeptsuche wird das Paket „Koch-Wiki“ gebraucht. <a href="#inhalte">Unter Inhalte herunterladen</a></p>
@@ -251,10 +273,13 @@
 </main>
 
 <script src="js/helfer.js"></script>
+<script src="js/pdftext.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/fragen.js"></script>
 <script src="js/uebersetzer.js"></script>
+<script src="js/gespraech.js"></script>
 <script src="js/bibliothek.js"></script>
+<script src="js/paketstart.js"></script>
 <script src="js/erstehilfe.js"></script>
 <script src="js/kochen.js"></script>
 <script src="js/vorsorge.js"></script>

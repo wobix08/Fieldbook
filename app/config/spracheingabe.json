@@ -1,0 +1,35 @@
+{
+  "_hinweis": "Spracheingabe im Übersetzer (Sprechen statt Tippen). Programm whisper.cpp (programme.json, \"whisper\"), das auch Parakeet kann. Parakeet (NVIDIA, schnell und gut) für die Sprachen in \"parakeet\", alle anderen mit Whisper small. Bosnisch und Serbisch laufen über Parakeet (Kroatisch ist fast gleich). Gemessen auf einem i5-10400F ohne Grafikkarte: Parakeet 1,4 s, Whisper small 1,5 bis 3,5 s je Satz; Whisper large-v3-turbo wäre 14 bis 19 s (zu langsam). Sprachen, die schlecht erkannt werden, haben in sprachen.json \"sprechen\": \"schlecht\" (Hinweis im Übersetzer), \"sprechen\": false heißt ohne Mikrofon.",
+  "titel": "Spracheingabe",
+  "modelle": [
+    {
+      "id": "parakeet",
+      "titel": "Spracheingabe: Parakeet (europäische Sprachen)",
+      "url": "https://huggingface.co/ggml-org/parakeet-GGUF/resolve/main/ggml-parakeet-tdt-0.6b-v3-q8_0.bin",
+      "datei": "ggml-parakeet-tdt-0.6b-v3-q8_0.bin",
+      "bytes": 668757119,
+      "sha256": "4d64e9e96c2792186d072fde0034df0ad670cf680a2f53069052ead827fd600e"
+    },
+    {
+      "id": "whisper",
+      "titel": "Spracheingabe: Whisper (weitere Sprachen)",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q8_0.bin",
+      "datei": "ggml-small-q8_0.bin",
+      "bytes": 264464607,
+      "sha256": "49c8fb02b65e6049d5fa6c04f81f53b867b5ec9540406812c643f177317f779f"
+    },
+    {
+      "id": "tiny",
+      "titel": "Spracheingabe: Whisper tiny (Sprechmodus)",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q8_0.bin",
+      "datei": "ggml-tiny-q8_0.bin",
+      "bytes": 43537433,
+      "sha256": "c2085835d3f50733e2ff6e4b41ae8a2b8d8110461e18821b09a15c40c42d1cca",
+      "zusatz": true
+    }
+  ],
+  "_sprechmodus": "Im Sprechmodus bestimmt Whisper tiny in 0,5 s, welche der beiden Sprachen gesprochen wurde (\"zusatz\": nur dafür, die Spracheingabe geht auch ohne; fehlt es, nimmt Fieldbook Whisper small, das dauert 2,7 s). Verwandte Sprachen verwechselt tiny (cs/pl, nb/sv); dann entscheidet im Browser franc am Text oder der Sprecherwechsel. \"verwandt\": erkennt Whisper eine Sprache der Gruppe, gilt die gewählte aus derselben Gruppe (nur wenn genau eine der beiden gewählten Sprachen in der Gruppe ist).",
+  "verwandt": [["cs", "sk", "pl", "sl", "hr", "bs", "sr"], ["ru", "uk", "be", "bg"], ["ms", "id"], ["nb", "no", "da", "sv"], ["es", "ca", "gl", "pt"]],
+  "parakeet": ["de", "en", "fr", "nl", "sv", "fi", "da", "es", "it", "pt", "pl", "cs", "sk", "sl", "hr", "bs", "sr", "hu", "el", "ru", "lt", "lv", "et", "bg", "ro", "uk", "mt"],
+  "whisperCodes": { "nb": "no" }
+}
