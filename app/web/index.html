@@ -25,14 +25,16 @@
   </nav>
   <div class="kopf-status">
     <a class="pill ok" id="download-pill" href="#inhalte" title="Downloads ansehen" hidden>lädt …</a>
-    <button class="pill" id="ki-pill" title="KI ein- oder ausschalten">KI …</button>
+    <div class="aus-menue">
+      <button class="pill" id="ki-pill" title="KI wechseln oder ausschalten" aria-haspopup="true" aria-expanded="false">KI …</button>
+      <div class="menue" id="ki-liste" hidden></div>
+    </div>
     <span class="pill pill-still" id="akku-pill" hidden></span>
     <button class="zahnrad" id="thema-knopf" title="Helle Ansicht"><svg class="sym" aria-hidden="true"><use href="symbole.svg#sun"/></svg></button>
     <a href="#einstellungen" class="zahnrad" title="Einstellungen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#settings"/></svg></a>
     <div class="aus-menue">
       <button class="zahnrad" id="aus-knopf" title="Ausschalten" aria-haspopup="true" aria-expanded="false"><svg class="sym" aria-hidden="true"><use href="symbole.svg#power"/></svg></button>
       <div class="menue" id="aus-liste" hidden>
-        <button id="menue-sparmodus"><svg class="sym" aria-hidden="true"><use href="symbole.svg#zap"/></svg>Nur KI ausschalten (Sparmodus)</button>
         <button id="menue-beenden" class="menue-rot"><svg class="sym" aria-hidden="true"><use href="symbole.svg#power"/></svg>Programm beenden</button>
       </div>
     </div>
@@ -102,7 +104,7 @@
 
   <!-- BIBLIOTHEK -->
   <section class="ansicht" data-ansicht="bibliothek">
-    <div class="spalte breit">
+    <div class="spalte">
       <div class="titel-zeile">
         <h1>Bibliothek</h1>
       </div>
@@ -118,7 +120,7 @@
 
   <!-- EIGENE STARTSEITE EINES PAKETS (z. B. Klexikon) -->
   <section class="ansicht" data-ansicht="paketstart">
-    <div class="spalte breit" id="paketstart-inhalt"></div>
+    <div class="spalte" id="paketstart-inhalt"></div>
   </section>
 
   <!-- LESEN -->
@@ -136,11 +138,29 @@
       </div>
       <div class="lese-rechts">
         <span id="uebersetzen-status" class="uebersetzen-status" aria-live="polite"></span>
-        <button class="knopf" id="uebersetzen-knopf" hidden title="Englische Artikel offline ins Deutsche übersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg>Auf Deutsch</button>
+        <button class="knopf" id="uebersetzen-knopf" hidden title="Artikel offline ins Deutsche übersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg>Auf Deutsch</button>
         <a id="lese-neu" class="knopf" target="_blank" rel="noopener">In neuem Tab öffnen</a>
       </div>
     </div>
     <iframe id="lese-rahmen" title="Artikel"></iframe>
+  </section>
+
+  <!-- PDF-BÜCHER (eigener Leser, js/pdfleser.js) -->
+  <section class="ansicht ansicht-voll" data-ansicht="pdf">
+    <div class="lese-leiste">
+      <div class="lese-links">
+        <button class="knopf" id="pdf-zurueck">← Zurück</button>
+        <span id="pdf-titel" class="lese-titel"></span>
+      </div>
+      <div class="lese-mitte" id="pdf-mitte"></div>
+      <div class="lese-rechts">
+        <span id="pdf-uebersetzen-status" class="uebersetzen-status" aria-live="polite"></span>
+        <button class="knopf" id="pdf-deutsch" hidden aria-pressed="false" title="Text offline ins Deutsche übersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg>Auf Deutsch</button>
+        <label class="schalter" id="pdf-original-box" hidden title="Seiten so zeigen, wie sie gedruckt sind (als Bild, in den Farben des Drucks)"><input type="checkbox" id="pdf-original"><span>Original</span></label>
+        <a id="pdf-neu" class="knopf" target="_blank" rel="noopener">In neuem Tab öffnen</a>
+      </div>
+    </div>
+    <div id="pdf-flaeche" class="pdf-flaeche" tabindex="-1"></div>
   </section>
 
   <!-- KARTEN -->
@@ -168,7 +188,7 @@
 
   <!-- ERSTE HILFE -->
   <section class="ansicht" data-ansicht="erstehilfe">
-    <div class="spalte breit">
+    <div class="spalte">
       <h1 class="eh-titel">Erste Hilfe</h1>
       <div class="ernstfall">
         <div class="ernstfall-kopf"><b><svg class="sym" aria-hidden="true"><use href="symbole.svg#siren"/></svg>Im Ernstfall</b><div class="notruf" id="notruf"></div></div>
@@ -181,9 +201,10 @@
 
   <!-- ÜBERSETZEN (Gespräch) -->
   <section class="ansicht" data-ansicht="uebersetzen">
-    <div class="spalte breit">
-      <div class="titel-zeile">
+    <div class="spalte">
+      <div class="titel-zeile gs-titel">
         <h1>Übersetzer</h1>
+        <div id="gs-modus-platz"></div>
         <a class="knopf" href="#inhalte?zu=sprachen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#plus"/></svg>Sprachen hinzufügen</a>
       </div>
       <div id="gs-inhalt"></div>
@@ -192,7 +213,7 @@
 
   <!-- VORSORGE -->
   <section class="ansicht" data-ansicht="vorsorge">
-    <div class="spalte breit">
+    <div class="spalte">
       <h1>Vorsorge</h1>
       <div id="vs-inhalt"></div>
     </div>
@@ -200,7 +221,7 @@
 
   <!-- KOCHEN -->
   <section class="ansicht" data-ansicht="kochen">
-    <div class="spalte breit">
+    <div class="spalte">
       <h1>Kochen</h1>
       <p id="koch-start" class="hinweis" hidden>Die Bibliothek wird gerade gestartet …</p>
       <p id="koch-fehlt" class="warnung" hidden>Für die Rezeptsuche wird das Paket „Koch-Wiki“ gebraucht. <a href="#inhalte">Unter Inhalte herunterladen</a></p>
@@ -279,6 +300,7 @@
 <script src="js/uebersetzer.js"></script>
 <script src="js/gespraech.js"></script>
 <script src="js/bibliothek.js"></script>
+<script src="js/pdfleser.js"></script>
 <script src="js/paketstart.js"></script>
 <script src="js/erstehilfe.js"></script>
 <script src="js/kochen.js"></script>

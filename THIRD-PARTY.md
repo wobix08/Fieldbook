@@ -10,7 +10,7 @@ die ihre eigenen Lizenzen haben.
 | [MapLibre GL JS](https://github.com/maplibre/maplibre-gl-js) 5.24.0 | BSD-3-Clause (`LICENSE-maplibre.txt`) |
 | [PMTiles](https://github.com/protomaps/PMTiles) 4.5.0 | BSD-3-Clause (`LICENSE-pmtiles.txt`) |
 | [Protomaps Basemaps](https://github.com/protomaps/basemaps) 5.7.2 | BSD-3-Clause (`LICENSE-basemaps.txt`) |
-| [pdf.js](https://github.com/mozilla/pdf.js) 4.10.38 (liest den Text aus PDF-Büchern für die KI, in `vendor/pdfjs`) | Apache-2.0 (`LICENSE-pdfjs.txt`) |
+| [pdf.js](https://github.com/mozilla/pdf.js) 4.10.38 (PDF-Leser und Text aus PDF-Büchern für die KI, in `vendor/pdfjs`) | Apache-2.0 (`LICENSE-pdfjs.txt`) |
 | [Lucide](https://lucide.dev) 0.460.0 (Symbole, als `app/web/symbole.svg`) | ISC (`LICENSE-lucide.txt`) |
 | [franc](https://github.com/wooorm/franc) 6.2.0 mit trigram-utils, n-gram und collapse-white-space (erkennt im Sprechmodus die Sprache eines Satzes, in `vendor/franc`) | MIT (`LICENSE-franc.txt`) |
 | [Barlow Semi Condensed](https://github.com/jpt/barlow) (Schrift für Überschriften, in `app/web/schrift`) | SIL Open Font License 1.1 (`schrift/LICENSE-barlow.txt`) |
@@ -66,7 +66,7 @@ Stimmen mit Nicht-kommerziell-Lizenz oder unklarer Lizenz lädt Fieldbook nicht.
 
 | Modell | Lizenz |
 |---|---|
-| Qwen 3.5 (Alibaba) in den Größen 2B, 4B, 9B, 27B und 35B-A3B | Apache 2.0 |
-| Gemma 4 (Google) in der Größe 12B | Lizenzbedingungen auf der Modellseite bei Hugging Face |
+| Qwen 3.5 (Alibaba) in der Größe 4B | Apache 2.0 |
 
+Weitere Modelle folgen, sobald sie getestet sind.\
 Die Modelle werden in der GGUF-Fassung von [Unsloth](https://huggingface.co/unsloth) geladen.

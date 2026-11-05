@@ -15,7 +15,7 @@ Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und [Internet-in-a-
 - [Ist das sicher?](#ist-das-sicher)
 - [Systemanforderungen](#systemanforderungen)
 - [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
-- [Welche KI passt zu meinem Gerät?](#welche-ki-passt-zu-meinem-gerät)
+- [Welche KI nutzt Fieldbook?](#welche-ki-nutzt-fieldbook)
 - [So funktioniert die Frage-Antwort-Funktion](#so-funktioniert-die-frage-antwort-funktion)
 - [Aufbau](#aufbau)
 - [Entwicklung](#entwicklung)
@@ -42,7 +42,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 | | Bereich | Was es kann |
 |---|---|---|
 | <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
-| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, alles im Fieldbook-Design (hell oder dunkel), mit Übersetzer Englisch → Deutsch |
+| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, alles im Fieldbook-Design (hell oder dunkel), mit Übersetzer ins Deutsche |
 | <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
 | <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
 | <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
@@ -56,7 +56,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Schnellstart
 
-1. **[Fieldbook 0.7.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.0/Fieldbook-0.7.0.zip)** (ZIP-Datei, etwa 1,3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.7.1 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.1/Fieldbook-0.7.1.zip)** (ZIP-Datei, etwa 1,3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -124,7 +124,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.7.0.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.7.1.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -135,8 +135,8 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
 ## Systemanforderungen
 
 - Windows 10 oder 11 (64 Bit)
-- Mindestens 4 GB Arbeitsspeicher, empfohlen 8 GB oder mehr
-- Speicherplatz je nach Auswahl: ca. 6 GB (Reise-Set) bis über 100 GB (alles)
+- Mindestens 4 GB Arbeitsspeicher, für die KI 8 GB oder mehr
+- Speicherplatz je nach Auswahl: etwa 20 GB („Das Wichtigste“ bei wenig Platz, mit KI) bis über 100 GB (alles)
 - Internet nur für die Einrichtung
 
 ## Downloads in Firmen- und Schulnetzen
@@ -167,23 +167,18 @@ Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbebloc
 | Wegedaten | `brouter.de` |
 | Rückmeldungen, Fehlerberichte und Statistik (nur mit Zustimmung) | `fieldbook-feedback.wobix08.workers.dev` |
 
-## Welche KI passt zu meinem Gerät?
+## Welche KI nutzt Fieldbook?
 
-Der Assistent misst Arbeitsspeicher und Grafikkarte und schlägt automatisch vor:
+Im Moment bietet Fieldbook nur **Qwen 3.5 (4B)** an (2,7 GB Download).\
+Es läuft auf jedem Laptop mit 8 GB Arbeitsspeicher, auch ohne Grafikkarte.\
+Weitere KIs folgen, sobald sie mit den Testfragen geprüft sind.\
+Bei weniger als 8 GB Arbeitsspeicher schlägt der Assistent „Keine KI“ vor.\
+Bibliothek, Karten und Erste Hilfe laufen trotzdem.
 
-| Gerät | Vorschlag | Download |
-|---|---|---|
-| 4 GB RAM | Qwen 3.5 (2B) | 1,3 GB |
-| 8 GB RAM, ohne Grafikkarte | Qwen 3.5 (4B) | 2,7 GB |
-| 16 GB RAM | Qwen 3.5 (9B) | 5,7 GB |
-| 32 GB RAM, ohne starke Grafikkarte | Qwen 3.5 (35B-A3B) | 22 GB |
-| Grafikkarte ab 10 GB | Gemma 4 (12B) | 7,1 GB |
-| Grafikkarte ab 20 GB | Qwen 3.5 (27B) | 16,7 GB |
-
-Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt.\
+Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt, die KI antwortet damit viel schneller.\
 Es ist keine Treiber-Zusatzinstallation wie CUDA nötig.\
 Ob die Grafikkarte genutzt wird, lässt sich jederzeit in den Einstellungen oder unter *Inhalte* umschalten.\
-Die Liste steht in [`app/config/modelle.json`](app/config/modelle.json) und lässt sich leicht erweitern.
+Die Liste der KIs steht in [`app/config/modelle.json`](app/config/modelle.json).
 
 ## So funktioniert die Frage-Antwort-Funktion
 
@@ -197,6 +192,8 @@ Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
 Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
 Pakete aus PDF-Büchern (z. B. die Medizin-Handbücher) kann Kiwix nicht durchsuchen.\
 Deshalb liest Fieldbook ihren Text nach der Installation einmal im Hintergrund aus (mit pdf.js) und legt ihn unter `daten\wissen\pdf-texte` ab.\
+Die Bücher selbst zeigt ein eigener PDF-Leser an: Er baut jede Seite beim Lesen mit echtem, markierbarem Text in Fieldbook-Schrift nach, auch im dunklen Design.\
+Man kann im ganzen Buch und in allen Büchern eines Pakets suchen und es offline ins Deutsche übersetzen.\
 Eingescannte Bücher ohne Text bleiben dabei außen vor.\
 Im **Sparmodus** ist die KI aus.\
 Dann zeigt der Bereich „Fragen“ die passenden Artikel direkt an.
@@ -225,7 +222,8 @@ Nach der Einrichtung geht Fieldbook nur noch in vier Fällen ins Internet:
   Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte gibt (auf Wunsch auch eine neue Fieldbook-Version), und fragt vorher oder lädt sie selbst, je nach Einstellung.\
   Mehr dazu unter [Automatische Aktualisierung](#automatische-aktualisierung-optional).
 - **Links ins Internet** in einem Artikel: Fieldbook fragt die Adresse kurz an.\
-  Mit Internet öffnet sie sich in einem neuen Tab, ohne erscheint ein kurzer Hinweis.
+  Mit Internet zeigt Fieldbook erst das Ziel und öffnet es auf Knopfdruck in einem neuen Tab.\
+  Ohne Internet erscheint ein kurzer Hinweis.
 
 Verwendete Bausteine:
 - [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
@@ -233,7 +231,7 @@ Verwendete Bausteine:
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) mit Parakeet (NVIDIA) und Whisper (OpenAI) für die Spracheingabe
 - [Piper](https://github.com/rhasspy/piper) mit freien Stimmen zum Vorlesen im Übersetzer
 - [Protomaps / PMTiles](https://protomaps.com) und [MapLibre](https://maplibre.org) für die Karten
-- [pdf.js](https://mozilla.github.io/pdf.js/) für den Text aus PDF-Büchern
+- [pdf.js](https://mozilla.github.io/pdf.js/) für den PDF-Leser und den Text aus PDF-Büchern
 - [GeoNames](https://www.geonames.org) für die Ortssuche
 
 ## Entwicklung

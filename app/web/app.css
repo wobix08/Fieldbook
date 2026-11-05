@@ -27,14 +27,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #131413; --flaeche: #1c1d1b; --flaeche2: #252725; --text: #f7f5f1; --text2: #e6e2dc;
+    --bg: #161715; --flaeche: #1c1d1b; --flaeche2: #252725; --text: #f7f5f1; --text2: #e6e2dc;
     --linie: #363836; --akzent: #9fb78f; --akzent-hell: #262925; --akzent-text: #121412;
     --rot: #db8b73; --rot-hell: #33201a; --gelb: #f2c14e; --gelb-hell: #3a301a; --gruen: #8fcf7f;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #131413; --flaeche: #1c1d1b; --flaeche2: #252725; --text: #f7f5f1; --text2: #e6e2dc;
+  --bg: #161715; --flaeche: #1c1d1b; --flaeche2: #252725; --text: #f7f5f1; --text2: #e6e2dc;
   --linie: #363836; --akzent: #9fb78f; --akzent-hell: #262925; --akzent-text: #121412;
   --rot: #db8b73; --rot-hell: #33201a; --gelb: #f2c14e; --gelb-hell: #3a301a; --gruen: #8fcf7f;
   color-scheme: dark;
@@ -46,6 +46,9 @@ html, body { margin: 0; height: 100%; }
    Karten und Lesefenster füllen das Fenster selbst und brauchen keinen leeren Rand. */
 html { scrollbar-gutter: stable; }
 html:has(.ansicht.sichtbar:is([data-ansicht="karten"], [data-ansicht="lesen"])) { scrollbar-gutter: auto; }
+/* Dort bekommt die Kopfzeile rechts einen unsichtbaren Rand in Breite der Bildlaufleiste (--leiste, misst app.js),
+   sonst sitzt das Menü ein Stück weiter rechts als auf den anderen Seiten */
+html:has(.ansicht.sichtbar:is([data-ansicht="karten"], [data-ansicht="lesen"])) .kopf { border-right: var(--leiste, 0px) solid transparent; }
 body {
   background: var(--bg); color: var(--text); font-family: var(--schrift);
   font-size: 17px; line-height: 1.55; display: flex; flex-direction: column;
@@ -98,6 +101,7 @@ h2 .sym, h3 .sym, summary .sym { color: var(--akzent); margin-right: .3em; }
   font-size: .85rem; cursor: pointer; white-space: nowrap;
 }
 .pill-still { cursor: default; }
+#ki-pill::after { content: "▾"; margin-left: 5px; opacity: .7; }
 .pill .kurz { display: none; }
 .pill.ok { background: var(--akzent-hell); color: var(--akzent); border-color: transparent; }
 .pill.warn { background: var(--gelb-hell); color: var(--gelb); border-color: transparent; }
@@ -113,9 +117,15 @@ button.zahnrad { border: 0; background: none; cursor: pointer; line-height: 1; }
   position: absolute; right: 0; top: calc(100% + 6px); min-width: 260px; z-index: 30; padding: 6px;
   background: var(--flaeche); border: 1px solid var(--linie); border-radius: 12px; box-shadow: var(--schatten);
 }
-.menue button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; border-radius: 8px; cursor: pointer; }
+.menue button { display: block; width: 100%; text-align: left; white-space: nowrap; border: 0; background: none; padding: 9px 12px; border-radius: 8px; cursor: pointer; }
 .menue button:hover { background: var(--flaeche2); }
 .menue .menue-rot { color: var(--rot); font-weight: 600; }
+.menue button:disabled { cursor: default; background: none; color: var(--text2); }
+.menue button.menue-aktiv { color: var(--akzent); font-weight: 600; }
+.menue-titel { padding: 6px 12px 4px; font-size: .8rem; color: var(--text2); }
+.menue-haken { display: inline-block; width: 1.2em; }
+.menue hr { border: 0; border-top: 1px solid var(--linie); margin: 6px 4px; }
+.menue small { color: var(--text2); }
 /* Schmale Fenster: Das Menü zeigt nur noch Text (nie nur Symbole), alles rückt enger */
 @media (max-width: 1400px) {
   .kopf-status .pill .sym { display: none; }
@@ -154,8 +164,7 @@ main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .ansicht.sichtbar { display: block; }
 .ansicht-voll { padding: 0; flex: 1; min-height: 0; }
 .ansicht-voll.sichtbar { display: flex; flex-direction: column; }
-.spalte { max-width: 820px; margin: 0 auto; }
-.spalte.breit { max-width: 1100px; }
+.spalte { max-width: 1100px; margin: 0 auto; }
 
 /* Knöpfe und Felder */
 .knopf {
@@ -184,7 +193,7 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .verbindung-liste .einst-zeile:last-child { border-bottom: 0; }
 
 /* Start */
-.start-wrap { max-width: 900px; margin: 3vh auto 0; }
+.start-wrap { max-width: 1100px; margin: 3vh auto 0; }
 .suche-gross { display: flex; gap: 8px; margin-bottom: 22px; }
 .suche-gross input { font-size: 1.15rem; padding: 14px 18px; border-radius: 14px; }
 .suche-gross button { border: none; background: var(--akzent); color: var(--akzent-text); border-radius: 14px; padding: 0 24px; font-weight: 600; cursor: pointer; }
@@ -360,9 +369,14 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .klapp-abschnitt small.klapp-unter { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .klapp-abschnitt.auf small.klapp-unter { display: none; }
 .klapp-abschnitt-innen { padding: 12px 2px 10px; }
-.klapp-abschnitt-innen > .wahl:last-child, .klapp-abschnitt-innen > .varianten:last-child { margin-bottom: 0; }
-.treffer-gruppe { margin-bottom: 18px; }
-.treffer-gruppe h3 { color: var(--text2); font-size: .95rem; font-weight: 600; }
+.klapp-abschnitt-innen > .wahl:last-child { margin-bottom: 0; }
+/* Suchtreffer je Paket in einem eigenen Kasten, Kopf mit Bild, Name und Anzahl */
+.treffer-gruppe { margin-bottom: 16px; padding: 6px 8px 8px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); box-shadow: var(--schatten); }
+.treffer-kopf { display: flex; align-items: center; gap: 12px; padding: 8px 6px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--linie); }
+.treffer-kopf .e-bild { width: 36px; height: 36px; }
+.treffer-kopf h3 { flex: 1; margin: 0; font-family: var(--titel); font-size: 1.25rem; font-weight: 600; color: var(--text); }
+.treffer-kopf h3 small { margin-left: 10px; font-family: var(--schrift, inherit); font-size: .82rem; font-weight: 400; color: var(--text2); }
+.treffer-zahl { color: var(--text2); font-size: .9rem; white-space: nowrap; }
 .treffer { display: block; padding: 8px 12px; border-radius: 10px; text-decoration: none; color: var(--text); }
 .treffer:hover { background: var(--flaeche2); }
 .treffer b { color: var(--akzent); }
@@ -389,7 +403,62 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 @media (max-width: 700px) { .uebersetzen-status { display: none; } #lese-neu { display: none; } }
 /* color-scheme light am Rahmen: Ein noch leerer Rahmen (about:blank, Seitenwechsel) ist dann durchsichtig und
    zeigt den dunklen Grund. Mit „dark“ malt Chrome für eine noch helle neue Seite eine weiße Fläche. */
-#lese-rahmen { flex: 1; border: 0; width: 100%; background: var(--flaeche); color-scheme: light; }
+#lese-rahmen { flex: 1; border: 0; width: 100%; background: var(--bg); color-scheme: light; }
+
+/* PDF-Leser (js/pdfleser.js) */
+/* overflow-anchor: Höhenänderungen gleicht pdfleser.js selbst aus, der Browser soll nicht zusätzlich verschieben */
+.pdf-flaeche { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; background: var(--bg); outline: none; }
+#pdf-mitte .stufen-seite { min-width: 84px; padding: 5px 14px; }
+.pdf-seitenwahl { display: flex; align-items: center; gap: 6px; color: var(--text2); white-space: nowrap; }
+.pdf-seitenwahl input { width: 4.2em; padding: 6px 8px; text-align: center; font-size: 1rem; }
+.pdf-suche { width: clamp(150px, 15vw, 280px); }
+.pdf-zoom { display: flex; gap: 4px; }
+.pdf-zoom .knopf { padding: 5px 10px; min-width: 34px; justify-content: center; }
+.pdf-zoom .knopf:disabled { opacity: .4; cursor: default; }
+.pdf-zoom-wert { min-width: 64px; font-variant-numeric: tabular-nums; }
+/* Die PDF-Leiste ist voller als die Leseleiste: zuerst „In neuem Tab öffnen“ weglassen, damit der Titel Platz hat */
+@media (max-width: 1500px) { #pdf-neu { display: none; } }
+@media (max-width: 1100px) { #pdf-uebersetzen-status { display: none; } }
+/* Trefferliste der Suche im Buch: unter der Leiste, über dem Buch */
+.ansicht[data-ansicht="pdf"] { position: relative; }
+.pdf-trefferliste { position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); top: 58px; width: min(720px, calc(100% - 32px)); max-height: 60vh; overflow-y: auto; background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); box-shadow: 0 8px 28px rgba(0,0,0,.35); }
+.pdf-treffer-kopf { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; background: var(--flaeche); border-bottom: 1px solid var(--linie); color: var(--text2); }
+.pdf-treffer-zu { border: 0; background: none; color: var(--text2); font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.pdf-treffer { display: block; width: 100%; padding: 10px 14px; border: 0; border-bottom: 1px solid var(--linie); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.pdf-treffer:hover, .pdf-treffer:focus-visible { background: var(--flaeche2); }
+.pdf-treffer span { display: block; margin-top: 2px; color: var(--text2); font-size: .92rem; }
+.pdf-treffer mark, mark.pdf-markiert { background: rgba(242, 193, 78, .55); color: inherit; border-radius: 2px; }
+.pdf-kasten.pdf-unsichtbar mark.pdf-markiert { color: transparent; }
+.pdf-hinweis { margin: 40px auto; max-width: 600px; text-align: center; color: var(--text2); }
+/* Seitenansicht: Seiten untereinander wie Papier; im dunklen Design ohne Papierkante, nur eine feine Linie */
+/* max-content: vergrößerte Seiten machen die Liste breiter, die Fläche scrollt dann auch seitlich */
+.pdf-seiten { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px 24px 40px; box-sizing: border-box; width: max-content; min-width: 100%; }
+.pdf-seite { position: relative; overflow: hidden; background: #fff; box-shadow: var(--schatten); max-width: 100%; }
+/* Nachgebauter Text auf der Seite: echte Schrift in Fieldbook-Optik, an der Stelle des gedruckten Absatzes.
+   Die Farbe richtet sich nach dem Grund darunter (pdf-hell = helle Schrift auf dunklem Grund). */
+.pdf-textschicht { position: absolute; left: 0; top: 0; width: 100%; }
+.pdf-kasten { position: absolute; margin: 0; font-family: var(--schrift); color: #1c1e1b; overflow-wrap: break-word; hyphens: auto; }
+.pdf-kasten.pdf-hell { color: #f7f5f1; }
+.pdf-kasten-titel { font-family: var(--titel); font-weight: 600; }
+.pdf-einzeilig { white-space: nowrap; }
+/* Stellen, die das Bild des Drucks zeigt: Text unsichtbar darüber, nur zum Markieren */
+.pdf-kasten.pdf-unsichtbar { color: transparent; }
+.pdf-kasten::selection { background: rgba(159, 183, 143, .45); }
+.pdf-seiten.dunkel .pdf-seite { background: var(--bg); box-shadow: none; outline: 1px solid var(--linie); }
+.pdf-seite canvas { display: block; }
+/* Textansicht: wie ein Artikel in Fieldbook */
+.pdf-text { max-width: 760px; margin: 0 auto; padding: 24px 24px 60px; font-size: 1.06rem; line-height: 1.6; }
+.pdf-textseite { min-height: 3em; padding-bottom: 8px; }
+.pdf-textseite + .pdf-textseite { border-top: 1px solid var(--linie); padding-top: 4px; }
+.pdf-seitenmarke { margin: 6px 0 10px; font-size: .82rem; color: var(--text2); }
+.pdf-als-seite { padding: 0; border: 0; background: none; font: inherit; color: var(--akzent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+/* Noch nicht gezeichnete Seite */
+.pdf-seite:empty::after { content: "Seite wird gezeichnet …"; position: absolute; top: 40px; left: 0; right: 0; text-align: center; color: var(--text2); font-size: .9rem; }
+.pdf-text h2 { font-size: 1.5rem; margin: 18px 0 8px; }
+.pdf-text h3 { font-size: 1.2rem; margin: 16px 0 6px; }
+.pdf-text p { margin: 0 0 .8em; }
+.pdf-ohne-text { color: var(--text2); font-style: italic; }
+.pdf-ohne-text .knopf { margin-top: 8px; font-style: normal; }
 
 /* Karten */
 .karte-wrap { position: relative; flex: 1; min-height: 0; }
@@ -601,11 +670,6 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .w-groesse { flex: none; white-space: nowrap; color: var(--text2); font-variant-numeric: tabular-nums; }
 .wahl small { color: var(--text2); display: block; }
 /* Varianten eines Pakets (Inhalte): ein Kasten um alle, installierte mit Häkchen statt Kästchen */
-.varianten { border: 1px solid var(--linie); border-radius: 14px; background: var(--flaeche2); padding: 12px 12px 4px; margin-bottom: 12px; }
-.varianten-kopf { margin: 0 4px 10px; color: var(--text2); }
-.varianten-kopf b { color: var(--text); margin-right: 8px; }
-.varianten-kopf span { font-size: .85rem; }
-.varianten .wahl { margin-bottom: 8px; }
 /* Grauer Rahmen, damit "installiert" nicht wie "zum Herunterladen ausgewählt" (grüner Rahmen) aussieht */
 .wahl.installiert, .wahl.installiert:hover { cursor: default; background: var(--akzent-hell); border-color: var(--linie); }
 .w-haken { flex: none; width: 18px; margin-top: 1px; text-align: center; color: var(--gruen); font-weight: 700; }
@@ -615,7 +679,32 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .tag-warn { background: var(--gelb-hell); color: var(--gelb); }
 .tag-en { background: var(--flaeche2); color: var(--text2); }
 .tag-ok { background: var(--akzent-hell); color: var(--gruen); }
-.vorlagen { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+/* Schiebeschalter mit mehreren Stellungen (Vorauswahl im Assistenten), Aussehen wie Schreiben | Sprechen */
+.stufen {
+  position: relative; display: inline-grid; grid-template-columns: repeat(var(--n), 1fr); padding: 4px; border-radius: 999px;
+  border: 1px solid var(--linie); background: var(--flaeche); max-width: 100%;
+}
+.stufen-knopf {
+  position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n)); border-radius: 999px;
+  background: var(--akzent); transform: translateX(calc(var(--i) * 100%)); transition: transform .2s ease;
+}
+.stufen-seite {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-width: 112px; padding: 6px 16px; border: 0; border-radius: 999px; background: none; cursor: pointer;
+  font: inherit; color: var(--text2); line-height: 1.2; transition: color .2s ease;
+}
+.stufen-seite:disabled { cursor: not-allowed; opacity: .5; }
+.stufen-seite:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+.stufen-name { font-weight: 600; }
+.stufen-seite small { font-size: .82rem; color: inherit; }
+.stufen-seite.an { color: var(--akzent-text); }
+.stufen.leer .stufen-knopf { opacity: 0; }
+.stufen-zeile { margin: 4px 0 6px; }
+/* Paket mit Varianten als eine Zeile, der Schalter steht unter der Beschreibung */
+.wahl.variante { cursor: default; }
+.variante-schalter { margin-top: 8px; }
+.variante-schalter .stufen-seite { min-width: 96px; padding: 5px 14px; }
+.stufen-zeile .hinweis { margin: 6px 0 0; }
 .summe { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0; border-top: 1px solid var(--linie); margin-top: 10px; font-weight: 600; }
 .balken { height: 10px; background: var(--flaeche2); border-radius: 999px; overflow: hidden; }
 .balken > div { height: 100%; background: var(--akzent); width: 0; transition: width .4s; }
@@ -649,8 +738,10 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .dialog ul { margin: 6px 0 12px; padding-left: 22px; }
 
 /* Einstellungen */
-.titel-zeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.titel-zeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 46px; margin-bottom: 18px; }
 .titel-zeile h1 { margin: 0; }
+/* Einfache Überschrift so hoch wie eine Titelzeile mit Knöpfen, damit nichts springt */
+.spalte > h1:first-child { margin: 3.5px 0 21.5px; }
 .inhalte-leiste { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 #download-pill { text-decoration: none; }
 .einst-zeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--linie); }
@@ -721,20 +812,67 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 @media (max-width: 600px) { .vs-tabelle td:nth-child(3), .vs-tabelle th:nth-child(3) { display: none; } }
 
 /* Übersetzen (Gespräch) */
-.gs-kopf { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.gs-sprache { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
-.gs-sprache > span { font-weight: 600; font-size: .92rem; color: var(--text2); }
+/* Titelzeile: Schalter Schreiben | Sprechen genau mittig */
+.gs-titel { display: grid; grid-template-columns: 1fr auto 1fr; }
+.gs-titel > .knopf { justify-self: end; }
+@media (max-width: 760px) { .gs-titel { grid-template-columns: 1fr auto; } .gs-titel > #gs-modus-platz { grid-row: 2; grid-column: 1 / -1; justify-self: center; } }
+/* Beide Seiten gleich breit, solange Platz ist („Tauschen“ genau mittig). Wird es eng, behält jedes Sprachfeld
+   die Breite seines Textes (Mindestbreite setzt gespraech.js), schmaler wird zuerst das mit dem kürzeren Namen. */
+.gs-kopf { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-bottom: 16px; }
+.gs-kopf-seite { display: flex; align-items: center; gap: 12px; }
+.gs-sprache { display: flex; flex: 1; }
+/* Gleich breite Ränder links und rechts, damit beide Sprachfelder gleich breit sind und nichts springt */
+.gs-kopf-rand { flex: 0 0 11.5rem; display: flex; }
+.knopf.gs-kopf-rand { justify-content: center; }
+.gs-kopf-rand-rechts { justify-content: flex-end; }
+.gs-kopf-rand .gs-modus { width: 100%; }
+/* Passt die Zeile nicht mehr (misst gespraech.js), stehen die Knöpfe über den Sprachfeldern */
+.gs-kopf.eng { align-items: stretch; }
+.gs-kopf.eng .gs-kopf-seite { flex-direction: column; align-items: stretch; justify-content: space-between; }
+.gs-kopf.eng .gs-kopf-seite > .gs-kopf-rand { flex: none; align-self: center; }
+.gs-kopf.eng .gs-kopf-seite > .gs-sprache { order: 2; flex: none; }
+.gs-kopf.eng .gs-tauschen { align-self: end; margin-bottom: 6px; }   /* mittig neben den Sprachfeldern */
+.gs-sprache > select { width: 100%; }
 .gs-kopf .knopf { white-space: nowrap; }
 .gs-chat { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .gs-leer { text-align: center; margin: 8px 0; }
-.gs-nachricht { max-width: 85%; border-radius: var(--radius); padding: 12px 16px; border: 1px solid var(--linie); }
-.gs-ich { align-self: flex-start; background: var(--akzent-hell); }
-.gs-du { align-self: flex-end; background: var(--flaeche2); }
+/* Chat: zwei feste Spalten wie die Eingabefelder darunter */
+.gs-zeile { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.gs-spaltenkopf { font-weight: 600; font-size: .92rem; color: var(--text2); margin-bottom: -4px; }
+.gs-spaltenkopf > span { padding: 0 16px; }
+.gs-zelle { border-radius: var(--radius); padding: 12px 16px; border: 1px solid var(--linie); }
+.gs-zelle-uebers { background: var(--flaeche); }
+.gs-zelle .gs-text { font-size: 1.2rem; overflow-wrap: anywhere; }
 .gs-text { font-size: 1.35rem; line-height: 1.4; white-space: pre-wrap; }
 .gs-klein { font-size: .9rem; color: var(--text2); margin-top: 6px; white-space: pre-wrap; }
 .gs-marke { font-weight: 600; }
 .gs-fehler { color: var(--rot); }
-.gs-knoepfe { margin-top: 8px; display: flex; justify-content: flex-end; }
+.gs-knoepfe { margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; }
+/* Bühne: neueste Übersetzung groß, Original und Rückübersetzung zum Vergleichen darunter */
+.gs-buehne { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 22px 26px 16px; }
+.gs-buehne > .gs-text, .gs-buehne > .gs-fehler { font-family: var(--titel); font-size: clamp(26px, 3.4vw, 42px); font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; text-align: center; }
+.gs-buehne > .gs-knoepfe { justify-content: center; }
+.gs-buehne-pruefen { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--linie); }
+.gs-buehne-absender { display: flex; flex-direction: column; gap: 4px; }
+.gs-buehne-absender .gs-klein { margin-top: 0; font-size: 1rem; }
+.gs-buehne-absender.gs-rechts { grid-column: 2; }
+@media (max-width: 700px) { .gs-buehne-pruefen { grid-template-columns: 1fr; } .gs-buehne-absender.gs-rechts { grid-column: 1; } }
+.gs-buehne-leer { margin: 0; padding: 34px 26px; }
+/* Verlauf unter der Eingabe, neueste zuerst; Klick holt die Nachricht auf die Bühne */
+.gs-bisher { display: flex; flex-direction: column; margin-top: 18px; }
+.gs-bisher:empty { display: none; }
+.gs-bisher-titel { font-weight: 600; font-size: .92rem; color: var(--text2); margin-bottom: 4px; }
+.gs-bisher-zeile { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; text-align: start; font: inherit; font-size: 1rem; color: var(--text); background: none; border: 0; border-top: 1px solid var(--linie); padding: 10px 0; cursor: pointer; }
+.gs-bisher-zeile > span:not(.gs-pfeil) { padding: 0 16px; overflow-wrap: anywhere; }
+.gs-bisher-zeile:hover { background: var(--flaeche); }
+/* Pfeil mittig zwischen den Spalten, vom Original zur Übersetzung */
+.gs-zeile { position: relative; }
+.gs-pfeil { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%; background: var(--akzent); border: 3px solid var(--bg); color: var(--akzent-text); pointer-events: none; }
+.gs-pfeil svg { width: 16px; height: 16px; stroke-width: 2.5; }
+.gs-pfeil-links svg { transform: scaleX(-1); }
+.gs-bisher-zeile .gs-pfeil { width: 24px; height: 24px; border-width: 2px; }
+.gs-bisher-zeile .gs-pfeil svg { width: 14px; height: 14px; }
 .gs-eingabe { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 700px) { .gs-eingabe { grid-template-columns: 1fr; } }
 .gs-feld { display: flex; flex-direction: column; gap: 6px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 12px 14px; }
@@ -744,7 +882,6 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .gs-pegel > span { display: block; height: 100%; width: 0; background: var(--akzent); transition: width .1s linear; }
 .gs-sprech-info { margin: 0; }
 /* Umschalter Schreiben | Sprechen und Statusfeld des Sprechmodus */
-.gs-modus-zeile { display: flex; justify-content: center; margin-bottom: 14px; }
 .gs-modus {
   position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px;
   border: 1px solid var(--linie); background: var(--flaeche); cursor: pointer; font: inherit; color: var(--text2);
@@ -761,6 +898,8 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
   min-width: 130px; padding: 7px 18px; font-weight: 600; transition: color .2s ease;
 }
 .gs-modus-seite svg { width: 18px; height: 18px; }
+.gs-modus-klein .gs-modus-seite { min-width: 0; padding: 5px 14px; font-size: .92rem; }
+.gs-modus-klein .gs-modus-seite svg { width: 16px; height: 16px; }
 .gs-modus:not(.an) .gs-modus-seite:nth-child(2), .gs-modus.an .gs-modus-seite:nth-child(3) { color: var(--akzent-text); }
 .gs-sprechmodus { text-align: center; margin-top: 14px; }
 .gs-sm-status { font-family: var(--titel); font-size: clamp(26px, 4vw, 40px); font-weight: 600; line-height: 1.2; }

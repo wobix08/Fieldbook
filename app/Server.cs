@@ -73,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.7.0";
+        public const string Version = "0.7.1";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -278,6 +278,7 @@ namespace OfflineWissen
                     if (kiwix == null || kiwix.HasExited) { SendeText(ctx, 503, "Die Bibliothek ist nicht gestartet (keine Wissenspakete installiert?)."); return; }
                     // RawUrl statt Url.PathAndQuery: Url entschlüsselt "%25" zu "%", dann findet Kiwix
                     // Dateien mit Sonderzeichen im Namen nicht mehr (z. B. "%252C" für ein Komma)
+                    if (IfixitUmleiten(ctx)) return;
                     Weiterleiten(ctx, KiwixPort, ctx.Request.RawUrl);
                 }
                 else if (pfad.StartsWith("/route/"))
@@ -380,10 +381,20 @@ namespace OfflineWissen
         static readonly HashSet<string> NichtKopieren = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "Content-Length", "Transfer-Encoding", "Connection", "Keep-Alive", "Server", "Date", "Content-Type", "Location" };
 
+        // .NET schneidet Punkte am Ende eines Pfadteils ab ("verdura./176032" → "verdura/176032"), dann findet
+        // Kiwix den Artikel nicht (iFixit-Titel enden oft mit Punkt). Als %2E kodiert bleiben sie erhalten.
+        static string PunkteSchuetzen(string pfadUndQuery)
+        {
+            int q = pfadUndQuery.IndexOf('?');
+            string pfad = q < 0 ? pfadUndQuery : pfadUndQuery.Substring(0, q);
+            pfad = Regex.Replace(pfad, @"(?<=[^/])\.+(?=/|$)", m => m.Value.Replace(".", "%2E"));
+            return q < 0 ? pfad : pfad + pfadUndQuery.Substring(q);
+        }
+
         static void Weiterleiten(HttpListenerContext ctx, int port, string pfadUndQuery)
         {
             var rq = ctx.Request;
-            var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + port + pfadUndQuery);
+            var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + port + PunkteSchuetzen(pfadUndQuery));
             req.Method = rq.HttpMethod;
             req.AllowAutoRedirect = false;
             req.Proxy = null;
@@ -432,7 +443,7 @@ namespace OfflineWissen
                 {
                     byte[] html;
                     using (var s = resp.GetResponseStream())
-                    using (var ms = new MemoryStream()) { s.CopyTo(ms); html = ArtikelDesign(ms.ToArray()); }
+                    using (var ms = new MemoryStream()) { s.CopyTo(ms); html = ArtikelDesign(IfixitSeiteFiltern(rq, ms.ToArray())); }
                     res.Headers.Remove("ETag");
                     res.Headers.Set("Cache-Control", "no-cache");
                     res.ContentLength64 = html.Length;
@@ -464,7 +475,7 @@ namespace OfflineWissen
             "<script>(function(){var t='dark';try{t=localStorage.getItem('thema')||'dark';}catch(e){}" +
             "if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';" +
             "var h=document.documentElement;h.setAttribute('data-fb',t==='light'?'hell':'dunkel');h.style.colorScheme=t==='light'?'light':'dark';" +
-            "h.style.background=t==='light'?'#fff':'#1c1d1b';})();</script>" +
+            "h.style.background=t==='light'?'#fff':'#161715';})();</script>" +
             "<link rel=\"stylesheet\" href=\"/artikel/design.css\"><script src=\"/artikel/design.js\"></script>");
         static byte[] ArtikelDesign(byte[] html)
         {
@@ -496,7 +507,9 @@ namespace OfflineWissen
         // ------------------------------------------------------------------ iFixit-Übersicht
         // Das iFixit-Paket hat einen Geräte-Baum (Device/...), in dem viele Zweige keine einzige Anleitung
         // enthalten. Der Baum wird einmal im Hintergrund ausgelesen (daten/cache/ifixit-<paket>.json), danach
-        // zeigt Fieldbook nur Zweige mit Anleitungen.
+        // zeigt Fieldbook nur Zweige mit Anleitungen. Geräteseiten ohne Anleitung (nur Text und Datenblatt)
+        // blendet Fieldbook auch in Suche, Vorschlägen, Zufall und Links aus (IfixitUmleiten, IfixitSeiteFiltern).
+        // Die Liste gehört zur Paketversion: Nach einem Update wird sie für das neue Paket neu erstellt.
 
         public class IfixitKnoten
         {
@@ -504,12 +517,179 @@ namespace OfflineWissen
             public List<string> Kinder = new List<string>();
             public List<string[]> Anleitungen = new List<string[]>(); // { Titel, Pfad }
             public int Anzahl;
+            // Leere Geräteseiten darunter, für die dieses Gerät das nächste mit Anleitungen ist (Ziel der Umleitung)
+            public List<string> Leer = new List<string>();
+            public int Version; // nur an der Wurzel: Aufbau des Caches, ältere werden neu erstellt
+        }
+        const int IfixitVersion = 3;
+
+        // Schnelle Nachschlage-Tabellen für den Filter (Pfade entschlüsselt verglichen)
+        class IfixitFilter
+        {
+            public string Buch;
+            public Dictionary<string, string> Leer = new Dictionary<string, string>(); // leeres Gerät → Ziel
+            public List<string> Anleitungen = new List<string>();
+            public bool IstLeer(string pfad) { return Leer.ContainsKey(Entschluesseln(pfad)); }
         }
 
         static readonly object IfixitLk = new object();
         static string ifixitBuch, ifixitStatus = "", ifixitFehler = "";
         static Dictionary<string, IfixitKnoten> ifixitBaum;
+        static IfixitFilter ifixitFilter;
         static int ifixitGelesen;
+
+        static string Entschluesseln(string pfad)
+        {
+            try { return Uri.UnescapeDataString(pfad); } catch { return pfad; }
+        }
+
+        static void IfixitFilterBauen(string buch, Dictionary<string, IfixitKnoten> baum)
+        {
+            var f = new IfixitFilter { Buch = buch };
+            var anleitungen = new HashSet<string>();
+            foreach (var k in baum.Values)
+            {
+                foreach (var l in k.Leer) f.Leer[Entschluesseln(l)] = k.Pfad;
+                foreach (var a in k.Anleitungen) if (anleitungen.Add(a[1])) f.Anleitungen.Add(a[1]);
+            }
+            ifixitFilter = f;
+        }
+
+        // Filter für ein iFixit-Paket; null, solange die Übersicht noch entsteht (dann wird nichts ausgeblendet)
+        static IfixitFilter IfixitFilterFuer(string buch)
+        {
+            if (string.IsNullOrEmpty(buch) || !buch.StartsWith("ifixit_")) return null;
+            var f = ifixitFilter;
+            if (f != null && f.Buch == buch) return f;
+            if (!Regex.IsMatch(buch, @"^ifixit_[\w.-]+$") || !File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"))) return null;
+            Ifixit(buch, "");
+            f = ifixitFilter;
+            return f != null && f.Buch == buch ? f : null;
+        }
+
+        // Beim Start der Bibliothek: Listen alter Paketversionen löschen, für das installierte Paket gleich erstellen
+        static void IfixitAufraeumen()
+        {
+            try
+            {
+                string cache = Path.Combine(Daten, "cache");
+                if (!Directory.Exists(cache)) return;
+                foreach (var d in Directory.GetFiles(cache, "ifixit-*.json"))
+                {
+                    string buch = Path.GetFileNameWithoutExtension(d).Substring("ifixit-".Length);
+                    if (!File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"))) { File.Delete(d); Log("iFixit-Übersicht der alten Version gelöscht: " + buch); }
+                }
+            }
+            catch (Exception e) { Log("iFixit-Übersicht aufräumen: " + e.Message); }
+        }
+
+        static void IfixitVorbereiten()
+        {
+            try
+            {
+                if (kiwix == null || kiwix.HasExited) return;
+                foreach (var z in Directory.GetFiles(Path.Combine(Daten, "wissen"), "ifixit_*.zim"))
+                {
+                    Ifixit(Path.GetFileNameWithoutExtension(z), "");
+                    break;
+                }
+            }
+            catch { }
+        }
+
+        // Zufall nur aus Anleitungen, leere Geräteseiten zum nächsten Gerät mit Anleitungen, Vorschläge ohne leere Geräte
+        static readonly Random IfixitZufall = new Random();
+        static bool IfixitUmleiten(HttpListenerContext ctx)
+        {
+            var rq = ctx.Request;
+            string pfad = rq.RawUrl.Split('?')[0];
+            if (pfad == "/kiwix/random" || pfad == "/kiwix/suggest")
+            {
+                var f = IfixitFilterFuer(rq.QueryString["content"] ?? rq.QueryString["books.name"]);
+                if (f == null) return false;
+                if (pfad == "/kiwix/suggest") return IfixitVorschlaege(ctx, f);
+                if (f.Anleitungen.Count == 0) return false;
+                string ziel;
+                lock (IfixitZufall) ziel = f.Anleitungen[IfixitZufall.Next(f.Anleitungen.Count)];
+                IfixitUmleitung(ctx, f.Buch, ziel);
+                return true;
+            }
+            var m = Regex.Match(pfad, "^/kiwix/content/(ifixit_[^/]+)/(Device/.+)$");
+            if (!m.Success) return false;
+            var f2 = IfixitFilterFuer(m.Groups[1].Value);
+            string oben;
+            if (f2 == null || !f2.Leer.TryGetValue(Entschluesseln(m.Groups[2].Value), out oben)) return false;
+            IfixitUmleitung(ctx, f2.Buch, oben == "" ? "home/home" : oben);
+            return true;
+        }
+
+        static void IfixitUmleitung(HttpListenerContext ctx, string buch, string pfad)
+        {
+            // Nur ASCII im Location-Kopf: Umlaute aus den Links prozentkodieren
+            var sb = new StringBuilder();
+            foreach (byte b in Utf8.GetBytes("/kiwix/content/" + buch + "/" + pfad))
+                if (b < 128 && b > 32) sb.Append((char)b); else sb.Append("%" + b.ToString("X2"));
+            ctx.Response.StatusCode = 302;
+            ctx.Response.Headers.Set("Cache-Control", "no-store");
+            ctx.Response.RedirectLocation = sb.ToString();
+        }
+
+        static bool IfixitVorschlaege(HttpListenerContext ctx, IfixitFilter f)
+        {
+            int anzahl;
+            if (!int.TryParse(ctx.Request.QueryString["count"], out anzahl) || anzahl <= 0) anzahl = 10;
+            // Mehr anfragen als gewünscht, weil leere Geräte herausfallen
+            string raw = ctx.Request.RawUrl;
+            string url = Regex.IsMatch(raw, "[?&]count=") ? Regex.Replace(raw, "([?&]count=)\\d*", "${1}" + (anzahl + 20)) : raw + "&count=" + (anzahl + 20);
+            object[] liste;
+            try { liste = Json.Deserialize<object[]>(KiwixHolen(url)); } catch { return false; }
+            var raus = new List<object>();
+            int n = 0;
+            foreach (var o in liste)
+            {
+                var d = o as Dictionary<string, object>;
+                if (d == null) continue;
+                object p;
+                if (d.TryGetValue("path", out p) && p is string)
+                {
+                    if (n >= anzahl || f.IstLeer((string)p)) continue;
+                    n++;
+                }
+                raus.Add(d);
+            }
+            SendeJson(ctx, raus);
+            return true;
+        }
+
+        // Leere Geräte aus Seiten entfernen: Kacheln in Gerätelisten und Treffer der Volltextsuche weg, andere Links nur noch Text
+        static byte[] IfixitSeiteFiltern(HttpListenerRequest rq, byte[] daten)
+        {
+            string pfad = rq.RawUrl.Split('?')[0];
+            bool suche = pfad == "/kiwix/search";
+            var m = Regex.Match(pfad, "^/kiwix/content/(ifixit_[^/]+)/");
+            var f = IfixitFilterFuer(suche ? (rq.QueryString["books.name"] ?? rq.QueryString["content"]) : (m.Success ? m.Groups[1].Value : null));
+            if (f == null) return daten;
+            string html = Utf8.GetString(daten);
+            if (suche)
+                html = Regex.Replace(html, "<li>\\s*<a href=\"/kiwix/content/" + Regex.Escape(f.Buch) + "/(Device/[^\"#?]+)\"[\\s\\S]*?</li>",
+                    t => f.IstLeer(t.Groups[1].Value) ? "" : t.Value);
+            else
+            {
+                int weg = 0;
+                html = Regex.Replace(html, "<div class=\"categoryListCell\">\\s*<a href=\"\\.\\./(Device/[^\"#?]+)\"[\\s\\S]*?</div>",
+                    t => { if (!f.IstLeer(t.Groups[1].Value)) return t.Value; weg++; return ""; });
+                if (weg > 0)
+                    html = Regex.Replace(html, "(<h2 id=['\"]Section_Childrens['\"][^>]*>\\s*)(\\d+)([\\s\\S]*?</h2>)", t =>
+                    {
+                        int alt;
+                        int.TryParse(t.Groups[2].Value, out alt);
+                        return alt - weg > 0 ? t.Groups[1].Value + (alt - weg) + t.Groups[3].Value : "";
+                    });
+                html = Regex.Replace(html, "<a\\s[^>]*href=\"\\.\\./(Device/[^\"#?]+)\"[^>]*>([\\s\\S]*?)</a>",
+                    t => f.IstLeer(t.Groups[1].Value) ? "<span>" + t.Groups[2].Value + "</span>" : t.Value);
+            }
+            return Utf8.GetBytes(html);
+        }
 
         static Dictionary<string, object> Ifixit(string buch, string pfad)
         {
@@ -518,10 +698,15 @@ namespace OfflineWissen
             {
                 if (ifixitBuch != buch)
                 {
-                    ifixitBuch = buch; ifixitBaum = null; ifixitStatus = ""; ifixitFehler = "";
+                    ifixitBuch = buch; ifixitBaum = null; ifixitFilter = null; ifixitStatus = ""; ifixitFehler = "";
                     string cache = Path.Combine(Daten, "cache", "ifixit-" + buch + ".json");
                     if (File.Exists(cache))
-                        try { ifixitBaum = Json.Deserialize<Dictionary<string, IfixitKnoten>>(File.ReadAllText(cache, Utf8)); ifixitStatus = "fertig"; } catch { ifixitBaum = null; }
+                        try
+                        {
+                            var b = Json.Deserialize<Dictionary<string, IfixitKnoten>>(File.ReadAllText(cache, Utf8));
+                            if (b.ContainsKey("") && b[""].Version >= IfixitVersion) { ifixitBaum = b; ifixitStatus = "fertig"; IfixitFilterBauen(buch, b); }
+                        }
+                        catch { ifixitBaum = null; }
                 }
                 if (ifixitBaum == null && ifixitStatus != "laeuft")
                 {
@@ -551,7 +736,12 @@ namespace OfflineWissen
 
         static string KiwixSeite(string buch, string pfad)
         {
-            var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + KiwixPort + "/kiwix/content/" + buch + "/" + pfad);
+            return KiwixHolen("/kiwix/content/" + buch + "/" + pfad);
+        }
+
+        static string KiwixHolen(string pfadUndQuery)
+        {
+            var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + KiwixPort + PunkteSchuetzen(pfadUndQuery));
             req.Proxy = null;
             req.Timeout = 30000;
             using (var r = req.GetResponse())
@@ -580,7 +770,8 @@ namespace OfflineWissen
             try
             {
                 var baum = new Dictionary<string, IfixitKnoten>();
-                var wurzel = new IfixitKnoten { Titel = "iFixit", Pfad = "" };
+                var wurzel = new IfixitKnoten { Titel = "iFixit", Pfad = "", Version = IfixitVersion };
+                var nichtGelesen = new HashSet<string>();
                 baum[""] = wurzel;
                 foreach (var l in IfixitLinks(KiwixSeite(buch, "home/home"), "Device"))
                     if (!baum.ContainsKey(l[1])) { baum[l[1]] = new IfixitKnoten { Titel = l[0], Pfad = l[1] }; wurzel.Kinder.Add(l[1]); }
@@ -594,7 +785,7 @@ namespace OfflineWissen
                     System.Threading.Tasks.Parallel.ForEach(ebene, opt, pfad =>
                     {
                         string html;
-                        try { html = KiwixSeite(buch, pfad); } catch { Interlocked.Increment(ref fehlgeschlagen); return; }
+                        try { html = KiwixSeite(buch, pfad); } catch { Interlocked.Increment(ref fehlgeschlagen); lock (baum) nichtGelesen.Add(pfad); return; }
                         var geraete = IfixitLinks(html, "Device");
                         var anleitungen = IfixitLinks(html, "Anleitung");
                         lock (baum)
@@ -623,6 +814,17 @@ namespace OfflineWissen
                     return menge;
                 };
                 zaehle(wurzel);
+                // Leere Geräteseiten dem nächsten Gerät darüber mit Anleitungen zuordnen. Nicht lesbare Seiten
+                // gelten nicht als leer (könnten Anleitungen haben), ebenso alles darunter.
+                int leer = 0;
+                Action<IfixitKnoten, IfixitKnoten> ordne = null;
+                ordne = (k, oben) =>
+                {
+                    if (nichtGelesen.Contains(k.Pfad)) return;
+                    if (k.Anzahl > 0) oben = k; else { oben.Leer.Add(k.Pfad); leer++; }
+                    foreach (var c in k.Kinder) ordne(baum[c], oben);
+                };
+                ordne(wurzel, wurzel);
                 // Leere Zweige gar nicht erst speichern
                 var voll = baum.Values.Where(x => x.Anzahl > 0).ToDictionary(x => x.Pfad);
                 foreach (var k in voll.Values) k.Kinder = k.Kinder.Where(voll.ContainsKey).ToList();
@@ -632,8 +834,8 @@ namespace OfflineWissen
                     Directory.CreateDirectory(Path.Combine(Daten, "cache"));
                     File.WriteAllText(Path.Combine(Daten, "cache", "ifixit-" + buch + ".json"), Json.Serialize(voll), Utf8);
                 }
-                lock (IfixitLk) if (ifixitBuch == buch) { ifixitBaum = voll; ifixitStatus = "fertig"; }
-                Log("iFixit-Übersicht: " + baum.Count + " Geräteseiten, " + wurzel.Anzahl + " Anleitungen, " + fehlgeschlagen + " Seiten nicht lesbar.");
+                lock (IfixitLk) if (ifixitBuch == buch) { ifixitBaum = voll; ifixitStatus = "fertig"; IfixitFilterBauen(buch, voll); }
+                Log("iFixit-Übersicht: " + baum.Count + " Geräteseiten (" + leer + " ohne Anleitung), " + wurzel.Anzahl + " Anleitungen, " + fehlgeschlagen + " Seiten nicht lesbar.");
             }
             catch (Exception e)
             {
@@ -651,18 +853,26 @@ namespace OfflineWissen
             Uri u;
             if (url == null || !Uri.TryCreate(url, UriKind.Absolute, out u) || (u.Scheme != "http" && u.Scheme != "https") || u.IsLoopback)
                 return new Dictionary<string, object> { { "fehler", "Ungültige Adresse" } };
-            bool da = false;
+            // Antwortet die Zielseite nicht, kann auch nur die Seite kaputt sein (z. B. Domain abgelaufen).
+            // Dann eine Adresse prüfen, die Fieldbook ohnehin benutzt: Geht die, gibt es Internet.
+            if (AdresseAntwortet(u)) return new Dictionary<string, object> { { "online", true }, { "erreichbar", true } };
+            bool netz = AdresseAntwortet(new Uri("https://library.kiwix.org/")) || AdresseAntwortet(new Uri("https://github.com/"));
+            return new Dictionary<string, object> { { "online", netz }, { "erreichbar", false } };
+        }
+
+        // Antwortet die Adresse überhaupt (auch mit Fehlercode)?  HEAD, höchstens 4 Sekunden
+        static bool AdresseAntwortet(Uri u)
+        {
             try
             {
                 var req = (HttpWebRequest)WebRequest.Create(u);
                 req.Method = "HEAD";
                 req.Timeout = 4000;
                 req.AllowAutoRedirect = false;
-                using (req.GetResponse()) da = true;
+                using (req.GetResponse()) return true;
             }
-            catch (WebException we) { da = we.Response != null; if (we.Response != null) we.Response.Close(); }
-            catch { da = false; }
-            return new Dictionary<string, object> { { "online", da } };
+            catch (WebException we) { bool da = we.Response != null; if (da) we.Response.Close(); return da; }
+            catch { return false; }
         }
 
         // ------------------------------------------------------------------ Artikelliste (Klexikon-Startseite)
@@ -1463,6 +1673,9 @@ namespace OfflineWissen
                 var m = (Dictionary<string, object>)o;
                 m["installiert"] = File.Exists(Path.Combine(Daten, "modelle", Str(m, "datei")));
             }
+            // Ausgemusterte Modelle nur zeigen, wo sie schon installiert sind
+            modelle["modelle"] = Arr(modelle, "modelle").OfType<Dictionary<string, object>>()
+                .Where(m => !Bool(m, "ausgemustert") || (bool)m["installiert"]).Cast<object>().ToArray();
             var pakete = LadeJson(Path.Combine(Config, "pakete.json"));
             foreach (var o in Arr(pakete, "pakete"))
             {
@@ -2408,18 +2621,21 @@ namespace OfflineWissen
 
                 if (pakete.Count > 0 && ProgrammPfad("kiwix") == null) jobs.Add(ProgrammJob("kiwix"));
 
-                if (!string.IsNullOrEmpty(modellId))
+                // "modell" wird die aktive KI, "modelle" (Seite Inhalte) werden nur geladen
+                var modellIds = Arr(b, "modelle").Select(x => Convert.ToString(x)).ToList();
+                if (!string.IsNullOrEmpty(modellId) && !modellIds.Contains(modellId)) modellIds.Add(modellId);
+                if (modellIds.Count > 0)
                 {
                     if (ProgrammPfad("llama-" + backend) == null) jobs.Add(ProgrammJob("llama-" + backend));
                     foreach (var o in Arr(LadeJson(Path.Combine(Config, "modelle.json")), "modelle"))
                     {
                         var m = (Dictionary<string, object>)o;
-                        if (Str(m, "id") != modellId) continue;
+                        if (!modellIds.Contains(Str(m, "id"))) continue;
                         string ziel = Path.Combine(Daten, "modelle", Str(m, "datei"));
                         if (!File.Exists(ziel))
                             jobs.Add(new Job { Art = "datei", Titel = "KI: " + Str(m, "name") + " (" + Str(m, "modell") + ")", Url = Str(m, "url"), Ziel = ziel, Gesamt = (long)Num(m, "bytes") });
                     }
-                    einst["modell"] = modellId;
+                    if (!string.IsNullOrEmpty(modellId)) einst["modell"] = modellId;
                     einst["backend"] = backend;
                 }
 
@@ -2726,13 +2942,28 @@ namespace OfflineWissen
 
         static void AlteVersionenLoeschen(Job j)
         {
-            var t = j.Extra.Split('|');
-            string muster = "^" + Regex.Escape(t[0]) + (t[1] == "" ? "" : "_" + Regex.Escape(t[1])) + @"_\d{4}-\d{2}[a-z]?\.zim$";
+            // Ältere Ausgaben desselben Pakets und andere Varianten derselben Gruppe (z. B. Wikipedia kompakt,
+            // wenn jetzt die mit Bildern geladen wurde): je Gruppe bleibt nur eine Variante
+            var arten = new List<string> { j.Extra };
+            try
+            {
+                var liste = Arr(LadeJson(Path.Combine(Config, "pakete.json")), "pakete").Cast<Dictionary<string, object>>().ToList();
+                var selbst = liste.FirstOrDefault(p => Str(p, "name") + "|" + (Str(p, "flavour") ?? "") == j.Extra);
+                string gruppe = selbst == null ? null : Str(selbst, "gruppeExklusiv");
+                if (!string.IsNullOrEmpty(gruppe))
+                    foreach (var p in liste) if (Str(p, "gruppeExklusiv") == gruppe) arten.Add(Str(p, "name") + "|" + (Str(p, "flavour") ?? ""));
+            }
+            catch { }
+            var muster = arten.Distinct().Select(a =>
+            {
+                var t = a.Split('|');
+                return "^" + Regex.Escape(t[0]) + (t[1] == "" ? "" : "_" + Regex.Escape(t[1])) + @"_\d{4}-\d{2}[a-z]?\.zim$";
+            }).ToList();
             string neu = Path.GetFileName(j.Ziel);
             foreach (var f in Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim"))
             {
                 string n = Path.GetFileName(f);
-                if (n != neu && Regex.IsMatch(n, muster, RegexOptions.IgnoreCase))
+                if (n != neu && muster.Any(m => Regex.IsMatch(n, m, RegexOptions.IgnoreCase)))
                 {
                     StoppeKiwix();
                     try { File.Delete(f); } catch { }
@@ -3569,6 +3800,13 @@ namespace OfflineWissen
         static void StarteKiwix()
         {
             PdfTexteAufraeumen();
+            IfixitAufraeumen();
+            StarteKiwixDienst();
+            IfixitVorbereiten();
+        }
+
+        static void StarteKiwixDienst()
+        {
             lock (KiwixLk)
             {
                 StoppeKiwix();

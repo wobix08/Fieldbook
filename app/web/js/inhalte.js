@@ -6,7 +6,7 @@ const Inhalte = (() => {
   try { if (localStorage.getItem("fb-sprachen-sortierung") === "nord") sprachSort = "nord"; } catch { }
   // Aufgeklappte Abschnitte (bleiben beim Neuzeichnen offen)
   const aufgeklappt = new Set();
-  const auswahl = { modell: null, pakete: new Set(), karten: new Map(), routen: false, routenGroesse: null, sprachen: new Set(), stimmen: new Set() };
+  const auswahl = { modelle: new Set(), pakete: new Set(), karten: new Map(), routen: false, routenGroesse: null, sprachen: new Set(), stimmen: new Set() };
 
   async function zeigen(params) {
     clearInterval(timer);
@@ -194,7 +194,7 @@ const Inhalte = (() => {
     const emp0 = Setup.empfehlung(hw, kat.modelle);
     const backend = (kat.einstellungen && kat.einstellungen.backend) || emp0.backend;
     // Empfehlung passend zum eingestellten Rechenweg (Prozessor oder Grafikkarte)
-    const passend = kat.modelle.filter(m => ["gpu", "cpu"].includes(Setup.passung(m, hw, backend))).sort((a, b) => b.bytes - a.bytes);
+    const passend = kat.modelle.filter(m => !m.ausgemustert && ["gpu", "cpu"].includes(Setup.passung(m, hw, backend))).sort((a, b) => b.bytes - a.bytes);
     const emp = { modell: passend[0] ? passend[0].id : emp0.modell };
     // Alle Bereiche als aufklappbare Zeilen; zugeklappt steht darunter, was schon installiert ist
     const liste = el("div", { class: "klapp-liste-abschnitte" });
@@ -209,8 +209,9 @@ const Inhalte = (() => {
     const vonInst = (n, gesamt) => n + " von " + gesamt + " installiert";
     const kiDa = kat.modelle.filter(m => m.installiert);
     const ki = abschnitt("ki", "message-circle", "KI-Assistent",
-      kiDa.map(m => m.name + " · " + m.modell + (s.modell === m.id && kiDa.length > 1 ? " (aktiv)" : "")), auswahl.modell ? 1 : 0, vonInst(kiDa.length, kat.modelle.length));
-    ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Du kannst mehrere KIs laden und jederzeit mit „Benutzen“ zwischen ihnen wechseln.", el("br"), "Es läuft immer nur eine, die anderen belegen nur Platz auf der Festplatte."));
+      kiDa.map(m => m.name + " · " + m.modell + (s.modell === m.id && kiDa.length > 1 ? " (aktiv)" : "")), auswahl.modelle.size, vonInst(kiDa.length, kat.modelle.length));
+    ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Im Moment bietet Fieldbook nur Qwen 3.5 (4B) an.", el("br"), "Es läuft auf jedem Laptop mit 8 GB Arbeitsspeicher.", el("br"), "Weitere KIs folgen, sobald sie getestet sind."));
+    if (kat.modelle.length > 1) ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Du kannst mehrere KIs laden und jederzeit mit „Benutzen“ zwischen ihnen wechseln.", el("br"), "Es läuft immer nur eine, die anderen belegen nur Platz auf der Festplatte.", el("br"), "Ein neuer Download ändert die aktive KI nicht."));
     // Rechenweg: Grafikkarte oder Prozessor. Fehlt das Grafikkarten-Programm, lädt Fieldbook es nach.
     const gpu = Setup.besteGpu(hw);
     if (gpu && gpu.vramGB >= 4) {
@@ -224,13 +225,14 @@ const Inhalte = (() => {
           fortschritt();
         } }),
         el("span", {}, "Grafikkarte für die KI nutzen (" + gpu.name + ", " + gpu.vramGB + " GB)",
-          el("small", { class: "hinweis", style: "display:block" }, "Antwortet viel schneller und erlaubt größere KIs. Ohne Häkchen rechnet der Prozessor."))));
+          el("small", { class: "hinweis", style: "display:block" }, "Antwortet viel schneller.", el("br"), "Ohne Häkchen rechnet der Prozessor."))));
     }
     for (const m of kat.modelle.slice().sort((a, b) => a.bytes - b.bytes)) {
       const aktivModell = s.modell === m.id;
       const p = Setup.passung(m, hw, backend);
       const tags = [];
       if (m.id === emp.modell) tags.push(tag("Empfohlen", "tag-empf"));
+      if (m.ausgemustert) tags.push(tag(m.ungetestet ? "noch nicht getestet" : "nicht mehr empfohlen", "tag-warn"));
       if (p === "zu-gross") tags.push(tag("zu groß für dein Gerät", "tag-warn"));
       if (p === "langsam") tags.push(tag("ohne Grafikkarte sehr langsam", "tag-warn"));
       if (m.installiert) {
@@ -240,11 +242,10 @@ const Inhalte = (() => {
       } else {
         const laedt = offen.titel.has("KI: " + m.name + " (" + m.modell + ")");
         if (laedt) tags.push(ladeTag());
-        ki.append(auswahlZeile("radio", "inh-modell", auswahl.modell === m.id, laedt, (e) => { auswahl.modell = e.target.checked ? m.id : null; zeichneListe(aktiv); },
-          [m.name + " · " + m.modell, ...tags], m.beschreibung + " Wird nach dem Download die aktive KI.", groesse(m.bytes)));
+        ki.append(auswahlZeile("checkbox", "inh-modell", auswahl.modelle.has(m.id), laedt, (e) => { if (e.target.checked) auswahl.modelle.add(m.id); else auswahl.modelle.delete(m.id); zeichneListe(aktiv); },
+          [m.name + " · " + m.modell, ...tags], m.beschreibung, groesse(m.bytes)));
       }
     }
-    if (auswahl.modell) ki.append(el("button", { class: "knopf knopf-klein", onclick: () => { auswahl.modell = null; zeichneListe(aktiv); } }, "Keine neue KI laden"));
 
     // Wissenspakete
     // Jedes Paket unter seiner Hauptkategorie (der ersten)
@@ -289,23 +290,94 @@ const Inhalte = (() => {
       return z;
     }
 
+    // Varianten (z. B. Wikipedia kompakt, ohne oder mit Bildern) als eine Zeile mit Schalter.
+    // Je Gruppe bleibt nur eine Variante: Eine neue ersetzt die installierte nach dem Download (Server).
     function variantenKasten(id, varianten) {
       const info = gruppen[id] || {};
       const titel = info.titel || varianten[0].titel;
-      const name = (p) => p.variante || p.titel;
-      const da = varianten.filter(p => p.installiert);
-      const kopf = da.length
-        ? "Du hast: " + da.map(name).join(" und ") + ". Andere Varianten kannst du zusätzlich laden."
-        : "Eine Variante wählen" + (info.zusatz ? ", " + info.zusatz : "") + ".";
-      const kasten = el("div", { class: "varianten" }, el("div", { class: "varianten-kopf" }, el("b", {}, titel), el("span", {}, kopf)));
-      for (const p of varianten) {
-        // Kleinere Variante angekreuzt, obwohl eine größere schon da ist: kurzer Hinweis, laden geht trotzdem
-        const groesser = !p.installiert && auswahl.pakete.has(p.id) && da.find(x => x.bytes > p.bytes);
-        kasten.append(paketZeile(p, name(p), groesser
-          ? "Brauchst du meist nicht, „" + name(groesser) + "“ hast du schon. Sinnvoll zum Beispiel für einen USB-Stick." : null));
+      const da = varianten.filter(p => p.installiert).sort((a, b) => b.bytes - a.bytes);
+      const laedt = varianten.find(p => offen.pakete.has(p.name + "|" + (p.flavour || "")));
+      if (laedt) varianten.forEach(p => auswahl.pakete.delete(p.id));
+      const neu = varianten.find(p => auswahl.pakete.has(p.id));
+      const gew = laedt || neu || da[0] || null;
+      const p = gew || varianten.find(x => x.id === info.standard) || varianten[0];
+      const tags = [];
+      if (p.sprache === "en") tags.push(tag("Englisch", "tag-en"));
+      if (laedt) tags.push(ladeTag());
+      else if (p.installiert && !neu) tags.push(tag("Installiert · Stand " + p.installiertDatum, "tag-ok"));
+      if (p.update && !laedt) tags.push(tag("neue Version " + (p.datum || "").slice(0, 7) + (neu ? " ausgewählt" : ""), "tag-warn"));
+      const hinweis = [];
+      if (neu && !neu.installiert && da.length) hinweis.push("Ersetzt „" + da.map(x => x.variante).join("“ und „") + "“, " + (da.length > 1 ? "die werden" : "die wird") + " nach dem Download gelöscht.");
+      else if (!neu && da.length > 1) hinweis.push("Zusätzlich installiert: „" + da.slice(1).map(x => x.variante).join("“, „") + "“.", el("br"), "Die brauchst du nicht, du kannst sie löschen.");
+      const knoepfe = [];
+      if (!neu && !laedt && da[0] && da[0].update)
+        knoepfe.push(knopf("Neue Version laden", () => { auswahl.pakete.add(da[0].id); zeichneListe(aktiv); }));
+      if (!neu && !laedt) {
+        da.slice(1).forEach(x => knoepfe.push(knopf("„" + x.variante + "“ löschen", () => loeschen("paket", x.id, x.titel), true)));
+        if (da[0]) knoepfe.push(knopf("Löschen", () => loeschen("paket", da[0].id, da[0].titel), true));
       }
-      return kasten;
+      // Gewählt: die neue Variante oder (ohne Auswahl) die installierte bzw. ladende
+      return variantenZeile({ titel, varianten, gewaehlt: gew ? gew.id : null, installiert: da.length ? da[0].id : null, standard: info.standard,
+        tags, gesperrt: !!laedt, hinweis: hinweis.length ? hinweis : null, knoepfe,
+        onWahl: (wahlId) => {
+          varianten.forEach(x => auswahl.pakete.delete(x.id));
+          // Die installierte Variante ist nichts Neues zum Laden, außer es gibt eine neue Version
+          const x = varianten.find(v => v.id === wahlId);
+          if (x && (!x.installiert || x.update)) auswahl.pakete.add(x.id);
+          zeichneListe(aktiv);
+        } });
     }
+
+    // Karten
+    const kDa = kat.karten.filter(r => r.installiert);
+    const k = abschnitt("karten", "map", "Karten und Routen", kDa.map(r => r.titel).concat(s.routen ? ["Wegedaten für Routen"] : []),
+      auswahl.karten.size + (auswahl.routen ? 1 : 0), vonInst(kDa.length, kat.karten.length));
+    // Routenplanung ganz oben: gilt für alle vorhandenen und ausgewählten Karten
+    const regionen = kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id);
+    const rg = auswahl.routenGroesse;
+    const routenText = "Routen zu Fuß, mit dem Rad und mit dem Auto.";
+    if (s.routen) {
+      // Installiert: wie die anderen installierten Inhalte. Nur wenn Wegedaten fehlen (für eine installierte
+      // oder eine gerade ausgewählte Karte), wird daraus eine Auswahl zum Nachladen.
+      const fehlen = (auswahl.routenFehlen || []).concat(kat.karten.filter(r => auswahl.karten.has(r.id) && r.routen !== false).map(r => r.titel));
+      if (!fehlen.length || (rg && rg.bytes === 0)) k.append(zeile(["Routenplanung", tag("Installiert", "tag-ok")], ["Wegedaten für alle installierten Karten.", el("br"), routenText], null));
+      else k.append(auswahlZeile("checkbox", "inh-routen", auswahl.routen, false, (e) => { auswahl.routen = e.target.checked; zeichneListe(aktiv); },
+        ["Routenplanung", tag("Installiert", "tag-ok"), tag("Ergänzung verfügbar", "tag-warn")],
+        "Wegedaten nachladen für " + fehlen.join(", ") + ".",
+        rg == null ? "wird berechnet …" : "ca. " + groesse(rg.bytes)));
+    } else {
+      k.append(auswahlZeile("checkbox", "inh-routen", auswahl.routen && regionen.length > 0, !regionen.length, (e) => { auswahl.routen = e.target.checked; zeichneListe(aktiv); groessen(); },
+        ["Routenplanung"],
+        !regionen.length ? "Erst eine Karte installieren oder auswählen." : ["Wegedaten für alle vorhandenen und ausgewählten Karten.", el("br"), routenText],
+        !regionen.length ? "" : rg == null ? "wird berechnet …" : "ca. " + groesse(rg.bytes + 56e6)));
+    }
+    if (regionen.length && rg == null) groessen();
+    k.append(el("h3", { style: "margin:18px 0 8px" }, "Regionen"));
+    const sparen = auswahl.sparen;
+    k.append(el("label", { class: "schalter", style: "margin-bottom:8px" },
+      el("input", { type: "checkbox", checked: sparen, onchange: (e) => { auswahl.sparen = e.target.checked; for (const v of auswahl.karten.values()) v.bytes = null; zeichneListe(aktiv); groessen(); } }),
+      el("span", {}, "Platz sparen (weniger Details beim starken Hineinzoomen)")));
+    for (const r of kat.karten) {
+      if (r.installiert) {
+        k.append(zeile([r.titel, tag("Installiert", "tag-ok")], null, groesse(r.bytesInstalliert), null, knopf("Löschen", () => loeschen("karte", r.id, r.titel), true)));
+      } else {
+        const laedt = offen.titel.has("Karte: " + r.titel);
+        if (laedt) auswahl.karten.delete(r.id);
+        const info = auswahl.karten.get(r.id);
+        k.append(auswahlZeile("checkbox", "inh-k-" + r.id, !!info, laedt, (e) => {
+          if (e.target.checked) auswahl.karten.set(r.id, { bytes: null }); else auswahl.karten.delete(r.id);
+          // Wer schon Routen hat, will sie für neue Karten meist auch: vorausgewählt, abwählbar.
+          // Ist keine neue Karte mehr ausgewählt, fällt die Vorauswahl wieder weg.
+          if (s.routen) {
+            if (e.target.checked && auswahl.karten.size === 1) auswahl.routen = true;
+            if (!auswahl.karten.size) auswahl.routen = false;
+          }
+          auswahl.routenGroesse = null;
+          zeichneListe(aktiv); groessen();
+        }, [r.titel, ...(laedt ? [ladeTag()] : [])], null, info && info.bytes > 0 ? "ca. " + groesse(info.bytes) : kartenSchaetzung(r, sparen) ? "ca. " + groesse(kartenSchaetzung(r, sparen)) : info && info.bytes === -1 ? "?" : info ? "wird berechnet …" : ""));
+      }
+    }
+
 
     // Übersetzer
     const spDa = sprachen.filter(sp => (s.sprachen || []).includes(sp.code));
@@ -315,7 +387,7 @@ const Inhalte = (() => {
     if (s.spracheingabe) ueNamen.push("Spracheingabe");
     const ueGewaehlt = (auswahl.uebersetzer ? 1 : 0) + auswahl.sprachen.size + [...auswahl.stimmen].filter(x => !auswahl.sprachen.has(x)).length + (auswahl.spracheingabe ? 1 : 0);
     const ue = abschnitt("uebersetzer", "languages", "Übersetzer", ueNamen, ueGewaehlt, spDa.length + " von " + sprachen.length + " Sprachen");
-    const ueText = "Übersetzt englische Artikel in der Bibliothek beim Lesen ins Deutsche (Knopf „Auf Deutsch“). Für Gespräche brauchst du eine der Sprachen unten. Technik von Mozilla, wie in Firefox.";
+    const ueText = "Übersetzt englische Artikel in der Bibliothek beim Lesen ins Deutsche (Knopf „Auf Deutsch“), mit den Sprachen unten auch Artikel in diesen Sprachen. Für Gespräche brauchst du eine der Sprachen unten. Technik von Mozilla, wie in Firefox.";
     const ueLoeschen = () => knopf("Löschen", () => loeschen("uebersetzer", "", "Artikel übersetzen"), true);
     if (s.uebersetzer && !s.uebersetzerAlt) {
       ue.append(zeile(["Artikel übersetzen (Englisch → Deutsch)", tag("Installiert", "tag-ok")], ueText, groesse(42e6), null, ueLoeschen()));
@@ -411,60 +483,10 @@ const Inhalte = (() => {
     }
 
 
-    // Karten
-    const kDa = kat.karten.filter(r => r.installiert);
-    const k = abschnitt("karten", "map", "Karten und Routen", kDa.map(r => r.titel).concat(s.routen ? ["Wegedaten für Routen"] : []),
-      auswahl.karten.size + (auswahl.routen ? 1 : 0), vonInst(kDa.length, kat.karten.length));
-    // Routenplanung ganz oben: gilt für alle vorhandenen und ausgewählten Karten
-    const regionen = kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id);
-    const rg = auswahl.routenGroesse;
-    const routenText = "Routen zu Fuß, mit dem Rad und mit dem Auto.";
-    if (s.routen) {
-      // Installiert: wie die anderen installierten Inhalte. Nur wenn Wegedaten fehlen (für eine installierte
-      // oder eine gerade ausgewählte Karte), wird daraus eine Auswahl zum Nachladen.
-      const fehlen = (auswahl.routenFehlen || []).concat(kat.karten.filter(r => auswahl.karten.has(r.id) && r.routen !== false).map(r => r.titel));
-      if (!fehlen.length || (rg && rg.bytes === 0)) k.append(zeile(["Routenplanung", tag("Installiert", "tag-ok")], ["Wegedaten für alle installierten Karten.", el("br"), routenText], null));
-      else k.append(auswahlZeile("checkbox", "inh-routen", auswahl.routen, false, (e) => { auswahl.routen = e.target.checked; zeichneListe(aktiv); },
-        ["Routenplanung", tag("Installiert", "tag-ok"), tag("Ergänzung verfügbar", "tag-warn")],
-        "Wegedaten nachladen für " + fehlen.join(", ") + ".",
-        rg == null ? "wird berechnet …" : "ca. " + groesse(rg.bytes)));
-    } else {
-      k.append(auswahlZeile("checkbox", "inh-routen", auswahl.routen && regionen.length > 0, !regionen.length, (e) => { auswahl.routen = e.target.checked; zeichneListe(aktiv); groessen(); },
-        ["Routenplanung"],
-        !regionen.length ? "Erst eine Karte installieren oder auswählen." : ["Wegedaten für alle vorhandenen und ausgewählten Karten.", el("br"), routenText],
-        !regionen.length ? "" : rg == null ? "wird berechnet …" : "ca. " + groesse(rg.bytes + 56e6)));
-    }
-    if (regionen.length && rg == null) groessen();
-    k.append(el("h3", { style: "margin:18px 0 8px" }, "Regionen"));
-    const sparen = auswahl.sparen;
-    k.append(el("label", { class: "schalter", style: "margin-bottom:8px" },
-      el("input", { type: "checkbox", checked: sparen, onchange: (e) => { auswahl.sparen = e.target.checked; for (const v of auswahl.karten.values()) v.bytes = null; zeichneListe(aktiv); groessen(); } }),
-      el("span", {}, "Platz sparen (weniger Details beim starken Hineinzoomen)")));
-    for (const r of kat.karten) {
-      if (r.installiert) {
-        k.append(zeile([r.titel, tag("Installiert", "tag-ok")], null, groesse(r.bytesInstalliert), null, knopf("Löschen", () => loeschen("karte", r.id, r.titel), true)));
-      } else {
-        const laedt = offen.titel.has("Karte: " + r.titel);
-        if (laedt) auswahl.karten.delete(r.id);
-        const info = auswahl.karten.get(r.id);
-        k.append(auswahlZeile("checkbox", "inh-k-" + r.id, !!info, laedt, (e) => {
-          if (e.target.checked) auswahl.karten.set(r.id, { bytes: null }); else auswahl.karten.delete(r.id);
-          // Wer schon Routen hat, will sie für neue Karten meist auch: vorausgewählt, abwählbar.
-          // Ist keine neue Karte mehr ausgewählt, fällt die Vorauswahl wieder weg.
-          if (s.routen) {
-            if (e.target.checked && auswahl.karten.size === 1) auswahl.routen = true;
-            if (!auswahl.karten.size) auswahl.routen = false;
-          }
-          auswahl.routenGroesse = null;
-          zeichneListe(aktiv); groessen();
-        }, [r.titel, ...(laedt ? [ladeTag()] : [])], null, info && info.bytes > 0 ? "ca. " + groesse(info.bytes) : kartenSchaetzung(r, sparen) ? "ca. " + groesse(kartenSchaetzung(r, sparen)) : info && info.bytes === -1 ? "?" : info ? "wird berechnet …" : ""));
-      }
-    }
-
 
     // Leiste zum Herunterladen
     const bytes = auswahlBytes();
-    const anzahl = (auswahl.modell ? 1 : 0) + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (basisNoetig() ? 1 : 0) + sprachenNeu().length + (auswahl.spracheingabe ? 1 : 0) + [...auswahl.stimmen].filter(c => !auswahl.sprachen.has(c)).length;
+    const anzahl = auswahl.modelle.size + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (basisNoetig() ? 1 : 0) + sprachenNeu().length + (auswahl.spracheingabe ? 1 : 0) + [...auswahl.stimmen].filter(c => !auswahl.sprachen.has(c)).length;
     c.append(el("div", { class: "summe inhalte-leiste" },
       el("span", {}, anzahl ? anzahl + " ausgewählt · " + groesse(bytes) + " · frei: " + groesse(hw.freiGB * 1e9) : "Nichts ausgewählt"),
       el("button", { class: "knopf knopf-haupt", disabled: !anzahl, onclick: herunterladen }, sym("download"), aktiv ? "Zu den Downloads hinzufügen" : "Auswahl herunterladen")));
@@ -518,8 +540,7 @@ const Inhalte = (() => {
 
   function auswahlBytes() {
     let b = 0;
-    const m = kat.modelle.find(x => x.id === auswahl.modell);
-    if (m) b += m.bytes;
+    for (const m of kat.modelle) if (auswahl.modelle.has(m.id)) b += m.bytes;
     for (const p of kat.pakete) if (auswahl.pakete.has(p.id)) b += p.bytes || 0;
     for (const [id, v] of auswahl.karten) b += v.bytes > 0 ? v.bytes : kartenSchaetzung(kat.karten.find(x => x.id === id) || {}, auswahl.sparen);
     if (auswahl.routen && auswahl.routenGroesse && auswahl.routenGroesse.bytes > 0) b += auswahl.routenGroesse.bytes;
@@ -564,11 +585,15 @@ const Inhalte = (() => {
   async function herunterladen() {
     const karten = [...auswahl.karten].map(([id, v]) => ({ id, maxzoom: String(maxzoom(kat.karten.find(x => x.id === id))), bytes: v.bytes > 0 ? v.bytes : 0 }));
     const routen = auswahl.routen ? kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id) : [];
-    const body = { modell: auswahl.modell || "", pakete: [...auswahl.pakete], karten, routen, uebersetzer: !!auswahl.uebersetzer, sprachen: [...auswahl.sprachen], spracheingabe: !!auswahl.spracheingabe, stimmen: [...auswahl.stimmen] };
-    if (auswahl.modell) body.backend = (kat.einstellungen && kat.einstellungen.backend) || Setup.empfehlung(hw, kat.modelle).backend;
+    // Die aktive KI bleibt. Nur wenn noch keine installiert ist, wird die größte neue aktiv.
+    const neueModelle = kat.modelle.filter(m => auswahl.modelle.has(m.id)).sort((a, b) => b.bytes - a.bytes);
+    const aktivDa = kat.modelle.some(m => m.installiert && m.id === (OW.status || {}).modell);
+    const body = { modell: !aktivDa && neueModelle.length ? neueModelle[0].id : "", modelle: neueModelle.map(m => m.id),
+      pakete: [...auswahl.pakete], karten, routen, uebersetzer: !!auswahl.uebersetzer, sprachen: [...auswahl.sprachen], spracheingabe: !!auswahl.spracheingabe, stimmen: [...auswahl.stimmen] };
+    if (neueModelle.length) body.backend = (kat.einstellungen && kat.einstellungen.backend) || Setup.empfehlung(hw, kat.modelle).backend;
     const r = await api("installieren", body);
     if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
-    auswahl.modell = null; auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false; auswahl.sprachen.clear(); auswahl.spracheingabe = false; auswahl.stimmen.clear();
+    auswahl.modelle.clear(); auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false; auswahl.sprachen.clear(); auswahl.spracheingabe = false; auswahl.stimmen.clear();
     warAktiv = null;
     window.scrollTo(0, 0);
     fortschritt();

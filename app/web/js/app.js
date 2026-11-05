@@ -1,11 +1,21 @@
 // Hauptsteuerung: Ansichten wechseln, Status anzeigen.
 "use strict";
 
+// Breite der Bildlaufleiste messen (für den Ausgleich der Kopfzeile in Lesefenster und Karten, siehe app.css)
+(function () {
+  const d = document.createElement("div");
+  d.style.cssText = "position:absolute;top:-999px;width:100px;height:100px;overflow:scroll";
+  document.body.appendChild(d);
+  document.documentElement.style.setProperty("--leiste", (d.offsetWidth - d.clientWidth) + "px");
+  d.remove();
+})();
+
 const Ansichten = {
   start: { zeigen: zeigeStart },
   fragen: { zeigen: (p) => Fragen.zeigen(p) },
   bibliothek: { zeigen: (p) => Bibliothek.zeigen(p) },
   lesen: { zeigen: (p) => Bibliothek.lesen(p) },
+  pdf: { zeigen: (p) => PdfLeser.zeigen(p) },
   paketstart: { zeigen: (p) => Paketstart.zeigen(p) },
   kochen: { zeigen: () => Kochen.zeigen() },
   karten: { zeigen: () => Karten.zeigen() },
@@ -25,12 +35,14 @@ function navigiere() {
   const params = new URLSearchParams(query || "");
   const ziel = Ansichten[name] ? name : "start";
   if (ziel !== "lesen") Bibliothek.anhalten();
+  if (ziel !== "pdf") PdfLeser.verlassen();
   $$(".ansicht").forEach(a => a.classList.toggle("sichtbar", a.dataset.ansicht === ziel));
-  const menue = ziel === "paketstart" ? "bibliothek" : ziel;   // Paket-Startseiten gehören zur Bibliothek
+  // Paket-Startseiten und PDF-Bücher gehören zur Bibliothek
+  const menue = ziel === "paketstart" || ziel === "pdf" ? "bibliothek" : ziel;
   $$("#hauptnav a").forEach(a => a.classList.toggle("aktiv", a.getAttribute("href") === "#" + menue));
   try { Ansichten[ziel].zeigen(params); } catch (e) { console.error(e); Statistik.fehler("Ansicht " + ziel + ": " + e.message); }
   Statistik.bereich(ziel);
-  if (ziel !== "lesen") window.scrollTo(0, 0);
+  if (ziel !== "lesen" && ziel !== "pdf") window.scrollTo(0, 0);
 }
 
 async function aktualisiereStatus() {
@@ -107,12 +119,43 @@ async function schalteKi(an) {
   try { OW.status = await api("ki", { an }); zeigeKopfStatus(OW.status); } catch (e) { alert(e.message); }
 }
 
-$("#ki-pill").addEventListener("click", () => {
-  const s = OW.status;
-  if (!s) return;
-  if (!s.modell) { location.hash = "#setup"; return; }
-  schalteKi(!!s.sparmodus);
-});
+// KI-Menü in der Kopfzeile: KI wechseln, aus- und einschalten
+(function () {
+  const knopf = $("#ki-pill"), liste = $("#ki-liste");
+  const zu = () => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); };
+  const eintrag = (text, onclick, klasse) => el("button", { class: klasse || null, onclick: () => { zu(); onclick(); } }, ...text);
+  async function fuellen() {
+    const s = OW.status || {};
+    liste.replaceChildren(el("div", { class: "menue-titel" }, "KI wird geladen …"));
+    const kat = await api("katalog").catch(() => ({ modelle: [] }));
+    // Installierte KIs und die gerade ausgewählte (auch wenn sie noch heruntergeladen wird)
+    const modelle = kat.modelle.filter(m => m.installiert || m.id === s.modell);
+    const teile = [];
+    if (modelle.length) teile.push(el("div", { class: "menue-titel" }, "KI wechseln"));
+    for (const m of modelle) {
+      const aktiv = m.id === s.modell;
+      const text = [el("span", { class: "menue-haken" }, aktiv ? "✓" : ""), m.name + " · " + m.modell, !m.installiert ? el("small", {}, " wird geladen") : null];
+      teile.push(aktiv || !m.installiert ? el("button", { disabled: true, class: aktiv ? "menue-aktiv" : null }, ...text)
+        : eintrag(text, async () => {
+          knopf.textContent = "KI wechselt …"; knopf.className = "pill warn";
+          OW.status = await api("einstellungen", { modell: m.id }); zeigeKopfStatus(OW.status);
+        }));
+    }
+    if (s.modell) teile.push(el("hr"), s.sparmodus
+      ? eintrag([sym("zap"), "KI einschalten"], () => schalteKi(true))
+      : eintrag([sym("zap"), "KI ausschalten (Sparmodus)"], () => schalteKi(false)));
+    teile.push(eintrag([sym("download"), modelle.length ? "Weitere KIs laden" : "KI einrichten"], () => { location.hash = modelle.length ? "#inhalte" : "#setup?schritt=1"; }));
+    liste.replaceChildren(...teile);
+  }
+  knopf.addEventListener("click", () => {
+    if (!OW.status) return;
+    liste.hidden = !liste.hidden;
+    knopf.setAttribute("aria-expanded", String(!liste.hidden));
+    if (!liste.hidden) fuellen();
+  });
+  document.addEventListener("click", (e) => { if (!liste.contains(e.target) && !knopf.contains(e.target)) zu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") zu(); });
+})();
 
 async function zeigeStart() {
   const s = OW.status || await aktualisiereStatus();
@@ -142,12 +185,9 @@ $("#start-suche").addEventListener("submit", (e) => {
     e.stopPropagation();
     liste.hidden = !liste.hidden;
     knopf.setAttribute("aria-expanded", String(!liste.hidden));
-    const s = OW.status || {};
-    $("#menue-sparmodus").hidden = !s.modell || s.sparmodus;
   });
   document.addEventListener("click", (e) => { if (!liste.contains(e.target)) zu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") zu(); });
-  $("#menue-sparmodus").addEventListener("click", () => { zu(); schalteKi(false); });
   $("#menue-beenden").addEventListener("click", () => { zu(); programmBeenden(); });
 })();
 

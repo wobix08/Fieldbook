@@ -63,6 +63,49 @@ function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts) {
   return { box, innen };
 }
 
+// Schiebeschalter mit mehreren Stellungen (Vorauswahl im Assistenten: Nichts · Empfohlen · Alles · Eigene).
+// stellungen: [{ id, text, unter, gesperrt }]; der grüne Knopf gleitet zur gewählten Stellung, danach onWahl(id).
+// aktiv null: keine Stellung gewählt (Knopf unsichtbar).
+function stufenSchalter(stellungen, aktiv, onWahl, label) {
+  const i = stellungen.findIndex(s => s.id === aktiv);
+  const box = el("div", { class: "stufen" + (i < 0 ? " leer" : ""), role: "radiogroup", "aria-label": label, style: "--n:" + stellungen.length + ";--i:" + Math.max(0, i) },
+    el("span", { class: "stufen-knopf", "aria-hidden": "true" }));
+  stellungen.forEach((s, j) => {
+    const b = el("button", { type: "button", class: "stufen-seite" + (j === i ? " an" : ""), role: "radio", "aria-checked": String(j === i), disabled: !!s.gesperrt },
+      el("span", { class: "stufen-name" }, s.text), s.unter ? el("small", {}, s.unter) : null);
+    b.addEventListener("click", () => {
+      if (j === i) return;
+      box.style.setProperty("--i", j);
+      box.classList.remove("leer");
+      box.querySelectorAll(".stufen-seite").forEach((x, k) => x.classList.toggle("an", k === j));
+      setTimeout(() => onWahl(s.id), 220);   // Gleiten erst zeigen
+    });
+    box.append(b);
+  });
+  return box;
+}
+
+// Ein Paket mit Varianten (z. B. Wikipedia kompakt, ohne oder mit Bildern) als eine Zeile:
+// Häkchen, Titel, Beschreibung der gewählten Variante und ein Schalter mit allen Varianten samt Größe.
+// Es ist immer höchstens eine Variante gewählt; eine andere als die installierte ersetzt diese nach dem Download.
+// o: { titel, varianten, gewaehlt (id|null), installiert (id|null), standard (id), tags, onWahl(id|null), gesperrt, hinweis, knoepfe }
+function variantenZeile(o) {
+  const an = !!o.gewaehlt;
+  const p = o.varianten.find(v => v.id === (o.gewaehlt || o.installiert || o.standard)) || o.varianten[0];
+  const input = el("input", { type: "checkbox", checked: an, disabled: !!o.gesperrt });
+  input.addEventListener("change", () => o.onWahl(input.checked ? (o.installiert || o.standard || o.varianten[0].id) : null));
+  const schalter = stufenSchalter(o.varianten.map(v => ({ id: v.id, text: v.variante || v.titel,
+    unter: (v.id === o.installiert ? "✓ " : "") + groesse(v.bytes), gesperrt: v.gesperrt })), an ? o.gewaehlt : null, id => o.onWahl(id), o.titel);
+  const installiertDa = an && o.installiert && o.gewaehlt === o.installiert;
+  return el("div", { class: "wahl variante" + (installiertDa ? " installiert" : an ? " gewaehlt" : "") },
+    installiertDa ? el("span", { class: "w-haken", "aria-hidden": "true" }, "✓") : input,
+    el("div", { class: "w-text" }, el("div", { class: "w-titel" }, o.titel, ...(o.tags || [])),
+      p.text ? el("small", {}, p.text) : null,
+      el("div", { class: "variante-schalter" }, schalter),
+      o.hinweis ? el("small", { class: "w-hinweis" }, ...[].concat(o.hinweis)) : null),
+    o.knoepfe && o.knoepfe.length ? el("div", { class: "knopfreihe", style: "margin:0;align-items:center;flex-wrap:nowrap" }, ...o.knoepfe) : null);
+}
+
 // Zusammenfassung für einen zugeklappten Abschnitt: was installiert ist und was gerade ausgewählt ist
 function klappZusammenfassung(namen, ausgewaehlt) {
   const teile = [];
@@ -396,6 +439,9 @@ const Kiwix = {
         englisch: /eng/.test(sprache) && !/deu/.test(sprache),
         volltext: /_ftindex:yes/.test(t("tags")),
         durchsuchen: !paket.keineSuche,
+        // PDF-Pakete ("pdf" in pakete.json, selbst hinzugefügte erst nach dem Auslesen): kein Zufall,
+        // gesucht wird im ausgelesenen Text der Bücher
+        pdf: !!paket.pdf || !!(OW.status && OW.status.pdfTexte && id in OW.status.pdfTexte),
         // Selbst hinzugefügte Pakete ohne Eintrag in pakete.json landen unter "Weitere Pakete"
         kategorien: paket.kategorien && paket.kategorien.length ? paket.kategorien : ["sonstiges"],
         bild: bild ? bild.getAttribute("href") : null,
@@ -404,8 +450,8 @@ const Kiwix = {
         startseite: paket.startseite || null,
       });
     }
-    // Wichtige Pakete zuerst
-    const rang = (b) => /wikipedia_de_all/.test(b.name) ? 0 : /medicine|mdwiki/.test(b.name) ? 1 : b.englisch ? 3 : 2;
+    // Reihenfolge wie in pakete.json (wie in Inhalte und Assistent), selbst hinzugefügte nach dem Alphabet dahinter
+    const rang = (b) => { const i = OW.pakete.findIndex(p => p.name === b.name); return i < 0 ? 1e6 : i; };
     liste.sort((a, b) => rang(a) - rang(b) || a.titel.localeCompare(b.titel));
     return (OW.buecher = liste);
   },
@@ -420,7 +466,8 @@ const Kiwix = {
     let daten;
     try { daten = await r.json(); } catch { return []; }
     return daten.filter(d => d.path && d.kind !== "pattern").map(d => ({
-      titel: (d.value || d.label || "").replace(/<[^>]+>/g, ""),
+      // Kiwix liefert Titel teils mit HTML-Zeichen („&apos;“), die hier zu echten Zeichen werden
+      titel: new DOMParser().parseFromString((d.value || d.label || "").replace(/<[^>]+>/g, ""), "text/html").documentElement.textContent,
       url: "/kiwix/content/" + encodeURIComponent(buch.id) + "/" + d.path.replace(/^\//, ""),
       buch,
     }));

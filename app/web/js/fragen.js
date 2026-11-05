@@ -401,7 +401,7 @@ const Fragen = (() => {
 
   // Titel-Treffer und Volltext-Treffer kombinieren und bewerten
   // Pakete mit Anleitungen zum Selbermachen
-  const PRAXIS_PAKET = /appropedia|post-disaster|ifixit|wikibooks|energypedia|electronics|diy\.|mechanics|bicycles|ham\.|outdoors|gardening|cooking|sustainability|wikihow|survival|bushcraft/i;
+  const PRAXIS_PAKET = /appropedia|post-disaster|ifixit|wikibooks|energypedia|electronics|diy\.|mechanics|bicycles|ham\.|outdoors|gardening|cooking|sustainability|wikihow|survival|bushcraft|restarters|zimgit-(water|knots|food)|wikiciv|cd3wd|usda-|gardenology/i;
 
   async function suchen(buecher, begriffe, einfach, praxis) {
     const auftraege = [];
@@ -542,6 +542,8 @@ const Fragen = (() => {
     const sys = "Du prüfst Suchergebnisse. Für jeden Artikel entscheidest du: Enthält er Wissen, das hilft, diese Frage zu beantworten? " +
       "Er hilft auch, wenn er nur einen Teil beantwortet oder das passende Gerät, Verfahren oder Grundwissen erklärt. " +
       "Er hilft nicht, wenn es um ein anderes Gerät, eine andere Sache oder ein anderes Thema geht, auch wenn einzelne Wörter gleich sind. " +
+      "Er hilft auch nicht, wenn er zu einer anderen Lage gehört: Schließt die Frage etwas aus (z. B. „ohne Strom“, „ohne Gerät X“), hilft ein Artikel nicht, der genau das voraussetzt. " +
+      "Artikel für Feuerwehr, Industrie, Kraftwerke oder Fachbetriebe helfen bei Fragen aus dem Alltag nicht. " +
       "Allgemeine Artikel und Anleitungen, die das Thema im Ganzen erklären, kommen vor Einzelversuchen, Sonderfällen und Forenfragen. " +
       "Antworte nur mit JSON: die Nummern der hilfreichen Artikel, der hilfreichste zuerst.";
     const schema = { type: "object", properties: { passend: { type: "array", items: { type: "integer" }, maxItems: 7 } }, required: ["passend"] };
@@ -562,6 +564,8 @@ const Fragen = (() => {
     return {
       reparatur: /reparier|kaputt|defekt|geht nicht|nicht mehr an|lässt sich nicht|funktioniert nicht|springt nicht|lädt nicht|rauscht|tropft|undicht|klemmt|wird nicht|abgesprungen|platten|flick|loch im|sohle|sicherung/.test(f),
       gesundheit: /verletz|wunde|blut|schmerz|stich|biss|zecke|vergift|fieber|krank|durchfall|erbrech|verbrenn|verbrüh|bruch|gebrochen|schiene|unterkühl|erfrier|sonnenstich|hitzschlag|bewusstlos|atem|herz|allerg|blase|nasenbluten|medikament|tablette|notfall|notruf/.test(f),
+      bedingung: /\bohne\b|stromausfall|\bkein(e|en)?\b/.test(f),
+      heizen: /heiz|wärm|warm|kerze|frier|kalt/.test(f),
       trinkwasser: /trink|pfütze|bachwasser|regenwasser|flusswasser|quellwasser|brunnen|wasserfilter|wasser.*(desinfiz|keim|aufbereit|filtern|sauber)|chlortablett/.test(f),
     };
   }
@@ -593,6 +597,13 @@ const Fragen = (() => {
         : "") +
       "Nur wenn deine Anleitung selbst Arbeiten am Netzstrom oder an Gasleitungen enthält, schreibst du dazu einen kurzen passenden Sicherheitshinweis. " +
       "Beschreibt eine Quelle einen anderen Fall (anderer Ort, anderes Gerät, andere Lage), übernimm nur, was sich übertragen lässt, nicht die Einzelheiten dieses Falls. " +
+      (art.bedingung
+        ? "Halte dich an die Bedingungen der Frage (z. B. „ohne …“, „bei Stromausfall“): Empfiehl nichts, was gegen sie verstößt, etwa ein Gerät, das Strom braucht, wenn es keinen Strom gibt, oder das Gerät, ohne das es gehen soll. "
+        : "") +
+      "Lass Teile einer Quelle weg, die für Feuerwehr, Industrie oder Fachbetriebe gedacht sind, wenn die Frage aus dem Alltag kommt. " +
+      (art.heizen
+        ? "Feuer, Grill, Gaskocher oder Kerzen als Wärmequelle in geschlossenen Räumen nur mit Hinweis auf Lüften und Kohlenmonoxid, offenes Feuer in der Wohnung nie. "
+        : "") +
       "Bei Wissensfragen, Rat oder Beschäftigung (z. B. Geschichte, Natur, Begriffe, Spiele) antwortest du einfach direkt und passend, ohne Anleitung und ohne Sicherheitsregeln. " +
       "Gedichte, Zitate, Liedtexte und Zahlen gibst du nur wieder, wenn sie wörtlich in den QUELLEN stehen; schreib nie selbst ein Gedicht und schreib nie etwas einem Autor zu, das nicht so in den Quellen steht. " +
       "Diese Regeln befolgst du still: Erwähne sie nicht in der Antwort. Sprich den Nutzer mit \"du\" an. " +
@@ -624,6 +635,9 @@ const Fragen = (() => {
   }
 
   function leseLink(q) {
+    // Stellen aus PDF-Büchern öffnen im eigenen PDF-Leser auf der gefundenen Seite
+    const pdf = String(q.url).match(/^(\/kiwix\/content\/[^#]+\.pdf)(?:#page=(\d+))?$/i);
+    if (pdf) return "#pdf?url=" + encodeURIComponent(pdf[1]) + (pdf[2] ? "&seite=" + pdf[2] : "") + "&titel=" + encodeURIComponent(String(q.titel).replace(/, Seite \d+$/, ""));
     return "#lesen?url=" + encodeURIComponent(q.url) + "&titel=" + encodeURIComponent(q.titel);
   }
 

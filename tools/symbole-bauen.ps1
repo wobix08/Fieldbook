@@ -24,7 +24,7 @@ $namen = @(
   # Inhalte und Einstellungen
   'folder', 'usb', 'refresh-cw', 'rotate-ccw',
   # Übersetzen
-  'arrow-left-right', 'maximize-2', 'send', 'mic', 'square', 'volume-2'
+  'arrow-left-right', 'maximize-2', 'send', 'mic', 'square', 'volume-2', 'messages-square', 'expand', 'arrow-right'
 )
 
 $js = [IO.File]::ReadAllText($Lucide)

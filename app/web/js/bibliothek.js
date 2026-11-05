@@ -31,7 +31,7 @@ const Bibliothek = (() => {
       $("#bib-treffer").innerHTML = "";
       return;
     }
-    if (q) suchen(q); else $("#bib-treffer").innerHTML = "";
+    if (q) suchen(q, params.get("buch")); else $("#bib-treffer").innerHTML = "";
     zeichneRegal(params, buecher);
   }
 
@@ -64,7 +64,7 @@ const Bibliothek = (() => {
     if (p) { const k = p.kategorien[0] || "sonstiges"; offen.add("k:" + k); offen.add("p:" + k + ":" + p.id); }
     if (params.get("q")) kopf.append(el("h2", {}, "Kategorien"));
     for (const kat of kategorien()) {
-      const pakete = buecher.filter(x => x.kategorien.includes(kat.id));
+      const pakete = buecher.filter(x => x.kategorien[0] === kat.id);
       if (!pakete.length) continue;
       regal.append(klappe("k:" + kat.id, "klapp-kat",
         [symFeld(kat.icon, "gross"),
@@ -94,13 +94,13 @@ const Bibliothek = (() => {
       aktionen.append(el("form", { class: "paket-suche", onsubmit: (e) => {
         e.preventDefault();
         const q = feld.value.trim();
-        if (q) location.hash = leseLink(b, "", b.titel, "&suche=" + encodeURIComponent(q));
+        if (q) location.hash = b.pdf ? pdfSucheLink(b.id, q) : leseLink(b, "", b.titel, "&suche=" + encodeURIComponent(q));
       } }, feld, el("button", { class: "knopf", type: "submit" }, "Suchen")));
     }
     const st = b.startseite || {};
     // Pakete mit eigener Fieldbook-Startseite (Klexikon) öffnen dort statt auf der Startseite des Pakets
     aktionen.append(el("a", { class: "knopf knopf-haupt", href: st.eigene ? "#paketstart?buch=" + encodeURIComponent(b.id) : leseLink(b) }, sym("book-open"), "Öffnen"),
-      el("a", { class: "knopf", href: leseLink(b, "", b.titel, "&zufall=1") }, sym("shuffle"), "Zufälliger Artikel"));
+      b.pdf ? null : el("a", { class: "knopf", href: leseLink(b, "", b.titel, "&zufall=1") }, sym("shuffle"), "Zufälliger Artikel"));
     box.append(aktionen);
     if ((st.kacheln || []).length)
       box.append(el("div", { class: "paket-themen" },
@@ -137,37 +137,109 @@ const Bibliothek = (() => {
         ...r.anleitungen.map(a => el("a", { class: "treffer", href: leseLink(b, a.pfad, a.titel) }, el("b", {}, a.titel))));
   }
 
-  async function suchen(q) {
+  // Suche in den PDF-Büchern eines Pakets: Kiwix findet darin nichts, deshalb über die Bibliothekssuche
+  const pdfSucheLink = (id, q) => "#bibliothek?q=" + encodeURIComponent(q) + "&buch=" + encodeURIComponent(id);
+  // Treffer öffnen im Lesefenster, Stellen aus PDF-Büchern im PDF-Leser auf der gefundenen Seite
+  function trefferLink(t) {
+    const pdf = t.pdf && t.pdf.match(/^([^#]+)#page=(\d+)$/);
+    if (pdf) return "#pdf?url=" + encodeURIComponent(pdf[1]) + "&seite=" + pdf[2] + "&titel=" + encodeURIComponent(t.titel.replace(/, Seite \d+$/, ""));
+    return "#lesen?url=" + encodeURIComponent(t.url) + "&titel=" + encodeURIComponent(t.titel);
+  }
+
+  // Profilseiten von Mitgliedern (iFixit „/User/123/…“, Stack Exchange „/users/123/…“): nie Wissen, nur Namen.
+  // Dazu die Blätterseiten der Foren („users_page=80“, „questions/tagged/water_page=7“): nur Listen ohne Titel
+  const NUTZERSEITE = /\/users?\/\d+\/|_page=\d/i;
+  const FUELLWOERTER = new Set(("der die das den dem des ein eine einen einem einer und oder mit von für fur auf aus bei " +
+    "im in an zu zum zur wie was wo ich man mache machen kann the a an of and or to in on for with how what is").split(" "));
+  // Suchwörter in Kleinbuchstaben ohne Füllwörter. Bei Mehrzahl auch der Wortstamm („Wunden“ → „wunde“,
+  // „Verbrennungen“ → „verbrennung“), aber nur durch Abschneiden von -en (wenn 5 Buchstaben bleiben), -n oder -s.
+  // Kiwix kürzt selbst stärker („Bowline“ → „bowlin“, „backen“ → „back“) und findet so Nachnamen oder englische
+  // Wörter, die mit dem Suchwort nichts zu tun haben.
+  function suchWoerter(q) {
+    const alle = (q.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []);
+    const woerter = alle.filter(w => w.length > 1 && !FUELLWOERTER.has(w));
+    return (woerter.length ? woerter : alle).map(w => {
+      if (w.length < 6) return w;
+      if (w.endsWith("en") && w.length - 2 >= 5) return w.slice(0, -2);
+      return /[ns]$/.test(w) ? w.slice(0, -1) : w;
+    });
+  }
+  // Wortanfang im Text: „wasser“ passt auf „Wasser“ und „Wasserfilter“, aber nicht auf „Abwasser“
+  // (zusammengesetzte Wörter hinten dran gingen nur mit Silbentrennung; lieber zu streng als Unsinn)
+  const wortAnfang = (text, w) => {
+    const t = " " + text.toLowerCase();
+    let i = -1;
+    while ((i = t.indexOf(w, i + 1)) >= 0) if (!/[\p{L}\p{N}]/u.test(t[i - 1])) return true;
+    return false;
+  };
+  // Passt ein Treffer? 2 = Suchwort im Titel, 1 = nur im Textauszug, 0 = weglassen.
+  // Bis zu zwei Suchwörter müssen alle vorkommen, bei mehr zwei Drittel.
+  function passt(woerter, t) {
+    if (!woerter.length) return 1;
+    const titel = t.titel || "";
+    const beides = titel + " " + (t.auszug || "");
+    const noetig = woerter.length <= 2 ? woerter.length : Math.ceil(woerter.length * 2 / 3);
+    if (woerter.filter(w => wortAnfang(titel, w)).length >= noetig) return 2;
+    return woerter.filter(w => wortAnfang(beides, w)).length >= noetig ? 1 : 0;
+  }
+
+  // q: Suchbegriff; nurBuch: nur in diesem Paket suchen (Suchfeld eines PDF-Pakets), dann mit mehr Treffern
+  async function suchen(q, nurBuch) {
     const ziel = $("#bib-treffer");
     ziel.innerHTML = '<p class="hinweis">Suche …</p>';
-    const buecher = (await Kiwix.buecher()).filter(b => b.durchsuchen);
+    let buecher = (await Kiwix.buecher()).filter(b => b.durchsuchen);
+    if (nurBuch) buecher = buecher.filter(b => b.id === nurBuch);
+    // Mehr holen als gezeigt wird: Der Filter unten wirft schwache Treffer weg
+    const anzahl = nurBuch ? 20 : 8;
+    const woerter = suchWoerter(q);
     const gruppen = await Promise.all(buecher.map(async b => {
-      const [titel, voll] = await Promise.all([Kiwix.vorschlaege(b, q, 4).catch(() => []), Kiwix.suche(b, q, 4).catch(() => [])]);
+      const [titel, voll] = await Promise.all([Kiwix.vorschlaege(b, q, anzahl).catch(() => []), Kiwix.suche(b, q, anzahl).catch(() => [])]);
       const gesehen = new Set();
       const liste = [];
+      let imTitel = false;
       for (const t of titel.concat(voll)) {
         const k = decodeURIComponent(t.url).toLowerCase();
-        if (gesehen.has(k)) continue;
+        if (gesehen.has(k) || NUTZERSEITE.test(k)) continue;
         gesehen.add(k);
+        const wertung = passt(woerter, t);
+        if (!wertung) continue;
+        if (wertung === 2) imTitel = true;
         liste.push(t);
       }
-      return { b, liste: liste.slice(0, 6) };
+      return { b, imTitel, liste: liste.slice(0, nurBuch ? 15 : 6) };
     }));
+    // Pakete, bei denen das Suchwort im Titel eines Treffers steht, zuerst (sonst Reihenfolge wie im Regal)
+    gruppen.sort((x, y) => (y.imTitel ? 1 : 0) - (x.imTitel ? 1 : 0));
     ziel.innerHTML = "";
-    const kopf = el("div", { class: "knopfreihe", style: "margin:0 0 16px" },
-      el("a", { class: "knopf knopf-haupt", href: "#fragen", onclick: () => setTimeout(() => { $("#frage-feld").value = q; }, 60) }, sym("message-circle"), "Die KI dazu fragen"));
-    if (OW.status && OW.status.karten && OW.status.karten.length)
+    const kopf = el("div", { class: "knopfreihe", style: "margin:0 0 16px" });
+    // Suche in einem Paket: zurück zum Paket und Suche über alle Pakete
+    const eins = nurBuch && buecher[0];
+    if (eins) kopf.append(el("a", { class: "knopf", href: leseLink(eins) }, sym("book-open"), "Zurück zum Paket"),
+      el("a", { class: "knopf", href: "#bibliothek?q=" + encodeURIComponent(q) }, sym("search"), "In allen Paketen suchen"));
+    kopf.append(el("a", { class: "knopf knopf-haupt", href: "#fragen", onclick: () => setTimeout(() => { $("#frage-feld").value = q; }, 60) }, sym("message-circle"), "Die KI dazu fragen"));
+    if (!eins && OW.status && OW.status.karten && OW.status.karten.length)
       kopf.append(el("a", { class: "knopf", href: "#karten", onclick: () => setTimeout(() => Karten.sucheOrt(q), 300) }, sym("map"), "Auf der Karte suchen"));
     ziel.append(kopf);
     let gefunden = 0;
     for (const { b, liste } of gruppen) {
       if (!liste.length) continue;
       gefunden += liste.length;
-      ziel.append(el("div", { class: "treffer-gruppe" }, el("h3", {}, b.titel),
-        ...liste.map(t => el("a", { class: "treffer", href: "#lesen?url=" + encodeURIComponent(t.url) + "&titel=" + encodeURIComponent(t.titel) },
+      // Jedes Paket als eigener Kasten mit Bild und Namen, damit man sieht, wo das nächste anfängt
+      ziel.append(el("section", { class: "treffer-gruppe" },
+        el("div", { class: "treffer-kopf" },
+          el("img", { class: "e-bild", src: b.bild || "icon.svg", alt: "" }),
+          el("h3", {}, b.titel, b.englisch ? el("small", {}, "Englisch") : null),
+          el("span", { class: "treffer-zahl" }, liste.length === 1 ? "1 Treffer" : liste.length + " Treffer")),
+        ...liste.map(t => el("a", { class: "treffer", href: trefferLink(t) },
           el("b", {}, t.titel), t.auszug ? el("small", {}, t.auszug.slice(0, 200)) : null))));
     }
-    if (!gefunden) ziel.append(el("p", { class: "hinweis" }, "Keine Treffer für „" + q + "“."));
+    if (!gefunden) {
+      // PDF-Bücher sind erst durchsuchbar, wenn Fieldbook ihren Text einmal ausgelesen hat
+      const pdfTexte = (OW.status && OW.status.pdfTexte) || {};
+      const unfertig = eins && eins.pdf && pdfTexte[eins.id] !== true;
+      ziel.append(el("p", { class: "hinweis" }, "Keine Treffer für „" + q + "“" + (eins ? " in „" + eins.titel + "“." : "."),
+        unfertig ? el("br") : null, unfertig ? "Fieldbook liest die Bücher dieses Pakets gerade noch für die Suche ein." : null));
+    }
   }
 
   $("#bib-suche").addEventListener("submit", (e) => {
@@ -179,20 +251,45 @@ const Bibliothek = (() => {
   // "Zurück" geht wie die Zurück-Taste der Maus eine Seite im Lesefenster zurück, von der ersten Seite
   // aus zur Seite, von der man gekommen ist (z. B. Bibliotheksübersicht). Ohne eigenen Verlaufseintrag
   // (Seite direkt geöffnet) springt er direkt zur Herkunft.
-  let leseStart = 0, herkunft = "#bibliothek", warLesen = false;
+  let herkunft = "#bibliothek", warLesen = false;
   window.addEventListener("hashchange", (e) => {
     const jetztLesen = location.hash.startsWith("#lesen");
-    if (jetztLesen && !warLesen) {
-      leseStart = history.length;
+    // Aus dem PDF-Leser zurück: Das PDF wurde von hier aus geöffnet, die Herkunft bleibt, wie sie war
+    if (jetztLesen && !warLesen && !e.oldURL.includes("#pdf")) {
       const alt = new URL(e.oldURL).hash;
       herkunft = alt && !alt.startsWith("#lesen") ? alt : "#bibliothek";
     }
     warLesen = jetztLesen;
   });
+  // Nicht nach history.length entscheiden: Die schrumpft, wenn man zurückgeht und dann Neues öffnet
   $("#lese-zurueck").addEventListener("click", () => {
-    if (leseStart && history.length > 1) history.back();
+    const z = schritteZurueck();
+    if (z.imRahmen || (window.navigation ? navigation.currentEntry.index > 0 : history.length > 1)) history.go(-z.n);
     else location.hash = herkunft;
   });
+  // Wie viele Verlaufseinträge zurück? Manche Pakete ändern beim Laden selbst die Sprungmarke ihrer Seite
+  // („home#list--0“ in den PDF-Paketen) und legen dabei einen Eintrag an, der nichts sichtbar ändert. Solche
+  // Einträge (gleiche Seite, nur andere Sprungmarke) überspringt „Zurück“, damit jeder Klick etwas bewirkt.
+  // Sind alle früheren Einträge des Artikels nur solche, geht es gleich zur Seite davor (z. B. Bibliothek).
+  // imRahmen: Das Ziel ist ein früherer Artikel im Lesefenster (sonst die Seite vor dem Lesefenster).
+  function schritteZurueck() {
+    try {
+      const rahmen = $("#lese-rahmen");
+      const innen = rahmen.contentDocument.getElementById("content_iframe") || rahmen;
+      const nav = innen.contentWindow.navigation;
+      const eintraege = nav.entries(), i = nav.currentEntry.index;
+      const ohneMarke = (u) => (u || "").split("#")[0];
+      let n = 1;
+      while (i - n >= 0 && ohneMarke(eintraege[i - n].url) === ohneMarke(eintraege[i].url)) n++;
+      // Links zwischen Artikeln laufen meist über den Viewer (seine Adresse ändert sich, der Artikelrahmen
+      // wird nur ersetzt): Hat der Viewer frühere Einträge, gibt es auch einen früheren Artikel
+      const viewerNav = rahmen.contentWindow.navigation;
+      return { n, imRahmen: i - n >= 0 || (innen !== rahmen && viewerNav.currentEntry.index > 0) };
+    } catch { return { n: 1, imRahmen: false }; }
+  }
+  // Art der letzten Navigation: Bei Zurück/Vor ("traverse") stellt der Browser das Lesefenster selbst wieder her
+  let navArt = "";
+  if (window.navigation) navigation.addEventListener("navigate", (e) => { navArt = e.navigationType; });
 
   Uebersetzer.anbinden();
 
@@ -201,21 +298,52 @@ const Bibliothek = (() => {
     try { const w = $("#lese-rahmen").contentWindow; return w && w.gotoMainPageOfCurrentBook ? w : null; } catch { return null; }
   }
   // Paket, das gerade im Lesefenster offen ist (aus "/kiwix/viewer#paket/Artikel" oder "/kiwix/content/paket/…")
+  // Zuerst der innere Rahmen des Viewers: Die Trefferliste einer Suche in einem anderen Paket
+  // („/kiwix/search?books.name=…“) ändert den Hash des Viewers nicht
   function aktuellesPaket() {
+    try {
+      const innen = $("#lese-rahmen").contentDocument.getElementById("content_iframe");
+      const il = innen && innen.contentWindow.location;
+      const m = il && (il.pathname.match(/^\/kiwix\/content\/([^/]+)/) ||
+        (il.pathname === "/kiwix/search" && il.search.match(/[?&]books\.name=([^&]+)/)));
+      if (m) return decodeURIComponent(m[1]);
+    } catch { }
     try {
       const l = $("#lese-rahmen").contentWindow.location;
       const m = l.hash.match(/^#([^/]+)/) || l.pathname.match(/^\/kiwix\/content\/([^/]+)/);
       return m ? decodeURIComponent(m[1]) : null;
     } catch { return null; }
   }
+  // Name oben im Lesefenster: Führt ein Link in ein anderes Paket (z. B. von Wikivoyage in die Wikipedia),
+  // steht dort dessen Name; zurück im ersten Paket wieder der ursprüngliche Titel
+  let startPaket = null, startTitel = "";
   async function leisteAnpassen() {
     const id = aktuellesPaket();
     const b = id && (await Kiwix.buecher()).find(x => x.id === id);
+    if (b) $("#lese-titel").textContent = id === startPaket ? startTitel : b.titel;
     $("#lese-suche").hidden = !(b && b.durchsuchen);
+    $("#lese-zufall").hidden = !!(b && b.pdf);
     $("#lese-suche-feld").placeholder = b ? "In „" + b.titel.replace(/ \(.*\)$/, "") + "“ suchen …" : "In diesem Paket suchen …";
+    adresseMerken();
+  }
+  // Die Adresse oben folgt dem Artikel im Lesefenster: Neu laden zeigt dann denselben Artikel statt der
+  // Startseite des Pakets. replaceState legt keinen Verlaufseintrag an und löst kein "hashchange" aus.
+  // Zufall und Suche fallen dabei weg (sonst käme beim Neuladen ein anderer Artikel).
+  function adresseMerken() {
+    if (!location.hash.startsWith("#lesen")) return;
+    let url;
+    try {
+      const l = $("#lese-rahmen").contentWindow.location;
+      if (l.href === "about:blank") return;
+      url = l.pathname + l.search + l.hash;
+    } catch { return; }
+    if (!url.startsWith("/kiwix/")) return;
+    const neu = "#lesen?url=" + encodeURIComponent(url) + "&titel=" + encodeURIComponent($("#lese-titel").textContent || "");
+    if (neu !== location.hash) history.replaceState(history.state, "", neu);
   }
   // PDF-Links (z. B. Medizin-Handbücher) wollen ein neues Fenster öffnen, was je nach Browser zum
-  // Download wird. Stattdessen das PDF im Lesefenster zeigen; "Zurück" führt dann zur Liste.
+  // Download wird. Stattdessen öffnet sich der eigene PDF-Leser (js/pdfleser.js); "Zurück" führt zur Liste.
+  // Außerdem: Treffer auf Suchseiten im Rahmen öffnen (siehe unten).
   function pdfImLesefenster(innen) {
     try {
       const doc = innen.contentDocument;
@@ -225,10 +353,21 @@ const Bibliothek = (() => {
         const a = e.target.closest && e.target.closest("a[href]");
         if (!a) return;
         const url = new URL(a.href, doc.baseURI);
+        // Treffer einer Suche führen über den Viewer („/kiwix/viewer#paket/Artikel“). Der merkt sich die
+        // Trefferliste nicht, „Zurück“ landete dann auf der Startseite des Pakets. Deshalb den Artikel direkt
+        // im Rahmen öffnen: Dann führt „Zurück“ wieder zur Trefferliste.
+        if (innen.contentWindow.location.pathname === "/kiwix/search" && url.origin === location.origin &&
+            url.pathname === "/kiwix/viewer" && url.hash.length > 1 && !e.ctrlKey && !e.shiftKey && !e.metaKey && e.button === 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          innen.contentWindow.location.href = "/kiwix/content/" + url.hash.slice(1);
+          return;
+        }
         if (url.origin !== location.origin || !/\.pdf$/i.test(url.pathname)) return;
         e.preventDefault();
         e.stopPropagation();
-        innen.contentWindow.location.href = url.href;
+        const seite = (url.hash.match(/page=(\d+)/) || [])[1];
+        location.hash = "#pdf?url=" + encodeURIComponent(url.pathname) + (seite ? "&seite=" + seite : "");
       }, true);
     } catch { }
   }
@@ -239,7 +378,7 @@ const Bibliothek = (() => {
       const w = $("#lese-rahmen").contentWindow;
       w.addEventListener("hashchange", leisteAnpassen);
       const innen = w.document.getElementById("content_iframe");
-      if (innen) { innen.addEventListener("load", () => pdfImLesefenster(innen)); pdfImLesefenster(innen); }
+      if (innen) { innen.addEventListener("load", () => { pdfImLesefenster(innen); leisteAnpassen(); }); pdfImLesefenster(innen); }
     } catch { }
   });
   $("#lese-start").addEventListener("click", async () => {
@@ -249,9 +388,13 @@ const Bibliothek = (() => {
     const w = viewer(); if (w) w.gotoMainPageOfCurrentBook();
   });
   $("#lese-zufall").addEventListener("click", () => { const w = viewer(); if (w) w.gotoRandomPage(); });
-  $("#lese-suche").addEventListener("submit", (e) => {
+  $("#lese-suche").addEventListener("submit", async (e) => {
     e.preventDefault();
     const q = $("#lese-suche-feld").value.trim();
+    // PDF-Pakete: Kiwix findet in den Büchern nichts, gesucht wird im ausgelesenen Text
+    const id = aktuellesPaket();
+    const b = q && id && (await Kiwix.buecher()).find(x => x.id === id);
+    if (b && b.pdf) { location.hash = pdfSucheLink(id, q); return; }
     const w = viewer();
     if (!q || !w) return;
     // Suchfeld des Viewers füllen und seine Suche starten, dann zeigt Kiwix die Trefferliste im Lesefenster
@@ -263,24 +406,38 @@ const Bibliothek = (() => {
     const url = params.get("url") || "";
     if (!url.startsWith("/kiwix/")) return;
     $("#uebersetzen-knopf").hidden = !Uebersetzer.verfuegbar();
-    if (!leseStart) { leseStart = history.length; warLesen = true; }
+    warLesen = true;
     const rahmen = $("#lese-rahmen");
     // Ein neues Buch ohne zusätzlichen Verlaufseintrag laden (sonst führt "Zurück" ins vorher gelesene Buch
     // statt zur Übersicht). Links innerhalb des Artikels bleiben mit "Zurück" erreichbar.
     let aktuell = null;
     try { const l = rahmen.contentWindow.location; aktuell = l.href === "about:blank" ? null : l.pathname + l.search + l.hash; } catch { }
-    if (aktuell !== url) {
+    // Zurück aus dem PDF-Leser oder Vor: Der Browser zeigt den Artikel von damals schon wieder, neu laden
+    // würde ihn ersetzen und einen leeren Schritt im Verlauf hinterlassen. Beim Öffnen dagegen immer laden:
+    // Die Adresse des Viewers verrät nicht, ob er gerade z. B. eine Trefferliste zeigt.
+    const zurueckGekommen = navArt === "traverse" && aktuell;
+    if (!zurueckGekommen) {
       verdeckenBisGeladen(rahmen);
-      if (aktuell) rahmen.contentWindow.location.replace(url);
+      // Gleiche Adresse: replace wäre wirkungslos (nur die Sprungmarke), deshalb neu laden
+      if (aktuell === url) rahmen.contentWindow.location.reload();
+      else if (aktuell) rahmen.contentWindow.location.replace(url);
       else rahmen.setAttribute("src", url);
     }
-    $("#lese-titel").textContent = params.get("titel") || "";
+    startTitel = params.get("titel") || "";
+    const p = url.match(/^\/kiwix\/viewer#([^/]+)/) || url.match(/^\/kiwix\/content\/([^/]+)/);
+    startPaket = p ? decodeURIComponent(p[1]) : null;
+    $("#lese-titel").textContent = startTitel;
     $("#lese-neu").href = url;
-    // Von der Paket-Startseite: zufälligen Artikel zeigen oder suchen, sobald der Viewer bereit ist
+    // Von der Paket-Startseite: zufälligen Artikel zeigen oder suchen, sobald der Viewer bereit ist.
+    // Die Startseite des Pakets wird dabei ersetzt (location.replace statt gotoRandomPage/performSearch des
+    // Viewers, die einen Verlaufseintrag anlegen): Sonst führte der erste Klick auf „Zurück“ nur zu ihr.
     const suche = params.get("suche"), zufall = params.get("zufall");
-    if (suche || zufall) wennViewerBereit((w) => {
-      if (zufall) w.gotoRandomPage();
-      else { w.document.getElementById("kiwixsearchbox").value = suche; w.performSearch(); }
+    if ((suche || zufall) && startPaket) wennViewerBereit((w) => {
+      const innen = w.document.getElementById("content_iframe");
+      const buch = encodeURIComponent(startPaket);
+      if (suche) w.document.getElementById("kiwixsearchbox").value = suche;
+      innen.contentWindow.location.replace(zufall ? "/kiwix/random?content=" + buch
+        : "/kiwix/search?books.name=" + buch + "&pattern=" + encodeURIComponent(suche));
     });
   }
 

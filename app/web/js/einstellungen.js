@@ -22,7 +22,7 @@ const Einstellungen = (() => {
     }
     const gpu = Setup.besteGpu(hw);
     if (gpu && gpu.vramGB >= 4) ki.append(el("div", { class: "einst-zeile" },
-      el("div", {}, el("b", {}, "Grafikkarte nutzen"), el("small", {}, gpu.name + ", " + gpu.vramGB + " GB. Die KI antwortet damit viel schneller und es passen größere KIs. Ohne rechnet der Prozessor.")),
+      el("div", {}, el("b", {}, "Grafikkarte nutzen"), el("small", {}, gpu.name + ", " + gpu.vramGB + " GB. Die KI antwortet damit viel schneller.", el("br"), "Ohne rechnet der Prozessor.")),
       el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.backend === "vulkan", onchange: async (e) => {
         e.target.disabled = true;
         await rechenwegSetzen(e.target.checked ? "vulkan" : "cpu");
@@ -272,6 +272,7 @@ function setzeThema(t) {
   try { localStorage.setItem("thema", t); } catch { }
   wendeThemaAn(t);
   if (typeof Karten !== "undefined" && Karten.themaGeaendert) Karten.themaGeaendert();
+  if (typeof PdfLeser !== "undefined") PdfLeser.themaGeaendert();
 }
 wendeThemaAn(aktuellesThema());
 document.getElementById("thema-knopf").addEventListener("click", () => {

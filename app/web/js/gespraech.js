@@ -9,18 +9,25 @@ const Gespraech = (() => {
   let ich = "de", du = null;
   const verlauf = [];           // { wer: "ich" | "du", von, nach, text, uebers, zurueck, fehler }
   let zeichneVerlauf = () => { };
-  const zurueckMarke = { de: "Zurückübersetzt:" };   // Beschriftung je Sprache, für das Gegenüber übersetzt
+  const marken = {};   // Beschriftungen je Sprache, für das Gegenüber übersetzt („sv|Original“ → „Original:“)
 
-  function marke(code) {
-    if (zurueckMarke[code] == null) {
-      zurueckMarke[code] = "";
-      uebersetze("de", code, "Zurückübersetzt").then(t => { zurueckMarke[code] = t.replace(/[.:。]+$/, "") + ":"; zeichneVerlauf(); }).catch(() => { });
+  // Deutsche Beschriftung in der Sprache code, mit Doppelpunkt; leer, solange die Übersetzung noch läuft
+  function marke(code, text) {
+    text = text || "Zurückübersetzt";
+    if (code === "de") return text + ":";
+    const k = code + "|" + text;
+    if (marken[k] == null) {
+      marken[k] = "";
+      uebersetze("de", code, text).then(t => { marken[k] = t.replace(/[.:。]+$/, "") + ":"; zeichneVerlauf(); }).catch(() => { marken[k] = text + ":"; });
     }
-    return zurueckMarke[code];
+    return marken[k];
   }
 
   let modus = "schreiben";       // "schreiben" | "sprechen"; startet immer mit Schreiben (Mikrofon nie ungefragt an)
-  try { du = localStorage.getItem("fb-gespraech-du"); } catch { }
+  // Ansicht: "chat" (Nachrichten links/rechts) oder "buehne" (neueste Übersetzung groß, Verlauf klein darunter), gemerkt
+  let ansicht = "buehne";
+  let gezeigt = null;            // Bühne: angeklickte ältere Nachricht, null = die neueste
+  try { du = localStorage.getItem("fb-gespraech-du"); if (localStorage.getItem("fb-gespraech-ansicht") === "chat") ansicht = "chat"; } catch { }
   // Seite verlassen: Mikrofon im Sprechmodus aus, Vorlesen anhalten
   window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#uebersetzen")) { smStopp(); vorlesenStopp(); modus = "schreiben"; } });
 
@@ -67,6 +74,8 @@ const Gespraech = (() => {
     vorlesenStopp();
     const c = $("#gs-inhalt");
     c.innerHTML = "";
+    const platz = $("#gs-modus-platz");
+    platz.innerHTML = "";
     const liste = verfuegbar();
     if (!liste.length) {
       c.append(el("div", { class: "karte-box" },
@@ -97,7 +106,7 @@ const Gespraech = (() => {
         schalter.classList.toggle("an", !an);
         setTimeout(zeichne, 220);   // Gleiten erst zeigen
       });
-      c.append(el("div", { class: "gs-modus-zeile" }, schalter));
+      platz.append(schalter);
     }
 
     const auswahl = (wert, onWahl, label) => {
@@ -108,12 +117,45 @@ const Gespraech = (() => {
     const setzeDu = (v) => { if (v === ich) ich = du; du = v; try { localStorage.setItem("fb-gespraech-du", du); } catch { } zeichne(); };
     const setzeIch = (v) => { if (v === du) du = ich; ich = v; zeichne(); };
 
-    // Überall gleich: ich links, Gegenüber rechts
+    // Ansicht Chat | Bühne: zeichnet nur den Verlauf neu, damit ein laufender Sprechmodus weiterhört
+    const ansichtSchalter = el("button", { class: "gs-modus gs-modus-klein" + (ansicht === "buehne" ? " an" : ""), type: "button", role: "switch",
+      "aria-checked": String(ansicht === "buehne"), "aria-label": "Große Ansicht" },
+      el("span", { class: "gs-modus-knopf", "aria-hidden": "true" }),
+      el("span", { class: "gs-modus-seite" }, sym("messages-square"), "Chat"),
+      el("span", { class: "gs-modus-seite" }, sym("maximize-2"), "Groß"));
+    ansichtSchalter.addEventListener("click", () => {
+      ansicht = ansicht === "buehne" ? "chat" : "buehne";
+      try { localStorage.setItem("fb-gespraech-ansicht", ansicht); } catch { }
+      ansichtSchalter.classList.toggle("an", ansicht === "buehne");
+      ansichtSchalter.setAttribute("aria-checked", String(ansicht === "buehne"));
+      gezeigt = null;
+      zeichneVerlauf();
+    });
+
+    // Überall gleich: ich links, Gegenüber rechts. „Tauschen“ genau mittig, „Neues Gespräch“ ganz links, Ansicht ganz rechts
     c.append(el("div", { class: "karte-box gs-kopf" },
-      el("label", { class: "gs-sprache" }, el("span", {}, "Ich spreche"), auswahl(ich, setzeIch, "Meine Sprache")),
+      el("div", { class: "gs-kopf-seite" },
+        el("button", { class: "knopf knopf-klein gs-neu gs-kopf-rand", type: "button", disabled: !verlauf.length, onclick: () => { verlauf.length = 0; gezeigt = null; zeichne(); } }, sym("rotate-ccw"), "Neues Gespräch"),
+        el("div", { class: "gs-sprache" }, auswahl(ich, setzeIch, "Meine Sprache"))),
       el("button", { class: "knopf knopf-klein gs-tauschen", type: "button", title: "Sprachen tauschen", onclick: () => { [ich, du] = [du, ich]; zeichne(); } }, sym("arrow-left-right"), "Tauschen"),
-      el("label", { class: "gs-sprache" }, el("span", {}, "Gegenüber spricht"), auswahl(du, setzeDu, "Sprache des Gegenübers")),
-      el("button", { class: "knopf knopf-klein gs-neu", type: "button", disabled: !verlauf.length, onclick: () => { verlauf.length = 0; zeichne(); } }, sym("rotate-ccw"), "Neues Gespräch")));
+      el("div", { class: "gs-kopf-seite" }, el("div", { class: "gs-sprache" }, auswahl(du, setzeDu, "Sprache des Gegenübers")),
+        el("div", { class: "gs-kopf-rand gs-kopf-rand-rechts" }, ansichtSchalter))));
+    const kopf = c.querySelector(".gs-kopf");
+    // Einzeilig, solange alles hineinpasst, sonst zweizeilig (hängt von der Länge der Sprachnamen ab)
+    // Als letzter Ausweg (sehr schmales Fenster) dürfen die Felder schmaler als ihr Text werden
+    const passt = () => kopf.scrollWidth <= kopf.clientWidth + 1;
+    const einpassen = () => {
+      kopf.classList.remove("eng");
+      kopf.querySelectorAll("select").forEach(textBreite);
+      if (passt()) return;
+      kopf.classList.add("eng");
+      if (!passt()) kopf.querySelectorAll("select").forEach(s => { s.style.minWidth = "0"; });
+    };
+    if (kopfBeobachter) kopfBeobachter.disconnect();
+    let breiteVorher = -1;
+    kopfBeobachter = new ResizeObserver(() => { if (c.clientWidth !== breiteVorher) { breiteVorher = c.clientWidth; einpassen(); } });
+    kopfBeobachter.observe(c);
+    einpassen();
 
     // Spracheingabe: einrichten, oder Hinweis bei Sprachen, die oft falsch erkannt werden
     if (!(OW.status && OW.status.spracheingabe)) {
@@ -129,14 +171,32 @@ const Gespraech = (() => {
     if (ohneStimme.length) c.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 14px" }, "Übersetzungen vorlesen lassen: ",
       el("a", { href: "#inhalte?zu=sprachen" }, "Sprache für " + ohneStimme.join(" und ") + " dazuladen")));
 
-    const chat = el("div", { class: "gs-chat", "aria-live": "polite" });
-    c.append(chat);
+    // Chat: alle Nachrichten über der Eingabe. Bühne: neueste (oder angeklickte) groß über der Eingabe,
+    // die übrigen klein darunter, neueste zuerst.
+    const oben = el("div", { class: "gs-chat", "aria-live": "polite" });
+    const unten = el("div", { class: "gs-bisher" });
+    c.append(oben);
     zeichneVerlauf = () => {
-      chat.innerHTML = "";
-      if (!verlauf.length) chat.append(el("p", { class: "hinweis gs-leer" }, sprechmodus
-        ? "Sprecht abwechselnd und macht nach jedem Satz eine kurze Pause. Fieldbook erkennt, wer gesprochen hat, übersetzt und liest die Übersetzung vor."
-        : "Schreibt abwechselnd: du links, dein Gegenüber rechts. Mit „Groß zeigen“ erscheint deine Übersetzung bildschirmfüllend, dann kannst du den Laptop umdrehen."));
-      for (const m of verlauf) chat.append(nachricht(m));
+      oben.innerHTML = ""; unten.innerHTML = "";
+      if (!verlauf.length) {
+        const saetze = sprechmodus
+          ? ["Sprecht abwechselnd und macht nach jedem Satz eine kurze Pause.", "Fieldbook erkennt, wer gesprochen hat, übersetzt und liest die Übersetzung vor."]
+          : ansicht === "buehne"
+            ? ["Schreibt abwechselnd: du links, dein Gegenüber rechts.", "Die neueste Übersetzung erscheint hier groß, darunter zur Kontrolle die Rückübersetzung."]
+            : ["Schreibt abwechselnd: du links, dein Gegenüber rechts.", "Links steht dann alles auf " + info(ich).name + ", rechts alles auf " + info(du).name + "."];
+        oben.append(el("p", { class: "hinweis gs-leer" + (ansicht === "buehne" ? " gs-buehne gs-buehne-leer" : "") }, saetze[0], el("br"), saetze[1]));
+        return;
+      }
+      if (ansicht === "chat") {
+        oben.append(el("div", { class: "gs-zeile gs-spaltenkopf" }, el("span", {}, info(ich).name), el("span", { dir: "auto", lang: du }, info(du).eigen)));
+        for (const m of verlauf) oben.append(nachricht(m));
+        return;
+      }
+      if (!verlauf.includes(gezeigt)) gezeigt = null;
+      const haupt = gezeigt || verlauf[verlauf.length - 1];
+      oben.append(buehne(haupt));
+      const rest = verlauf.filter(m => m !== haupt).reverse();
+      if (rest.length) unten.append(el("div", { class: "gs-bisher-titel" }, "Bisher"), ...rest.map(m => bisherZeile(m)));
     };
     zeichneVerlauf();
 
@@ -148,7 +208,37 @@ const Gespraech = (() => {
       const feldDu = eingabe("du", du, ich);
       c.append(el("div", { class: "gs-eingabe" }, feldIch, feldDu));
     }
-    c.append(el("p", { class: "hinweis klein" }, "Übersetzt offline mit Technik von Mozilla (wie in Firefox). Maschinelle Übersetzungen können Fehler machen, besonders bei sehr kurzen Sätzen. Die Rückübersetzung zeigt, ob der Sinn angekommen ist. Bei Medikamenten und wichtigen Dingen lieber noch einmal anders nachfragen."));
+    c.append(unten);
+    c.append(el("p", { class: "hinweis klein" }, "Übersetzt offline mit Technik von Mozilla (wie in Firefox).", el("br"),
+      "Maschinelle Übersetzungen können Fehler machen, besonders bei sehr kurzen Sätzen.", el("br"),
+      "Die Rückübersetzung zeigt, ob der Sinn angekommen ist.", el("br"),
+      "Bei Medikamenten und wichtigen Dingen lieber noch einmal anders nachfragen."));
+  }
+
+  // Fehlt bei einer eindeutigen Frage das Fragezeichen, übersetzt Bergamot oft falsch („Wie geht es dir“ →
+  // „How are you doing“ → schwedisch „Hur gör du“). Deshalb geht ein ergänztes „?“ an den Übersetzer, das Feld
+  // und die Anzeige behalten den getippten Text. Nur Deutsch und Englisch (Fragewörter bzw. Hilfsverb + Pronomen).
+  const FRAGE = {
+    de: /^(wie|was|wo|woher|wohin|wann|warum|wieso|weshalb|weswegen|wer|wen|wem|wessen|welche[rsnm]?|wozu|womit|wodurch|worauf|worüber|wofür|woran|worin|wovon|(kannst|können|könnten|könntest|hast|haben|habt|hat|ist|bist|sind|seid|gibt|darf|darfst|dürfen|muss|musst|müssen|soll|sollen|sollte|willst|wollen|möchtest|möchten|weißt|wissen|kennst|kennen|brauchst|brauchen|sprichst|sprechen|tut|geht|gehst)\s+(du|sie|ihr|wir|ich|es|man|er|das|hier|dort|da)\b)/i,
+    en: /^(what|where|when|why|who|whom|whose|which|how|(do|does|did|can|could|is|are|was|were|have|has|will|would|should|may|shall)\s+(you|i|we|they|he|she|it|there|this|that)\b)/i
+  };
+  function mitFragezeichen(sprache, text) {
+    const muster = FRAGE[sprache];
+    if (!muster) return text;
+    return text.split("\n").map(z => {
+      const t = z.trimEnd();
+      return t && !/[.!?…:;]$/.test(t) && muster.test(t.trimStart()) ? t + "?" : z;
+    }).join("\n");
+  }
+
+  // Mindestbreite eines Sprachfelds = gewählter Text plus Innenabstand und Pfeil, damit er nie abgeschnitten wird
+  let messLeinwand = null, kopfBeobachter = null;
+  function textBreite(sel) {
+    const st = getComputedStyle(sel);
+    const ctx = (messLeinwand = messLeinwand || document.createElement("canvas")).getContext("2d");
+    ctx.font = st.fontWeight + " " + st.fontSize + " " + st.fontFamily;
+    const text = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : "";
+    sel.style.minWidth = Math.ceil(ctx.measureText(text).width + parseFloat(st.paddingLeft) + parseFloat(st.paddingRight) + 30) + "px";
   }
 
   // Nachricht anlegen und übersetzen; fertig, sobald die Übersetzung da ist. Die Rückübersetzung zur
@@ -156,10 +246,11 @@ const Gespraech = (() => {
   async function neueNachricht(wer, von, nach, t, gesprochen) {
     const m = { wer, von, nach, text: t, uebers: null, zurueck: null, fehler: null, gesprochen: !!gesprochen };
     verlauf.push(m);
+    gezeigt = null;
     const neu = $(".gs-neu"); if (neu) neu.disabled = false;
     zeichneVerlauf();
     try {
-      m.uebers = await uebersetze(von, nach, t);
+      m.uebers = await uebersetze(von, nach, mitFragezeichen(von, t));
       zeichneVerlauf();
       uebersetze(nach, von, m.uebers).then(z => { m.zurueck = z; zeichneVerlauf(); }).catch(() => { m.zurueck = "–"; zeichneVerlauf(); });
     } catch (e) {
@@ -173,7 +264,7 @@ const Gespraech = (() => {
   function eingabe(wer, sprache, andere) {
     const s = info(sprache);
     const text = el("textarea", { rows: 3, dir: "auto", lang: sprache, placeholder: wer === "ich" ? "Hier schreiben …" : "…" });
-    const knopf = el("button", { class: "knopf" + (wer === "ich" ? " knopf-haupt" : ""), type: "button" }, sym("send"), wer === "ich" ? "Übersetzen" : "…");
+    const knopf = el("button", { class: "knopf knopf-haupt", type: "button" }, sym("send"), wer === "ich" ? "Übersetzen" : "…");
     const titel = el("b", { dir: "auto", lang: sprache }, wer === "ich" ? "Ich (" + s.name + ")" : s.eigen);
     const senden = async () => {
       const t = text.value.trim();
@@ -523,7 +614,7 @@ const Gespraech = (() => {
   // Den ganzen (gewachsenen) Text einer Nachricht neu übersetzen, Rückübersetzung danach
   async function neuUebersetzen(m) {
     try {
-      m.uebers = await uebersetze(m.von, m.nach, m.text);
+      m.uebers = await uebersetze(m.von, m.nach, mitFragezeichen(m.von, m.text));
       zeichneVerlauf();
       uebersetze(m.nach, m.von, m.uebers).then(z => { m.zurueck = z; zeichneVerlauf(); }).catch(() => { m.zurueck = "–"; zeichneVerlauf(); });
     } catch (e) {
@@ -546,19 +637,58 @@ const Gespraech = (() => {
     } catch { return erwartet; }
   }
 
-  function nachricht(m) {
+  // Bausteine einer Nachricht, gemeinsam für Chat und Bühne
+  function teile(m) {
     const laedt = !m.uebers && !m.fehler;
     const haupt = m.fehler ? el("div", { class: "gs-fehler" }, m.fehler)
       : laedt ? el("div", { class: "gs-text hinweis" }, "Wird übersetzt …")
       : el("div", { class: "gs-text", dir: richtung(m.nach), lang: m.nach }, m.uebers);
-    const original = el("div", { class: "gs-klein" }, el("span", { class: "gs-marke" }, m.wer === "ich" ? (m.gesprochen ? "Du hast gesagt:" : "Du hast geschrieben:") : "Original (" + info(m.von).name + "):"),
-      " ", el("span", { dir: richtung(m.von), lang: m.von }, m.text));
-    const zurueck = m.uebers ? el("div", { class: "gs-klein" }, el("span", { class: "gs-marke", dir: richtung(m.von), lang: m.von }, marke(m.von)), " ",
-      m.zurueck == null ? "…" : el("span", { dir: richtung(m.von), lang: m.von }, m.zurueck)) : null;
-    const gross = m.uebers ? el("button", { class: "knopf knopf-klein", type: "button", onclick: () => grossZeigen(m) }, sym("maximize-2"), "Groß zeigen") : null;
+    // Beschriftung in der Sprache dessen, der geschickt hat: „Du hast geschrieben:“ bzw. „Original (Svenska):“ auf Schwedisch
+    const om = m.wer === "ich" ? marke(m.von, m.gesprochen ? "Du hast gesagt" : "Du hast geschrieben")
+      : (marke(m.von, "Original") || "Original:").replace(/:$/, "") + " (" + info(m.von).eigen + "):";
+    const original = el("div", { class: "gs-klein", dir: richtung(m.von), lang: m.von }, el("span", { class: "gs-marke" }, om),
+      " ", el("span", {}, m.text));
+    const zurueck = m.uebers ? el("div", { class: "gs-klein", dir: richtung(m.von), lang: m.von }, el("span", { class: "gs-marke" }, marke(m.von)), " ",
+      m.zurueck == null ? "…" : el("span", {}, m.zurueck)) : null;
+    const gross = m.uebers ? el("button", { class: "knopf knopf-klein", type: "button", onclick: () => grossZeigen(m) }, sym("expand"), "Vollbild") : null;
     const lesen = m.uebers && kannVorlesen(m.nach) ? vorlesenKnopf(m, () => zeichneVerlauf()) : null;
     const lesenFehler = m.vorlesenFehler ? el("div", { class: "gs-fehler gs-klein" }, m.vorlesenFehler) : null;
-    return el("div", { class: "gs-nachricht gs-" + m.wer }, haupt, original, zurueck, lesenFehler, gross ? el("div", { class: "gs-knoepfe" }, lesen, gross) : null);
+    const knoepfe = gross ? el("div", { class: "gs-knoepfe" }, lesen, gross) : null;
+    return { haupt, original, zurueck, lesenFehler, knoepfe };
+  }
+
+  // Chat: eine Zeile je Nachricht in zwei festen Spalten, links meine Sprache, rechts die des Gegenübers.
+  // Das Original steht schlicht mit der Rückübersetzung darunter (zum Vergleichen auf derselben Seite),
+  // die Übersetzung im Kasten mit den Knöpfen.
+  const linksVon = (m) => m.von === ich || (m.nach !== ich && m.wer === "ich");
+  function nachricht(m) {
+    const t = teile(m);
+    const orig = el("div", { class: "gs-zelle gs-zelle-original" }, el("div", { class: "gs-text", dir: richtung(m.von), lang: m.von }, m.text), t.zurueck);
+    const ueb = el("div", { class: "gs-zelle gs-zelle-uebers" }, t.haupt, t.lesenFehler, t.knoepfe);
+    const links = linksVon(m);
+    return el("div", { class: "gs-zeile" }, links ? orig : ueb, links ? ueb : orig, richtungsPfeil(links));
+  }
+
+  // Kleiner runder Pfeil mittig zwischen den Spalten: zeigt vom Original zur Übersetzung
+  const richtungsPfeil = (vonLinks) => el("span", { class: "gs-pfeil" + (vonLinks ? "" : " gs-pfeil-links"), "aria-hidden": "true" }, sym("arrow-right"));
+
+  // Bühne: Übersetzung groß in der Mitte, darunter auf der Seite des Absenders Original und Rückübersetzung übereinander
+  function buehne(m) {
+    const t = teile(m);
+    return el("div", { class: "gs-buehne" }, t.haupt, t.knoepfe,
+      el("div", { class: "gs-buehne-pruefen" }, el("div", { class: "gs-buehne-absender " + (linksVon(m) ? "gs-links" : "gs-rechts") }, t.original, t.zurueck)),
+      t.lesenFehler);
+  }
+
+  // Ältere Nachricht im Verlauf unter der Bühne, in zwei Spalten wie die Eingabefelder: jede Seite in ihrer
+  // Sprache, der Pfeil zeigt die Übersetzungsrichtung. Ein Klick holt sie auf die Bühne.
+  function bisherZeile(m) {
+    const links = linksVon(m);
+    const orig = el("span", { class: "gs-bisher-original", dir: richtung(m.von), lang: m.von }, m.text);
+    const ueb = el("span", { class: "gs-bisher-text", dir: richtung(m.nach), lang: m.nach }, m.fehler ? m.fehler : m.uebers || "Wird übersetzt …");
+    return el("button", { class: "gs-bisher-zeile", type: "button", title: "Groß anzeigen",
+      onclick: () => { gezeigt = m; zeichneVerlauf(); $("#gs-inhalt").scrollIntoView({ block: "start", behavior: "smooth" }); } },
+      links ? orig : ueb, links ? ueb : orig, richtungsPfeil(links));
   }
 
   // ------------------------------------------------ Vorlesen
