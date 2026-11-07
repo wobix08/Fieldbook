@@ -11,7 +11,7 @@ Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und [Internet-in-a-
 > Fieldbook läuft nur unter **Windows 10 und 11**.\
 > Für macOS, Linux, iPhone, iPad und Android gibt es keine Version.
 
-### **[Fieldbook 0.7.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.2/Fieldbook-0.7.2.zip)**
+### **[Fieldbook 0.7.3 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.3/Fieldbook-0.7.3.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -65,7 +65,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.7.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.2/Fieldbook-0.7.2.zip)** (ZIP-Datei, etwa 1,3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.7.3 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.3/Fieldbook-0.7.3.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -139,7 +139,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.7.2.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.7.3.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
