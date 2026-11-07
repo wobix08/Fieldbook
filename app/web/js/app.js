@@ -17,7 +17,7 @@ const Ansichten = {
   lesen: { zeigen: (p) => Bibliothek.lesen(p) },
   pdf: { zeigen: (p) => PdfLeser.zeigen(p) },
   paketstart: { zeigen: (p) => Paketstart.zeigen(p) },
-  kochen: { zeigen: () => Kochen.zeigen() },
+  kochen: { zeigen: (p) => Kochen.zeigen(p) },
   karten: { zeigen: () => Karten.zeigen() },
   erstehilfe: { zeigen: (p) => ErsteHilfe.zeigen(p) },
   vorsorge: { zeigen: (p) => Vorsorge.zeigen(p) },
@@ -83,22 +83,27 @@ function zeigeKopfStatus(s) {
     if (f.gesamt > 0) dp.replaceChildren(sym("download"), Math.floor(f.bytes / f.gesamt * 100) + " %");
   }).catch(() => { });
 
+  // Akku: Prozent und Restzeit (die Restzeit fällt bei schmalem Fenster weg), gelb ab 30 %, rot ab 15 %
   const a = s.akku || {};
-  const ap = $("#akku-pill");
+  const akkuWarn = a.vorhanden && !a.netz && a.prozent <= 30;
+  $("#akku-box").hidden = !a.vorhanden;
   if (a.vorhanden) {
-    ap.hidden = false;
-    ap.replaceChildren(sym(a.netz ? "plug" : a.prozent <= 20 ? "battery-low" : "battery"), a.prozent + " %");
-    ap.title = a.netz ? "Am Stromnetz" : (a.restMinuten > 0 ? "Noch " + dauer(a.restMinuten * 60) : "Akkubetrieb");
-    ap.className = "pill pill-still" + (!a.netz && a.prozent <= 20 ? " fehler" : "");
-  } else ap.hidden = true;
+    const ap = $("#akku-pill");
+    ap.replaceChildren(sym(a.netz ? "plug" : akkuWarn ? "battery-low" : "battery"), a.prozent + " %",
+      !a.netz && a.restMinuten > 0 ? el("span", { class: "lang" }, " · " + akkuZeit(a.restMinuten)) : "");
+    ap.className = "pill" + (akkuWarn ? (a.prozent <= 15 ? " fehler" : " warn") : "");
+    if (!$("#akku-liste").hidden) fuelleAkkuMenue();
+  }
 
   // Hinweis bei schwachem Akku
   const b = $("#banner");
-  if (a.vorhanden && !a.netz && a.prozent <= 20 && s.modell && !s.sparmodus && sessionStorage.getItem("akkuHinweis") !== "weg") {
+  if (akkuWarn && s.modell && !s.sparmodus && sessionStorage.getItem("akkuHinweis") !== "weg") {
     b.hidden = false;
     b.innerHTML = "";
     b.append(
-      sym("battery-low"), " Akku schwach (" + a.prozent + " %). Antworten der KI brauchen viel Strom. Der Sparmodus schaltet sie ab, damit der Akku länger hält.",
+      sym("battery-low"), " Akku schwach (" + a.prozent + " %).", el("br"),
+      "Antworten der KI brauchen viel Strom.", el("br"),
+      "Der Sparmodus schaltet sie ab, damit der Akku länger hält.",
       el("button", { class: "knopf knopf-klein", onclick: () => schalteKi(false) }, "Sparmodus einschalten"),
       el("button", { class: "knopf knopf-klein", onclick: () => { sessionStorage.setItem("akkuHinweis", "weg"); b.hidden = true; } }, "Später"),
     );
@@ -118,6 +123,49 @@ function zeigeKopfStatus(s) {
 async function schalteKi(an) {
   try { OW.status = await api("ki", { an }); zeigeKopfStatus(OW.status); } catch (e) { alert(e.message); }
 }
+
+// Restzeit des Akkus: kurz für die Kopfzeile, lang für das Menü
+function akkuZeit(min, lang) {
+  const h = Math.floor(min / 60), m = min % 60;
+  if (!lang) return h ? h + " Std. " + m + " Min." : m + " Min.";
+  const st = h === 1 ? "1 Stunde" : h + " Stunden", mi = m === 1 ? "1 Minute" : m + " Minuten";
+  return h ? (m ? st + " " + mi : st) : mi;
+}
+
+// Akku-Menü: Restzeit ausgeschrieben, Spartipps, Sparmodus
+function fuelleAkkuMenue() {
+  const s = OW.status || {}, a = s.akku || {};
+  const text = (...t) => el("div", { class: "akku-text" }, ...t);
+  const teile = [el("div", { class: "menue-titel" }, a.netz ? "Am Stromnetz" : "Akku " + a.prozent + " %")];
+  if (a.netz) teile.push(text("Der Akku ist zu " + a.prozent + " % geladen."));
+  else {
+    teile.push(text(a.restMinuten > 0 ? "Reicht noch etwa " + akkuZeit(a.restMinuten, true) + "."
+      : "Windows schätzt die Restzeit erst nach ein paar Minuten auf Akku."));
+    teile.push(el("div", { class: "menue-titel" }, "So hält der Akku länger"),
+      text("Energiesparmodus von Windows einschalten.", el("br"), el("small", {}, "Zu finden über das Akku-Symbol unten rechts in der Taskleiste.")),
+      text("Bildschirm dunkler stellen."),
+      text("Fragen an die KI brauchen am meisten Strom.", el("br"), "Lesen, Karten und Kochen brauchen wenig."));
+  }
+  if (s.modell) {
+    const zu = () => { $("#akku-liste").hidden = true; $("#akku-pill").setAttribute("aria-expanded", "false"); };
+    teile.push(el("hr"), s.sparmodus
+      ? el("button", { onclick: () => { zu(); schalteKi(true); } }, sym("zap"), "KI einschalten")
+      : el("button", { onclick: () => { zu(); schalteKi(false); } }, sym("zap"), "KI ausschalten (Sparmodus)"));
+  }
+  $("#akku-liste").replaceChildren(...teile);
+}
+
+(function () {
+  const knopf = $("#akku-pill"), liste = $("#akku-liste");
+  const zu = () => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); };
+  knopf.addEventListener("click", () => {
+    liste.hidden = !liste.hidden;
+    knopf.setAttribute("aria-expanded", String(!liste.hidden));
+    if (!liste.hidden) fuelleAkkuMenue();
+  });
+  document.addEventListener("click", (e) => { if (!liste.contains(e.target) && !knopf.contains(e.target)) zu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") zu(); });
+})();
 
 // KI-Menü in der Kopfzeile: KI wechseln, aus- und einschalten
 (function () {

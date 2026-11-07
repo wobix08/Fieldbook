@@ -29,7 +29,10 @@
       <button class="pill" id="ki-pill" title="KI wechseln oder ausschalten" aria-haspopup="true" aria-expanded="false">KI …</button>
       <div class="menue" id="ki-liste" hidden></div>
     </div>
-    <span class="pill pill-still" id="akku-pill" hidden></span>
+    <div class="aus-menue" id="akku-box" hidden>
+      <button class="pill" id="akku-pill" title="Akku und Strom sparen" aria-haspopup="true" aria-expanded="false"></button>
+      <div class="menue akku-menue" id="akku-liste" hidden></div>
+    </div>
     <button class="zahnrad" id="thema-knopf" title="Helle Ansicht"><svg class="sym" aria-hidden="true"><use href="symbole.svg#sun"/></svg></button>
     <a href="#einstellungen" class="zahnrad" title="Einstellungen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#settings"/></svg></a>
     <div class="aus-menue">
@@ -58,7 +61,7 @@
         <a class="kachel" href="#kochen"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#cooking-pot"/></svg></span><span class="k-titel">Kochen</span><span class="k-text">Was kann ich mit meinen Vorräten kochen?</span></a>
         <a class="kachel" href="#karten"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#map"/></svg></span><span class="k-titel">Karten</span><span class="k-text">Offline-Karten und Ortssuche</span></a>
         <a class="kachel" href="#uebersetzen"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#languages"/></svg></span><span class="k-titel">Übersetzer</span><span class="k-text">Gespräche in 52 Sprachen</span></a>
-        <a class="kachel" href="#vorsorge"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#shield-check"/></svg></span><span class="k-titel">Vorsorge</span><span class="k-text">Vorräte, Stromausfall, Notgepäck</span></a>
+        <a class="kachel" href="#vorsorge"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#shield-check"/></svg></span><span class="k-titel">Vorsorge</span><span class="k-text">Vorräte, Hausapotheke, Stromausfall</span></a>
         <a class="kachel kachel-notfall" href="#erstehilfe"><span class="feld gross" aria-hidden="true"><svg class="sym"><use href="symbole.svg#briefcase-medical"/></svg></span><span class="k-titel">Erste Hilfe</span><span class="k-text">Kurs zum Vorbereiten, Spickzettel für den Ernstfall</span></a>
       </div>
       <p class="start-info" id="start-info"></p>
@@ -249,7 +252,7 @@
       <h2>Leitfaden: Wasser und Lebensmittel</h2>
       <div id="koch-leitfaden"></div>
       <p class="hinweis klein">Faustregeln für Notlagen. Im Zweifel ein Lebensmittel lieber wegwerfen.</p>
-      <p><a class="knopf knopf-klein" href="#vorsorge?k=vorraete"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shield-check"/></svg>Vorräte anlegen: zur Seite Vorsorge</a></p>
+      <p><a class="knopf knopf-klein" href="#vorsorge?k=essen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#shield-check"/></svg>Vorräte anlegen: zur Seite Vorsorge</a> <a class="knopf knopf-klein" href="#vorsorge?lage=strom"><svg class="sym" aria-hidden="true"><use href="symbole.svg#refrigerator"/></svg>Stromausfall: Kühlschrank und Gefriertruhe</a></p>
     </div>
   </section>
 

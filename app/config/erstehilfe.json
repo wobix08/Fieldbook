@@ -579,7 +579,7 @@
       "ueben": [
         { "id": "handflaeche", "text": "Nimm deine Handfläche als Maß: Wie viele Handflächen passen auf deinen Unterarm, wie viele auf deinen Rücken?" },
         { "id": "kueche", "text": "Prüfe deine Küche: Zeigen Topfstiele nach hinten? Können Kinder heiße Getränke oder ein Wasserkocherkabel vom Tisch ziehen?" },
-        { "id": "verbandtuch", "text": "Schau, ob in deinem Verbandkasten ein großes Verbandtuch für Brandwunden liegt, und falte es einmal auf." }
+        { "id": "verbandtuch", "text": "Schau, ob in deinem Verbandkasten ein großes Verbandtuch für Brandwunden liegt, und falte es einmal auf. Was sonst hineingehört, steht in der Vorsorge.", "link": "#vorsorge?k=gesundheit" }
       ],
       "quiz": [
         {
@@ -732,7 +732,7 @@
       ],
       "kinder": "Babys und Kleinkinder kühlen schneller aus und überhitzen schneller als Erwachsene. Lass Kinder nie im Auto zurück, auch nicht für kurze Zeit.",
       "ueben": [
-        { "id": "waerme", "text": "Leg für einen Stromausfall im Winter eine Wärme-Ecke an: Decken, Mützen, Wärmflasche, Rettungsdecke." },
+        { "id": "waerme", "text": "Leg für einen Stromausfall im Winter eine Wärme-Ecke an. Was hineingehört, steht in der Vorsorge.", "link": "#vorsorge?k=strom&s=2" },
         { "id": "einpacken", "text": "Pack eine zweite Person einmal richtig ein: Decke darunter, Decke darüber, Kopf bedeckt, nur das Gesicht frei." }
       ],
       "quiz": [
@@ -764,7 +764,7 @@
         "Bei einem großen Stromausfall fällt nach einiger Zeit oft auch das Handynetz aus. Dann kommt kein Notruf durch, und der Rettungsdienst ist vielleicht überlastet.",
         "Dann bist du nicht nur Ersthelfer für ein paar Minuten, sondern vielleicht für Stunden. Alles, was du in diesem Kurs gelernt hast, gilt weiter, nur länger.",
         "Viele Gemeinden richten in solchen Lagen Anlaufstellen ein, oft in Feuerwehrhäusern, Rathäusern oder Schulen. Sie heißen z. B. „Notfalltreffpunkt“ oder „Katastrophenschutz-Leuchtturm“. Dort kann man Notrufe absetzen und bekommt Hilfe.",
-        "Die beste Hilfe ist Vorbereitung: Wer weiß, wo die nächste Anlaufstelle ist, und einen gut gefüllten Verbandkasten hat, ist im Vorteil. Ein normaler Verbandkasten reicht für Stunden ohne Hilfe nicht lange. Erweitere deinen Verbandkasten zu Hause deshalb vorab um zusätzliche Dreiecktücher, Rettungsdecken, Verbandsmaterial und deine wichtigen Dauermedikamente."
+        "Die beste Hilfe ist Vorbereitung: Wer weiß, wo die nächste Anlaufstelle ist, und einen gut gefüllten Verbandkasten hat, ist im Vorteil. Ein normaler Verbandkasten reicht für Stunden ohne Hilfe nicht lange. Was in einen erweiterten Verbandkasten und die Hausapotheke gehört, steht auf der Seite Vorsorge unter Gesundheit."
       ],
       "schritte": [
         "Den Notruf trotzdem an verschiedenen Stellen versuchen: draußen, höher gelegen, am Fenster. Eine SMS an Angehörige kommt manchmal noch durch, wenn Anrufe nicht gehen. Ist das eigene Handynetz weg, versucht das Handy beim Notruf auch andere Netze. Sind alle Sendemasten ohne Strom, geht aber auch das nicht mehr.",
@@ -778,10 +778,10 @@
         "Fieldbook hilft: Auf der Seite Erste Hilfe stehen ganz oben unter „Im Ernstfall“ die Sofort-Schritte, in der Bibliothek ausführliche Artikel, und auf der Karte findest du Krankenhäuser, Apotheken und Ärzte in der Nähe."
       ],
       "ueben": [
-        { "id": "anlaufstelle", "text": "Finde heraus, wo in deinem Ort die Anlaufstelle für Notfälle bei Stromausfall ist (Website der Gemeinde, Aushang, Feuerwehr)." },
-        { "id": "notfallkarte", "text": "Schreib eine Notfallkarte auf Papier: Adresse, Vorerkrankungen, Medikamente, Allergien und wichtige Telefonnummern. Leg sie zum Verbandkasten." },
+        { "id": "anlaufstelle", "text": "Finde heraus, wo in deinem Ort die Anlaufstelle für Notfälle bei Stromausfall ist (Website der Gemeinde, Aushang, Feuerwehr), und hak sie in der Vorsorge ab.", "link": "#vorsorge?k=information" },
+        { "id": "notfallkarte", "text": "Schreib eine Notfallkarte auf Papier und leg sie zum Verbandkasten. Was darauf gehört, steht in der Vorsorge.", "link": "#vorsorge?k=gesundheit&s=2" },
         { "id": "karte", "text": "Such auf der Karte in Fieldbook das nächste Krankenhaus und die nächste Apotheke.", "link": "#karten" },
-        { "id": "hausapotheke", "text": "Prüfe deine Hausapotheke: Verbandsmaterial, Schmerzmittel, Fieberthermometer und eigene Medikamente für einige Tage." }
+        { "id": "hausapotheke", "text": "Geh deine Hausapotheke einmal mit der Liste in der Vorsorge durch.", "link": "#vorsorge?k=gesundheit" }
       ],
       "quiz": [
         {

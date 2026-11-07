@@ -1,12 +1,12 @@
 {
-  "_info": "Seite Vorsorge: Checklisten zum Abhaken. Ein Kapitel hat 'abschnitte', ein Abschnitt hat 'gruppen' (Titel optional, z. B. die Kosten-Stufen), eine Gruppe hat 'punkte' mit fester 'id' (eindeutig im Kapitel), 'text' und optional 'mehr' (kleiner Zusatz). 'hervor': Abschnitt hervorgehoben. 'text': Absätze ohne Häkchen (dann 'gruppen': []). 'verweise': Links in Fieldbook. 'artikel': exakte Titel aus den 'pakete' für „Mehr lesen“. Häkchen in daten/vorsorge.json.",
+  "_info": "Seite Vorsorge. 'stufen': die drei Stufen des Schalters oben (1 = Standard). 'lagen': Was tun, wenn es passiert ist (kurze Schritte ohne Häkchen, 'warnung' steht rot ganz oben, 'vorbereiten' = Themen-ids für den Link „Dafür vorbereiten“). 'themen': Vorbereiten, je Thema 'warum' und drei 'stufen' (Index 0 = Stufe 1) mit 'text' (Erklärung) und 'punkte'. Ein Punkt hat eine feste 'id' (eindeutig im Thema, daran hängen die Häkchen in daten/vorsorge.json), 'text', optional 'mehr' (Zusatz), 'frei' (kostet nichts), 'kiste' (kommt in die Notfallkiste, die Packliste entsteht daraus), 'verweis' {text, link} oder eine Liste davon (auch bei Schritten der Lagen; Sprungziele: #vorsorge?k=thema&s=2 für eine Stufe, &z=rechner oder &z=packliste, #vorsorge?lage=id, #kochen?l=id, #erstehilfe?l=id) und 'alt' (frühere Orte als 'kapitel/id', damit alte Häkchen übernommen werden; ohne 'alt' gilt 'thema/id'). Texte dürfen {notruf} enthalten. Jeder Satz erscheint auf der Seite in eigener Zeile.",
   "pakete": ["wikipedia_de_all", "wikipedia_de_top", "klexikon_de_all"],
-  "einleitung": "Was du vorbereiten kannst, bevor etwas passiert: für einen Stromausfall, ein Unwetter oder ein paar Tage, an denen man nicht einkaufen kann. Hak ab, was du schon hast. Vieles kostet nichts.",
-  "stufen": {
-    "frei": "Kostet nichts",
-    "guenstig": "Günstig und bringt viel",
-    "passend": "Nur wenn es zu dir passt"
-  },
+  "einleitung": "Was du vorbereiten kannst, bevor etwas passiert, und was du tust, wenn es so weit ist. Die meisten Ernstfälle sind klein: Jemand wird krank, das Wasser ist abgestellt, der Strom fällt ein paar Stunden aus. Hak ab, was du schon hast. Vieles kostet nichts.",
+  "stufen": [
+    { "id": 1, "name": "Das Wichtigste", "text": "Das Nötigste für ein paar Tage, vieles kostet nichts." },
+    { "id": 2, "name": "Gut vorbereitet", "text": "Für längere Ausfälle, mit etwas mehr Ausrüstung." },
+    { "id": 3, "name": "Weiter vorsorgen", "text": "Für alle, die sich auf Wochen ohne Versorgung einstellen wollen." }
+  ],
   "rechner": {
     "tage": 10,
     "_gruppen": "'anteil': Anteil an der Lebensmittelmenge eines Erwachsenen (nach dem Energiebedarf). 'wasser': Liter pro Tag zum Trinken und Kochen (wie im Vorratskalkulator der BLE: Erwachsene 2, Kinder bis 12 Jahre 1). Säuglinge bekommen keine Mengen, sondern einen eigenen Hinweis.",
@@ -36,60 +36,209 @@
         "beispiele": [{ "name": "Flaschen Speiseöl (0,5 l)", "gewicht": 0.5 }] }
     ]
   },
-  "kapitel": [
+
+  "lagen": [
     {
-      "id": "vorraete", "titel": "Vorräte für 10 Tage", "icon": "wheat", "rechner": true,
-      "warum": [
-        "Bei einem großen Stromausfall oder Unwetter sind Geschäfte vielleicht tagelang zu. Mit einem Vorrat für 10 Tage kommt man ohne Einkaufen aus.",
-        "Am besten ist ein Vorrat, der im Alltag mitläuft: lange haltbare Lebensmittel ohne Kühlschrank, die ihr ohnehin esst. Ihr kocht ganz normal daraus und kauft nach, was verbraucht ist. Neues kommt nach hinten, Älteres wird zuerst gegessen. So wird nichts alt, und nichts muss weggeworfen werden."
+      "id": "strom", "titel": "Strom weg", "icon": "zap-off",
+
+      "warnung": [
+        "Nie Grill, Gasheizer, Petroleumofen oder Notstromaggregat in geschlossenen Räumen benutzen. Sie bilden Kohlenmonoxid, das man nicht riecht und das tödlich ist.",
+        "Das Auto nie in einer geschlossenen Garage laufen lassen.",
+        "Kerzen nie unbeaufsichtigt und nie beim Schlafen brennen lassen."
       ],
-      "abschnitte": [
+      "schritte": [
+        { "titel": "In der ersten Stunde", "punkte": [
+          { "text": "Badewanne, Eimer, Töpfe und Flaschen mit Wasser füllen, solange noch Druck in der Leitung ist.", "mehr": "Bei längerem Stromausfall fallen oft auch die Pumpen der Wasserversorgung aus. Wasser aus der Badewanne nur abgekocht oder entkeimt trinken.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } },
+          { "text": "Herd, Bügeleisen und empfindliche Geräte ausschalten oder den Stecker ziehen.", "mehr": "Wenn der Strom zurückkommt, kann eine Spannungsspitze sie beschädigen. Eine Lampe eingeschaltet lassen, dann merkt man, wann der Strom wieder da ist." },
+          { "text": "Kühlschrank und Gefriertruhe geschlossen halten.", "mehr": "Ein geschlossener Kühlschrank hält etwa 4 Stunden kalt. Ein Gefrierfach hält je nach Gerät 10 bis 24 Stunden, eine volle Gefriertruhe etwa 2 Tage. Den genauen Wert nennt die Anleitung unter „Lagerzeit bei Störung“." },
+          { "text": "Das Handy schonen: Stromsparmodus, Bildschirm dunkel, nur kurz telefonieren oder SMS schreiben.", "mehr": "Das Handynetz hält oft nur Minuten bis wenige Stunden. SMS kommen eher durch als Anrufe." },
+          { "text": "Im Radio erfahren, wie groß der Stromausfall ist und wie lange er voraussichtlich dauert: Batterieradio oder Autoradio.", "mehr": "Durchsagen kommen meist zur vollen Stunde. Kein Radio? Dann bei Nachbarn mithören.", "verweis": { "text": "Vorsorge: Radio und Notruf vorbereiten", "link": "#vorsorge?k=information" } },
+          { "text": "Licht mit Taschenlampe oder LED-Laterne machen. Kerzen nur als Reserve, in feuerfesten Haltern.", "verweis": { "text": "Vorsorge: Licht und Wärme vorbereiten", "link": "#vorsorge?k=strom" } }
+        ] },
+        { "titel": "In den ersten Tagen", "punkte": [
+          { "text": "Zuerst essen, was im Kühlschrank verdirbt, dann aus dem Gefrierfach, zuletzt den Vorrat.", "mehr": "Gekochtes höchstens 2 Stunden ungekühlt stehen lassen, bei Hitze über 30 °C nur 1 Stunde. Aufgetautes Fleisch und Fisch bald durchgaren und nicht wieder einfrieren.", "verweis": { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit" } },
+          { "text": "Warm halten: alle in einem Raum, Türen schließen, Fenster nachts mit Decken oder Pappe abdichten, mehrere Schichten Kleidung, Mütze auch drinnen.", "mehr": "Auch Gas- und Ölheizungen brauchen Strom. Eine Wohnung kühlt in 2 bis 3 Tagen deutlich aus.", "verweis": { "text": "Erste Hilfe: Kälte und Hitze", "link": "#erstehilfe?l=temperatur" } },
+          { "text": "Kommt kein Wasser mehr, die Toilette nicht mehr spülen und ein Notklo einrichten.", "lage": "wasser" },
+          { "text": "Nach Nachbarn sehen, vor allem nach Älteren und Alleinlebenden.", "mehr": "Gemeinsam ist es leichter: ein warmer Raum, ein Kocher, Vorräte teilen." },
+          { "text": "Die Anlaufstelle der Gemeinde suchen (Feuerwehrhaus, Rathaus, Aushänge).", "mehr": "Dort kann man Notrufe absetzen und erfährt Neues. Sie ist oft erst ab dem zweiten Tag besetzt und bietet meist kein Essen und keinen Schlafplatz.", "verweis": { "text": "Erste Hilfe: Wenn keine Hilfe kommt", "link": "#erstehilfe?l=keinehilfe" } },
+          { "text": "Für Kinder: Bücher, Spiele, Papier und Stifte.", "mehr": "Ohne Strom dauert vieles länger, und die Tage werden lang." },
+          { "text": "Fieldbook im Sparmodus nutzen (KI ausschalten) und den Laptop im Auto oder an einer Powerbank laden." }
+        ] }
+      ],
+      "vorbereiten": ["strom", "information", "essen", "wasser"],
+      "verweise": [
+        { "text": "Erste Hilfe: Vergiftung (Kohlenmonoxid)", "link": "#erstehilfe?l=vergiftung", "icon": "briefcase-medical" }
+      ],
+      "artikel": ["Stromausfall", "Kohlenstoffmonoxidvergiftung"]
+    },
+    {
+      "id": "wasser", "titel": "Wasser weg", "icon": "droplet",
+
+      "warnung": [
+        "Heizungswasser nie trinken. Es enthält Zusätze und Rost."
+      ],
+      "schritte": [
+        { "titel": "Sofort", "punkte": [
+          { "text": "Bei einem Rohrbruch den Haupthahn zudrehen.", "mehr": "Er sitzt meist im Keller beim Wasserzähler." },
+          { "text": "Kommt noch etwas Wasser, Badewanne, Eimer und Töpfe füllen." },
+          { "text": "Die Toilette nicht mehr spülen und das Wasser im Spülkasten aufheben.", "mehr": "Darin stehen etwa 6 bis 9 Liter Leitungswasser (nur, wenn keine WC-Steine oder Reiniger im Kasten hängen). Auch im Warmwasserspeicher sind je nach Größe 30 bis 200 Liter, abzuzapfen am Hahn unten. Vor dem Trinken abkochen oder entkeimen.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } },
+          { "text": "Restwasser aus der Leitung holen: Haupthahn zu, oben im Haus einen Hahn öffnen, dann unten einen Hahn öffnen und das Wasser auffangen." },
+          { "text": "Ein Notklo einrichten: einen stabilen Müllbeutel in die Toilette oder einen Eimer hängen.", "mehr": "Nach jeder Benutzung etwas Katzenstreu, Sägespäne, Erde oder zerknülltes Zeitungspapier darüber, den Beutel zuknoten und draußen sammeln. Im Keller oder Erdgeschoss mit Hebeanlage gar nicht spülen, sonst kann Abwasser zurückdrücken.", "verweis": { "text": "Vorsorge: Material fürs Notklo bereitlegen", "link": "#vorsorge?k=haus&s=2" } }
+        ] },
+        { "titel": "In den nächsten Tagen", "punkte": [
+          { "text": "Trinkwasser nur aus Flaschen, abgekocht oder entkeimt.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } },
+          { "text": "Wasser mehrfach nutzen: erst zum Waschen, dann zum Putzen, zuletzt für die Toilette.", "mehr": "Ein Eimer Wasser spült die Toilette, etwa 7 Liter." },
+          { "text": "Hände trotzdem waschen: etwas Wasser und Seife über einer Schüssel.", "mehr": "Ohne saubere Hände breiten sich Magen-Darm-Infekte schnell aus." },
+          { "text": "Auf Durchsagen achten, wo es Wasser gibt, und eigene Kanister mitnehmen.", "mehr": "Oft stellen Gemeinde oder Wasserversorger Tankwagen auf." }
+        ] }
+      ],
+      "vorbereiten": ["wasser", "haus"],
+      "verweise": [],
+      "artikel": ["Trockentoilette", "Trinkwasser"]
+    },
+    {
+      "id": "unwetter", "titel": "Unwetter und Hochwasser", "kurz": "Unwetter", "icon": "wind",
+      "warnung": [
+        "Nie in einen überfluteten Keller oder eine Tiefgarage gehen. Strom im Wasser und die Strömung sind lebensgefährlich.",
+        "Nicht durch überflutete Straßen fahren oder gehen. Schon 30 Zentimeter strömendes Wasser können ein Auto mitreißen. Unter dem Wasser sieht man auch keine hochgedrückten Gullydeckel und offenen Schächte, in die man hineinfahren oder hineinfallen kann."
+      ],
+      "schritte": [
+        { "titel": "Wenn eine Warnung kommt", "punkte": [
+          { "text": "Handy und Powerbank laden." },
+          { "text": "Das Auto aus Tiefgarage oder Senke an einen höheren Ort fahren." },
+          { "text": "Gartenmöbel, Mülltonnen und Loses sichern oder hereinholen." },
+          { "text": "Wichtiges und Wertvolles aus dem Keller nach oben bringen." },
+          { "text": "Fenster, Türen und Kellerfenster schließen." },
+          { "text": "Warnungen und Radio verfolgen.", "verweis": { "text": "Vorsorge: Warn-App einrichten", "link": "#vorsorge?k=information" } }
+        ] },
+        { "titel": "Wenn es da ist", "punkte": [
+          { "text": "Drinnen bleiben und weg von den Fenstern." },
+          { "text": "Bei Hochwasser in höhere Stockwerke gehen." },
+          { "text": "Den Strom für den Keller abschalten, wenn Wasser kommt, aber nur, wenn man trocken an den Sicherungskasten kommt." },
+          { "text": "Fordern die Behörden zum Verlassen auf: Notgepäck nehmen und gehen.", "lage": "raus" }
+        ] },
+        { "titel": "Danach", "punkte": [
+          { "text": "Schäden fotografieren, bevor aufgeräumt wird.", "mehr": "Das braucht die Versicherung.", "verweis": { "text": "Vorsorge: Versicherung prüfen", "link": "#vorsorge?k=haus" } },
+          { "text": "Beim Aufräumen Handschuhe und feste Schuhe tragen." },
+          { "text": "Lebensmittel, die mit Hochwasser in Berührung kamen, wegwerfen.", "mehr": "Auch Dosen und Gläser, das Wasser ist meist verschmutzt." }
+        ] }
+      ],
+      "vorbereiten": ["haus", "information", "notgepaeck"],
+      "verweise": [
+        { "text": "Erste Hilfe: Unfall und Umwelt", "link": "#erstehilfe", "icon": "briefcase-medical" }
+      ],
+      "artikel": ["Hochwasser", "Starkregen"]
+    },
+    {
+      "id": "krank", "titel": "Krank im Haushalt", "kurz": "Krank", "icon": "thermometer",
+      "warnung": [
+        "Bei Lebensgefahr sofort den Notruf {notruf} wählen."
+      ],
+      "schritte": [
+        { "titel": "Zu Hause versorgen", "punkte": [
+          { "text": "Viel trinken.", "mehr": "Bei Durchfall und Erbrechen verliert der Körper Wasser und Salz. Elektrolytpulver aus der Hausapotheke gleicht das aus.", "verweis": { "text": "Vorsorge: Hausapotheke", "link": "#vorsorge?k=gesundheit" } },
+          { "text": "Fieber messen und mit Uhrzeit aufschreiben, ebenso jedes Mittel, das man gibt." },
+          { "text": "Leichte Kost: Zwieback, Brühe, Reis, Haferflocken." },
+          { "text": "Die kranke Person möglichst in einem eigenen Raum, mit eigenem Handtuch." },
+          { "text": "Oft die Hände mit Seife waschen, besonders vor dem Essen und nach der Toilette." }
+        ] },
+        { "titel": "Hilfe holen", "punkte": [
+          { "text": "Wird es schlimmer oder bist du unsicher: den ärztlichen Bereitschaftsdienst anrufen.", "verweis": { "text": "Erste Hilfe: Nummern für dein Land", "link": "#erstehilfe" } },
+          { "text": "In der Apotheke fragen, welches Mittel passt, besonders für Kinder." }
+        ] }
+      ],
+      "vorbereiten": ["gesundheit"],
+      "verweise": [
+        { "text": "Erste Hilfe: Spickzettel für den Ernstfall", "link": "#erstehilfe", "icon": "briefcase-medical" }
+      ],
+      "artikel": ["Hausapotheke"]
+    },
+    {
+      "id": "unterwegs", "titel": "Unterwegs festsitzen", "kurz": "Unterwegs", "icon": "car",
+      "warnung": [
+        "Den Motor nicht zum Wärmen laufen lassen, wenn der Auspuff im Schnee steckt. Die Abgase ziehen ins Auto."
+      ],
+      "schritte": [
+        { "titel": "Panne oder Stau", "punkte": [
+          { "text": "Bei einer Panne: Warnblinker an, Warnweste anziehen, hinter die Leitplanke gehen, dann Hilfe rufen." },
+          { "text": "Im Stau im Winter: warm anziehen und den Motor nur ab und zu kurz laufen lassen.", "mehr": "Den Auspuff frei halten." }
+        ] },
+        { "titel": "Stromausfall unterwegs", "punkte": [
+          { "text": "Erst überlegen, ob du bleibst oder gehst, statt hektisch loszufahren.", "mehr": "Ampeln fallen aus, und Tankstellen können nicht mehr zapfen." },
+          { "text": "Aufzüge meiden." },
+          { "text": "Familie Bescheid geben, solange das Handynetz noch geht." },
+          { "text": "Zu Fuß nach Hause: bekannte, helle Wege, Lampe und Warnweste.", "verweis": { "text": "Vorsorge: Heimweg vorbereiten", "link": "#vorsorge?k=unterwegs&s=2" } }
+        ] }
+      ],
+      "vorbereiten": ["unterwegs"],
+      "verweise": [],
+      "artikel": []
+    },
+    {
+      "id": "raus", "titel": "Haus schnell verlassen", "kurz": "Raus aus dem Haus", "icon": "backpack",
+      "schritte": [
+        { "titel": "Was du mitnimmst und tust", "punkte": [
+          { "text": "Notgepäck, Notfallmappe und eigene Medikamente nehmen.", "verweis": [{ "text": "Vorsorge: Notgepäck", "link": "#vorsorge?k=notgepaeck" }, { "text": "Vorsorge: Notfallmappe", "link": "#vorsorge?k=dokumente" }] },
+          { "text": "Herd und Geräte ausschalten." },
+          { "text": "An Haustiere denken." },
+          { "text": "Nachbarn Bescheid geben, vor allem Älteren." },
+          { "text": "Den Anweisungen der Behörden folgen und zur genannten Anlaufstelle gehen.", "verweis": { "text": "Vorsorge: Anlaufstelle kennen", "link": "#vorsorge?k=information" } },
+          { "text": "Kindern einen Zettel mit Namen und Telefonnummer der Eltern mitgeben." }
+        ] }
+      ],
+      "vorbereiten": ["notgepaeck", "dokumente"],
+      "verweise": [],
+      "artikel": ["Notgepäck", "Evakuierung"]
+    }
+  ],
+
+  "themen": [
+    {
+      "id": "essen", "titel": "Essen", "icon": "wheat", "rechner": true,
+      "warum": "Bei einem Unwetter, einer Krankheit oder einem großen Stromausfall kann man manchmal tagelang nicht einkaufen. Mit einem kleinen Vorrat kommt man gut über diese Zeit.",
+      "stufen": [
         {
-          "titel": "Frisches hält keine 10 Tage",
           "text": [
-            "Frischer Fisch, frisches Fleisch, Aufschnitt, Frischmilch und das meiste frische Obst und Gemüse halten ohne Kühlschrank nur wenige Tage. Für den Vorrat zählen deshalb nur Dinge, die ungekühlt lange halten: Dosen, Gläser, Getrocknetes und H-Milch. So sind auch die Mengen im Rechner gemeint, z. B. Fisch und Fleisch als Konserven.",
-            "Was frisch im Haus ist, wird im Ernstfall zuerst gegessen: erst der Kühlschrank, dann das Gefrierfach, zuletzt der Vorrat.",
-            "Einiges hält kühl und dunkel gelagert auch frisch mehrere Wochen und ist eine gute Ergänzung: Kartoffeln, Zwiebeln, Knoblauch, Möhren, Weiß- und Rotkohl, Kürbis, Äpfel und Zitrusfrüchte. Dauerwurst wie Salami am Stück hält ungekühlt einige Wochen. Wie lange was hält, steht im Leitfaden auf der Seite Kochen."
+            "Am besten ist ein Vorrat, der im Alltag mitläuft: lange haltbare Lebensmittel ohne Kühlschrank, die ihr ohnehin esst. Ihr kocht ganz normal daraus und kauft nach, was verbraucht ist. Neues kommt nach hinten, Älteres wird zuerst gegessen. So wird nichts alt, und nichts muss weggeworfen werden.",
+            "Für den Vorrat zählt nur, was ungekühlt lange hält: Dosen, Gläser, Getrocknetes und H-Milch. Was frisch im Haus ist, wird im Ernstfall zuerst gegessen. Kartoffeln, Zwiebeln, Möhren, Kohl und Äpfel halten kühl und dunkel auch frisch einige Wochen."
           ],
-          "gruppen": []
-        },
-        {
-          "titel": "Lebensmittel und Wasser",
           "hinweis": "Hak eine Gruppe ab, wenn ihr genug für 10 Tage habt. Wie viel das für euren Haushalt ist, zeigt der Rechner oben.",
-          "gruppen": [
-            { "punkte": [
-              { "id": "wasser", "text": "Wasser und Getränke", "mehr": "2 Liter pro Person und Tag: 1,5 zum Trinken, 0,5 zum Kochen. Mineralwasser in Flaschen hält lange und läuft im Alltag mit." },
-              { "id": "getreide", "text": "Getreide und Beilagen", "mehr": "Nudeln, Reis, Haferflocken, Müsli, Knäckebrot, Zwieback, Mehl, Grieß, Kartoffelpüree-Flocken" },
-              { "id": "gemuese", "text": "Gemüse und Hülsenfrüchte", "mehr": "Dosen und Gläser (Erbsen, Mais, Bohnen, Rotkohl, Sauerkraut, Tomaten), getrocknete Linsen, Bohnen, Kichererbsen" },
-              { "id": "obst", "text": "Obst und Nüsse", "mehr": "Obst in Dosen oder Gläsern, Apfelmus, Trockenobst, Nüsse, Marmelade" },
-              { "id": "milch", "text": "Milch und Milchprodukte", "mehr": "H-Milch, Milchpulver, Kondensmilch, Hartkäse am Stück" },
-              { "id": "fleisch", "text": "Fisch und Fleisch", "mehr": "Thunfisch, Sardinen, Makrelen, Wurst und Fleisch in Dosen oder Gläsern. Wer kein Fleisch isst, nimmt mehr Hülsenfrüchte." },
-              { "id": "fett", "text": "Fette und Öle", "mehr": "Speiseöl, Butterschmalz, Erdnussbutter" },
-              { "id": "sonstiges", "text": "Zucker, Salz, Honig, Gewürze, Brühe, Kaffee oder Tee" }
-            ] }
+          "punkte": [
+            { "id": "getreide", "text": "Getreide und Beilagen", "mehr": "Nudeln, Reis, Haferflocken, Müsli, Knäckebrot, Zwieback, Mehl, Grieß, Kartoffelpüree-Flocken", "alt": ["vorraete/getreide"] },
+            { "id": "gemuese", "text": "Gemüse und Hülsenfrüchte", "mehr": "Dosen und Gläser (Erbsen, Mais, Bohnen, Rotkohl, Sauerkraut, Tomaten), getrocknete Linsen, Bohnen, Kichererbsen", "alt": ["vorraete/gemuese"] },
+            { "id": "obst", "text": "Obst und Nüsse", "mehr": "Obst in Dosen oder Gläsern, Apfelmus, Trockenobst, Nüsse, Marmelade", "alt": ["vorraete/obst"] },
+            { "id": "milch", "text": "Milch und Milchprodukte", "mehr": "H-Milch, Milchpulver, Kondensmilch, Hartkäse am Stück", "alt": ["vorraete/milch"] },
+            { "id": "fleisch", "text": "Fisch und Fleisch", "mehr": "Thunfisch, Sardinen, Makrelen, Wurst und Fleisch in Dosen oder Gläsern. Wer kein Fleisch isst, nimmt mehr Hülsenfrüchte.", "alt": ["vorraete/fleisch"] },
+            { "id": "fett", "text": "Fette und Öle", "mehr": "Speiseöl, Butterschmalz, Erdnussbutter", "alt": ["vorraete/fett"] },
+            { "id": "sonstiges", "text": "Zucker, Salz, Honig, Gewürze, Brühe, Kaffee oder Tee", "mehr": "Etwas Süßes hebt die Stimmung, gerade bei Kindern. Honig nicht für Kinder unter einem Jahr.", "alt": ["vorraete/sonstiges"] },
+            { "id": "kalt", "text": "Ein paar Dinge, die man kalt essen kann", "mehr": "Z. B. Eintopf in Dosen mit Aufreißdeckel, Fisch in Dosen, Knäckebrot. Sie gehen auch ohne Kocher und ohne Wasser." },
+            { "id": "oeffner", "text": "Ein Dosenöffner, der ohne Strom geht" },
+            { "id": "vorne", "frei": true, "text": "Der Vorrat ist so sortiert, dass Älteres vorn steht („Vorne raus, hinten rein“)", "alt": ["vorraete/vorne"], "verweis": { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit" } },
+            { "id": "einkauf", "frei": true, "text": "Was verbraucht ist, kommt gleich auf den Einkaufszettel", "alt": ["vorraete/einkauf"] },
+            { "id": "tiere", "text": "Tierfutter für 10 Tage", "mehr": "Wenn Haustiere im Haushalt leben.", "alt": ["vorraete/tiere"] },
+            { "id": "saeugling", "text": "Für Säuglinge: Säuglingsnahrung, Wasser für Fläschchen, Windeln", "mehr": "Säuglingsnahrung nie über das Haltbarkeitsdatum hinaus verwenden.", "alt": ["vorraete/saeugling"] }
           ]
         },
         {
-          "titel": "Außerdem",
-          "gruppen": [
-            { "stufe": "frei", "punkte": [
-              { "id": "vorne", "text": "Der Vorrat ist so sortiert, dass Älteres vorn steht („Vorne raus, hinten rein“)" },
-              { "id": "einkauf", "text": "Was verbraucht ist, kommt gleich auf den Einkaufszettel" }
-            ] },
-            { "stufe": "guenstig", "punkte": [
-              { "id": "entkeimung", "text": "Entkeimungstabletten für Trinkwasser", "mehr": "Kosten wenig und halten mehrere Jahre. Sie machen z. B. Regenwasser oder Wasser aus dem Spülkasten sicherer." },
-              { "id": "feuer", "text": "Streichhölzer oder Feuerzeug" },
-              { "id": "hausapotheke", "text": "Hausapotheke: Schmerz- und Fiebermittel, Fieberthermometer, Pflaster, eigene Dauermedikamente für mindestens 10 Tage" },
-              { "id": "verbandkasten", "text": "Erweiterter Verbandkasten", "mehr": "Zusätzliche Dreiecktücher, Rettungsdecken und Verbandsmaterial. Ein normaler Verbandkasten reicht für Stunden ohne Hilfe nicht lange." },
-              { "id": "hygiene", "text": "Hygiene: Toilettenpapier, Seife, stabile Müllbeutel, Monatshygiene" }
-            ] },
-            { "stufe": "passend", "punkte": [
-              { "id": "kocher", "text": "Campingkocher mit Gaskartuschen", "mehr": "Lohnt sich, wenn ihr ohnehin zeltet oder grillt. Nach Herstellerangabe benutzen, meist nur draußen oder bei weit offenem Fenster." },
-              { "id": "tiere", "text": "Tierfutter für 10 Tage", "mehr": "Wenn Haustiere im Haushalt leben." },
-              { "id": "saeugling", "text": "Für Säuglinge: Säuglingsnahrung, Wasser für Fläschchen, Windeln" },
-              { "id": "aeltere", "text": "Für Ältere: Ersatzbrille, Batterien für Hörgeräte, Hilfsmittel" },
-              { "id": "notration", "text": "Notrationen, die viele Jahre halten", "mehr": "Notkekse, Fertigmahlzeiten mit Selbsterhitzer, Notwasser. Sie sind teurer und werden im Alltag nicht gegessen. Wenn überhaupt, passen ein, zwei davon ins Notgepäck." }
-            ] }
+          "text": [
+            "Wer mehr Sicherheit will, legt einen Vorrat für 14 Tage an und kann auch ohne Strom warm essen. Wichtig ist, alles einmal auszuprobieren. Erst dann merkt man, was fehlt."
+          ],
+          "punkte": [
+            { "id": "vierzehn", "text": "Vorrat für 14 Tage statt 10", "mehr": "Der Rechner oben zeigt die Mengen für 10 Tage, für 14 Tage braucht ihr rund 40 Prozent mehr.", "verweis": { "text": "Zum Vorratsrechner", "link": "#vorsorge?k=essen&z=rechner" } },
+            { "id": "kocher", "text": "Campingkocher mit passenden Kartuschen", "mehr": "Kartuschen passend zum Kocher kaufen und den Kocher einmal ausprobieren. Nach Herstellerangabe benutzen, meist nur draußen oder bei weit offenem Fenster.", "alt": ["vorraete/kocher", "stromausfall/kocher"], "verweis": { "text": "Kochen: Kochen ohne Strom", "link": "#kochen" } },
+            { "id": "probe", "frei": true, "text": "Einmal einen Tag nur aus dem Vorrat kochen, ohne Kühlschrank", "mehr": "So merkt man, was fehlt: Würze, Fett, Brennstoff oder Dinge, die keiner mag." },
+            { "id": "probieren", "frei": true, "text": "Neue Konserven erst einzeln probieren, bevor ihr mehr davon kauft" }
+          ]
+        },
+        {
+          "text": [
+            "Für mehrere Wochen reicht ein Alltagsvorrat nicht. Dazu kommt eine Reserve, die viele Jahre hält und an einem eigenen Ort steht. Sie ist teurer und wird im Alltag nicht gegessen."
+          ],
+          "punkte": [
+            { "id": "wochen", "text": "Vorrat für mehrere Wochen" },
+            { "id": "notration", "text": "Notrationen, die viele Jahre halten", "mehr": "Notkekse, Fertigmahlzeiten mit Selbsterhitzer, Notwasser in Dosen oder Beuteln.", "alt": ["vorraete/notration"] },
+            { "id": "korn", "text": "Getreide als ganzes Korn und eine Handmühle", "mehr": "Ganzes Korn hält viele Jahre, Vollkornmehl nur wenige Monate." },
+            { "id": "einkochen", "text": "Selbst einkochen", "verweis": { "text": "Kochen: Einkochen, was sicher ist", "link": "#kochen?l=einkochen" } }
           ]
         }
       ],
@@ -99,200 +248,371 @@
       "artikel": ["Notvorrat", "Mindesthaltbarkeitsdatum", "Konserve"]
     },
     {
-      "id": "stromausfall", "titel": "Stromausfall", "icon": "zap-off",
-      "warum": [
-        "Ohne Strom fallen Licht, Heizung, Kühlschrank und Telefon aus, nach einiger Zeit oft auch das Handynetz und das Wasser."
-      ],
-      "abschnitte": [
+      "id": "wasser", "titel": "Wasser", "icon": "droplet",
+      "warum": "Ohne Wasser hält man es nur wenige Tage aus. Bei einem Rohrbruch, einer Abschaltung oder einem langen Stromausfall kommt oft kein Wasser mehr aus der Leitung.",
+      "stufen": [
         {
-          "id": "sofort", "hervor": true,
-          "titel": "Wenn es passiert: Was du sofort tun kannst",
-          "hinweis": "Nicht vorbereitet? Du kannst trotzdem viel tun. Für nichts davon musst du etwas kaufen.",
-          "gruppen": [
-            { "titel": "In der ersten Stunde", "punkte": [
-              { "id": "s-wasser", "text": "Badewanne, Eimer, Töpfe und Flaschen mit Wasser füllen, solange noch Druck in der Leitung ist.", "mehr": "Bei längerem Stromausfall fallen oft auch die Pumpen der Wasserversorgung aus." },
-              { "id": "s-spuelen", "text": "Die Toilette nicht mehr spülen und das Wasser im Spülkasten aufheben.", "mehr": "Darin stehen etwa 6 bis 9 Liter sauberes Leitungswasser (nur, wenn keine WC-Steine oder Reiniger im Kasten hängen). Auch im Warmwasserspeicher sind je nach Größe 30 bis 200 Liter, abzuzapfen am Hahn unten. Vor dem Trinken abkochen oder entkeimen." },
-              { "id": "s-notklo", "text": "Ein Notklo einrichten: einen stabilen Müllbeutel in die Toilette oder einen Eimer hängen.", "mehr": "Nach jeder Benutzung etwas Katzenstreu, Sägespäne, Erde oder zerknülltes Zeitungspapier darüber, den Beutel zuknoten und draußen sammeln. Im Keller oder Erdgeschoss mit Hebeanlage gar nicht spülen, sonst kann Abwasser zurückdrücken." },
-              { "id": "s-geraete", "text": "Herd, Bügeleisen und empfindliche Geräte ausschalten oder den Stecker ziehen.", "mehr": "Wenn der Strom zurückkommt, kann eine Spannungsspitze sie beschädigen. Eine Lampe eingeschaltet lassen, dann merkt man, wann der Strom wieder da ist." },
-              { "id": "s-handy", "text": "Das Handy schonen: Stromsparmodus, Bildschirm dunkel, nur kurz telefonieren oder SMS schreiben.", "mehr": "Laden geht im Auto." },
-              { "id": "s-radio", "text": "Im Radio erfahren, wie groß der Stromausfall ist und wie lange er voraussichtlich dauert: Autoradio oder das UKW-Radio im Handy.", "mehr": "Kein Auto? Dann einfach bei Nachbarn mithören. Das Auto nie in einer geschlossenen Garage laufen lassen." }
-            ] },
-            { "titel": "In den ersten Tagen", "punkte": [
-              { "id": "s-essen", "text": "Kühlschrank und Gefriertruhe geschlossen halten. Zuerst essen, was im Kühlschrank verdirbt, dann aus dem Gefrierfach, zuletzt den Vorrat." },
-              { "id": "s-warm", "text": "Warm halten: alle in einem Raum, Türen schließen, Fenster nachts mit Decken oder Pappe abdichten, mehrere Schichten Kleidung, Mütze auch drinnen." },
-              { "id": "s-licht", "text": "Kerzen nur in feuerfesten Haltern und nie unbeaufsichtigt brennen lassen. Die Handy-Taschenlampe sparsam nutzen." },
-              { "id": "s-co", "text": "Nie Grill, Gasheizer oder Notstromaggregat in geschlossenen Räumen benutzen.", "mehr": "Sie bilden Kohlenmonoxid, das man nicht riecht und das tödlich ist." },
-              { "id": "s-nachbarn", "text": "Nach Nachbarn sehen, vor allem nach Älteren und Alleinlebenden.", "mehr": "Gemeinsam ist es leichter: ein warmer Raum, ein Kocher, Vorräte teilen." },
-              { "id": "s-anlaufstelle", "text": "Die Anlaufstelle der Gemeinde suchen (Feuerwehrhaus, Rathaus, Aushänge).", "mehr": "Dort gibt es Hilfe, und man kann Notrufe absetzen." },
-              { "id": "s-fieldbook", "text": "Fieldbook im Sparmodus nutzen (KI ausschalten) und den Laptop im Auto oder an einer Powerbank laden." }
-            ] }
+          "text": [
+            "Rechnet mit 2 Litern pro Person und Tag zum Trinken und Kochen. Mineralwasser in Flaschen hält lange und läuft im Alltag mit, wie der übrige Vorrat."
+          ],
+          "punkte": [
+            { "id": "wasser", "text": "Wasser und Getränke für 10 Tage", "mehr": "Wie viel das für euren Haushalt ist, zeigt der Vorratsrechner beim Thema Essen.", "alt": ["vorraete/wasser"], "verweis": { "text": "Zum Vorratsrechner", "link": "#vorsorge?k=essen&z=rechner" } },
+            { "id": "haupthahn", "frei": true, "text": "Wissen, wo der Haupthahn für das Wasser ist", "mehr": "Meist im Keller beim Wasserzähler. Bei einem Rohrbruch dreht man ihn zu." },
+            { "id": "reserve", "frei": true, "text": "Wissen, wo im Haus noch Wasser steckt", "mehr": "Im Spülkasten der Toilette stehen 6 bis 9 Liter, im Warmwasserspeicher je nach Größe 30 bis 200 Liter. Vor dem Trinken abkochen.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } }
           ]
         },
         {
-          "titel": "Vorher bereitlegen",
-          "gruppen": [
-            { "stufe": "frei", "punkte": [
-              { "id": "nummern", "text": "Wichtige Telefonnummern auf Papier" },
-              { "id": "bargeld", "text": "Etwas Bargeld in kleinen Scheinen zu Hause", "mehr": "Ohne Strom gehen Kartenzahlung und Geldautomaten nicht." },
-              { "id": "decken", "text": "Warme Decken, Pullover und Mützen an einem Ort, den man im Dunkeln findet" },
-              { "id": "anlaufstelle", "text": "Wissen, wo die Anlaufstelle der Gemeinde für Notfälle ist" },
-              { "id": "radio", "text": "Wissen, wo man Radio hören kann: im Auto oder mit dem UKW-Radio im Handy", "mehr": "Ein Auto in der Familie oder bei Nachbarn reicht, ein eigenes Kurbelradio ist dafür nicht nötig." },
-              { "id": "fieldbook", "text": "Fieldbook ist auf dem Laptop eingerichtet, der Laptop ist geladen" }
-            ] },
-            { "stufe": "guenstig", "punkte": [
-              { "id": "lampe", "text": "Taschenlampe oder Stirnlampe mit Ersatzbatterien" },
-              { "id": "kerzen", "text": "Kerzen oder Teelichter und Feuerzeug" },
-              { "id": "powerbank", "text": "Powerbank, immer geladen" },
-              { "id": "entkeimung", "text": "Entkeimungstabletten für Trinkwasser" }
-            ] },
-            { "stufe": "passend", "punkte": [
-              { "id": "kurbelradio", "text": "Radio mit Batterie, Kurbel oder Solarzelle", "mehr": "Lohnt sich nur, wenn weder du noch Nachbarn ein Auto haben und das Handy kein UKW-Radio hat." },
-              { "id": "kocher", "text": "Campingkocher", "mehr": "Lohnt sich, wenn ihr ohnehin zeltet oder grillt." }
-            ] }
+          "text": [
+            "Für längere Ausfälle braucht man auch Wasser zum Waschen, Spülen und für die Toilette, etwa noch einmal so viel wie zum Trinken. Dafür eignen sich Kanister."
+          ],
+          "punkte": [
+            { "id": "kanister", "text": "Kanister für Brauchwasser", "mehr": "Lebensmittelecht und sauber, randvoll füllen, kühl und dunkel lagern. Etwa alle 6 Monate neu füllen und das alte Wasser zum Gießen nehmen." },
+            { "id": "entkeimung", "kiste": true, "text": "Entkeimungstabletten für Trinkwasser", "mehr": "Sie halten mehrere Jahre und machen z. B. Wasser aus Kanister oder Spülkasten sicherer. Nur nach Packungsbeilage verwenden.", "alt": ["vorraete/entkeimung", "stromausfall/entkeimung", "aufbewahren/k-entkeimung"] },
+            { "id": "mehrfach", "frei": true, "text": "Wissen, wie man Wasser mehrfach nutzt", "mehr": "Erst zum Waschen, dann zum Putzen, zuletzt für die Toilette. Ein Eimer Wasser spült die Toilette, etwa 7 Liter." }
+          ]
+        },
+        {
+          "text": [
+            "Wer ganz unabhängig sein will, kann Wasser selbst gewinnen. Auch dann gilt: vor dem Trinken abkochen oder entkeimen."
+          ],
+          "punkte": [
+            { "id": "filter", "text": "Wasserfilter für Bach- oder Teichwasser", "mehr": "Filter halten Schmutz und viele Keime zurück, aber nicht alle. Danach abkochen oder entkeimen.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } },
+            { "id": "regen", "text": "Regenwasser sammeln", "mehr": "Eine Tonne mit Deckel am Fallrohr. Für Garten und Toilette gut, zum Trinken nur abgekocht." },
+            { "id": "gemeinde", "frei": true, "text": "Bei der Gemeinde nachfragen, wo es im Notfall Wasser gibt", "mehr": "Manche Orte haben Notbrunnen oder feste Ausgabestellen." }
           ]
         }
       ],
       "verweise": [
-        { "text": "Kochen: Kühlschrank, Haltbarkeit, Trinkwasser", "link": "#kochen", "icon": "cooking-pot" },
-        { "text": "Erste Hilfe: Vergiftung (Kohlenmonoxid)", "link": "#erstehilfe?l=vergiftung", "icon": "briefcase-medical" },
-        { "text": "Erste Hilfe: Kälte und Hitze", "link": "#erstehilfe?l=temperatur", "icon": "briefcase-medical" },
-        { "text": "Erste Hilfe: Wenn keine Hilfe kommt", "link": "#erstehilfe?l=keinehilfe", "icon": "briefcase-medical" }
+        { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser", "icon": "cooking-pot" }
       ],
-      "artikel": ["Stromausfall", "Kohlenstoffmonoxidvergiftung", "Trockentoilette"]
+      "artikel": ["Trinkwasser", "Regenwassernutzung", "Wasserfilter"]
     },
     {
-      "id": "aufbewahren", "titel": "Aufbewahren: Notfallkiste und Lagerung", "kurz": "Aufbewahren", "icon": "box",
-      "warum": [
-        "Vorsorge hilft nur, wenn man die Sachen im Ernstfall findet und sie dann noch gut sind. Entkeimungstabletten, die irgendwo in einem Schrank liegen, findet nach fünf Jahren niemand mehr, schon gar nicht im Dunkeln."
-      ],
-      "abschnitte": [
+      "id": "gesundheit", "titel": "Gesundheit", "icon": "briefcase-medical",
+      "warum": "Der häufigste Ernstfall ist ganz alltäglich: Jemand im Haushalt wird krank, und es ist Wochenende, Feiertag oder die Apotheke hat zu. Mit einer kleinen Hausapotheke ist man dann gut versorgt.",
+      "stufen": [
         {
-          "titel": "Die Notfallkiste",
-          "hinweis": "Eine einzige Kiste für die kleinen Dinge, die man bei einem Stromausfall braucht. Sie bleibt zu Hause, anders als das Notgepäck, das man mitnimmt.",
-          "gruppen": [
-            { "titel": "So richtest du sie ein", "punkte": [
-              { "id": "box", "text": "Eine stabile Kunststoffbox mit Deckel, etwa so groß wie ein Schuhkarton bis eine Getränkekiste", "mehr": "Ein Tragegriff ist praktisch. Keine Tasche, die zusammenfällt." },
-              { "id": "platz", "text": "Ein fester Platz, den alle im Haushalt kennen und den man im Dunkeln erreicht", "mehr": "Z. B. im Flur oder in der Küche, nicht ganz hinten im Keller. Obenauf liegt die Taschenlampe." },
-              { "id": "liste", "text": "Auf dem Deckel eine Inhaltsliste mit den Ablaufdaten", "mehr": "Diese Seite lässt sich ausdrucken." },
-              { "id": "blick", "text": "Einmal im Jahr hineinschauen, z. B. bei der Zeitumstellung" }
-            ] },
-            { "stufe": "frei", "titel": "Was hineinkommt: kostet nichts", "punkte": [
-              { "id": "k-nummern", "text": "Zettel mit wichtigen Nummern und Adressen" },
-              { "id": "k-ausdruck", "text": "Der ausgedruckte Abschnitt „Wenn es passiert“ (Kapitel Stromausfall)" },
-              { "id": "k-streichhoelzer", "text": "Streichhölzer und ein paar Teelichter" },
-              { "id": "k-muellbeutel", "text": "Stabile Müllbeutel für das Notklo" }
-            ] },
-            { "stufe": "guenstig", "titel": "Was hineinkommt: günstig und bringt viel", "punkte": [
-              { "id": "k-lampe", "text": "Taschenlampe oder Stirnlampe" },
-              { "id": "k-batterien", "text": "Ersatzbatterien, getrennt vom Gerät", "mehr": "In Geräten können sie über die Jahre auslaufen." },
-              { "id": "k-feuerzeug", "text": "Feuerzeug" },
-              { "id": "k-entkeimung", "text": "Entkeimungstabletten" },
-              { "id": "k-rettungsdecke", "text": "Rettungsdecken" },
-              { "id": "k-klebeband", "text": "Klebeband und Kabelbinder" },
-              { "id": "k-erstehilfe", "text": "Kleines Erste-Hilfe-Set" }
-            ] },
-            { "stufe": "passend", "titel": "Was hineinkommt: nur wenn es zu dir passt", "punkte": [
-              { "id": "k-radio", "text": "Radio mit Batterie oder Kurbel", "mehr": "Nur, wenn weder du noch Nachbarn ein Auto haben und das Handy kein UKW-Radio hat." },
-              { "id": "k-powerbank", "text": "Powerbank", "mehr": "Muss ab und zu nachgeladen werden. Deshalb besser griffbereit im Alltag als vergessen in der Kiste." }
-            ] }
+          "text": [
+            "In die Hausapotheke gehört, was man bei Erkältung, Fieber, Durchfall und kleinen Verletzungen braucht. Welche Mittel zu euch passen, besonders für Kinder, fragt ihr am besten in der Apotheke."
+          ],
+          "punkte": [
+            { "id": "schmerz", "text": "Schmerz- und Fiebermittel", "mehr": "Am besten zwei verschiedene Wirkstoffe, falls einer nicht vertragen wird. Für Kinder in kindgerechter Form.", "alt": ["vorraete/hausapotheke"] },
+            { "id": "thermometer", "text": "Fieberthermometer" },
+            { "id": "pflaster", "text": "Pflaster, Verbandpäckchen, Mullbinden, Dreiecktuch und Einmalhandschuhe", "mehr": "Eine kleine Pflasterbox griffbereit hilft im Alltag mehr als eine große Tasche im Schrank.", "alt": ["aufbewahren/k-erstehilfe"], "verweis": { "text": "Erste Hilfe: Wunden versorgen", "link": "#erstehilfe?l=blutung" } },
+            { "id": "durchfall", "text": "Mittel gegen Durchfall und Elektrolytpulver", "mehr": "Bei Durchfall und Erbrechen verliert der Körper viel Wasser und Salz. Elektrolytpulver aus der Apotheke gleicht das aus." },
+            { "id": "wunde", "text": "Wunddesinfektion, Splitterpinzette und Zeckenkarte" },
+            { "id": "dauer", "text": "Eigene Dauermedikamente für mindestens 10 Tage", "mehr": "Mit Arzt oder Apotheke besprechen, ob eher 2 Wochen sinnvoll sind. Tabletten halten meist länger als Säfte. Den Medikamentenplan in die Notfallmappe legen.", "verweis": { "text": "Dokumente und Geld: Notfallmappe", "link": "#vorsorge?k=dokumente" } },
+            { "id": "hygiene", "text": "Toilettenpapier, Taschentücher, Seife, Monatshygiene", "alt": ["vorraete/hygiene"] },
+            { "id": "aeltere", "text": "Für Ältere: Ersatzbrille, Batterien für Hörgeräte, Hilfsmittel", "alt": ["vorraete/aeltere"] },
+            { "id": "tetanus", "frei": true, "text": "Im Impfpass nachsehen, ob die Tetanus-Impfung noch gilt", "mehr": "Sie wird alle 10 Jahre aufgefrischt." }
           ]
         },
         {
-          "titel": "Lagerung der Vorräte",
-          "gruppen": [
-            { "punkte": [
-              { "id": "l-kuehl", "text": "Kühl, trocken und dunkel lagern", "mehr": "Nicht neben Herd oder Heizung und nicht in der Sonne, auch das Wasser nicht." },
-              { "id": "l-keller", "text": "Im Keller nur, wenn er trocken ist und kein Hochwasser droht, und nicht direkt auf dem Boden" },
-              { "id": "l-dosen", "text": "Trockenes (Mehl, Reis, Nudeln, Nüsse) nach dem Öffnen in dicht schließenden Dosen oder Gläsern", "mehr": "Gegen Feuchtigkeit und Lebensmittelmotten." },
-              { "id": "l-beulen", "text": "Verbeulte, aufgeblähte oder rostige Dosen nicht mehr verwenden" },
-              { "id": "l-mhd", "text": "Wissen: Das Mindesthaltbarkeitsdatum heißt nicht „danach giftig“", "mehr": "Vieles ist deutlich länger gut. Mehr dazu im Leitfaden auf der Seite Kochen." },
-              { "id": "l-ort", "text": "Alles an einem oder zwei Orten, nicht über die ganze Wohnung verteilt" }
-            ] }
+          "text": [
+            "Ein normaler Verbandkasten reicht nur kurz, wenn lange keine Hilfe kommt. Bei Infekten hilft es, Ansteckung im Haushalt zu vermeiden und alles für ein paar Tage im Bett im Haus zu haben."
+          ],
+          "punkte": [
+            { "id": "verbandkasten", "text": "Erweiterter Verbandkasten", "mehr": "Zusätzliche Dreiecktücher, Rettungsdecken, Verbandpäckchen und Wundauflagen, die nicht verkleben.", "alt": ["vorraete/verbandkasten"], "verweis": { "text": "Erste Hilfe: Wenn keine Hilfe kommt", "link": "#erstehilfe?l=keinehilfe" } },
+            { "id": "infekt", "text": "Schnelltests, Masken und Einmalhandschuhe" },
+            { "id": "schonkost", "text": "Tee, Zwieback und Brühe für Kranke" },
+            { "id": "hausmittel", "text": "Wärmflasche, Kamillen- und Salbeitee", "mehr": "Hausmittel helfen bei leichten Beschwerden. Wird es schlimmer, zum Arzt." },
+            { "id": "geraete", "frei": true, "text": "Einen Plan für Geräte und Medikamente, die Strom oder Kühlung brauchen", "mehr": "Wer Sauerstoff, ein Pflegebett oder Insulin braucht, klärt vorher mit Arzt oder Pflegedienst, was bei einem Stromausfall passiert." },
+            { "id": "notfallkarte", "frei": true, "text": "Eine Notfallkarte auf Papier beim Verbandkasten", "mehr": "Adresse, Vorerkrankungen, Medikamente, Allergien und wichtige Telefonnummern." }
+          ]
+        },
+        {
+          "text": [
+            "Wer sich auf lange Zeit ohne Arzt einstellt, ergänzt Dinge für die Pflege über mehrere Tage und lernt, sie zu benutzen."
+          ],
+          "punkte": [
+            { "id": "pflege", "text": "Pflegehilfen: Urinflasche, Nachttopf, Schnabeltasse" },
+            { "id": "zahn", "text": "Zahn-Notset aus der Apotheke", "mehr": "Provisorisches Füllmaterial überbrückt nur die Zeit bis zum Zahnarzt." },
+            { "id": "kurs", "text": "Einen Erste-Hilfe-Kurs machen und alle paar Jahre auffrischen", "verweis": { "text": "Erste Hilfe: zum Kurs in Fieldbook", "link": "#erstehilfe" } }
           ]
         }
       ],
       "verweise": [
-        { "text": "Kochen: Haltbarkeit und verdorben oder nicht", "link": "#kochen", "icon": "cooking-pot" }
+        { "text": "Erste Hilfe: Notrufnummern, Spickzettel und Kurs", "link": "#erstehilfe", "icon": "briefcase-medical" }
       ],
-      "artikel": ["Lebensmittelmotte", "Mindesthaltbarkeitsdatum"]
+      "artikel": ["Hausapotheke", "Verbandkasten"]
     },
     {
-      "id": "dokumente", "titel": "Wichtige Dokumente", "icon": "file-text",
-      "warum": [
-        "Nach einem Brand, einem Hochwasser oder wenn man die Wohnung schnell verlassen muss, braucht man Nachweise. In einer Notfallmappe liegt alles an einem Ort und kann schnell mitgenommen werden. Fieldbook speichert nur deine Häkchen, keine Dokumente."
-      ],
-      "abschnitte": [
+      "id": "strom", "titel": "Licht, Strom und Wärme", "kurz": "Licht und Wärme", "icon": "zap",
+      "warum": "Ohne Strom fallen Licht, Heizung, Kühlschrank und Telefon aus. Die meisten Stromausfälle dauern nur Stunden, aber auch dann ist es gut, wenn Licht und Wärme sofort griffbereit sind.",
+      "stufen": [
         {
-          "titel": "Die Notfallmappe",
-          "hinweis": "Originale oder Kopien, je nachdem, was du brauchst. Nicht alles betrifft jeden.",
-          "gruppen": [
-            { "titel": "Ausweise und Urkunden", "punkte": [
-              { "id": "ausweis", "text": "Kopien von Personalausweis, Reisepass und Führerschein" },
-              { "id": "urkunden", "text": "Geburts- und Heiratsurkunden" }
-            ] },
-            { "titel": "Gesundheit", "punkte": [
-              { "id": "gesundheit", "text": "Impfpass, Medikamentenplan, Allergiepass" },
-              { "id": "verfuegung", "text": "Patientenverfügung und Vorsorgevollmacht, wenn vorhanden" }
-            ] },
-            { "titel": "Geld, Wohnung und Versicherungen", "punkte": [
-              { "id": "versicherung", "text": "Versicherungsscheine (Hausrat, Gebäude, Kranken-, Lebensversicherung)" },
-              { "id": "konto", "text": "Kontoverbindungen" },
-              { "id": "wohnung", "text": "Mietvertrag oder Grundbuchauszug" },
-              { "id": "fahrzeug", "text": "Fahrzeugpapiere" },
-              { "id": "rente", "text": "Zeugnisse, Renten- und Steuerbescheide", "mehr": "Wer sie braucht." },
-              { "id": "testament", "text": "Testament, wenn vorhanden" }
-            ] },
-            { "titel": "Aufbewahren", "punkte": [
-              { "id": "nummernliste", "text": "Eine Liste wichtiger Telefonnummern und Adressen" },
-              { "id": "ort", "text": "Die Mappe liegt griffbereit an einem festen Ort" },
-              { "id": "digital", "text": "Kopien auch digital auf einem USB-Stick", "mehr": "Am besten verschlüsselt, denn darauf stehen viele persönliche Daten." }
-            ] }
+          "text": [
+            "Licht kommt am sichersten aus Lampen mit Batterien. Wichtig ist, dass man sie im Dunkeln findet und die Batterien noch gut sind."
+          ],
+          "punkte": [
+            { "id": "lampe", "kiste": true, "text": "Taschenlampe oder Stirnlampe", "mehr": "Am besten eine Lampe für jeden Raum, den ihr nutzt.", "alt": ["stromausfall/lampe", "aufbewahren/k-lampe"] },
+            { "id": "batterien", "kiste": true, "text": "Ersatzbatterien, getrennt vom Gerät", "mehr": "In Geräten, die man selten nutzt, laufen Batterien über die Jahre aus.", "alt": ["aufbewahren/k-batterien"] },
+            { "id": "powerbank", "text": "Powerbank, immer geladen", "mehr": "Besser griffbereit im Alltag als vergessen in einer Kiste.", "alt": ["stromausfall/powerbank", "aufbewahren/k-powerbank"] },
+            { "id": "feuer", "kiste": true, "text": "Streichhölzer oder Feuerzeug", "alt": ["vorraete/feuer", "aufbewahren/k-feuerzeug", "aufbewahren/k-streichhoelzer"] },
+            { "id": "decken", "frei": true, "text": "Warme Decken, Pullover und Mützen an einem Ort, den man im Dunkeln findet", "alt": ["stromausfall/decken"] },
+            { "id": "fieldbook", "frei": true, "text": "Fieldbook ist auf dem Laptop eingerichtet, der Laptop ist geladen", "alt": ["stromausfall/fieldbook"] }
+          ]
+        },
+        {
+          "text": [
+            "Eine Heizung braucht fast immer Strom, auch mit Gas oder Öl. Eine Wohnung kühlt in 2 bis 3 Tagen deutlich aus. Wer vorbereitet ist, wärmt einen Raum und bleibt dort."
+          ],
+          "punkte": [
+            { "id": "waermeecke", "text": "Eine Wärme-Ecke für den Winter", "mehr": "Decken, Mützen, Wärmflasche und Rettungsdecken zusammen an einem Ort.", "verweis": { "text": "Erste Hilfe: Kälte und Hitze", "link": "#erstehilfe?l=temperatur" } },
+            { "id": "rettungsdecke", "kiste": true, "text": "Rettungsdecken", "alt": ["aufbewahren/k-rettungsdecke"] },
+            { "id": "notlicht", "text": "Akku-Notlichter für Flur und Treppe", "mehr": "Sie stecken in der Steckdose und gehen bei Stromausfall von selbst an." },
+            { "id": "kerzen", "kiste": true, "text": "Kerzen oder Teelichter als Reserve", "mehr": "Nur in feuerfesten Haltern und nie unbeaufsichtigt. Fürs Licht sind Lampen sicherer.", "alt": ["stromausfall/kerzen"] }
+          ]
+        },
+        {
+          "text": [
+            "Strom selbst zu erzeugen oder zu speichern kostet Geld und will gelernt sein. Sicherheit geht vor: Geräte mit Motor oder Flamme nie in geschlossenen Räumen."
+          ],
+          "punkte": [
+            { "id": "powerstation", "text": "Powerstation, auf Wunsch mit Solarmodul", "mehr": "Reicht für Licht, Handy, Radio und kurz für den Kühlschrank. Laufzeit grob: Kapazität in Wattstunden geteilt durch die Leistung des Geräts. Im Winter liefert ein Solarmodul nur wenig." },
+            { "id": "aggregat", "text": "Notstromaggregat", "mehr": "Nur im Freien betreiben, nie im Haus oder in der Garage. Ins Hausnetz nur über eine Umschaltung vom Elektriker einspeisen." },
+            { "id": "ofen", "text": "Kaminofen mit Holzvorrat", "mehr": "Er braucht einen Schornstein und Holz, das ein bis zwei Jahre getrocknet ist. Das Anheizen vorher üben." }
           ]
         }
       ],
+      "verweise": [
+        { "text": "Erste Hilfe: Vergiftung (Kohlenmonoxid)", "link": "#erstehilfe?l=vergiftung", "icon": "briefcase-medical" }
+      ],
+      "artikel": ["Stromausfall", "Notstromaggregat", "Inselanlage"]
+    },
+    {
+      "id": "information", "titel": "Information und Notruf", "kurz": "Information", "icon": "phone",
+      "warum": "Bei einem großen Ausfall will man wissen, was los ist und wie lange es dauert. Und im Notfall muss man Hilfe rufen können, auch wenn man nicht sprechen kann oder das Netz wackelt.",
+      "stufen": [
+        {
+          "text": [
+            "Das Handynetz hält bei Stromausfall oft nur Minuten bis wenige Stunden. Radio funktioniert länger. Vieles am Handy lässt sich vorher in ein paar Minuten einrichten."
+          ],
+          "punkte": [
+            { "id": "nummern", "frei": true, "kiste": true, "text": "Wichtige Telefonnummern und Adressen auf Papier", "alt": ["stromausfall/nummern", "aufbewahren/k-nummern", "dokumente/nummernliste"] },
+            { "id": "radio", "frei": true, "text": "Wissen, wo man ohne Strom Radio hören kann", "mehr": "Im Auto, bei Nachbarn oder mit einem Batterieradio. Viele neue Handys haben kein UKW-Radio mehr, am eigenen Handy also vorher ausprobieren.", "alt": ["stromausfall/radio"] },
+            { "id": "batterieradio", "kiste": true, "text": "Kleines Radio mit Batterien", "mehr": "Am besten mit denselben Batterien wie die Taschenlampe. Kurbelradios liefern für viel Kurbeln nur kurz Strom.", "alt": ["stromausfall/kurbelradio", "aufbewahren/k-radio"] },
+            { "id": "sos", "frei": true, "text": "Die Notruf-Funktion am Handy einrichten", "mehr": "In den Einstellungen nach „SOS“ suchen. Viele Handys rufen dann nach mehrmaligem Drücken der Seitentaste den Notruf oder schicken den Standort an Vertraute." },
+            { "id": "notfallpass", "frei": true, "text": "Den Notfallpass im Handy ausfüllen", "mehr": "Vorerkrankungen, Medikamente und Notfallkontakte. Rettungskräfte sehen ihn auch bei gesperrtem Handy." },
+            { "id": "warnapp", "frei": true, "text": "Eine Warn-App einrichten", "mehr": "Deutschland: NINA, Österreich: KATWARN, Schweiz: Alertswiss. In den Handy-Einstellungen außerdem die Notfallwarnungen eingeschaltet lassen." },
+            { "id": "anlaufstelle", "frei": true, "text": "Wissen, wo die Anlaufstelle der Gemeinde für Notfälle ist", "mehr": "Die Adresse aufschreiben. Dort kann man Notrufe absetzen und erfährt Neues.", "alt": ["stromausfall/anlaufstelle"] }
+          ]
+        },
+        {
+          "text": [
+            "Bei längeren Ausfällen helfen ein paar Dinge, die ohne Netz und Strom auskommen."
+          ],
+          "punkte": [
+            { "id": "sender", "frei": true, "text": "Regionalsender und seine Frequenz aufgeschrieben", "mehr": "Durchsagen kommen meist zur vollen Stunde." },
+            { "id": "zweithandy", "text": "Ein altes Handy geladen als Reserve" },
+            { "id": "karte", "text": "Eine Landkarte der Umgebung auf Papier", "mehr": "Fieldbook hat Karten, braucht aber selbst Strom." }
+          ]
+        },
+        {
+          "text": [
+            "Funkgeräte gehen ohne Netz. Sie helfen aber nur, wenn andere auch eins haben und man es vorher geübt hat."
+          ],
+          "punkte": [
+            { "id": "pmr", "text": "Funkgeräte (PMR) für Familie oder Nachbarn", "mehr": "Ohne Anmeldung erlaubt, Reichweite meist 1 bis 3 Kilometer. Einen Kanal vorher vereinbaren." },
+            { "id": "cb", "text": "CB-Funk", "mehr": "Ohne Prüfung erlaubt, mit guter Antenne 15 bis 25 Kilometer. Nur zugelassene Geräte, Verstärker sind verboten." }
+          ]
+        }
+      ],
+      "verweise": [],
+      "artikel": ["Notruf", "Warn-App NINA", "CB-Funk"]
+    },
+    {
+      "id": "haus", "titel": "Haus und Wohnung", "kurz": "Haus", "icon": "house",
+      "warum": "Starkregen und Hochwasser treffen auch Orte fern von Flüssen. Wer weiß, wie sein Haus auf Wasser und Stromausfall reagiert, kann Schäden oft verhindern.",
+      "stufen": [
+        {
+          "text": [
+            "Vieles kostet nichts: wissen, wo man den Strom abstellt, und nichts Wichtiges auf dem Kellerboden lassen."
+          ],
+          "punkte": [
+            { "id": "sicherung", "frei": true, "text": "Wissen, wo der Sicherungskasten ist und wie man ihn bedient" },
+            { "id": "kellerboden", "frei": true, "text": "Im Keller nichts Wichtiges direkt auf den Boden stellen" },
+            { "id": "starkregen", "frei": true, "text": "Die Starkregenkarte der Gemeinde ansehen", "mehr": "Viele Gemeinden zeigen im Internet, wo bei Starkregen Wasser fließt und sich sammelt." },
+            { "id": "versicherung", "frei": true, "text": "Prüfen, ob die Versicherung Hochwasser und Rückstau abdeckt", "mehr": "Das heißt meist Elementarschaden." }
+          ]
+        },
+        {
+          "text": [
+            "Wasser kommt bei Starkregen oft durch Lichtschächte, Kellertreppen oder rückwärts durch den Abfluss. Dagegen helfen kleine Umbauten und etwas Material."
+          ],
+          "punkte": [
+            { "id": "rueckstau", "text": "Rückstauklappe einbauen lassen und regelmäßig prüfen" },
+            { "id": "werkzeug", "kiste": true, "text": "Klebeband, Kabelbinder und etwas Werkzeug", "mehr": "Für kleine Reparaturen, wenn kein Handwerker kommt.", "alt": ["aufbewahren/k-klebeband"] },
+            { "id": "notklo", "kiste": true, "text": "Stabile Müllbeutel und Katzenstreu für ein Notklo", "alt": ["aufbewahren/k-muellbeutel"], "verweis": { "text": "Wasser weg: So richtest du ein Notklo ein", "link": "#vorsorge?lage=wasser" } },
+            { "id": "planen", "text": "Planen und ein paar Sandsäcke" }
+          ]
+        },
+        {
+          "text": [
+            "Wer in einem gefährdeten Gebiet wohnt, hält Material bereit, um Wasser draußen zu halten oder abzupumpen."
+          ],
+          "punkte": [
+            { "id": "pumpe", "text": "Tauchpumpe mit Schlauch" },
+            { "id": "bretter", "text": "Zugeschnittene Bretter für Kellerfenster und Türen", "mehr": "Am besten im Baumarkt passend zuschneiden lassen und beschriften." }
+          ]
+        }
+      ],
+      "verweise": [],
+      "artikel": ["Rückstauverschluss", "Hochwasserschutz"]
+    },
+    {
+      "id": "unterwegs", "titel": "Unterwegs und Auto", "kurz": "Unterwegs", "icon": "car",
+      "warum": "Panne, Stau im Schnee oder ein Unwetter auf dem Heimweg: Unterwegs ist man oft schlechter vorbereitet als zu Hause.",
+      "stufen": [
+        {
+          "text": [
+            "Ein paar Kleinigkeiten im Auto oder in der Tasche reichen, um ein paar Stunden gut zu überstehen."
+          ],
+          "punkte": [
+            { "id": "tank", "frei": true, "text": "Den Tank nie unter halb voll werden lassen", "mehr": "Bei Stromausfall gehen auch die Zapfsäulen nicht." },
+            { "id": "auto", "text": "Im Auto: Wasser, ein paar Riegel, Taschenlampe und eine Decke" },
+            { "id": "laden", "text": "Ein Ladekabel fürs Handy im Auto" }
+          ]
+        },
+        {
+          "text": [
+            "Wenn man zu Fuß nach Hause muss, hilft eine kleine Tasche im Auto oder am Arbeitsplatz."
+          ],
+          "punkte": [
+            { "id": "tasche", "text": "Eine Tasche mit Wasser, Essen, Lampe, Regenschutz, Erste-Hilfe-Set und Bargeld", "mehr": "Wie ein kleines Notgepäck, nur für den Weg nach Hause.", "verweis": { "text": "Vorsorge: Notgepäck", "link": "#vorsorge?k=notgepaeck" } },
+            { "id": "schuhe", "text": "Feste Schuhe und warme Kleidung im Auto oder am Arbeitsplatz" },
+            { "id": "heimweg", "frei": true, "text": "Den Heimweg zu Fuß kennen", "mehr": "Wie weit ist es von der Arbeit nach Hause? Welcher Weg geht auch ohne Ampeln und Bahn?" }
+          ]
+        },
+        {
+          "text": [
+            "Wer weite Wege hat, packt einen Rucksack, mit dem man einen Tagesmarsch schafft."
+          ],
+          "punkte": [
+            { "id": "rucksack", "text": "Heimweg-Rucksack für bis zu 25 Kilometer", "mehr": "Regenjacke, Mütze, Handschuhe, Wasserflasche (im Winter nur zu drei Vierteln füllen), Essen, Stirnlampe, Powerbank, Karte. Höchstens 15 bis 20 Prozent des eigenen Körpergewichts." }
+          ]
+        }
+      ],
+      "verweise": [],
+      "artikel": []
+    },
+    {
+      "id": "dokumente", "titel": "Dokumente und Geld", "kurz": "Dokumente", "icon": "file-text",
+      "warum": "Nach einem Hochwasser oder wenn man die Wohnung schnell verlassen muss, braucht man Nachweise. In einer Notfallmappe liegt alles an einem Ort und kann schnell mitgenommen werden. Fieldbook speichert nur deine Häkchen, keine Dokumente.",
+      "stufen": [
+        {
+          "text": [
+            "Originale oder Kopien, je nachdem, was du brauchst. Nicht alles betrifft jeden."
+          ],
+          "punkte": [
+            { "id": "ausweis", "text": "Kopien von Personalausweis, Reisepass und Führerschein" },
+            { "id": "urkunden", "text": "Geburts- und Heiratsurkunden" },
+            { "id": "gesundheit", "text": "Impfpass, Medikamentenplan, Allergiepass, Mutterpass" },
+            { "id": "verfuegung", "text": "Patientenverfügung und Vorsorgevollmacht, wenn vorhanden" },
+            { "id": "versicherung", "text": "Versicherungsscheine (Hausrat, Gebäude, Kranken-, Lebensversicherung)" },
+            { "id": "konto", "text": "Kontoverbindungen" },
+            { "id": "wohnung", "text": "Mietvertrag oder Grundbuchauszug" },
+            { "id": "fahrzeug", "text": "Fahrzeugpapiere" },
+            { "id": "rente", "text": "Zeugnisse, Renten- und Steuerbescheide", "mehr": "Wer sie braucht." },
+            { "id": "testament", "text": "Testament, wenn vorhanden" },
+            { "id": "ort", "frei": true, "text": "Die Mappe liegt griffbereit an einem festen Ort" },
+            { "id": "bargeld", "text": "Etwas Bargeld in kleinen Scheinen und Münzen zu Hause", "mehr": "Ohne Strom gehen Kartenzahlung und Geldautomaten nicht.", "alt": ["stromausfall/bargeld"] }
+          ]
+        },
+        {
+          "text": [
+            "Gehen Papiere oder Dateien verloren, hilft eine Kopie an anderer Stelle."
+          ],
+          "punkte": [
+            { "id": "digital", "text": "Kopien der Dokumente auf einem USB-Stick", "mehr": "Am besten verschlüsselt, denn darauf stehen viele persönliche Daten." },
+            { "id": "sicherung", "text": "Fotos und wichtige Dateien auf einem zweiten Speicher gesichert" },
+            { "id": "adressbuch", "text": "Ein Adressbuch auf Papier", "mehr": "Mit Familie, Freunden und Vertragspartnern wie Versicherung, Bank und Stadtwerken." }
+          ]
+        },
+        { "text": [], "punkte": [] }
+      ],
+      "verweise": [],
       "artikel": ["Vorsorgevollmacht", "Patientenverfügung"]
     },
     {
       "id": "notgepaeck", "titel": "Notgepäck", "icon": "backpack",
-      "warum": [
-        "Muss man das Haus schnell verlassen, etwa bei einem Brand, Hochwasser oder einer Evakuierung, hilft es, wenn das Wichtigste schon zusammensteht. Ein Rucksack pro Person reicht, gepackt für ein, zwei Tage bei Bekannten oder in einer Notunterkunft."
-      ],
-      "abschnitte": [
+      "warum": "Muss man das Haus schnell verlassen, etwa bei Hochwasser oder einer Evakuierung, hilft es, wenn das Wichtigste schon zusammensteht. Ein Rucksack pro Person reicht, gepackt für ein, zwei Tage bei Bekannten oder in einer Notunterkunft.",
+      "stufen": [
         {
-          "titel": "Im Rucksack",
-          "gruppen": [
-            { "punkte": [
-              { "id": "medikamente", "text": "Eigene Medikamente und ein kleines Erste-Hilfe-Set" },
-              { "id": "mappe", "text": "Die Notfallmappe mit den Dokumenten" },
-              { "id": "laden", "text": "Handy-Ladekabel und Powerbank" },
-              { "id": "lampe", "text": "Taschenlampe" },
-              { "id": "kleidung", "text": "Wechselkleidung und Hygieneartikel" },
-              { "id": "proviant", "text": "Trinkflasche und etwas Proviant" },
-              { "id": "geld", "text": "Bargeld und Ersatzschlüssel" },
-              { "id": "kinder", "text": "Für Kinder: Lieblingskuscheltier und ein Zettel mit Namen und Telefonnummer der Eltern" }
-            ] }
+          "text": [],
+          "punkte": [
+            { "id": "medikamente", "text": "Eigene Medikamente und ein kleines Erste-Hilfe-Set", "verweis": { "text": "Gesundheit: Dauermedikamente und Hausapotheke", "link": "#vorsorge?k=gesundheit" } },
+            { "id": "mappe", "text": "Die Notfallmappe mit den Dokumenten", "verweis": { "text": "Dokumente und Geld: Was in die Mappe gehört", "link": "#vorsorge?k=dokumente" } },
+            { "id": "laden", "text": "Handy-Ladekabel und Powerbank" },
+            { "id": "lampe", "text": "Taschenlampe" },
+            { "id": "kleidung", "text": "Wechselkleidung und Hygieneartikel" },
+            { "id": "proviant", "text": "Trinkflasche und etwas Proviant" },
+            { "id": "geld", "text": "Bargeld und Ersatzschlüssel" },
+            { "id": "kinder", "text": "Für Kinder: Lieblingskuscheltier und ein Zettel mit Namen und Telefonnummer der Eltern" }
+          ]
+        },
+        {
+          "text": [
+            "Der Rucksack hilft nur, wenn er schnell greifbar ist und man ihn auch tragen kann."
+          ],
+          "punkte": [
+            { "id": "jeperson", "frei": true, "text": "Ein Rucksack pro Person, alle wissen, wo er steht" },
+            { "id": "tragen", "frei": true, "text": "Einmal Probe tragen", "mehr": "Höchstens 15 bis 20 Prozent des eigenen Körpergewichts." },
+            { "id": "pruefen", "frei": true, "text": "Zweimal im Jahr nachsehen, z. B. bei der Zeitumstellung", "mehr": "Passt die Kleidung noch, sind die Medikamente noch gut?" },
+            { "id": "regen", "text": "Regenschutz und eine Rettungsdecke" },
+            { "id": "tiere", "text": "Für Haustiere: Leine, Napf, Futter, Transportkorb" }
+          ]
+        },
+        {
+          "text": [
+            "Wer sich auch auf eine Nacht im Freien einstellt, packt mehr ein."
+          ],
+          "punkte": [
+            { "id": "draussen", "text": "Schlafsack oder Decke, Plane, Schnur und Taschenmesser" },
+            { "id": "wasser", "text": "Wasserflasche und Entkeimungstabletten", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } }
           ]
         }
       ],
+      "verweise": [],
       "artikel": ["Notgepäck"]
+    },
+    {
+      "id": "aufbewahren", "titel": "Notfallkiste und Lagerung", "kurz": "Notfallkiste", "icon": "box", "kiste": true,
+      "warum": "Vorsorge hilft nur, wenn man die Sachen im Ernstfall findet und sie dann noch gut sind. Entkeimungstabletten, die irgendwo in einem Schrank liegen, findet nach fünf Jahren niemand mehr, schon gar nicht im Dunkeln.",
+      "stufen": [
+        {
+          "text": [
+            "Eine einzige Kiste für die kleinen Dinge, die man bei einem Stromausfall braucht. Sie bleibt zu Hause, anders als das Notgepäck, das man mitnimmt. Was hineinkommt, ist bei den anderen Themen markiert und steht unten als Packliste."
+          ],
+          "punkte": [
+            { "id": "box", "text": "Eine stabile Kunststoffbox mit Deckel, etwa so groß wie ein Schuhkarton bis eine Getränkekiste", "mehr": "Ein Tragegriff ist praktisch. Keine Tasche, die zusammenfällt.", "alt": ["aufbewahren/box"] },
+            { "id": "platz", "frei": true, "text": "Ein fester Platz, den alle im Haushalt kennen und den man im Dunkeln erreicht", "mehr": "Z. B. im Flur oder in der Küche, nicht ganz hinten im Keller. Obenauf liegt die Taschenlampe." },
+            { "id": "liste", "frei": true, "text": "Auf dem Deckel eine Inhaltsliste mit den Ablaufdaten", "mehr": "Die Packliste unten lässt sich ausdrucken.", "verweis": { "text": "Zur Packliste", "link": "#vorsorge?k=aufbewahren&z=packliste" } },
+            { "id": "ausdruck", "frei": true, "kiste": true, "text": "Die Schritte „Wenn es passiert“ ausgedruckt", "mehr": "Fieldbook braucht selbst Strom. Gedruckt werden die Schritte zusammen mit der Packliste.", "alt": ["aufbewahren/k-ausdruck"], "verweis": { "text": "Für die Notfallkiste drucken", "link": "#vorsorge?druck=kiste" } },
+            { "id": "blick", "frei": true, "text": "Einmal im Jahr hineinschauen, z. B. bei der Zeitumstellung" },
+            { "id": "l-kuehl", "frei": true, "text": "Vorräte kühl, trocken und dunkel lagern", "mehr": "Nicht neben Herd oder Heizung, nicht auf dem Dachboden und nicht in der Sonne, auch das Wasser nicht." },
+            { "id": "l-keller", "frei": true, "text": "Im Keller nur, wenn er trocken ist und kein Hochwasser droht, und nicht direkt auf dem Boden" },
+            { "id": "l-dosen", "text": "Trockenes (Mehl, Reis, Nudeln, Nüsse) nach dem Öffnen in dicht schließenden Dosen oder Gläsern", "mehr": "Gegen Feuchtigkeit, Lebensmittelmotten und Mäuse. Karton und dünne Folie halten sie nicht auf." },
+            { "id": "l-beulen", "frei": true, "text": "Gewölbte, undichte oder rostige Dosen nicht mehr verwenden" },
+            { "id": "l-mhd", "frei": true, "text": "Wissen: Das Mindesthaltbarkeitsdatum heißt nicht „danach giftig“", "mehr": "Vieles ist deutlich länger gut, aber nicht alles gleich lange.", "verweis": { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit" } },
+            { "id": "l-ort", "frei": true, "text": "Alles an einem oder zwei Orten, nicht über die ganze Wohnung verteilt" }
+          ]
+        },
+        {
+          "text": [
+            "Bei einem größeren Vorrat lohnt etwas Ordnung, damit nichts hinten im Regal alt wird."
+          ],
+          "punkte": [
+            { "id": "ablauf", "frei": true, "text": "Was in diesem Jahr abläuft, kommt nach vorn oder in eine eigene Kiste und wird zuerst gegessen" },
+            { "id": "regal", "text": "Dosen nicht direkt auf Metallregale stellen, sondern in eine Kiste oder auf Pappe", "mehr": "Rostet oder platzt eine Dose, verdirbt sie so nicht den Rest." }
+          ]
+        },
+        { "text": [], "punkte": [] }
+      ],
+      "verweise": [
+        { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit", "icon": "cooking-pot" }
+      ],
+      "artikel": ["Lebensmittelmotte", "Mindesthaltbarkeitsdatum"]
     }
-  ],
-  "weiter": {
-    "titel": "Wer weiter vorsorgen will",
-    "text": "Man kann noch deutlich weiter vorsorgen. Das geht über diese Seite hinaus. Hier nur ein paar Stichpunkte, mehr findest du in den offiziellen Ratgebern zur Notfallvorsorge (Deutschland: Bundesamt für Bevölkerungsschutz und Katastrophenhilfe, Österreich: Zivilschutzverband, Schweiz: Bundesamt für Bevölkerungsschutz) und in der Bibliothek.",
-    "punkte": [
-      "Vorräte für mehrere Wochen statt für 10 Tage.",
-      "Notverpflegung, die viele Jahre hält: Notkekse, Fertigmahlzeiten mit Selbsterhitzer, Notwasser in Dosen oder Beuteln.",
-      "Wasser selbst gewinnen: Regenwasser sammeln, ein Wasserfilter für Bach- oder Teichwasser, Entkeimungstabletten auf Vorrat.",
-      "Notstrom: ein Solarpanel mit Speicher oder ein Ladegerät mit Kurbel.",
-      "Heizen und Kochen ohne Strom und Gas: Kaminofen mit Holzvorrat, Hobo-Kocher oder Kochfeuer im Freien.",
-      "Toilette ohne Wasser für längere Zeit: Eimer mit Deckel, Müllbeutel und Katzenstreu oder Sägespäne.",
-      "Werkzeug und Wissen zum Reparieren: In der Bibliothek helfen z. B. iFixit und das Low-tech Magazine."
-    ],
-    "verweise": [
-      { "text": "Kochen: Kochfeuer und Brot ohne Backofen", "link": "#kochen", "icon": "flame" },
-      { "text": "Bibliothek", "link": "#bibliothek", "icon": "library" }
-    ],
-    "artikel": ["Notvorrat", "Regenwassernutzung", "Wasserfilter", "Inselanlage"]
-  }
+  ]
 }

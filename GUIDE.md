@@ -99,6 +99,7 @@ Läuft gerade ein Download, zeigt oben in der Kopfzeile den Stand, etwa „40 %�
 ### Fragen
 Schreib eine Frage, zum Beispiel „Wie versorge ich eine Schnittwunde?“.\
 Die KI sucht passende Artikel und antwortet mit Quellennummern wie [1].\
+Eine kleine Suchhilfe, die mit der KI kommt, sortiert die Treffer dabei nach ihrer Bedeutung.\
 Klick auf eine Nummer öffnet den Artikel.\
 Unter der Antwort stehen Suchbegriffe, mit denen du in der Bibliothek selbst weiterlesen kannst.\
 Pakete aus PDF-Büchern (z. B. die Medizin-Handbücher) bereitet Fieldbook nach der Installation einmal für die KI vor.\
@@ -206,7 +207,7 @@ Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.
 ### Kochen
 Unter **Was hast du da?** gibst du ein, was im Haus ist.\
 Fieldbook sucht passende Rezepte im Koch-Wiki, zuerst die, für die du alles hast.\
-Darunter stehen Faustregeln zu Trinkwasser, Vorräten und Kühlschrank im Stromausfall, auch ohne heruntergeladene Pakete.
+Darunter stehen Faustregeln zu Trinkwasser, Haltbarkeit und sicherem Einkochen, auch ohne heruntergeladene Pakete.
 
 ### Erste Hilfe
 Ganz oben stehen die Notrufnummern und Spickzettel für den Ernstfall mit je fünf Sofort-Schritten.\
@@ -214,12 +215,20 @@ Darunter folgt ein Kurs mit 12 Lektionen, Quiz und Fallbeispielen zum Üben.\
 Er ersetzt keinen echten Erste-Hilfe-Kurs.
 
 ### Vorsorge
-Checklisten zum Abhaken: Vorräte für 10 Tage (mit Vorratsrechner), Stromausfall, Aufbewahren, Dokumente und Notgepäck.\
-Jedes Kapitel lässt sich ausdrucken.
+Die Vorsorge hat drei Stufen: **Das Wichtigste**, **Gut vorbereitet** und **Weiter vorsorgen**.\
+**Wenn es passiert** zeigt kurze Schritte für Strom weg, Wasser weg, Unwetter, Krankheit, unterwegs und das schnelle Verlassen des Hauses.\
+**Vorbereiten** ordnet die Themen (Essen mit Vorratsrechner, Wasser, Gesundheit, Licht und Wärme, Information, Haus, Unterwegs, Dokumente, Notgepäck, Notfallkiste) nach den drei Stufen.\
+Darüber siehst du, wie viel du in jeder Stufe schon abgehakt hast.\
+Jedes Thema erklärt, warum es wichtig ist, und hat Punkte zum Abhaken.\
+Die höheren Stufen sind zugeklappt, bis du dort etwas abhakst.\
+Die Packliste für die Notfallkiste entsteht von selbst und lässt sich zusammen mit den Schritten ausdrucken.\
+Drucken kannst du nur das Wichtigste oder alles.
 
 ## 5. Strom sparen
 
-- Oben rechts siehst du den Akkustand.
+- Oben rechts siehst du den Akkustand und, wenn das Fenster breit genug ist, wie lange er noch reicht.\
+  Ab 30 % wird die Anzeige gelb, ab 15 % rot.\
+  Ein Klick darauf zeigt Tipps zum Stromsparen und den Sparmodus.
 - Strom braucht die KI vor allem, während sie antwortet: Dann rechnet der Laptop mit voller Kraft.\
   Wer Akku sparen will, stellt also lieber wenige, gezielte Fragen.
 - Der **Sparmodus** schaltet die KI ganz ab und gibt den Arbeitsspeicher frei, den sie belegt.\

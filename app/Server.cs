@@ -73,14 +73,14 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.7.1";
+        public const string Version = "0.7.2";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
-        static int Port, KiwixPort, LlmPort, RoutePort;
+        static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
         static readonly object Lk = new object();
         static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
 
-        static Process kiwix, llama, brouter;
+        static Process kiwix, llama, brouter, suchhilfe;
         static string llmStatus = "aus", llmFehler = "", llmModell = "";
         static int llmGen = 0;
 
@@ -135,6 +135,7 @@ namespace OfflineWissen
             FensterSymbol();
             KiwixPort = FreierPort();
             LlmPort = FreierPort();
+            SuchPort = FreierPort();
             RoutePort = FreierPort();
 
             listener = new HttpListener();
@@ -290,6 +291,11 @@ namespace OfflineWissen
                 {
                     if (llmStatus != "bereit") { SendeJson(ctx, new Dictionary<string, object> { { "error", "KI ist nicht bereit (" + llmStatus + ")" } }, 503); return; }
                     Weiterleiten(ctx, LlmPort, ctx.Request.RawUrl.Substring(4));
+                }
+                else if (pfad.StartsWith("/suchhilfe/"))
+                {
+                    if (suchhilfe == null || suchhilfe.HasExited) { SendeJson(ctx, new Dictionary<string, object> { { "error", "Suchhilfe läuft nicht" } }, 503); return; }
+                    Weiterleiten(ctx, SuchPort, ctx.Request.RawUrl.Substring(10));
                 }
                 else if (pfad.StartsWith("/api/")) Api(ctx, pfad.Substring(5));
                 else if (pfad.StartsWith("/karten/")) SendeDatei(ctx, SichererPfad(Path.Combine(Daten, "karten"), pfad.Substring(8)));
@@ -1538,7 +1544,7 @@ namespace OfflineWissen
                 {"stimmenFehlen", StimmenJobs(InstallierteSprachen()).Where(x => x.Art == "stimme").Select(x => x.Ziel).ToArray()},
                 {"defektePakete", kiwixDefekt.ToArray()},
                 {"pdfTexte", PdfTexte()},
-                {"ki", new Dictionary<string, object> { {"status", llmStatus}, {"fehler", llmFehler}, {"modell", llmModell}, {"kontext", AktuellesModellKontext()} }},
+                {"ki", new Dictionary<string, object> { {"status", llmStatus}, {"fehler", llmFehler}, {"modell", llmModell}, {"kontext", AktuellesModellKontext()}, {"suchhilfe", suchhilfe != null && !suchhilfe.HasExited} }},
                 {"modell", Str(einst, "modell")},
                 {"backend", Str(einst, "backend") ?? "cpu"},
                 {"sparmodus", Bool(einst, "sparmodus")},
@@ -1673,6 +1679,8 @@ namespace OfflineWissen
                 var m = (Dictionary<string, object>)o;
                 m["installiert"] = File.Exists(Path.Combine(Daten, "modelle", Str(m, "datei")));
             }
+            var sh = modelle.ContainsKey("suchhilfe") ? modelle["suchhilfe"] as Dictionary<string, object> : null;
+            if (sh != null) sh["installiert"] = SuchhilfeDa();
             // Ausgemusterte Modelle nur zeigen, wo sie schon installiert sind
             modelle["modelle"] = Arr(modelle, "modelle").OfType<Dictionary<string, object>>()
                 .Where(m => !Bool(m, "ausgemustert") || (bool)m["installiert"]).Cast<object>().ToArray();
@@ -1718,6 +1726,7 @@ namespace OfflineWissen
             return new Dictionary<string, object>
             {
                 {"modelle", Arr(modelle, "modelle")},
+                {"suchhilfe", sh},
                 {"kategorien", Arr(pakete, "kategorien")},
                 {"pakete", Arr(pakete, "pakete")},
                 {"vorlagen", Arr(pakete, "vorlagen")},
@@ -2638,6 +2647,16 @@ namespace OfflineWissen
                     if (!string.IsNullOrEmpty(modellId)) einst["modell"] = modellId;
                     einst["backend"] = backend;
                 }
+                // Suchhilfe kommt mit jeder KI mit; ältere Installationen holen sie mit "suchhilfe" nach
+                if ((modellIds.Count > 0 || Bool(b, "suchhilfe")) && !SuchhilfeDa())
+                {
+                    var sj = SuchhilfeJob();
+                    if (sj != null)
+                    {
+                        if (ProgrammPfad("llama-" + backend) == null && ProgrammPfad("llama-cpu") == null && !jobs.Any(x => x.Art == "programm" && x.Ziel == "llama-" + backend)) jobs.Add(ProgrammJob("llama-" + backend));
+                        jobs.Add(sj);
+                    }
+                }
 
                 var paketListe = Arr(LadeJson(Path.Combine(Config, "pakete.json")), "pakete");
                 foreach (var id in pakete)
@@ -3161,6 +3180,9 @@ namespace OfflineWissen
                     if (string.Equals(Str(m, "datei"), name, StringComparison.OrdinalIgnoreCase))
                     { art = "modell"; titel = "KI: " + Str(m, "name") + " (" + Str(m, "modell") + ")"; ziel = Path.Combine(Daten, "modelle", Str(m, "datei")); }
                 }
+                var sh = SuchhilfeInfo();
+                if (art == null && sh != null && string.Equals(Str(sh, "datei"), name, StringComparison.OrdinalIgnoreCase))
+                { art = "modell"; titel = "KI: Suchhilfe (" + Str(sh, "modell") + ")"; ziel = SuchhilfeDatei(); }
             }
             else if (endung == ".pmtiles" && !name.Contains(".tmp.") && !name.Contains(".neu."))
             {
@@ -3710,6 +3732,13 @@ namespace OfflineWissen
                         string f = Path.Combine(Daten, "modelle", Str(m, "datei"));
                         if (File.Exists(f)) File.Delete(f);
                     }
+                    // Ohne KI braucht es auch die Suchhilfe nicht mehr
+                    if (!KiInstalliert())
+                    {
+                        StoppeSuchhilfe();
+                        string sf = SuchhilfeDatei();
+                        if (sf != null && File.Exists(sf)) File.Delete(sf);
+                    }
                 }
                 else if (art == "karte")
                 {
@@ -4083,6 +4112,12 @@ namespace OfflineWissen
                 }
                 catch { }
             }
+            // Suchhilfe für die KI: ältere Installationen haben nur die KI
+            if (KiInstalliert() && !SuchhilfeDa())
+            {
+                var sj = SuchhilfeJob();
+                if (sj != null) liste.Add(new Dictionary<string, object> { { "art", "datei" }, { "titel", sj.Titel }, { "url", sj.Url }, { "ziel", sj.Ziel }, { "bytes", sj.Gesamt } });
+            }
             // Karten: etwa zweimal im Jahr
             foreach (var f in Directory.GetFiles(Path.Combine(Daten, "karten"), "*.pmtiles"))
             {
@@ -4238,6 +4273,7 @@ namespace OfflineWissen
                     if (BereitVersion() != null) { Neustart(); return; }
                     StarteKiwix();
                     StarteRouting();
+                    if (llmStatus == "bereit") StarteSuchhilfe();
                 }) { IsBackground = true };
                 foreach (var o in Arr(d, "updates")) { var u = (Dictionary<string, object>)o; jobs.Add(new Job { Titel = Str(u, "titel"), Gesamt = (long)Num(u, "bytes") }); }
                 worker.Start();
@@ -4277,6 +4313,7 @@ namespace OfflineWissen
                     if (j.Art == "zim") { Herunterladen(j, j.Url, j.Ziel); try { AlteVersionenLoeschen(j); } catch { } }
                     else if (j.Art == "route") Herunterladen(j, j.Url, j.Ziel + ".neu");
                     else if (j.Art == "karte") KarteLaden(j);
+                    else if (j.Art == "datei") { Directory.CreateDirectory(Path.GetDirectoryName(j.Ziel)); Herunterladen(j, j.Url, j.Ziel); }
                     else if (j.Art == "programm-update") { var t = (j.Extra ?? "|").Split('|'); ProgrammUpdateLaden(j, j.Url, t[0], t.Length > 1 ? t[1] : ""); }
                     j.Status = "fertig";
                     offen.Remove(u);
@@ -4945,6 +4982,7 @@ namespace OfflineWissen
                 gen = ++llmGen;
                 llama = StarteDienst(exe, args + " --reasoning-budget 0", Path.Combine(Logs, "ki.log"));
                 Log("KI wird geladen: " + llmModell + " [" + backend + "]");
+                StarteSuchhilfe();
             }
             bool zweiterVersuch = false;
             var ladeUhr = Stopwatch.StartNew();
@@ -4988,6 +5026,69 @@ namespace OfflineWissen
                 llama = null;
                 llmStatus = "aus";
                 llmFehler = "";
+                StoppeSuchhilfe();
+            }
+        }
+
+        // ------------------------------------------------------------------ Suchhilfe (Bedeutungsmodell)
+        // Ein kleines Modell (EmbeddingGemma) sortiert die Treffer der KI-Suche nach Bedeutung statt nach
+        // gleichen Wörtern. Läuft als zweiter llama-server mit --embedding, immer auf dem Prozessor
+        // (etwa 1 s je Frage). Fehlt es oder läuft es nicht, sucht die KI wie vorher.
+
+        static Dictionary<string, object> SuchhilfeInfo()
+        {
+            var m = LadeJson(Path.Combine(Config, "modelle.json"));
+            return m != null && m.ContainsKey("suchhilfe") ? m["suchhilfe"] as Dictionary<string, object> : null;
+        }
+
+        static string SuchhilfeDatei()
+        {
+            var s = SuchhilfeInfo();
+            return s == null ? null : Path.Combine(Daten, "modelle", "suchhilfe", Str(s, "datei"));
+        }
+
+        static bool SuchhilfeDa()
+        {
+            string f = SuchhilfeDatei();
+            return f != null && File.Exists(f);
+        }
+
+        static bool KiInstalliert()
+        {
+            return Arr(LadeJson(Path.Combine(Config, "modelle.json")), "modelle").OfType<Dictionary<string, object>>()
+                .Any(m => File.Exists(Path.Combine(Daten, "modelle", Str(m, "datei"))));
+        }
+
+        static Job SuchhilfeJob()
+        {
+            var s = SuchhilfeInfo();
+            if (s == null) return null;
+            string ziel = SuchhilfeDatei();
+            Directory.CreateDirectory(Path.GetDirectoryName(ziel));
+            return new Job { Art = "datei", Titel = "KI: Suchhilfe (" + Str(s, "modell") + ")", Url = Str(s, "url"), Ziel = ziel, Gesamt = (long)Num(s, "bytes") };
+        }
+
+        static void StarteSuchhilfe()
+        {
+            lock (Lk)
+            {
+                if (suchhilfe != null && !suchhilfe.HasExited) return;
+                if (!SuchhilfeDa()) return;
+                // Immer auf dem Prozessor: das Programm für den Prozessor, sonst das der KI ohne Grafikkarte
+                string exe = ProgrammPfad("llama-cpu") ?? ProgrammPfad("llama-" + (Str(einst, "backend") ?? "cpu"));
+                if (exe == null) return;
+                string args = "-m \"" + SuchhilfeDatei() + "\" --host 127.0.0.1 --port " + SuchPort + " --embedding -c 8192 -b 2048 -ub 2048 --parallel 4 -ngl 0";
+                try { suchhilfe = StarteDienst(exe, args, Path.Combine(Logs, "suchhilfe.log")); }
+                catch (Exception e) { suchhilfe = null; Log("Suchhilfe konnte nicht starten: " + e.Message); }
+            }
+        }
+
+        static void StoppeSuchhilfe()
+        {
+            lock (Lk)
+            {
+                try { if (suchhilfe != null && !suchhilfe.HasExited) { suchhilfe.Kill(); suchhilfe.WaitForExit(5000); } } catch { }
+                suchhilfe = null;
             }
         }
 

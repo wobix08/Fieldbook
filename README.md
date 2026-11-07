@@ -43,11 +43,11 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 |---|---|---|
 | <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
 | <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, alles im Fieldbook-Design (hell oder dunkel), mit Übersetzer ins Deutsche |
-| <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Vorräten und Stromausfall |
+| <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Haltbarkeit und Einkochen |
 | <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
 | <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
-| <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Checklisten zum Abhaken: Vorräte für 10 Tage, Stromausfall, Dokumente, Notgepäck |
+| <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Vorbereiten in drei Stufen (Vorräte, Hausapotheke, Licht, Dokumente …) und was zu tun ist, wenn Strom oder Wasser weg sind |
 
 > [!WARNING]
 > Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
@@ -56,7 +56,7 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Schnellstart
 
-1. **[Fieldbook 0.7.1 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.1/Fieldbook-0.7.1.zip)** (ZIP-Datei, etwa 1,3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.7.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.2/Fieldbook-0.7.2.zip)** (ZIP-Datei, etwa 1,3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -124,7 +124,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.7.1.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.7.2.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -174,6 +174,10 @@ Es läuft auf jedem Laptop mit 8 GB Arbeitsspeicher, auch ohne Grafikkarte.\
 Weitere KIs folgen, sobald sie mit den Testfragen geprüft sind.\
 Bei weniger als 8 GB Arbeitsspeicher schlägt der Assistent „Keine KI“ vor.\
 Bibliothek, Karten und Erste Hilfe laufen trotzdem.
+
+Mit der KI kommt eine kleine **Suchhilfe** (EmbeddingGemma von Google, 330 MB).\
+Sie sortiert die gefundenen Artikel nach ihrer Bedeutung statt nur nach gleichen Wörtern, damit die KI passendere Quellen bekommt.\
+Sie läuft immer auf dem Prozessor und braucht etwa eine Sekunde pro Frage.
 
 Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt, die KI antwortet damit viel schneller.\
 Es ist keine Treiber-Zusatzinstallation wie CUDA nötig.\

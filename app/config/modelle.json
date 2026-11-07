@@ -1,5 +1,12 @@
 {
   "_hinweis": "Liste der KI-Modelle. Neue Modelle einfach hier eintragen. minRamGB gilt ohne Grafikkarte, minVramGB mit Grafikkarte. cpuGeeignet=false heisst: ohne Grafikkarte zu langsam. ausgemustert=true heisst: wird nicht mehr angeboten, bleibt aber nutzbar, wo es schon installiert ist. ungetestet=true heisst: noch nicht mit den Testfragen geprueft (wie ausgemustert, nur anders beschriftet). Zum Freigeben beide Zeilen loeschen.",
+  "suchhilfe": {
+    "_hinweis": "Kleines Bedeutungsmodell für die KI-Suche: sortiert die gefundenen Artikel nach Bedeutung statt nach gleichen Wörtern. Kommt mit jeder KI mit, läuft immer auf dem Prozessor. Liegt in daten/modelle/suchhilfe/.",
+    "modell": "EmbeddingGemma (300M)",
+    "datei": "embeddinggemma-300M-Q8_0.gguf",
+    "url": "https://huggingface.co/ggml-org/embeddinggemma-300M-GGUF/resolve/main/embeddinggemma-300M-Q8_0.gguf",
+    "bytes": 333590944
+  },
   "modelle": [
     {
       "id": "qwen35-2b",

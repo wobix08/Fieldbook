@@ -67,6 +67,7 @@ Stimmen mit Nicht-kommerziell-Lizenz oder unklarer Lizenz lädt Fieldbook nicht.
 | Modell | Lizenz |
 |---|---|
 | Qwen 3.5 (Alibaba) in der Größe 4B | Apache 2.0 |
+| [EmbeddingGemma 300M](https://huggingface.co/google/embeddinggemma-300m) (Google), Suchhilfe für die KI | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
 
 Weitere Modelle folgen, sobald sie getestet sind.\
-Die Modelle werden in der GGUF-Fassung von [Unsloth](https://huggingface.co/unsloth) geladen.
+Die KI-Modelle werden in der GGUF-Fassung von [Unsloth](https://huggingface.co/unsloth) geladen, die Suchhilfe in der von [ggml-org](https://huggingface.co/ggml-org/embeddinggemma-300M-GGUF).

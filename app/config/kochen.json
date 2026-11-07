@@ -46,16 +46,17 @@
       ]
     },
     {
-      "id": "strom", "icon": "refrigerator", "titel": "Stromausfall: Kühlschrank und Gefriertruhe",
+      "id": "einkochen", "icon": "archive", "titel": "Einkochen: was sicher ist",
       "abschnitte": [
         {
-          "titel": "Faustregeln",
+          "titel": "Sauer oder nicht sauer", "verweis": { "Einkochen": "Einkochen" },
           "punkte": [
-            "Türen geschlossen halten. Ein geschlossener Kühlschrank hält etwa 4 Stunden kalt.",
-            "Eine volle Gefriertruhe hält etwa 2 Tage, eine halb volle etwa 1 Tag.",
-            "Zuerst essen, was am schnellsten verdirbt: Fleisch, Fisch, Milchprodukte, Reste. Danach frisches Obst und Gemüse, zuletzt die Vorräte.",
-            "Gekochtes Essen höchstens 2 Stunden ungekühlt stehen lassen, bei Hitze über 30 °C nur 1 Stunde.",
-            "Aufgetautes Fleisch und Fisch bald durchgaren und nicht wieder einfrieren."
+            "Obst, Marmelade, Gelee und sauer Eingelegtes wie Essiggurken lassen sich im Einkochtopf oder im Backofen bei 100 °C sicher einkochen.",
+            "Gemüse, Bohnen, Kartoffeln, Pilze, Fleisch, Wurst, Fisch und Suppen enthalten wenig Säure. Darin können Keime überleben, die bei 100 °C nicht sterben und ein starkes Gift bilden (Botulismus). Solche Lebensmittel nur in einem Druckeinkochtopf bei 121 °C einkochen.",
+            "Zweimal einkochen oder länger bei 100 °C kochen ersetzt den Druckeinkochtopf nicht.",
+            "Tomaten liegen dazwischen. Mit etwa 1 Esslöffel Zitronensaft je halben Liter gelten sie als sauer genug.",
+            "Gläser mit gewölbtem oder losem Deckel, mit Schaum, Trübung oder seltsamem Geruch ungekostet wegwerfen.",
+            "Genaue Zeiten stehen im Paket „Einkochen (Englisch)“ in der Bibliothek."
           ]
         }
       ]
@@ -79,7 +80,7 @@
           "punkte": [
             "Eier: ohne Kühlung bis etwa 18 Tage nach dem Legen, ältere nur gut durchgegart essen. Nicht abwaschen, sonst geht die Schutzschicht ab und Keime gelangen ins Ei. Einmal gekühlt, immer gekühlt, sonst bildet sich Kondenswasser auf der Schale. Frisch-Probe: Im Glas Wasser sinkt ein frisches Ei, schwimmt es oben, nicht mehr essen.",
             "Brot: je nach Sorte 3 bis 7 Tage. Vollkorn- und Sauerteigbrot halten länger.",
-            "Hartkäse: ungekühlt einige Tage. Frischkäse, Joghurt und frische Milch nur wenige Stunden.",
+            "Gereifter Hartkäse am Stück: kühl und dunkel einige Wochen, angeschnitten einige Tage. Frischkäse, Joghurt und frische Milch nur wenige Stunden.",
             "Gekochter Reis: schnell abkühlen lassen und innerhalb eines Tages essen, nicht stundenlang warm stehen lassen.",
             "Hackfleisch, Geflügel und Fisch: ohne Kühlung am selben Tag gut durchgaren."
           ]
@@ -92,7 +93,8 @@
         {
           "titel": "Datum auf der Packung",
           "punkte": [
-            "„Mindestens haltbar bis“: Danach ist vieles noch gut. Ansehen, riechen, ein wenig probieren.",
+            "„Mindestens haltbar bis“: Danach ist vieles noch gut. Trockenes wie Nudeln, Reis oder Kekse: ansehen, riechen, ein wenig probieren.",
+            "Dosen und Gläser nie zum Prüfen probieren. Ist der Deckel gewölbt, zischt oder spritzt es beim Öffnen oder riecht es seltsam: ungekostet wegwerfen. Das gefährliche Gift (Botulismus) schmeckt und riecht man nicht.",
             "„Zu verbrauchen bis“ (z. B. Hackfleisch, Geflügel): Danach nicht mehr essen."
           ]
         },

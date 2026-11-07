@@ -126,6 +126,8 @@ button.zahnrad { border: 0; background: none; cursor: pointer; line-height: 1; }
 .menue-haken { display: inline-block; width: 1.2em; }
 .menue hr { border: 0; border-top: 1px solid var(--linie); margin: 6px 4px; }
 .menue small { color: var(--text2); }
+.akku-menue { width: 300px; }
+.akku-text { padding: 4px 12px 6px; line-height: 1.45; }
 /* Schmale Fenster: Das Menü zeigt nur noch Text (nie nur Symbole), alles rückt enger */
 @media (max-width: 1400px) {
   .kopf-status .pill .sym { display: none; }
@@ -577,8 +579,14 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .eh-uebung-link { margin-left: 8px; }
 .eh-fall-bereich { margin-top: 28px; }
 .eh-faelle .eh-name small { display: block; font-weight: 400; color: var(--text2); font-size: .85rem; }
-.eh-fall-situation { border-left: 4px solid var(--akzent); background: var(--akzent-hell); border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 0 0 10px; }
-.eh-fall-start { font-size: 1.08rem; }
+/* Erzähltext der Geschichte: kursiv, etwas größer und mit Luft, damit er sich von Frage und Antworten absetzt */
+.eh-fall-situation {
+  border-left: 4px solid var(--akzent); background: var(--akzent-hell); border-radius: 0 10px 10px 0;
+  padding: 14px 18px; margin: 4px 0 18px; font-style: italic; font-size: 1.05rem; line-height: 1.6;
+}
+.eh-frage > p.eh-fall-situation { margin: 4px 0 18px; }
+.eh-fall-start { font-size: 1.12rem; margin-top: 8px; }
+.eh-fall-anleitung { font-size: .88rem; color: var(--text2); margin: -6px 0 18px; }
 /* Etwas freier Platz am Seitenende (unter dem Hinweis) für Erklärung und „Weiter“ (PLATZ_ANTWORT in
    erstehilfe.js), damit man nach der Antwort nicht selbst scrollen muss. Am Ende fällt er weg. */
 .eh-fall-verlauf { display: grid; gap: 12px; }
@@ -763,43 +771,78 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 
 /* Vorsorge */
 .eh-vorsorge { margin-top: 20px; color: var(--text2); }
-.vs-kapitel { margin: 18px 0; }
-.vs-kapitel .eh-name small { display: block; font-weight: 400; color: var(--text2); font-size: .85rem; }
-.vs-sofort {
-  display: flex; align-items: center; gap: 12px; margin: 16px 0 6px; padding: 12px 16px; border-radius: 12px;
-  background: var(--gelb-hell); color: var(--text); text-decoration: none; border: 1px solid transparent; line-height: 1.45;
+.vs-uebersicht h2 { margin: 30px 0 4px; }
+.vs-stand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0 14px; }
+.vs-stand-stufe { display: grid; gap: 6px; align-content: start; padding: 10px 12px; border-radius: 12px; background: var(--flaeche); border: 1px solid var(--linie); }
+.vs-stand-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.vs-stand-kopf b { color: var(--akzent); }
+.vs-stand-kopf span { font-size: .88rem; color: var(--text2); }
+.vs-stand-stufe.ok .vs-stand-kopf span { color: var(--gruen); font-weight: 600; }
+@media (max-width: 700px) { .vs-stand { grid-template-columns: 1fr; } }
+.vs-lagen { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 10px; }
+.vs-lage {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; line-height: 1.3;
+  background: var(--gelb-hell); color: var(--text); text-decoration: none; border: 1px solid transparent; font-weight: 600;
 }
-.vs-sofort:hover { border-color: var(--gelb); }
-.vs-sofort > .sym { color: var(--gelb); width: 1.4em; height: 1.4em; }
-.vs-sofort .vs-pfeil { margin-left: auto; font-weight: 700; color: var(--gelb); }
+.vs-lage:hover { border-color: var(--gelb); }
+.vs-lage > .sym { color: var(--gelb); width: 1.3em; height: 1.3em; flex: none; margin: 0; }
+.vs-raster { display: grid; gap: 6px; margin-top: 10px; }
+.vs-r-kopf, .vs-r-zeile { display: grid; grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
+.vs-r-kopf span { font-size: .85rem; color: var(--text2); font-weight: 600; padding: 0 4px; }
+.vs-r-thema { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 600; min-width: 0; }
+.vs-r-thema span:last-child { overflow-wrap: anywhere; }
+.vs-r-thema:hover { color: var(--akzent); }
+.vs-r-feld {
+  display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 8px 10px; border-radius: 10px;
+  background: var(--flaeche); border: 1px solid var(--linie); color: var(--text); text-decoration: none; font-size: .88rem;
+}
+a.vs-r-feld:hover { border-color: var(--akzent); }
+.vs-r-feld.ok { color: var(--gruen); font-weight: 600; }
+.vs-r-feld.leer { align-items: center; color: var(--text2); border-style: dashed; background: none; }
+.vs-balken { display: block; height: 3px; border-radius: 2px; background: var(--linie); overflow: hidden; }
+.vs-balken span { display: block; height: 100%; background: var(--gruen); }
 .vs-knoepfe { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .vs-uebersicht > .vs-knoepfe { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--linie); }
 .vs-fuss { margin-top: 28px; }
-.vs-weiter { margin-top: 18px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 12px; }
-.vs-weiter summary { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; list-style: none; }
-.vs-weiter summary::-webkit-details-marker { display: none; }
-/* Die allgemeine Regel für Symbole in <summary> (Abstand rechts) würde das Symbol im Farbfeld verschieben */
-.vs-weiter summary .feld .sym { margin-right: 0; }
-.vs-weiter summary:hover { color: var(--akzent); }
-.vs-auf { font-size: 1.1rem; line-height: 1; transition: transform .15s ease; }
-.vs-weiter[open] .vs-auf { transform: rotate(90deg); }
-.vs-weiter-inhalt { padding: 0 14px 14px 52px; }
-.vs-weiter p, .vs-weiter li { line-height: 1.5; }
-.vs-weiter .knoepfe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .vs-kapitelseite h3 { margin: 26px 0 8px; }
-.vs-kapitelseite > p { line-height: 1.55; }
-.vs-abschnitt { scroll-margin-top: 80px; }
-.vs-abschnitt.hervor { background: var(--gelb-hell); border-radius: var(--radius); padding: 4px 16px 14px; margin-top: 22px; }
-.vs-abschnitt.hervor h3 { margin-top: 14px; }
-.vs-hervor-text { font-weight: 600; }
-.vs-gruppe { margin: 16px 0 8px; font-size: .95rem; color: var(--text2); }
-.vs-gruppe.stufe-frei, .vs-gruppe.stufe-guenstig, .vs-gruppe.stufe-passend { color: var(--akzent); }
+.vs-kapitelseite > p, .vs-stufe p { line-height: 1.55; }
+.vs-warum { font-size: 1.05rem; }
+.vs-stufe { scroll-margin-top: 80px; margin-top: 26px; padding-top: 4px; border-top: 1px solid var(--linie); }
+.vs-stufe h3 { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; margin-top: 16px; }
+.vs-stufe-name { color: var(--akzent); }
+.vs-zaehler { margin-left: auto; color: var(--text2); font-size: .88rem; font-weight: 400; }
+.vs-stufe.zu summary { display: flex; align-items: baseline; gap: 8px; padding: 14px 0 6px; cursor: pointer; list-style: none; font-weight: 600; }
+.vs-stufe.zu summary::-webkit-details-marker { display: none; }
+.vs-stufe.zu summary:hover .vs-stufe-name { text-decoration: underline; }
+.vs-auf { font-size: 1.1rem; line-height: 1; transition: transform .15s ease; }
+.vs-stufe.zu[open] .vs-auf { transform: rotate(90deg); }
 .vs-liste { gap: 6px; }
 .vs-liste li { padding: 8px 14px; }
-.vs-mehr { display: block; color: var(--text2); font-size: .88rem; margin: 2px 0 0 28px; }
+.vs-mehr { display: block; color: var(--text2); font-size: .88rem; margin: 2px 0 0 28px; line-height: 1.45; }
+.vs-marke { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: .75rem; font-weight: 600; background: var(--flaeche2); color: var(--text2); vertical-align: 1px; }
+.vs-marke.kiste { background: var(--gelb-hell); color: var(--gelb); text-decoration: none; border: 1px solid transparent; }
+a.vs-marke.kiste:hover { border-color: var(--gelb); }
+.vs-verweis + .vs-verweis { margin-left: 16px; }
+.vs-schritte .vs-verweis, .vs-schritte .vs-verweis + .vs-verweis { display: flex; width: fit-content; margin: 4px 0 0; }
+.vs-verweis { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 0 28px; font-size: .88rem; color: var(--akzent); text-decoration: none; }
+.vs-verweis:hover { text-decoration: underline; }
+.vs-verweis .sym { width: 1em; height: 1em; margin: 0; }
+.vs-herkunft { margin-left: 8px; font-size: .8rem; color: var(--text2); }
+.vs-packliste h3 { display: flex; align-items: center; gap: 8px; }
+.vs-packliste-stufe { margin: 18px 0 6px; font-size: 1rem; }
+.vs-warnung { margin: 16px 0; }
+.vs-warnung b { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.vs-warnung p { margin: 6px 0 0; line-height: 1.5; }
+.vs-schritte ul { padding-left: 20px; }
+.vs-schritte li { margin: 8px 0; line-height: 1.5; }
+.vs-schritte .vs-mehr, .vs-schritte .vs-verweis { margin-left: 0; }
 .vs-verweise { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
 .vs-kapitelseite .knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
-.vs-rechner { margin: 18px 0; }
+@media (max-width: 700px) {
+  .vs-r-kopf, .vs-r-zeile { grid-template-columns: minmax(110px, 1.2fr) repeat(3, minmax(0, 1fr)); }
+  .vs-r-thema .feld { display: none; }
+}
+.vs-rechner { margin: 18px 0; scroll-margin-top: 80px; }
 .vs-rechner h3 { margin: 0 0 12px; }
 .vs-personen { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
 .vs-person { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--flaeche2); border-radius: 10px; padding: 8px 10px; }
@@ -917,12 +960,17 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .gs-gross-knoepfe { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; }
 
 /* Drucken (Vorsorge-Listen): nur der Inhalt, schwarz auf weiß */
+@page { margin: 16mm 15mm; }
 @media print {
-  .kopf, .banner, .vs-knoepfe, .vs-verweise, .vs-sofort, .vs-weiter, .knoepfe, .vs-person input::-webkit-inner-spin-button { display: none !important; }
-  body, .ansicht, .karte-box, .vs-liste li, .vs-abschnitt.hervor, .vs-person { background: #fff !important; color: #000 !important; box-shadow: none !important; }
+  /* Hell drucken: sonst malt der Browser Kästchen und Zahlenfelder im dunklen Design schwarz */
+  :root, :root[data-theme] { color-scheme: light !important; }
+  input[type="checkbox"] { accent-color: #333; }
+  .vs-person input { background: #fff !important; color: #000 !important; border: 1px solid #000 !important; }
+  .kopf, .banner, .vs-knoepfe, .vs-verweise, .vs-verweis, .vs-herkunft, .vs-zaehler, .knoepfe, .vs-person input::-webkit-inner-spin-button { display: none !important; }
+  body, .ansicht, .karte-box, .vs-liste li, .vs-warnung, .vs-person, .vs-marke { background: #fff !important; color: #000 !important; box-shadow: none !important; }
   .ansicht { padding: 0; }
   .vs-liste li { border: 0; padding: 2px 0; }
-  .vs-mehr, .hinweis, .vs-tabelle th, .vs-person small, .vs-gruppe { color: #333 !important; }
+  .vs-mehr, .hinweis, .vs-tabelle th, .vs-person small, .vs-stufe-name { color: #333 !important; }
   .vs-kapitelseite { break-after: page; }
-  .vs-abschnitt.hervor { border: 1px solid #000; }
+  .vs-warnung, .vs-marke { border: 1px solid #000; }
 }

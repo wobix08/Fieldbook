@@ -75,7 +75,7 @@ const ErsteHilfe = (() => {
     const d = el("div", { class: "notfall-detail" },
       el("h2", {}, sym(t.icon), t.titel),
       el("h3", {}, "Sofort tun"),
-      el("ol", {}, ...t.sofort.map(s => el("li", {}, Land.einsetzen(s)))),
+      el("ol", {}, ...t.sofort.map(s => el("li", {}, zeilen(s)))),
       t.takt ? taktUebung({}) : null,
       el("div", { class: "knoepfe" },
         el("a", { class: "knopf", href: "#erstehilfe" }, "← Zum Kurs"),
@@ -118,7 +118,7 @@ const ErsteHilfe = (() => {
     });
     d.append(liste, fallListe(),
       el("p", { class: "eh-vorsorge" }, "Gut vorbereitet sein: Was in den Verbandkasten gehört, welche Vorräte und was bei Stromausfall hilft, steht auf der Seite ",
-        el("a", { href: "#vorsorge" }, "Vorsorge"), "."),
+        el("a", { href: "#vorsorge?k=gesundheit" }, "Vorsorge"), "."),
       el("div", { class: "eh-zuruecksetzen" },
         el("button", { class: "knopf knopf-klein", onclick: zuruecksetzen }, "↺ Kurs zurücksetzen"),
         el("span", { class: "hinweis" }, "Löscht alle abgeschlossenen Lektionen, Fallbeispiele und Häkchen, damit die nächste Person den Kurs von vorn machen kann.")));
@@ -194,7 +194,7 @@ const ErsteHilfe = (() => {
       };
       box.addEventListener("change", () => setze(box.checked));
       uebungen.append(el("li", {},
-        el("label", {}, box, " ", Land.einsetzen(u.text)),
+        el("label", {}, box, " ", el("span", {}, zeilen(u.text))),
         u.link ? el("a", { class: "knopf knopf-klein eh-uebung-link", href: u.link }, "Öffnen →") : null,
         u.takt ? taktUebung({ dauer: 120, fertig: () => setze(true) }) : null));
     }
@@ -215,11 +215,11 @@ const ErsteHilfe = (() => {
         el("span", { class: "hinweis" }, "Lektion " + nr + " von " + konf.lektionen.length)),
       el("h2", {}, sym(t.icon), t.titel),
       el("h3", {}, "1. Verstehen"),
-      ...t.verstehen.map(s => el("p", {}, Land.einsetzen(s))),
+      ...t.verstehen.map(s => el("p", {}, zeilen(s))),
       el("h3", {}, "2. Schritt für Schritt"),
       t.bilder ? bilderReihe(t.bilder) : null,
-      el("ol", { class: "eh-schritte" }, ...t.schritte.map(s => el("li", {}, Land.einsetzen(s)))),
-      t.kinder ? el("div", { class: "eh-kinder" }, el("b", {}, sym("baby"), " Bei Kindern: "), Land.einsetzen(t.kinder)) : null,
+      el("ol", { class: "eh-schritte" }, ...t.schritte.map(s => el("li", {}, zeilen(s)))),
+      t.kinder ? el("div", { class: "eh-kinder" }, el("b", {}, sym("baby"), " Bei Kindern: "), el("span", {}, zeilen(t.kinder))) : null,
       el("h3", {}, "3. Jetzt üben"),
       el("p", { class: "hinweis" }, "Am besten mit einer zweiten Person. Hake ab, was du geübt hast."),
       uebungen,
@@ -296,7 +296,7 @@ const ErsteHilfe = (() => {
       const weiter = el("button", { class: "knopf knopf-haupt", hidden: true, onclick: () => { weiter.remove(); schritt(i + 1); } },
         i + 1 < f.schritte.length ? "Weiter →" : "Wie geht es aus? →");
       box.append(...[
-        s.situation ? el("p", { class: "eh-fall-situation" }, Land.einsetzen(s.situation)) : null,
+        s.situation ? el("p", { class: "eh-fall-situation" }, zeilen(s.situation)) : null,
         el("p", {}, el("b", {}, s.frage)),
         ...auswahl(s, () => {
           weiter.hidden = false;
@@ -320,7 +320,7 @@ const ErsteHilfe = (() => {
       }
       const stufe2 = hatStufe2(f);
       const box = el("div", { class: fehlerfrei ? "eh-fertig" : "eh-fall-nochmal" },
-        el("p", {}, Land.einsetzen(f.abschluss || "")),
+        el("p", {}, zeilen(f.abschluss || "")),
         el("p", {}, fehlerfrei
           ? el("b", {}, "✓ Fehlerfrei geschafft!" + (stufe2 ? " Jetzt bist du bereit für Stufe 2: Dort antwortest du in eigenen Worten." : ""))
           : el("b", {}, "Geschafft, aber " + fehler + (fehler === 1 ? " Antwort war" : " Antworten waren") + " nicht richtig. Spiel es noch einmal durch, bis alles sitzt. Fehlerfrei geschafft, wird Stufe 2 frei.")),
@@ -352,7 +352,7 @@ const ErsteHilfe = (() => {
         andere),
       el("h2", {}, sym(f.icon), f.titel),
       passend.length ? el("p", { class: "hinweis" }, "Passt zu: ", ...passend.flatMap((x, i) => [i ? ", " : "", el("a", { href: "#erstehilfe?l=" + x.id }, x.titel)])) : null,
-      el("p", { class: "eh-fall-situation eh-fall-start" }, Land.einsetzen(f.einleitung)),
+      el("p", { class: "eh-fall-situation eh-fall-start" }, zeilen(f.einleitung)),
     ].filter(Boolean);
   }
 
@@ -380,7 +380,7 @@ const ErsteHilfe = (() => {
       const weiter = el("button", { class: "knopf knopf-haupt", hidden: true, onclick: () => { weiter.remove(); schritt(i + 1); } },
         i + 1 < f.schritte.length ? "Weiter →" : "Wie geht es aus? →");
       const box = el("div", { class: "eh-frage eh-fall-schritt" }, ...[
-        s.situation ? el("p", { class: "eh-fall-situation" }, Land.einsetzen(s.situation)) : null,
+        s.situation ? el("p", { class: "eh-fall-situation" }, zeilen(s.situation)) : null,
         el("p", {}, el("b", {}, s.frage2 || s.frage)),
         feld,
         el("div", { class: "knoepfe" }, pruefen, KI.bereit() ? null : el("span", { class: "hinweis" }, "Ohne KI vergleichst du deine Antwort danach selbst.")),
@@ -421,7 +421,7 @@ const ErsteHilfe = (() => {
       speichern();
       const gut = genannt >= gesamt * 0.75 && !gefaehrlich;
       const box = el("div", { class: gut ? "eh-fertig" : "eh-fall-nochmal" },
-        el("p", {}, Land.einsetzen(f.abschluss || "")),
+        el("p", {}, zeilen(f.abschluss || "")),
         el("p", {}, el("b", {}, "Du hast " + genannt + " von " + gesamt + " wichtigen Punkten genannt"
           + (gefaehrlich ? " und " + gefaehrlich + (gefaehrlich === 1 ? " gefährlichen Fehler" : " gefährliche Fehler") + " gemacht." : ".")
           + (gut ? " Sehr gut, das sitzt!" : " Lies die Musterlösungen oben noch einmal und spiel es dann erneut durch."))),
@@ -432,8 +432,8 @@ const ErsteHilfe = (() => {
       box.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     d.append(...fallKopf(f, 2),
-      el("p", { class: "hinweis" }, "Diesmal gibt es keine Auswahl. Schreib zu jedem Schritt, was du tun würdest."
-        + (KI.bereit() ? " Die KI vergleicht deine Antwort mit den wichtigsten Punkten, danach siehst du die Musterlösung." : " Danach siehst du die wichtigsten Punkte und die Musterlösung.")),
+      el("p", { class: "hinweis eh-fall-anleitung" }, zeilen("Diesmal gibt es keine Auswahl. Schreib zu jedem Schritt, was du tun würdest."
+        + (KI.bereit() ? " Die KI vergleicht deine Antwort mit den wichtigsten Punkten, danach siehst du die Musterlösung." : " Danach siehst du die wichtigsten Punkte und die Musterlösung."))),
       verlauf, el("p", { class: "eh-hinweis klein" }, hinweisText()));
     schritt(0);
     return d;

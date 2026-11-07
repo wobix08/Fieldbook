@@ -27,6 +27,19 @@ function el(tag, attrs, ...kinder) {
   return e;
 }
 
+// Text aus den Konfigurationsdateien mit jedem Satz in eigener Zeile: el("p", {}, zeilen(text)).
+// Abkürzungen wie „z. B.“ und Zahlen wie „6. November“ trennen nicht. {notruf} wird ersetzt.
+const KEIN_SATZENDE = /(?:(?:^|\s)[a-zäöü]|\b(?:ca|bzw|evtl|ggf|usw|etc|inkl|nr|min|std|tel|bspw|vgl)|\d)\.$/i;
+function zeilen(text) {
+  const t = typeof Land !== "undefined" ? Land.einsetzen(text) : String(text);
+  const teile = [];
+  for (const s of t.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„"(])/)) {
+    if (teile.length && KEIN_SATZENDE.test(teile[teile.length - 1])) teile[teile.length - 1] += " " + s;
+    else teile.push(s);
+  }
+  return teile.flatMap((s, i) => i ? [el("br"), s] : [s]);
+}
+
 // Linien-Symbol aus symbole.svg (Lucide), färbt sich wie der Text: sym("map")
 function sym(name) {
   const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");

@@ -403,6 +403,36 @@ const Fragen = (() => {
   // Pakete mit Anleitungen zum Selbermachen
   const PRAXIS_PAKET = /appropedia|post-disaster|ifixit|wikibooks|energypedia|electronics|diy\.|mechanics|bicycles|ham\.|outdoors|gardening|cooking|sustainability|wikihow|survival|bushcraft|restarters|zimgit-(water|knots|food)|wikiciv|cd3wd|usda-|gardenology/i;
 
+  // Suchhilfe: Ein kleines Bedeutungsmodell (EmbeddingGemma, eigener Dienst unter /suchhilfe/) sortiert die
+  // Kandidaten nach Bedeutung statt nach gleichen Wörtern. Fehlt es oder antwortet es nicht, bleibt alles wie vorher.
+  // Getestet mit 120 Testfragen: deutlich öfter der passende Artikel statt einer Forenfrage, etwa 1 s auf dem Prozessor.
+  const suchhilfeDa = () => !!(((OW.status || {}).ki || {}).suchhilfe);
+  // Artikel nur einmal laden: Die Suchhilfe braucht den Anfang, das Lesen danach den ganzen Text
+  const artikelCache = new Map();
+  function artikel(url) {
+    if (!artikelCache.has(url)) {
+      const p = Kiwix.artikelText(url);
+      p.catch(() => artikelCache.delete(url));
+      artikelCache.set(url, p);
+      if (artikelCache.size > 60) artikelCache.delete(artikelCache.keys().next().value);
+    }
+    return artikelCache.get(url);
+  }
+  async function nachBedeutung(begriffe, treffer) {
+    const frage = "task: search result | query: " + begriffe.frage + (begriffe.thema ? " (" + begriffe.thema + ")" : "");
+    // Treffer der Titelsuche haben keinen Auszug. Nur mit dem Titel verlieren sie gegen jeden Absatz,
+    // deshalb kommt der Anfang des Artikels dazu
+    await Promise.all(treffer.filter(t => !t.auszug && !t.pdf).map(t => artikel(t.url).then(a => {
+      t.auszug = a.abschnitte.slice(0, 2).map(s => s.text).join(" ").slice(0, 300);
+    }).catch(() => {})));
+    const texte = treffer.map(t => "title: " + t.titel + " | text: " + String(t.auszug || "").replace(/<[^>]+>/g, "").slice(0, 300));
+    const r = await fetch("/suchhilfe/v1/embeddings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input: [frage].concat(texte) }) });
+    if (!r.ok) throw new Error("Suchhilfe antwortet nicht");
+    const v = (await r.json()).data.sort((a, b) => a.index - b.index).map(d => d.embedding);
+    const aehnlich = (a, b) => { let s = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++) { s += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; } return s / Math.sqrt(x * y); };
+    return v.slice(1).map(x => aehnlich(v[0], x));
+  }
+
   async function suchen(buecher, begriffe, einfach, praxis) {
     const auftraege = [];
     const nummern = begriffe.codes || [];
@@ -433,7 +463,7 @@ const Fragen = (() => {
       // Dasselbe Buch steckt manchmal in zwei PDF-Paketen: gleiche Stelle nur einmal
       const key = t.pdf ? "pdf:" + (t.auszug || "").slice(0, 120) : decodeURIComponent(t.url).toLowerCase();
       const v = nachUrl.get(key);
-      if (v) v.punkte += t.punkte * 0.6; else nachUrl.set(key, Object.assign({}, t));
+      if (v) { v.punkte += t.punkte * 0.6; if (!v.auszug && t.auszug) v.auszug = t.auszug; } else nachUrl.set(key, Object.assign({}, t));
     }
     // Wikipedia-Medizin und Haupt-Wikipedia leicht bevorzugen, Englisch leicht abwerten
     const liste = [...nachUrl.values()].map(t => {
@@ -461,6 +491,20 @@ const Fragen = (() => {
       return t;
     }).filter(t => !t.weg).sort((a, b) => b.punkte - a.punkte);
     if (!liste.length) return [];
+    // Mit Suchhilfe: mehr Kandidaten (16, bis 3 je Buch) nach Bedeutung sortieren, die Punkte zählen nur wenig mit
+    if (begriffe.bedeutung !== false && suchhilfeDa()) {
+      const max = liste[0].punkte, proB = {};
+      const pool = liste.filter(t => t.punkte >= Math.max(1, max * 0.25))
+        .filter(t => (proB[t.buch.id] = (proB[t.buch.id] || 0) + 1) <= 3).slice(0, 16);
+      try {
+        const sim = await nachBedeutung(begriffe, pool);
+        // Mehr Gewicht für die Punkte (0,25 und 0,4) brachte im Test nichts
+        pool.forEach((t, i) => { t.wert = sim[i] + 0.1 * Math.max(0, t.punkte) / max; });
+        pool.sort((a, b) => b.wert - a.wert);
+        const proBuch = {};
+        return pool.filter(t => (proBuch[t.buch.id] = (proBuch[t.buch.id] || 0) + 1) <= 2).slice(0, 7);
+      } catch { /* Suchhilfe antwortet nicht: wie ohne */ }
+    }
     // Schwache Treffer weglassen, höchstens 2 Artikel pro Buch
     const grenze = Math.max(1, liste[0].punkte * 0.4);
     const proBuch = {};
@@ -480,7 +524,7 @@ const Fragen = (() => {
   async function lesen(treffer, frage, begriffe, budgetZeichen, mitPruefung) {
     const woerter = staemme(frage + " " + begriffe.de.join(" ") + " " + begriffe.en.join(" "));
     const anleitung = ANLEITUNG.test(frage);
-    const texte = await Promise.all(treffer.map(t => Kiwix.artikelText(t.url).then(a => ({ t, a })).catch(() => null)));
+    const texte = await Promise.all(treffer.map(t => artikel(t.url).then(a => ({ t, a })).catch(() => null)));
     // Gleiche Zielartikel (nach Weiterleitungen) nur einmal
     const gesehen = new Set();
     const gueltig = texte.filter(x => {
@@ -489,9 +533,12 @@ const Fragen = (() => {
       const voll = x.a.abschnitte.map(s => s.text).join(" ");
       if (voll.length < 300) return false;
       if (/California Energy Commission|Date Added: \d{4}/.test(voll) && !/\b(step|schritt|replace|austausch|remove|entfern)/i.test(voll)) return false;
+      // Auch über verschiedene Adressen derselbe Artikel (z. B. Klexikon „Wolf“ zweimal) nur einmal
       const k = decodeURIComponent(x.a.url).toLowerCase();
-      if (gesehen.has(k)) return false;
+      const k2 = x.t.buch.id + "|" + String(x.a.titel || x.t.titel).toLowerCase();
+      if (gesehen.has(k) || gesehen.has(k2)) return false;
       gesehen.add(k);
+      gesehen.add(k2);
       return true;
     });
     // Die KI sortiert Artikel aus, die zur Frage nicht passen (z. B. Winter-Tipps bei einer Radio-Frage)
@@ -499,7 +546,7 @@ const Fragen = (() => {
     if (mitPruefung && gueltig.length > 1) {
       try {
         // Passt nichts, bleibt die Liste leer: Dann lieber ehrlich „nichts gefunden“ als eine Antwort aus unpassenden Artikeln
-        auswahl = (await quellenPruefen(frage, gueltig.map(x => x.a), begriffe.thema)).map(i => gueltig[i]);
+        auswahl = (await quellenPruefen(frage, gueltig, begriffe.thema)).map(i => gueltig[i]);
       } catch { /* Prüfung fehlgeschlagen: alle behalten */ }
     }
     auswahl = auswahl.slice(0, 4);
@@ -533,11 +580,16 @@ const Fragen = (() => {
 
   // Quellen prüfen: Die KI bekommt Titel, Anfang und Abschnittsüberschriften jedes Artikels und nennt die,
   // die bei genau dieser Frage helfen. Ergebnis: Positionen in der Liste, in der Reihenfolge der Liste.
-  async function quellenPruefen(frage, artikel, thema) {
-    const liste = artikel.map((a, i) => {
+  // Getestet (Nov. 2026): Herkunft und Sprache dazu brachte mehr deutsche Quellen und etwas bessere Antworten.
+  // Eine Regel „deutsche zuerst“ wirkte zu stark (allgemeine deutsche Artikel statt Anleitungen), eine zusätzliche
+  // „passende Stelle“ je Artikel verwirrte das kleine Modell.
+  async function quellenPruefen(frage, eintraege, thema) {
+    const artikel = eintraege.map(x => x.a);
+    const liste = eintraege.map(({ t, a }, i) => {
       const anfang = (a.abschnitte[0] ? a.abschnitte[0].text : "").replace(/\s+/g, " ").slice(0, 280);
       const kapitel = a.abschnitte.map(s => s.ueberschrift).filter(Boolean).slice(0, 10).join(", ");
-      return "[" + (i + 1) + "] " + (a.titel || "") + "\nAnfang: " + anfang + (kapitel ? "\nAbschnitte: " + kapitel : "");
+      const herkunft = "\nAus: " + t.buch.titel.replace(/\s*\(.*$/, "") + (t.buch.englisch ? " (englisch)" : " (deutsch)");
+      return "[" + (i + 1) + "] " + (a.titel || "") + herkunft + "\nAnfang: " + anfang + (kapitel ? "\nAbschnitte: " + kapitel : "");
     }).join("\n\n");
     const sys = "Du prüfst Suchergebnisse. Für jeden Artikel entscheidest du: Enthält er Wissen, das hilft, diese Frage zu beantworten? " +
       "Er hilft auch, wenn er nur einen Teil beantwortet oder das passende Gerät, Verfahren oder Grundwissen erklärt. " +

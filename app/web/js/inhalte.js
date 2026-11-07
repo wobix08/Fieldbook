@@ -246,6 +246,15 @@ const Inhalte = (() => {
           [m.name + " · " + m.modell, ...tags], m.beschreibung, groesse(m.bytes)));
       }
     }
+    // Suchhilfe: kommt mit jeder neuen KI mit, ältere Installationen laden sie hier nach
+    const sh = kat.suchhilfe;
+    if (sh && kiDa.length && !sh.installiert) {
+      const laedt = offen.titel.has("KI: Suchhilfe (" + sh.modell + ")");
+      if (laedt) auswahl.suchhilfe = false;
+      ki.append(auswahlZeile("checkbox", "inh-suchhilfe", !!auswahl.suchhilfe, laedt, (e) => { auswahl.suchhilfe = e.target.checked; zeichneListe(aktiv); },
+        ["Suchhilfe für die KI", tag("Ergänzung verfügbar", "tag-warn"), ...(laedt ? [ladeTag()] : [])],
+        "Findet passendere Artikel für die Antworten der KI.", groesse(sh.bytes)));
+    }
 
     // Wissenspakete
     // Jedes Paket unter seiner Hauptkategorie (der ersten)
@@ -486,7 +495,7 @@ const Inhalte = (() => {
 
     // Leiste zum Herunterladen
     const bytes = auswahlBytes();
-    const anzahl = auswahl.modelle.size + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (basisNoetig() ? 1 : 0) + sprachenNeu().length + (auswahl.spracheingabe ? 1 : 0) + [...auswahl.stimmen].filter(c => !auswahl.sprachen.has(c)).length;
+    const anzahl = auswahl.modelle.size + (auswahl.suchhilfe ? 1 : 0) + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (basisNoetig() ? 1 : 0) + sprachenNeu().length + (auswahl.spracheingabe ? 1 : 0) + [...auswahl.stimmen].filter(c => !auswahl.sprachen.has(c)).length;
     c.append(el("div", { class: "summe inhalte-leiste" },
       el("span", {}, anzahl ? anzahl + " ausgewählt · " + groesse(bytes) + " · frei: " + groesse(hw.freiGB * 1e9) : "Nichts ausgewählt"),
       el("button", { class: "knopf knopf-haupt", disabled: !anzahl, onclick: herunterladen }, sym("download"), aktiv ? "Zu den Downloads hinzufügen" : "Auswahl herunterladen")));
@@ -541,6 +550,8 @@ const Inhalte = (() => {
   function auswahlBytes() {
     let b = 0;
     for (const m of kat.modelle) if (auswahl.modelle.has(m.id)) b += m.bytes;
+    // Die Suchhilfe kommt mit jeder KI mit, falls sie fehlt
+    if ((auswahl.suchhilfe || auswahl.modelle.size) && kat.suchhilfe && !kat.suchhilfe.installiert) b += kat.suchhilfe.bytes;
     for (const p of kat.pakete) if (auswahl.pakete.has(p.id)) b += p.bytes || 0;
     for (const [id, v] of auswahl.karten) b += v.bytes > 0 ? v.bytes : kartenSchaetzung(kat.karten.find(x => x.id === id) || {}, auswahl.sparen);
     if (auswahl.routen && auswahl.routenGroesse && auswahl.routenGroesse.bytes > 0) b += auswahl.routenGroesse.bytes;
@@ -588,12 +599,12 @@ const Inhalte = (() => {
     // Die aktive KI bleibt. Nur wenn noch keine installiert ist, wird die größte neue aktiv.
     const neueModelle = kat.modelle.filter(m => auswahl.modelle.has(m.id)).sort((a, b) => b.bytes - a.bytes);
     const aktivDa = kat.modelle.some(m => m.installiert && m.id === (OW.status || {}).modell);
-    const body = { modell: !aktivDa && neueModelle.length ? neueModelle[0].id : "", modelle: neueModelle.map(m => m.id),
+    const body = { modell: !aktivDa && neueModelle.length ? neueModelle[0].id : "", modelle: neueModelle.map(m => m.id), suchhilfe: !!auswahl.suchhilfe,
       pakete: [...auswahl.pakete], karten, routen, uebersetzer: !!auswahl.uebersetzer, sprachen: [...auswahl.sprachen], spracheingabe: !!auswahl.spracheingabe, stimmen: [...auswahl.stimmen] };
     if (neueModelle.length) body.backend = (kat.einstellungen && kat.einstellungen.backend) || Setup.empfehlung(hw, kat.modelle).backend;
     const r = await api("installieren", body);
     if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
-    auswahl.modelle.clear(); auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false; auswahl.sprachen.clear(); auswahl.spracheingabe = false; auswahl.stimmen.clear();
+    auswahl.modelle.clear(); auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false; auswahl.sprachen.clear(); auswahl.spracheingabe = false; auswahl.stimmen.clear(); auswahl.suchhilfe = false;
     warAktiv = null;
     window.scrollTo(0, 0);
     fortschritt();

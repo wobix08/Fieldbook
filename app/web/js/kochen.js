@@ -9,7 +9,7 @@ const Kochen = (() => {
   const leitfadenLinks = [];
   let beschaeftigt = false;
 
-  async function zeigen() {
+  async function zeigen(params) {
     if (!konf) konf = await ladeKonfig("kochen");
     if (!aufgebaut) {
       aufgebaut = true;
@@ -18,6 +18,10 @@ const Kochen = (() => {
       $("#koch-form").addEventListener("submit", (e) => { e.preventDefault(); suchen(); });
       leitfaden();
     }
+    // Sprung aus Vorsorge, z. B. #kochen?l=haltbarkeit: Abschnitt aufklappen und hinscrollen
+    const l = params && params.get("l");
+    const box = l && document.getElementById("koch-l-" + l);
+    if (box) { box.open = true; setTimeout(() => box.scrollIntoView({ block: "start" }), 50); }
     // Direkt nach dem Programmstart läuft die Bibliothek oft noch nicht. Dann nicht "Koch-Wiki fehlt"
     // melden, sondern warten und es alle 3 Sekunden erneut versuchen.
     const buecher = await Kiwix.buecher();
@@ -233,7 +237,7 @@ const Kochen = (() => {
   function leitfaden() {
     const ziel = $("#koch-leitfaden");
     for (const t of konf.leitfaden) {
-      const box = el("details", { class: "leitfaden" }, el("summary", {}, sym(t.icon), t.titel));
+      const box = el("details", { class: "leitfaden", id: "koch-l-" + t.id }, el("summary", {}, sym(t.icon), t.titel));
       for (const a of t.abschnitte) {
         // Wörter aus "verweis" kommen in ein eigenes <span>, das nachlesen() durch einen Link ersetzt,
         // sobald die Bibliothek bereit ist
@@ -248,7 +252,7 @@ const Kochen = (() => {
           leitfadenLinks.push({ wort: span, titel });
         }
         kopf.append(rest);
-        box.append(kopf, el("ul", {}, ...a.punkte.map(p => el("li", {}, p))));
+        box.append(kopf, el("ul", {}, ...a.punkte.map(p => el("li", {}, zeilen(p)))));
       }
       ziel.append(box);
     }

@@ -497,6 +497,8 @@ const Setup = (() => {
     let b = 0;
     const m = kat.modelle.find(x => x.id === wahl.modell);
     if (m && !m.installiert) b += m.bytes;
+    // Die Suchhilfe kommt mit der KI mit
+    if (m && kat.suchhilfe && !kat.suchhilfe.installiert) b += kat.suchhilfe.bytes;
     for (const p of kat.pakete) if (wahl.pakete.has(p.id) && (!p.installiert || p.update)) b += p.bytes || 0;
     for (const [id, k] of wahl.karten) { const r = kat.karten.find(x => x.id === id); if (r && !r.installiert) b += k.bytes > 0 ? k.bytes : kartenSchaetzung(r, wahl.sparen); }
     if (wahl.routen && wahl.routenGroesse && wahl.routenGroesse.bytes > 0) b += wahl.routenGroesse.bytes + (OW.status && OW.status.routen ? 0 : 56e6);

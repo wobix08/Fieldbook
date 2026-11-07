@@ -403,8 +403,12 @@ const Bibliothek = (() => {
   });
 
   function lesen(params) {
-    const url = params.get("url") || "";
+    let url = params.get("url") || "";
     if (!url.startsWith("/kiwix/")) return;
+    // Artikel-Links aus Kochen, Suche, KI usw. zeigen direkt auf „/kiwix/content/paket/…“. Ohne den Viewer
+    // drumherum gehen Suche, Zufall und Startseite der Leseleiste nicht, deshalb im Viewer öffnen.
+    const direkt = url.match(/^\/kiwix\/content\/([^/?#]+\/[^?]*)$/);
+    if (direkt && !/\.pdf(#|$)/i.test(direkt[1])) url = "/kiwix/viewer#" + direkt[1];
     $("#uebersetzen-knopf").hidden = !Uebersetzer.verfuegbar();
     warLesen = true;
     const rahmen = $("#lese-rahmen");
