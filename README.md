@@ -25,6 +25,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 - [Schnellstart](#schnellstart)
 - [Warum Fieldbook?](#warum-fieldbook)
 - [Ist das sicher?](#ist-das-sicher)
+- [Code-Signatur](#code-signatur)
 - [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
 - [Welche KI nutzt Fieldbook?](#welche-ki-nutzt-fieldbook)
 - [So funktioniert die Frage-Antwort-Funktion](#so-funktioniert-die-frage-antwort-funktion)
@@ -146,6 +147,23 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
 - **Selbst prüfen lassen**\
   Wer möchte, lädt die ZIP bei [VirusTotal](https://www.virustotal.com) hoch.\
   Dort prüfen rund 70 Virenscanner gleichzeitig.
+
+## Code-Signatur
+
+Fieldbook hat eine kostenlose Code-Signatur bei der [SignPath Foundation](https://signpath.org) beantragt, die Open-Source-Projekte unterstützt.\
+Sobald sie zugesagt ist, wird `Fieldbook.exe` digital signiert, und hier steht dann:\
+*Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).*
+
+Gebaut wird jede Version automatisch auf GitHub aus dem Quellcode dieses Repositorys ([`.github/workflows/release.yml`](.github/workflows/release.yml)).\
+Signiert wird nur `Fieldbook.exe`, und jede Version wird vor dem Signieren von Hand freigegeben.
+
+| Rolle | Wer |
+|---|---|
+| Entwicklung (Committer) | [wobix08](https://github.com/wobix08) |
+| Prüfung (Reviewer) | [wobix08](https://github.com/wobix08) |
+| Freigabe (Approver) | [wobix08](https://github.com/wobix08) |
+
+Was Fieldbook überträgt, steht unter [Datenschutz](#datenschutz).
 
 ## Downloads in Firmen- und Schulnetzen
 
