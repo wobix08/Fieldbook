@@ -46,6 +46,144 @@
       ]
     },
     {
+      "id": "rezepte", "icon": "soup", "titel": "Rezepte aus dem Vorrat",
+      "abschnitte": [
+        {
+          "titel": "So geht es",
+          "punkte": [
+            "Diese Rezepte brauchen nur Dinge aus dem Vorrat und keinen Kühlschrank. Die Mengen reichen für etwa 2 Personen.",
+            "Gewürze, Brühe und ein Schuss Essig oder Zitronensaft machen einfaches Essen viel besser. Sie gehören deshalb mit in den Vorrat.",
+            "Weitere Rezepte findest du oben unter „Was hast du da?“."
+          ]
+        },
+        {
+          "titel": "Rote-Linsen-Curry (ein Topf, 20 Minuten)",
+          "punkte": [
+            "Zutaten: 150 g rote Linsen, 1 Dose gehackte Tomaten, 1 Zwiebel, 1 bis 2 Teelöffel Currypulver, Öl, Salz. Wer hat: Kokosmilch aus der Dose.",
+            "Zwiebel klein schneiden und in etwas Öl andünsten. Das Currypulver kurz mitrösten.",
+            "Linsen, Tomaten und etwa 400 ml Wasser dazugeben und 15 Minuten leise kochen, bis die Linsen zerfallen. Mit Salz abschmecken.",
+            "Dazu passen Reis oder Pfannenbrot."
+          ]
+        },
+        {
+          "titel": "Linsen- oder Erbseneintopf",
+          "punkte": [
+            "Zutaten: 200 g Tellerlinsen oder getrocknete Erbsen, 2 bis 3 Kartoffeln, Trockensuppengemüse oder 1 Dose Möhren, Brühe, 1 Lorbeerblatt. Wer hat: Würstchen aus dem Glas, Essig.",
+            "Getrocknete Erbsen über Nacht einweichen. Tellerlinsen brauchen das nicht.",
+            "Mit gut 1 Liter Brühe und dem Lorbeerblatt aufkochen und etwa 30 Minuten leise kochen, Erbsen länger. Die Kartoffeln würfeln und mitkochen, bis alles weich ist.",
+            "Würstchen nur noch darin heiß werden lassen. Ein Schuss Essig zum Schluss macht den Eintopf frischer.",
+            "Der Eintopf eignet sich gut für die Kochkiste (siehe „Brennstoff sparen“)."
+          ]
+        },
+        {
+          "titel": "Bohnen-Chili",
+          "punkte": [
+            "Zutaten: 1 Dose Kidneybohnen, 1 Dose Mais, 1 Dose Tomaten, 1 Zwiebel, Chili- oder Paprikapulver, Öl, Salz. Wer hat: Fleisch aus der Dose, ein Stück dunkle Schokolade.",
+            "Zwiebel in etwas Öl andünsten und die Gewürze kurz mitrösten.",
+            "Bohnen und Mais abgießen und abspülen, mit den Tomaten dazugeben und 10 Minuten köcheln lassen. Bohnen aus der Dose sind schon gar, sie müssen nur heiß werden.",
+            "Dazu passen Reis, Brot oder Pfannenbrot."
+          ]
+        },
+        {
+          "titel": "Nudelsalat mit Thunfisch und Bohnen (kalt)",
+          "punkte": [
+            "Zutaten: 250 g Nudeln, 1 Dose Thunfisch, 1 Dose weiße Bohnen, Öl, Essig, Salz, Pfeffer. Wer hat: Mais, Gurken oder Oliven aus dem Glas, getrocknete Kräuter.",
+            "Nudeln kochen, abgießen und abkühlen lassen.",
+            "Bohnen abspülen, Thunfisch zerpflücken. Alles mit 3 Esslöffeln Öl, 2 Esslöffeln Essig, Salz und Pfeffer mischen.",
+            "Ohne Kühlschrank am selben Tag essen."
+          ]
+        },
+        {
+          "titel": "Couscous-Schale (ohne Kochen)",
+          "punkte": [
+            "Zutaten: 150 g Couscous, Brühe, Öl. Dazu, was das Glas hergibt: Gurken, Paprika, Oliven, Mais, Kichererbsen.",
+            "Couscous mit der gleichen Menge heißer Brühe übergießen, zudecken und 5 Minuten quellen lassen.",
+            "Mit einer Gabel auflockern, Öl und das Gemüse untermischen. Schmeckt warm und kalt.",
+            "Ohne heißes Wasser geht es auch kalt, dann etwa eine Stunde quellen lassen."
+          ]
+        },
+        {
+          "titel": "Pfannenbrot ohne Hefe",
+          "punkte": [
+            "Zutaten: 250 g Mehl, 1 Teelöffel Backpulver, ½ Teelöffel Salz, 2 Esslöffel Öl, etwa 150 ml Wasser.",
+            "Alles zu einem weichen Teig kneten, der nicht mehr klebt. In 4 bis 6 Stücke teilen und dünn flach drücken.",
+            "In einer Pfanne mit wenig oder ohne Fett bei mittlerer Hitze von jeder Seite 2 bis 3 Minuten backen, bis braune Flecken kommen.",
+            "Das geht auch auf dem Campingkocher. Ohne Backpulver werden es flache Fladen, die schmecken auch."
+          ]
+        },
+        {
+          "titel": "Haferflocken über Nacht (ohne Kochen)",
+          "punkte": [
+            "Zutaten für 1 Person: 50 g Haferflocken, 150 ml H-Milch, angerührtes Milchpulver oder Wasser. Wer hat: Nüsse, Rosinen, Marmelade, Obst aus der Dose, Zucker oder Honig.",
+            "Haferflocken mit der Flüssigkeit verrühren und abgedeckt quellen lassen.",
+            "Mit Wasser geht das über Nacht. Mit Milch ohne Kühlschrank nur ein paar Stunden, bei Hitze kürzer.",
+            "Mit Obst, Nüssen oder Marmelade essen."
+          ]
+        },
+        {
+          "titel": "Mehlsuppe",
+          "punkte": [
+            "Zutaten: 3 Esslöffel Mehl, 2 Esslöffel Öl oder Butterschmalz, 1 Liter Brühe, Salz, Pfeffer. Wer hat: Zwiebel, Kümmel, Nudeln, Gemüse aus der Dose oder Würstchen.",
+            "Das Mehl im Fett unter Rühren braun rösten, bis es nussig riecht. Es darf nicht schwarz werden.",
+            "Die Brühe nach und nach einrühren, damit keine Klümpchen entstehen, und 10 Minuten leise kochen.",
+            "Mit einer Einlage aus dem Vorrat wird ein sättigendes Essen daraus."
+          ]
+        },
+        {
+          "titel": "Grießbrei mit Obst",
+          "punkte": [
+            "Zutaten: 500 ml H-Milch oder angerührtes Milchpulver, 50 g Grieß, 1 bis 2 Esslöffel Zucker, 1 Prise Salz. Dazu Obst aus der Dose oder Apfelmus.",
+            "Milch mit Zucker und Salz aufkochen und den Grieß einrühren.",
+            "Kurz unter Rühren aufkochen, dann zugedeckt neben der Flamme 5 Minuten quellen lassen.",
+            "Mit dem Obst essen, warm oder kalt."
+          ]
+        },
+        {
+          "titel": "Haferflocken-Bratlinge",
+          "punkte": [
+            "Zutaten: 150 g Haferflocken, 300 ml heiße Brühe, 1 Zwiebel oder Röstzwiebeln, 1 Ei oder 2 Esslöffel Mehl, Gewürze, Öl zum Braten.",
+            "Haferflocken mit der heißen Brühe übergießen und 10 Minuten quellen lassen.",
+            "Zwiebel, Ei oder Mehl und Gewürze untermischen und kleine flache Bratlinge formen.",
+            "In Öl bei mittlerer Hitze von jeder Seite 4 bis 5 Minuten braten. Dazu passen Gemüse aus der Dose oder Apfelmus."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brennstoff", "icon": "flame", "titel": "Brennstoff sparen",
+      "abschnitte": [
+        {
+          "titel": "Kürzer kochen",
+          "punkte": [
+            "Ohne Strom ist Brennstoff knapp, und eine Kartusche ist schneller leer, als man denkt. Mit ein paar Kniffen reicht sie deutlich länger.",
+            "Immer mit Deckel kochen. Sobald es kocht, die Flamme klein stellen.",
+            "Reis und Grieß nur kurz aufkochen und dann zugedeckt neben der Flamme quellen lassen. Nudeln gehen genauso: 2 Minuten kochen, dann zugedeckt etwas länger ziehen lassen, als auf der Packung steht.",
+            "Couscous, feiner Bulgur, Haferflocken und Kartoffelpüree-Flocken brauchen gar nicht zu kochen. Heißes Wasser darüber genügt.",
+            "Was in Dosen und Gläsern ist, ist schon gar. Es muss nur heiß werden oder lässt sich kalt essen.",
+            "Lieber einen Eintopf als mehrere Töpfe. Und nur so viel Wasser erhitzen, wie man braucht."
+          ]
+        },
+        {
+          "titel": "Kochkiste und Thermoskanne", "verweis": { "Kochkiste": "Kochkiste" },
+          "punkte": [
+            "Das Essen im Topf richtig aufkochen und den Topf mit Deckel sofort in eine Kiste mit Decken, Kissen oder Zeitungspapier stellen. Dort gart es ohne Flamme weiter.",
+            "Für kleine Mengen geht auch eine vorgewärmte Thermoskanne, z. B. für Reis, Linsen oder Haferbrei.",
+            "Wichtig: Beim Öffnen muss das Essen noch richtig heiß sein, über etwa 60 °C. Lauwarm stehendes Essen verdirbt schnell, besonders Reis. Lieber 2 bis 4 Stunden garen als über Nacht.",
+            "Getrocknete Bohnen, vor allem Kidneybohnen, vorher mindestens 10 Minuten sprudelnd kochen. Roh oder halb gar sind sie giftig."
+          ]
+        },
+        {
+          "titel": "Alte, harte Hülsenfrüchte",
+          "punkte": [
+            "Je älter getrocknete Bohnen, Erbsen und Kichererbsen sind, desto länger brauchen sie. Sehr alte werden manchmal gar nicht mehr richtig weich.",
+            "12 bis 18 Stunden einweichen und einen Teelöffel Natron ins Wasser geben. Das Einweichwasser weggießen und mit frischem Wasser kochen.",
+            "Salz erst zum Schluss dazugeben, sonst werden sie langsamer weich.",
+            "Rote Linsen brauchen kein Einweichen und sind in 10 bis 15 Minuten gar. Sie sparen am meisten Brennstoff."
+          ]
+        }
+      ]
+    },
+    {
       "id": "einkochen", "icon": "archive", "titel": "Einkochen: was sicher ist",
       "abschnitte": [
         {
@@ -65,12 +203,27 @@
       "id": "haltbarkeit", "icon": "calendar", "titel": "Wie lange hält was ohne Kühlschrank?",
       "abschnitte": [
         {
+          "titel": "Was die Haltbarkeit bestimmt",
+          "punkte": [
+            "Fett wird mit der Zeit ranzig. Fettarmes hält deshalb länger: weißer Reis länger als Vollkornreis, Nudeln ohne Ei länger als Eiernudeln, Magermilchpulver länger als Vollmilchpulver.",
+            "Säure greift das Blech von Dosen an. Obst-, Tomaten- und Sauerkrautdosen halten deshalb kürzer als Dosen mit Fleisch, Fisch oder Gemüse. Saures kauft man besser im Glas.",
+            "Je dichter verpackt, desto länger: Dose und Glas vor Beutel, Beutel vor Pappe und Papier.",
+            "Wärme verkürzt alle Zeiten stark. Vorräte nicht auf dem Dachboden, im Auto oder im Gartenhaus lagern.",
+            "Die Zeiten unten gelten für ungeöffnete Packungen, kühl, trocken und dunkel gelagert. Oft hält es länger, sicher ist das aber nicht."
+          ]
+        },
+        {
           "titel": "Trocken und kühl gelagert",
           "punkte": [
-            "Reis, Nudeln, getrocknete Bohnen und Linsen: 1 bis 2 Jahre und länger.",
+            "Weißer Reis und Nudeln ohne Ei: viele Jahre, in Dose oder Glas noch länger. Vollkornreis nur etwa 1 Jahr.",
+            "Getrocknete Bohnen, Erbsen und Linsen: viele Jahre. Je älter, desto härter werden sie und desto länger brauchen sie.",
             "Weizenmehl: etwa 6 bis 12 Monate. Vollkornmehl nur einige Monate, es wird ranzig.",
-            "Haferflocken: etwa 1 Jahr.",
-            "Konserven: mehrere Jahre. Aufgewölbte, undichte oder stark verrostete Dosen wegwerfen.",
+            "Haferflocken: etwa 1 Jahr, danach werden sie muffig.",
+            "Zucker, Salz und Honig: praktisch unbegrenzt, wenn sie trocken und dicht verschlossen sind. Fest gewordener Honig wird im warmen Wasserbad wieder flüssig.",
+            "Konserven mit Fleisch, Fisch, Gemüse oder Eintopf: mehrere Jahre, oft auch über das Datum hinaus. Obst- und Tomatendosen deutlich kürzer.",
+            "Speiseöl: dunkel und kühl bis zum Datum, angebrochen in einigen Wochen bis Monaten verbrauchen. Butterschmalz hält gut verschlossen sehr lange.",
+            "Nüsse: lose nach einigen Monaten ranzig, in Dose oder dichter Packung deutlich länger.",
+            "Dauerwurst wie Salami am Stück und Speck: kühl und dunkel einige Wochen.",
             "Kartoffeln: dunkel, kühl und trocken mehrere Wochen bis Monate. Grüne Stellen und Keime großzügig wegschneiden.",
             "Zwiebeln: kühl und trocken mehrere Wochen bis Monate."
           ]
@@ -95,7 +248,18 @@
           "punkte": [
             "„Mindestens haltbar bis“: Danach ist vieles noch gut. Trockenes wie Nudeln, Reis oder Kekse: ansehen, riechen, ein wenig probieren.",
             "Dosen und Gläser nie zum Prüfen probieren. Ist der Deckel gewölbt, zischt oder spritzt es beim Öffnen oder riecht es seltsam: ungekostet wegwerfen. Das gefährliche Gift (Botulismus) schmeckt und riecht man nicht.",
+            "Auch eine Dose ohne Wölbung kann verdorben sein. Vorsicht bei einer Beule am Rand, Rost an der Naht oder wenn sie undicht ist. Ein Glas, dessen Deckel beim Öffnen nicht hörbar aufploppt, war nicht mehr dicht.",
             "„Zu verbrauchen bis“ (z. B. Hackfleisch, Geflügel): Danach nicht mehr essen."
+          ]
+        },
+        {
+          "titel": "Ranzig, muffig, ohne Kraft",
+          "punkte": [
+            "Ranzig: Das Fett riecht nach altem Frittierfett, Farbe oder Pappe und schmeckt bitter. Das betrifft vor allem Nüsse, Vollkornmehl, Öl, Kekse und Fertigmischungen. Ranziges nicht essen.",
+            "Muffig: Reis, Mehl oder Haferflocken riechen dumpf oder säuerlich, meist weil die Packung Feuchtigkeit gezogen hat. Wegwerfen.",
+            "Kleine Käfer oder feine Fäden in Mehl und Getreide sind Vorratsschädlinge. Die ganze Packung wegwerfen, die Nachbarpackungen prüfen und den Schrank gründlich putzen.",
+            "Trockenhefe verliert mit der Zeit ihre Kraft. Probe: etwas Hefe mit einer Prise Zucker in lauwarmes Wasser rühren. Schäumt es nach etwa 10 Minuten nicht, treibt sie nicht mehr.",
+            "Weich gewordene Kekse, Knäckebrot oder Cornflakes werden im Backofen bei etwa 150 °C in 10 Minuten wieder knusprig, wenn sie nicht ranzig riechen."
           ]
         },
         {
@@ -104,6 +268,7 @@
             "Brot, Marmelade, Joghurt, Obst und Gekochtes: ganz wegwerfen, auch wenn nur eine Stelle schimmelt. Ebenso weicher Käse (z. B. Frischkäse, Mozzarella, Feta), Scheibenkäse und geriebener Käse.",
             "Fester Käse am Stück (z. B. Gouda, Bergkäse, Parmesan) und festes Gemüse (z. B. Möhren): Schimmel großzügig wegschneiden, mindestens 1 cm rundherum.",
             "Schimmelkäse (Camembert, Blauschimmel): Der gewollte Edelschimmel ist essbar. Fremder Schimmel in anderer Farbe (z. B. grüne Flecken auf weißem Camembert): ganz wegwerfen.",
+            "Nüsse, Getreide, Gewürze und Schmalz oder Öl im Glas: bei Schimmel alles wegwerfen. Gerade auf Nüssen bildet Schimmel sehr starke Gifte.",
             "Im Zweifel wegwerfen. Krank zu werden ist ohne Arzt und Apotheke schlimmer als ein verlorenes Essen."
           ]
         }

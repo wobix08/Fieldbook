@@ -1,6 +1,6 @@
 ﻿# Baut das Release-Paket dist\Fieldbook-<Version>.zip
 # Inhalt: Startdatei, app\, Anleitung (GUIDE.txt), Lizenzen (LICENSE.txt, THIRD-PARTY.txt). Keine Downloads (daten\, programme\).
-param([string]$Version = '0.7.2')
+param([string]$Version = '0.7.3')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $dist = Join-Path $root 'dist'
@@ -9,7 +9,11 @@ $ordner = Join-Path $dist 'Fieldbook'
 if (Test-Path $ordner) { Remove-Item -Recurse -Force $ordner }
 New-Item -ItemType Directory -Force $ordner | Out-Null
 
-& (Join-Path $PSScriptRoot 'starter-bauen.ps1') -Ziel $ordner
+# Die Version muss mit der in app\Server.cs übereinstimmen (sonst meldet das Programm eine falsche Version)
+$serverVersion = [regex]::Match((Get-Content (Join-Path $root 'app\Server.cs') -Raw -Encoding UTF8), 'const string Version = "([^"]+)"').Groups[1].Value
+if ($serverVersion -ne $Version) { throw "Version $Version passt nicht zu app\Server.cs ($serverVersion)." }
+
+& (Join-Path $PSScriptRoot 'starter-bauen.ps1') -Ziel $ordner -Version $Version
 Copy-Item -Recurse (Join-Path $root 'app') (Join-Path $ordner 'app')
 Copy-Item (Join-Path $root 'GUIDE.md') (Join-Path $ordner 'GUIDE.txt')
 Copy-Item (Join-Path $root 'LICENSE') (Join-Path $ordner 'LICENSE.txt')
@@ -37,4 +41,4 @@ $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -Path "$zip.sha256" -Encoding ASCII -Value "$hash  $(Split-Path -Leaf $zip)"
 Write-Host "SHA256: $hash"
 Write-Host "Release erstellt: $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
-Write-Host "Nicht vergessen: Download-Link im Schnellstart der README auf die neue Version setzen."
+Write-Host "Nicht vergessen: Beide Download-Links der README (ganz oben und im Schnellstart) auf die neue Version setzen."

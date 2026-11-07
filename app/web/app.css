@@ -301,8 +301,6 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .bib-kopf { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 4px 0 14px; }
 .bib-kopf h2 { margin: 0; }
 .bib-kopf small { color: var(--text2); }
-.paket-aktionen { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; width: 100%; }
-.paket-suche { display: flex; gap: 8px; flex: 1 1 320px; }
 .regal.liste { display: flex; flex-direction: column; gap: 10px; }
 .eintrag {
   display: flex; gap: 12px; align-items: flex-start; padding: 14px; background: var(--flaeche); border: 1px solid var(--linie);
@@ -330,9 +328,11 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .klapp.auf > .klapp-huelle { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows .25s ease; }
 .klapp-innen { overflow: hidden; min-height: 0; }
 .klapp-liste { display: flex; flex-direction: column; gap: 6px; padding: 6px 0 8px 30px; }
-.regal.liste .klapp-paket .klapp-kopf { padding: 8px 12px; }
-.regal.liste .klapp-paket .e-bild { width: 32px; height: 32px; }
-.paket-innen { display: flex; flex-direction: column; gap: 12px; padding: 12px 4px 10px 30px; }
+/* Paketzeile: ein Klick öffnet das Paket, deshalb Pfeil nach rechts statt nach unten */
+.regal.liste .paket-zeile { padding: 8px 12px; }
+.regal.liste .paket-zeile .e-bild { width: 32px; height: 32px; }
+.paket-pfeil { flex: none; width: 8px; height: 8px; margin: 0 8px 0 4px; border-right: 2px solid var(--text2); border-bottom: 2px solid var(--text2); transform: rotate(-45deg); }
+.paket-zeile:hover .paket-pfeil { border-color: var(--akzent); }
 .paket-themen { display: flex; flex-wrap: wrap; gap: 6px; }
 /* Eigene Startseite eines Pakets (Klexikon): Kopf, Themen, Kacheln mit Bild, ABC-Leiste */
 .ps-kopf { display: flex; align-items: center; gap: 16px; margin: 4px 0 18px; }
@@ -356,10 +356,12 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .ps-abc button[aria-selected="true"] { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
 .ifixit-baum .hinweis, .ifixit-baum .fehlerbox { margin: 0; }
 .ifixit-weg { font-weight: 600; margin: 4px 0 10px; font-size: 1rem; }
-.ifixit-baum button { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; color: var(--akzent); }
-.ifixit-zweige { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 12px; }
-.ifixit-zweige button { display: block; text-align: left; padding: 6px 10px; border-radius: 8px; color: var(--text); }
-.ifixit-zweige button:hover { background: var(--flaeche2); }
+.ifixit-weg a { color: var(--akzent); text-decoration: none; }
+.ifixit-weg a:hover { text-decoration: underline; }
+.ifixit-zweige { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-bottom: 18px; }
+.ifixit-zweige a { display: block; text-align: left; padding: 10px 12px; border-radius: var(--radius); color: var(--text); text-decoration: none;
+  background: var(--flaeche); border: 1px solid var(--linie); }
+.ifixit-zweige a:hover { border-color: var(--akzent); }
 .ifixit-zweige small { display: block; color: var(--text2); }
 .ifixit-baum h3 { font-size: 1rem; }
 @media (prefers-reduced-motion: reduce) { .klapp-huelle, .klapp-pfeil { transition: none; } }
@@ -613,8 +615,11 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 /* Die Zeichnungen haben schwarze Linien, deshalb auch im dunklen Design auf hellem Grund */
 .eh-bild-flaeche { background: #fbfaf7; border: 1px solid var(--linie); border-radius: 12px; padding: 10px; }
 .eh-bild-flaeche img { display: block; width: 100%; height: 100px; object-fit: contain; }
+.eh-bilder-gross .eh-bilder-reihe { grid-template-columns: repeat(auto-fill, minmax(240px, 340px)); }
+.eh-bilder-gross .eh-bild-flaeche img { height: 220px; }
 .eh-bilder figcaption { font-size: .92rem; line-height: 1.4; }
 .eh-bilder small { font-size: .8rem; }
+.eh-kinder .eh-bilder { margin: 14px 0 4px; }
 .eh-alle { color: var(--gruen); font-weight: 600; }
 .eh-zuruecksetzen { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--linie); font-size: .9rem; }
 
@@ -959,18 +964,73 @@ a.vs-marke.kiste:hover { border-color: var(--gelb); }
 .gs-gross-original { font-size: 1.1rem; color: var(--text2); }
 .gs-gross-knoepfe { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; }
 
-/* Drucken (Vorsorge-Listen): nur der Inhalt, schwarz auf weiß */
-@page { margin: 16mm 15mm; }
+/* Drucken (Vorsorge): vorsorge.js baut die Blätter selbst (.ds-blatt, A4 mit Kopf- und Fußzeile), damit
+   der Druck in jedem Browser gleich aussieht. Die Regeln gelten für den Druckbereich auch am Bildschirm,
+   weil dort vorab gemessen wird, was auf ein Blatt passt. Ein Blatt ist 180 × 279 mm groß und steht
+   mittig: So bleibt der Rand, auch wenn der Browser eigene Ränder dazugibt oder „Ränder: Keine“ gewählt ist. */
+@page { size: A4; margin: 8mm 0; }
+#vs-druck { display: none; }
+#vs-druck.messen { display: block; position: absolute; left: -10000px; top: 0; visibility: hidden; }
+#vs-druck {
+  --bg: #fff; --flaeche: #fff; --flaeche2: #fff; --text: #000; --text2: #333; --linie: #bbb; --akzent: #3b4d34;
+  --gelb: #6b4a00; --gelb-hell: #fff; --gruen: #2f7a32; --schatten: none;
+  color-scheme: light; background: #fff; color: #000; font-size: 12.5px; line-height: 1.35;
+}
+.ds-blatt { width: 180mm; height: 279mm; margin: 0 auto; padding: 6mm 0 5mm; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; break-after: page; page-break-after: always; }
+.ds-blatt:last-child { break-after: auto; page-break-after: auto; }
+.ds-kopf, .ds-fuss { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex: none; }
+.ds-kopf { font: 600 10pt var(--titel); color: #555; padding-bottom: 2mm; border-bottom: .5pt solid #b5b5b5; }
+.ds-name { display: flex; align-items: center; gap: 6px; color: #3b4d34; }
+.ds-logo svg { width: 13px; height: 13px; display: block; }
+.ds-fuss { font-size: 8pt; color: #666; padding-top: 2mm; }
+.ds-seite { font: 600 9pt var(--titel); color: #333; }
+.ds-inhalt { flex: 1; min-height: 0; overflow: hidden; padding-top: 3.5mm; }
+
+#vs-druck input[type="checkbox"] { accent-color: #333; }
+#vs-druck .vs-person input { background: #fff; color: #000; border: 1px solid #000; }
+#vs-druck :is(.vs-knoepfe, .vs-verweise, .vs-verweis, .vs-herkunft, .vs-zaehler, .knoepfe) { display: none !important; }
+#vs-druck :is(.karte-box, .vs-liste li, .vs-warnung, .vs-person, .vs-marke) { background: #fff; color: #000; box-shadow: none; }
+#vs-druck :is(.vs-mehr, .hinweis, .vs-tabelle th, .vs-person small, .vs-stufe-name) { color: #333; }
+#vs-druck :is(.vs-warnung, .vs-marke) { border: 1px solid #000; }
+#vs-druck .vs-person input::-webkit-inner-spin-button { display: none; }
+
+/* Kompakt: kleinere Schrift und engere Abstände (Größen in px, nicht rem: rem hinge an der Bildschirmschrift) */
+#vs-druck h2 { font-size: 19px; margin: 0 0 4px; }
+#vs-druck h3 { font-size: 14px; margin: 8px 0 3px; }
+#vs-druck h4 { font-size: 12.5px; }
+#vs-druck .vs-kapitelseite > p, #vs-druck .vs-stufe p { line-height: 1.35; margin: 3px 0; }
+#vs-druck .vs-warum { font-size: 12.5px; }
+#vs-druck .vs-stufe { margin-top: 10px; padding-top: 0; }
+/* Abhak-Listen zweispaltig, das spart am meisten Höhe */
+#vs-druck .vs-liste { display: block; columns: 2; column-gap: 8mm; margin: 6px 0; }
+#vs-druck .vs-liste li { border: 0; padding: 1px 0 1px 20px; margin-bottom: 2px; position: relative; break-inside: avoid; }
+/* Kästchen links außen, umbrochene Zeilen rücken bündig ein */
+#vs-druck .eh-ueben input { transform: none; margin: 0; position: absolute; left: 0; top: .3em; }
+#vs-druck .vs-mehr { font-size: 10.6px; margin: 0; line-height: 1.3; }
+#vs-druck .vs-marke { font-size: 9.4px; }
+#vs-druck .vs-packliste-stufe { margin: 10px 0 4px; }
+#vs-druck .vs-warnung { margin: 8px 0; padding: 6px 10px; }
+#vs-druck .vs-schritte li { margin: 3px 0; line-height: 1.4; }
+#vs-druck .vs-rechner { margin: 8px 0; padding: 6px 10px; border: 1px solid #999; }
+#vs-druck .vs-rechner h3 { margin: 0 0 6px; }
+#vs-druck .vs-rechner .hinweis { font-size: 10.6px; line-height: 1.35; margin: 6px 0 0; }
+#vs-druck .vs-personen { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-bottom: 6px; }
+#vs-druck .vs-person { padding: 0; gap: 8px; justify-content: flex-start; }
+#vs-druck .vs-person b { white-space: nowrap; }
+#vs-druck .vs-person small { font-size: 10px; }
+#vs-druck .vs-person input { width: 40px; padding: 1px 2px; }
+#vs-druck .vs-tabelle { font-size: 11.25px; }
+#vs-druck .vs-tabelle th { font-size: 10.6px; }
+#vs-druck .vs-tabelle th, #vs-druck .vs-tabelle td { padding: 2px 6px; }
+#vs-druck .vs-tabelle td:first-child, #vs-druck .vs-tabelle th { white-space: nowrap; }
+
 @media print {
-  /* Hell drucken: sonst malt der Browser Kästchen und Zahlenfelder im dunklen Design schwarz */
   :root, :root[data-theme] { color-scheme: light !important; }
-  input[type="checkbox"] { accent-color: #333; }
-  .vs-person input { background: #fff !important; color: #000 !important; border: 1px solid #000 !important; }
-  .kopf, .banner, .vs-knoepfe, .vs-verweise, .vs-verweis, .vs-herkunft, .vs-zaehler, .knoepfe, .vs-person input::-webkit-inner-spin-button { display: none !important; }
-  body, .ansicht, .karte-box, .vs-liste li, .vs-warnung, .vs-person, .vs-marke { background: #fff !important; color: #000 !important; box-shadow: none !important; }
-  .ansicht { padding: 0; }
-  .vs-liste li { border: 0; padding: 2px 0; }
-  .vs-mehr, .hinweis, .vs-tabelle th, .vs-person small, .vs-stufe-name { color: #333 !important; }
-  .vs-kapitelseite { break-after: page; }
-  .vs-warnung, .vs-marke { border: 1px solid #000; }
+  html, body { height: auto !important; background: #fff !important; }
+  /* Drucken über die Knöpfe: nur die gebauten Blätter */
+  body.vs-drucken > :not(#vs-druck) { display: none !important; }
+  body.vs-drucken { display: block; }
+  body.vs-drucken #vs-druck { display: block; }
+  /* Strg+P ohne Knopf: wenigstens ohne Kopfleiste */
+  .kopf, .banner { display: none !important; }
 }

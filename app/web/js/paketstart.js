@@ -1,5 +1,6 @@
-// Eigene Startseite für ein Wissenspaket (bisher das Klexikon, "startseite.eigene" in pakete.json):
-// Suche über die Titel, Zufall, Themen, zwölf zufällige Artikel und alle Artikel von A bis Z.
+// Eigene Startseite für ein Wissenspaket:
+// Klexikon ("startseite.eigene" in pakete.json): Suche über die Titel, Zufall, Themen, zwölf zufällige Artikel und alle Artikel von A bis Z.
+// iFixit ("startseite.ifixit"): Suche, Zufall und der Geräte-Baum.
 // Die Artikelliste liest der Server einmal aus (/api/artikelliste), danach liegt sie im Cache.
 "use strict";
 
@@ -30,6 +31,7 @@ const Paketstart = (() => {
       return;
     }
     if (buchId !== id) { buchId = id; artikel = null; buchstabe = "A"; }
+    if ((buch.startseite || {}).ifixit) { zeichneIfixitSeite(params.get("pfad") || ""); return; }
     zeichne();
     if (!artikel) laden();
   }
@@ -51,7 +53,7 @@ const Paketstart = (() => {
     c.innerHTML = "";
     c.append(el("div", { class: "ps-kopf" },
       el("img", { class: "ps-logo", src: buch.bild || "icon.svg", alt: "" }),
-      el("div", {}, el("h1", {}, buch.titel.replace(/ \(.*\)$/, "")), el("p", { class: "hinweis" }, buch.text || ""))));
+      el("div", {}, el("h1", {}, buch.titel.replace(/ \(.*\)$/, "")), el("p", { class: "hinweis" }, ...zeilen(buch.text || "")))));
 
     // Suche: tippen filtert die Titel sofort, Enter sucht im ganzen Text
     const feld = el("input", { type: "search", id: "ps-feld", placeholder: "Was willst du wissen?", autocomplete: "off", "aria-label": "Artikel suchen" });
@@ -101,6 +103,64 @@ const Paketstart = (() => {
 
     c.append(el("p", { class: "hinweis", style: "margin-top:28px" },
       el("a", { href: "#lesen?url=" + encodeURIComponent(buch.start) + "&titel=" + encodeURIComponent(buch.titel) }, "Über " + (st.ueber || "dieses Paket"))));
+  }
+
+  // Kopf mit Logo, Name und Beschreibung, darunter Suche im ganzen Text und „Zufälliger Artikel“
+  function kopfUndSuche(c, platzhalter, zufallText) {
+    const zuLesen = (extra) => "#lesen?url=" + encodeURIComponent(buch.start) + "&titel=" + encodeURIComponent(buch.titel) + extra;
+    c.append(el("div", { class: "ps-kopf" },
+      el("img", { class: "ps-logo", src: buch.bild || "icon.svg", alt: "" }),
+      el("div", {}, el("h1", {}, buch.titel.replace(/ \(.*\)$/, "")), el("p", { class: "hinweis" }, ...zeilen(buch.text || "")))));
+    const feld = el("input", { type: "search", placeholder: platzhalter, autocomplete: "off", "aria-label": "Im Paket suchen" });
+    c.append(el("form", { class: "suche-gross", onsubmit: (e) => {
+      e.preventDefault();
+      const q = feld.value.trim();
+      if (q) location.hash = zuLesen("&suche=" + encodeURIComponent(q));
+    } }, feld, el("button", { type: "submit" }, "Suchen")),
+      el("div", { class: "knopfreihe", style: "margin:10px 0 0" },
+        el("a", { class: "knopf", href: zuLesen("&zufall=1") }, sym("shuffle"), zufallText)));
+  }
+
+  // Startseite für iFixit: Geräte-Baum (nur Zweige mit Anleitungen). Der Bereich steht in der Adresse („&pfad=“),
+  // so geht Zurück Bereich für Bereich, und aus der Bibliothek beginnt man immer bei „Alle Bereiche“
+  const ifixitLink = (pfad) => "#paketstart?buch=" + encodeURIComponent(buchId) + (pfad ? "&pfad=" + encodeURIComponent(pfad) : "");
+  let ifixitKnoten = null;
+  function zeichneIfixitSeite(knoten) {
+    const c = $("#paketstart-inhalt");
+    let baum = c.querySelector(".ifixit-baum");
+    // Nur der Bereich wechselt: Kopf und Suche bleiben stehen
+    if (!baum || c.dataset.buch !== buchId) {
+      c.innerHTML = "";
+      c.dataset.buch = buchId;
+      kopfUndSuche(c, "Gerät oder Fehler, z. B. Waschmaschine pumpt nicht ab", "Zufällige Anleitung");
+      baum = el("div", { class: "ifixit-baum" });
+      c.append(el("h2", {}, "Nach Gerät suchen"), baum);
+    }
+    zeichneIfixit(baum, knoten);
+  }
+
+  async function zeichneIfixit(ziel, knoten) {
+    const id = buchId;
+    ifixitKnoten = knoten;
+    const r = await api("ifixit?buch=" + encodeURIComponent(id) + "&pfad=" + encodeURIComponent(knoten)).catch(e => ({ fehler: e.message }));
+    if (ifixitKnoten !== knoten || buchId !== id || !ziel.isConnected) return;
+    ziel.innerHTML = "";
+    if (r.status === "laeuft") {
+      ziel.append(el("p", { class: "hinweis" }, "Die Übersicht wird einmalig erstellt, das dauert ein paar Minuten (" + (r.gelesen || 0) + " Seiten gelesen).", el("br"), "Suche und Zufall gehen schon."));
+      setTimeout(() => { if (ziel.isConnected) zeichneIfixit(ziel, knoten); }, 3000);
+      return;
+    }
+    if (r.fehler) { ziel.append(el("p", { class: "fehlerbox" }, "Übersicht nicht verfügbar: " + r.fehler)); return; }
+    const gehe = (pfad, ...inhalt) => el("a", { href: ifixitLink(pfad) }, ...inhalt);
+    const anz = (n) => n === 1 ? "1 Anleitung" : n.toLocaleString("de-DE") + " Anleitungen";
+    ziel.append(el("h3", { class: "ifixit-weg" },
+      gehe("", "Alle Bereiche"), ...r.weg.flatMap(w => [" › ", w.pfad === r.pfad ? w.titel : gehe(w.pfad, w.titel)])));
+    if (r.kinder.length)
+      ziel.append(el("div", { class: "ifixit-zweige" },
+        r.kinder.map(k => gehe(k.pfad, el("b", {}, k.titel), el("small", {}, anz(k.anzahl))))));
+    if (r.anleitungen.length)
+      ziel.append(el("h3", {}, r.kinder.length ? "Anleitungen direkt hier" : anz(r.anleitungen.length)),
+        ...r.anleitungen.map(a => el("a", { class: "treffer", href: lesen(a.pfad, a.titel) }, el("b", {}, a.titel))));
   }
 
   function kachel(a) {

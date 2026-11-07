@@ -1,6 +1,7 @@
 # Anleitung: Fieldbook einrichten und benutzen
 
-Diese Anleitung ist für alle gedacht, auch ohne Computer-Erfahrung.
+Diese Anleitung ist für alle gedacht, auch ohne Computer-Erfahrung.\
+Fieldbook läuft nur auf Windows-Computern (Windows 10 und 11).
 
 ---
 
@@ -123,11 +124,13 @@ Das dauert ein, zwei Minuten, solange Fieldbook offen ist; oben im Bereich steht
 
 ### Bibliothek
 Die Pakete sind nach Themen sortiert: Grundwissen, Gesundheit & Erste Hilfe, Reparieren & Technik, Draußen & Überleben, Selbstversorgung & Haushalt, Lernen & Kinder sowie Beschäftigung & Lesen.\
-Ein Klick auf eine Kategorie klappt ihre Pakete darunter auf, ein zweiter Klick klappt sie wieder zu.\
-Ein Klick auf ein Paket klappt es ebenfalls auf: mit Suche im Paket, **Öffnen** und **Zufälliger Artikel**, bei manchen Paketen auch mit Themen zum direkten Einstieg.\
+Ein Klick auf eine Kategorie klappt ihre Pakete darunter auf, die zuvor offene Kategorie klappt dabei zu.\
+Ein Klick auf ein Paket öffnet es.\
 Über der Liste kannst du in allen Paketen gleichzeitig suchen.\
 Das Klexikon öffnet eine eigene Startseite mit Themen, zwölf zufälligen Artikeln und allen Artikeln von A bis Z.\
-Beim ersten Öffnen stellt Fieldbook die Liste einmal zusammen, das dauert etwa eine Minute.
+Beim ersten Öffnen stellt Fieldbook die Liste einmal zusammen, das dauert etwa eine Minute.\
+iFixit öffnet ebenfalls eine eigene Startseite: Dort suchst du nach Gerät oder Fehler oder klickst dich durch die Geräte (z. B. Haushaltsgeräte › Waschmaschine).\
+Beim ersten Start stellt Fieldbook diese Übersicht einmal zusammen, das dauert ein paar Minuten.
 
 **Lesen**\
 Oben in der Mitte stehen **Startseite**, die Suche im geöffneten Paket und **Zufall**.\
@@ -207,7 +210,7 @@ Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.
 ### Kochen
 Unter **Was hast du da?** gibst du ein, was im Haus ist.\
 Fieldbook sucht passende Rezepte im Koch-Wiki, zuerst die, für die du alles hast.\
-Darunter stehen Faustregeln zu Trinkwasser, Haltbarkeit und sicherem Einkochen, auch ohne heruntergeladene Pakete.
+Darunter stehen Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und sicherem Einkochen, auch ohne heruntergeladene Pakete.
 
 ### Erste Hilfe
 Ganz oben stehen die Notrufnummern und Spickzettel für den Ernstfall mit je fünf Sofort-Schritten.\
@@ -289,6 +292,12 @@ Unter **Inhalte** das betroffene Paket löschen und neu herunterladen.
 
 **Der Browser öffnet sich nicht**\
 Öffne ihn selbst und gib `http://localhost:8090` ein.
+
+**Im Firmennetz scheitern Downloads oder der Virenschutz blockiert Fieldbook**\
+Firmen-Firewalls und Virenschutz-Programme sperren unbekannte Programme und große Downloads oft vorsorglich.\
+Statt `Fieldbook.exe` kannst du `app\Start.bat` doppelklicken.\
+Hilft das nicht, muss die IT Fieldbook freigeben.\
+Was sie dafür braucht, steht in der README auf GitHub im Abschnitt **Downloads in Firmen- und Schulnetzen**.
 
 **„KI-Fehler“ oben rechts**\
 Meist reicht der Arbeitsspeicher nicht.\

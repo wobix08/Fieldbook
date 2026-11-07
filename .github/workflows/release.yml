@@ -1,0 +1,88 @@
+# Baut das Release-Paket auf GitHub, lässt Fieldbook.exe bei SignPath signieren und legt einen
+# Release-Entwurf mit ZIP und Prüfsumme an. Gestartet wird es von Hand (Actions → "Release bauen").
+#
+# Signiert wird nur, wenn die Variable SIGNPATH_ORGANIZATION_ID und das Geheimnis SIGNPATH_API_TOKEN
+# in den Repository-Einstellungen eingetragen sind. Ohne sie entsteht ein unsignierter Entwurf.
+name: Release bauen
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, z. B. 0.7.3 (muss mit app/Server.cs übereinstimmen)"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  bauen:
+    if: github.repository == 'wobix08/Fieldbook'
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version prüfen
+        shell: powershell
+        run: |
+          if ($env:VERSION -notmatch '^\d+(\.\d+){2,3}$') { throw "Ungültige Version: $env:VERSION" }
+
+      - name: ZIP bauen
+        shell: powershell
+        run: .\tools\release-bauen.ps1 -Version $env:VERSION
+
+      - name: Unsignierte ZIP bereitstellen
+        id: unsigniert
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fieldbook-${{ inputs.version }}-unsigniert
+          path: dist/Fieldbook-${{ inputs.version }}.zip
+          if-no-files-found: error
+
+      - name: Bei SignPath signieren
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: Fieldbook
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: release-zip
+          github-artifact-id: ${{ steps.unsigniert.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signiert
+          parameters: |
+            version: "${{ inputs.version }}"
+
+      - name: Prüfsumme und Release-Entwurf
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $name = "Fieldbook-$env:VERSION.zip"
+          $signiert = Get-ChildItem -Path signiert -Recurse -Filter $name -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($signiert) {
+            New-Item -ItemType Directory -Force ausgabe | Out-Null
+            Copy-Item $signiert.FullName "ausgabe\$name"
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $z = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "ausgabe\$name"))
+            $tmp = Join-Path $env:RUNNER_TEMP 'pruefen.exe'
+            [IO.Compression.ZipFileExtensions]::ExtractToFile(($z.Entries | Where-Object FullName -eq 'Fieldbook/Fieldbook.exe'), $tmp, $true)
+            $z.Dispose()
+            $sig = Get-AuthenticodeSignature $tmp
+            if ($sig.Status -ne 'Valid') { throw "Signatur ungültig: $($sig.Status)" }
+            Write-Host "Signiert von: $($sig.SignerCertificate.Subject)"
+            $zip = "ausgabe\$name"
+          } else {
+            Write-Host "::warning::Nicht signiert (SignPath ist noch nicht eingerichtet)."
+            $zip = "dist\$name"
+          }
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path "$zip.sha256" -Encoding ASCII -Value "$hash  $name"
+          Write-Host "SHA256: $hash"
+          gh release create "v$env:VERSION" $zip "$zip.sha256" --draft --title "Fieldbook $env:VERSION" --notes "Release-Notizen folgen." --target $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Release-Entwurf konnte nicht angelegt werden." }

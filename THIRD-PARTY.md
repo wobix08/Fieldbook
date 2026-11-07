@@ -15,6 +15,27 @@ die ihre eigenen Lizenzen haben.
 | [franc](https://github.com/wooorm/franc) 6.2.0 mit trigram-utils, n-gram und collapse-white-space (erkennt im Sprechmodus die Sprache eines Satzes, in `vendor/franc`) | MIT (`LICENSE-franc.txt`) |
 | [Barlow Semi Condensed](https://github.com/jpt/barlow) (Schrift für Überschriften, in `app/web/schrift`) | SIL Open Font License 1.1 (`schrift/LICENSE-barlow.txt`) |
 
+## Bilder im Erste-Hilfe-Kurs (`app/web/bilder/erstehilfe`)
+
+Alle Bilder stammen von Wikimedia Commons.\
+Die Quelle steht auch unter jedem Bild im Kurs.
+
+| Bild | Urheber | Lizenz |
+|---|---|---|
+| Stabile Seitenlage, 6 Schritte, aus [Stabilt sidoläge.svg](https://commons.wikimedia.org/wiki/File:Stabilt_sidol%C3%A4ge.svg) (in Einzelbilder aufgeteilt) | Hibernate | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| Herzdruckmassage, aus [CPR 3.png](https://commons.wikimedia.org/wiki/File:CPR_3.png) und [CPR 9.png](https://commons.wikimedia.org/wiki/File:CPR_9.png) (verkleinert, Augen geändert) | Francesca Moretti | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Rückenschläge, aus [Back blows (back slaps) against choking for adult people.jpg](https://commons.wikimedia.org/wiki/File:Back_blows_(back_slaps)_against_choking_for_adult_people.jpg) (verkleinert, Hintergrund durchsichtig) | Trakotako | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Heimlich-Handgriff, [AbdominalThrust HeimlichManoeuvre.svg](https://commons.wikimedia.org/wiki/File:AbdominalThrust_HeimlichManoeuvre.svg) | Evolution and evolvability | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Druckverband, [Druckverband.svg](https://commons.wikimedia.org/wiki/File:Druckverband.svg) | Tkarcher | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| Abbinden mit Knebel, aus [Tourniquet (PSF).png](https://commons.wikimedia.org/wiki/File:Tourniquet_(PSF).png) (Beschriftung übersetzt, verkleinert) | Pearson Scott Foresman | gemeinfrei |
+| Kopf überstrecken, aus [Head-tilt-chin-lift-maneuver.jpg](https://commons.wikimedia.org/wiki/File:Head-tilt-chin-lift-maneuver.jpg) (verkleinert) | Another-anon-artist-234 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Atemweg verlegt und frei, [Tongue blocking airway.svg](https://commons.wikimedia.org/wiki/File:Tongue_blocking_airway.svg) | Vassia Atanassova, Vektorgrafik Offnfopt | gemeinfrei |
+| Atmung prüfen, aus [Checking respiration2 - high contrast (new).jpg](https://commons.wikimedia.org/wiki/File:Checking_respiration2_-_high_contrast_(new).jpg) (verkleinert) | Scriptir nach Rama | [CC BY-SA 3.0 FR](https://creativecommons.org/licenses/by-sa/3.0/fr/) |
+| Elektroden des Defibrillators, aus [Defibrilation electrode placement svg hariadhi.svg](https://commons.wikimedia.org/wiki/File:Defibrilation_electrode_placement_svg_hariadhi.svg) (Beschriftung übersetzt) | Hariadhi | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Wiederbelebung beim Säugling, aus [CPR Infant Chest Compression.png](https://commons.wikimedia.org/wiki/File:CPR_Infant_Chest_Compression.png) (Beschriftung entfernt, verkleinert) | BruceBlaus | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Säugling beim Verschlucken, aus [Heimlich Infant.png](https://commons.wikimedia.org/wiki/File:Heimlich_Infant.png) (in zwei Bilder geteilt, Beschriftung entfernt) | BruceBlaus | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Armschlinge, 4 Schritte, aus [Sling-and-swathe.svg](https://commons.wikimedia.org/wiki/File:Sling-and-swathe.svg) (in Einzelbilder aufgeteilt) | Baedr-9439 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+
 ## Vom Setup heruntergeladen
 
 | Baustein | Lizenz |

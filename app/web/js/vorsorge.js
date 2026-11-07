@@ -25,12 +25,11 @@ const Vorsorge = (() => {
     const druck = params.get("druck");
     const thema = konf.themen.find(x => x.id === params.get("k"));
     const lage = konf.lagen.find(x => x.id === params.get("lage"));
-    if (druck === "alle" || druck === "wichtigste") {
-      ziel.append(...konf.themen.map(t => themaAnsicht(t, druck)));
-      setTimeout(() => window.print(), 300);
-    } else if (druck === "kiste") {
-      ziel.append(packlisteDruck(), ...konf.lagen.map(l => lageAnsicht(l, true)));
-      setTimeout(() => window.print(), 300);
+    if (druck) {
+      // Alte Adressen (#vorsorge?druck=…) öffnen die Übersicht und das Druckfenster
+      history.replaceState(null, "", "#vorsorge");
+      ziel.append(uebersicht());
+      setTimeout(() => drucken(druck), 300);
     } else if (thema) {
       ziel.append(themaAnsicht(thema));
       const s = params.get("s");
@@ -75,11 +74,119 @@ const Vorsorge = (() => {
       el("p", { class: "hinweis" }, "Klick ein Feld an, um es zu öffnen."),
       raster(),
       el("div", { class: "vs-knoepfe" },
-        el("a", { class: "knopf knopf-klein", href: "#vorsorge?druck=wichtigste" }, sym("printer"), "Das Wichtigste drucken"),
-        el("a", { class: "knopf knopf-klein", href: "#vorsorge?druck=alle" }, sym("printer"), "Alles drucken"),
-        el("a", { class: "knopf knopf-klein", href: "#vorsorge?druck=kiste" }, sym("box"), "Für die Notfallkiste drucken"),
+        el("button", { class: "knopf knopf-klein", onclick: () => drucken("wichtigste") }, sym("printer"), "Das Wichtigste drucken"),
+        el("button", { class: "knopf knopf-klein", onclick: () => drucken("alle") }, sym("printer"), "Alles drucken"),
+        el("button", { class: "knopf knopf-klein", onclick: () => drucken("kiste") }, sym("box"), "Für die Notfallkiste drucken"),
         el("button", { class: "knopf knopf-klein", onclick: zuruecksetzen }, "↺ Alles zurücksetzen"),
         el("span", { class: "hinweis klein" }, "Zurücksetzen löscht alle Häkchen, z. B. um alles neu durchzugehen.")));
+  }
+
+  // Drucken ohne eigene Seite: Fieldbook baut die Druckblätter selbst (A4, Kopfzeile, Fußzeile mit
+  // Seitenzahl) in einem unsichtbaren Bereich, nur der wird gedruckt. So sieht der Druck in jedem
+  // Browser gleich aus; Kopf- und Fußzeilen über @page kann nicht jeder Browser (Firefox nicht).
+  // art: "wichtigste", "alle", "kiste" oder "thema"/"lage" mit dem Thema bzw. der Lage.
+  async function drucken(art, ding) {
+    let titel, bloecke;
+    if (art === "kiste") {
+      titel = "Notfallkiste und Wenn es passiert";
+      bloecke = [packlisteDruck(), ...konf.lagen.map(l => lageAnsicht(l, true))];
+    } else if (art === "thema") {
+      titel = ding.titel; bloecke = [themaAnsicht(ding, "alle")];
+    } else if (art === "lage") {
+      titel = ding.titel; bloecke = [lageAnsicht(ding, true)];
+    } else {
+      titel = art === "wichtigste" ? "Das Wichtigste" : "Alles";
+      bloecke = konf.themen.map(t => themaAnsicht(t, art === "wichtigste" ? "wichtigste" : "alle"));
+    }
+    const alt = document.getElementById("vs-druck");
+    if (alt) alt.remove();
+    const bereich = el("div", { id: "vs-druck", class: "messen" });
+    document.body.append(bereich);
+    await document.fonts.ready;
+    blaetterBauen(bereich, bloecke, titel);
+    bereich.classList.remove("messen");
+    document.body.classList.add("vs-drucken");
+    const weg = () => {
+      window.removeEventListener("afterprint", weg);
+      bereich.remove();
+      document.body.classList.remove("vs-drucken");
+    };
+    window.addEventListener("afterprint", weg);
+    window.print();
+  }
+
+  // Verteilt die Blöcke auf Blätter fester Höhe. Jeder Block (Thema, Lage) beginnt auf einem neuen Blatt.
+  // Passt etwas nicht mehr, wird es aufs nächste Blatt geschoben; Abschnitte und Listen werden dabei
+  // geteilt (auf dem neuen Blatt geht es in einer Kopie des Abschnitts weiter). Eine Überschrift
+  // wandert mit, statt allein unten zu stehen.
+  function blaetterBauen(bereich, bloecke, titel) {
+    const datum = new Date().toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
+    const blaetter = [];
+    let inhalt = null;
+    let klone = new Map();          // Abschnitt im Original → seine Kopie auf dem aktuellen Blatt
+    const teilbar = k => k.nodeType === 1 && /^(DIV|SECTION|UL|OL)$/.test(k.tagName) &&
+      !k.classList.contains("vs-rechner") && !k.classList.contains("vs-warnung") && k.childNodes.length > 1;
+    const istTitel = k => k && /^H[2-4]$/.test(k.tagName);
+
+    function neuesBlatt() {
+      // leere Abschnitts-Kopien vom alten Blatt entfernen (sonst bliebe z. B. ein Trennstrich unten stehen)
+      for (const c of [...klone.values()].reverse()) if (!c.childNodes.length) c.remove();
+      klone = new Map();
+      const logo = el("span", { class: "ds-logo" });
+      logo.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-2.6-1.7-6-2.1-10-1.5V9.6l3.6-2.7 2.2 1.7L12 4"/><path d="M12 20c2.6-1.7 6-2.1 10-1.5V9.6l-4-3.6-2 1.8L12 4"/><path d="M12 4v16"/></svg>';
+      inhalt = el("div", { class: "ds-inhalt" });
+      const blatt = el("div", { class: "ds-blatt" },
+        el("div", { class: "ds-kopf" }, el("span", { class: "ds-name" }, logo, "Fieldbook · Vorsorge"), el("span", {}, titel)),
+        inhalt,
+        el("div", { class: "ds-fuss" }, el("span", {}, "Gedruckt am " + datum + " mit Fieldbook"), el("span", { class: "ds-seite" })));
+      bereich.append(blatt);
+      blaetter.push(blatt);
+    }
+    const voll = () => inhalt.scrollHeight > inhalt.clientHeight + 1;
+    // Blatt leer: höchstens leere Abschnitts-Kopien darauf
+    const leer = () => !inhalt.textContent.trim() && !inhalt.querySelector("input, img, svg, table");
+
+    // Behälter auf dem aktuellen Blatt für einen Pfad von Abschnitten (fehlende Kopien werden angelegt)
+    function behaelter(pfad) {
+      let b = inhalt;
+      for (const p of pfad) {
+        if (!klone.has(p)) {
+          const c = p.cloneNode(false);
+          c.removeAttribute("id");
+          b.append(c);
+          klone.set(p, c);
+        }
+        b = klone.get(p);
+      }
+      return b;
+    }
+
+    function setzen(knoten, pfad) {
+      const b = behaelter(pfad);
+      b.append(knoten);
+      if (!voll() || knoten.nodeType !== 1) return;
+      knoten.remove();
+      if (teilbar(knoten)) {
+        for (const k of [...knoten.childNodes]) setzen(k, pfad.concat(knoten));
+        return;
+      }
+      if (leer()) {
+        b.append(knoten);           // passt auch auf ein leeres Blatt nicht: trotzdem hier
+        return;
+      }
+      const mit = istTitel(b.lastElementChild) ? b.lastElementChild : null;
+      if (mit) mit.remove();
+      neuesBlatt();
+      if (mit) behaelter(pfad).append(mit);
+      behaelter(pfad).append(knoten);
+    }
+
+    for (const block of bloecke) {
+      neuesBlatt();
+      for (const k of [...block.childNodes]) setzen(k, [block]);
+    }
+    for (const c of [...klone.values()].reverse()) if (!c.childNodes.length) c.remove();
+    blaetter.forEach((b, i) => { b.querySelector(".ds-seite").textContent = "Seite " + (i + 1) + " von " + blaetter.length; });
   }
 
   // Stand je Stufe über alle Themen: Name, wofür sie gedacht ist, wie viel schon abgehakt ist
@@ -148,7 +255,7 @@ const Vorsorge = (() => {
       druck || !(t.artikel || []).length ? null : el("div", {}, el("h3", {}, "Mehr lesen"), mehr),
       druck ? null : el("div", { class: "vs-knoepfe vs-fuss" },
         el("a", { class: "knopf", href: "#vorsorge" }, "← Übersicht"),
-        el("button", { class: "knopf", onclick: () => window.print() }, sym("printer"), "Drucken"),
+        el("button", { class: "knopf", onclick: () => drucken("thema", t) }, sym("printer"), "Drucken"),
         naechstes ? el("a", { class: "knopf knopf-haupt", href: "#vorsorge?k=" + naechstes.id }, "Nächstes Thema: " + (naechstes.kurz || naechstes.titel) + " →") : null));
   }
 
@@ -259,7 +366,7 @@ const Vorsorge = (() => {
       druck || !(l.artikel || []).length ? null : el("div", {}, el("h3", {}, "Mehr lesen"), mehr),
       druck ? null : el("div", { class: "vs-knoepfe vs-fuss" },
         el("a", { class: "knopf", href: "#vorsorge" }, "← Übersicht"),
-        el("button", { class: "knopf", onclick: () => window.print() }, sym("printer"), "Drucken"),
+        el("button", { class: "knopf", onclick: () => drucken("lage", l) }, sym("printer"), "Drucken"),
         naechste ? el("a", { class: "knopf knopf-haupt", href: "#vorsorge?lage=" + naechste.id }, "Nächste Lage: " + (naechste.kurz || naechste.titel) + " →") : null));
   }
 

@@ -221,7 +221,16 @@
         "Nicht normal ist: Der Brustkorb bewegt sich gar nicht, du hörst und spürst keine Luft, oder die Person schnappt nur selten und mühsam nach Luft, oft mit offenem Mund und einem Geräusch (Schnappatmung). Das wirkt wie Atmen, ist aber ein Zeichen für einen Kreislaufstillstand. Im Zweifel gilt: Behandle es als nicht normal und beginne mit der Wiederbelebung.",
         "Auch in der Seitenlage kann die Atmung aussetzen. Deshalb bleibst du dabei und prüfst sie immer wieder."
       ],
-      "bilder": {
+      "bilder": [{
+        "dateien": ["bilder/erstehilfe/atemweg-1.png", "bilder/erstehilfe/atemweg-2.svg", "bilder/erstehilfe/atemweg-3.png"],
+        "titel": "So machst du den Atemweg frei und prüfst die Atmung",
+        "schritte": [
+          "Eine Hand an die Stirn, zwei Finger unter das Kinn. Den Kopf vorsichtig nach hinten neigen und das Kinn anheben.",
+          "Warum: Links ist der Kopf gebeugt, die Zunge fällt nach hinten und versperrt den Atemweg. Rechts ist der Kopf überstreckt, der Atemweg ist frei.",
+          "Dein Ohr über Mund und Nase, den Blick zum Brustkorb. Sehen, hören und fühlen, höchstens 10 Sekunden."
+        ],
+        "quelle": "Zeichnungen: Another-anon-artist-234 (Head-tilt-chin-lift-maneuver.jpg, gemeinfrei, CC0), Vassia Atanassova und Offnfopt (Tongue blocking airway.svg, gemeinfrei) und Scriptir nach Rama (Checking respiration2 - high contrast (new).jpg, Lizenz CC BY-SA 3.0 FR, creativecommons.org/licenses/by-sa/3.0/fr), Wikimedia Commons."
+      }, {
         "datei": "bilder/erstehilfe/seitenlage-{n}.svg",
         "titel": "So geht die stabile Seitenlage",
         "schritte": [
@@ -233,7 +242,7 @@
           "Fertig: Kopf nach hinten überstrecken, damit der Atemweg frei bleibt. Der Mund zeigt zum Boden, so kann Erbrochenes ablaufen. Atmung weiter prüfen."
         ],
         "quelle": "Zeichnung: Hibernate, Wikimedia Commons (Stabilt sidoläge.svg), Lizenz CC BY-SA 3.0 (creativecommons.org/licenses/by-sa/3.0), für Fieldbook in Einzelbilder aufgeteilt."
-      },
+      }],
       "schritte": [
         "Laut ansprechen („Hallo, hören Sie mich?“) und an den Schultern rütteln.",
         "Reagiert die Person: so liegen lassen, fragen, was passiert ist, Verletzungen versorgen, wenn nötig Notruf {notruf}.",
@@ -295,6 +304,22 @@
         "Du kannst nichts falsch machen, außer nichts zu tun. Wenn dabei eine Rippe knackt oder bricht, ist das kein Grund aufzuhören. Ein Bruch heilt, ein Gehirn ohne Sauerstoff nicht.",
         "Herzdruckmassage ist sehr anstrengend. Schon nach etwa 2 Minuten werden die meisten Menschen langsamer und drücken weniger tief, oft ohne es selbst zu merken. Sind zwei Helfer da, wechselt ihr euch deshalb ab, auch wenn du dich noch fit fühlst."
       ],
+      "bilder": [{
+        "datei": "bilder/erstehilfe/wiederbelebung-{n}.png",
+        "titel": "So geht die Herzdruckmassage",
+        "schritte": [
+          "Einen Handballen auf die Mitte des Brustkorbs legen, die zweite Hand darauf. Die Finger verschränken.",
+          "Arme gestreckt, Schultern senkrecht über den Händen. Mit dem Gewicht des Oberkörpers 5 bis 6 cm tief drücken."
+        ],
+        "quelle": "Zeichnungen: Francesca Moretti, Wikimedia Commons (CPR 3.png, CPR 9.png), gemeinfrei (CC0), für Fieldbook leicht geändert."
+      }, {
+        "datei": "bilder/erstehilfe/defibrillator-{n}.svg",
+        "titel": "Hierhin kommen die Elektroden des Defibrillators",
+        "schritte": [
+          "Eine Elektrode unter das rechte Schlüsselbein der Person, die andere links seitlich unter die Brust. Der Strom fließt dann quer durch das Herz. Auf den Elektroden ist es auch aufgemalt."
+        ],
+        "quelle": "Zeichnung: Hariadhi, Wikimedia Commons (Defibrilation electrode placement svg hariadhi.svg), Lizenz CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0), für Fieldbook Beschriftung übersetzt."
+      }],
       "schritte": [
         "Auf die eigene Sicherheit achten (Straßenverkehr, Strom, Feuer, Gas).",
         "Laut ansprechen und an den Schultern rütteln. Keine Reaktion: laut um Hilfe rufen.",
@@ -308,6 +333,13 @@
         "Nicht aufhören, bis der Rettungsdienst übernimmt, die Person wieder normal atmet oder du nicht mehr kannst."
       ],
       "kinder": "Bei Kindern zuerst 5 Mal beatmen, dann 30 Mal drücken und 2 Mal beatmen. Drücken etwa ein Drittel der Brustkorbtiefe: bei Kindern mit einer oder beiden Händen, bei Säuglingen mit zwei Fingern. Wichtiger als die genaue Technik ist, überhaupt anzufangen. Wichtig: Wenn du allein bist, mache bei Kindern erst 1 Minute lang die Wiederbelebung und wähle erst danach den Notruf {notruf} (außer du kannst das Handy sofort auf Lautsprecher stellen und gleichzeitig weitermachen). Kinder haben meist ein Atemproblem, deshalb hilft ihnen die erste Minute Beatmen und Drücken besonders.",
+      "kinderBilder": {
+        "datei": "bilder/erstehilfe/wiederbelebung-saeugling-{n}.png",
+        "schritte": [
+          "Säugling: Mit zwei Fingern auf die Mitte des Brustkorbs drücken, die andere Hand hält den Kopf."
+        ],
+        "quelle": "Zeichnung: BruceBlaus, Wikimedia Commons (CPR Infant Chest Compression.png), Lizenz CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0), für Fieldbook Beschriftung entfernt."
+      },
       "ueben": [
         { "id": "takt", "text": "Takt-Übung: 2 Minuten im Takt auf ein festes Kissen drücken und laut mitzählen.", "takt": true },
         { "id": "hand", "text": "Zeig an dir selbst, wo die Hände hingehören: Mitte des Brustkorbs, auf dem unteren Teil des Brustbeins." },
@@ -356,6 +388,15 @@
         "Kinder verschlucken sich besonders oft, z. B. an Nüssen, Weintrauben, Bonbons oder kleinen Spielteilen.",
         "Nach Oberbauchkompressionen muss die Person immer ärztlich untersucht werden, auch wenn es ihr gut geht. Dabei können innere Organe verletzt werden."
       ],
+      "bilder": {
+        "dateien": ["bilder/erstehilfe/ersticken-1.png", "bilder/erstehilfe/ersticken-2.svg"],
+        "titel": "So hilfst du, wenn der Husten nicht mehr reicht",
+        "schritte": [
+          "Seitlich neben der Person stehen, mit einer Hand die Brust stützen und den Oberkörper weit nach vorn beugen. Mit dem Handballen bis zu 5 Mal kräftig zwischen die Schulterblätter schlagen.",
+          "Hilft das nicht: hinter der Person stehen und sie nach vorn beugen. Die Faust zwischen Bauchnabel und Brustbein legen, mit der anderen Hand umfassen und ruckartig nach innen und oben ziehen."
+        ],
+        "quelle": "Zeichnungen: Trakotako (Back blows (back slaps) against choking for adult people.jpg) und Evolution and evolvability (AbdominalThrust HeimlichManoeuvre.svg), Wikimedia Commons, Lizenz CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0)."
+      },
       "schritte": [
         "Fragen: „Hast du dich verschluckt?“ Kann die Person husten: zum kräftigen Husten auffordern und dabeibleiben. Nicht auf den Rücken klopfen, solange sie gut hustet.",
         "Wird der Husten schwach: dich seitlich neben die Person stellen, mit einer Hand ihre Brust stützen und den Oberkörper weit nach vorn beugen.",
@@ -366,6 +407,15 @@
         "Wird die Person bewusstlos: vorsichtig auf den Boden legen, Notruf {notruf} und sofort mit der Wiederbelebung beginnen (Lektion 3)."
       ],
       "kinder": "Bei Kindern über einem Jahr wie bei Erwachsenen, nur mit weniger Kraft. Knie dich dafür hinter das Kind. Bei Säuglingen unter einem Jahr keine Oberbauchkompressionen: Den Säugling bäuchlings auf deinen Unterarm legen, Kopf tiefer als der Körper, Kiefer mit der Hand stützen und bis zu 5 Schläge zwischen die Schulterblätter geben. Dann auf den Rücken auf deinen anderen Unterarm drehen (Kopf weiterhin tief halten, so hilft die Schwerkraft) und bis zu 5 Mal mit zwei Fingern kräftig auf die Mitte des Brustkorbs drücken. Im Wechsel wiederholen.",
+      "kinderBilder": {
+        "datei": "bilder/erstehilfe/ersticken-saeugling-{n}.png",
+        "titel": "So hilfst du einem Säugling",
+        "schritte": [
+          "Bäuchlings auf deinem Unterarm, Kopf tiefer als der Körper. Bis zu 5 Schläge zwischen die Schulterblätter.",
+          "Auf den Rücken auf den anderen Unterarm drehen, Kopf weiter tief. Bis zu 5 Mal mit zwei Fingern auf die Mitte des Brustkorbs drücken."
+        ],
+        "quelle": "Zeichnungen: BruceBlaus, Wikimedia Commons (Heimlich Infant.png), Lizenz CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0), für Fieldbook geteilt und Beschriftung entfernt."
+      },
       "ueben": [
         { "id": "haltung", "text": "Stellt die Haltung zu zweit nach: nach vorn beugen, Hand an der Brust, Schläge auf den Rücken nur andeuten." },
         { "id": "faust", "text": "Zeig an einer zweiten Person, wo die Faust für die Oberbauchkompression hingehört, ohne wirklich zu drücken. Echte Kompressionen übt man nie an Gesunden." },
@@ -408,6 +458,21 @@
         "Schütze dich vor fremdem Blut: Einmalhandschuhe aus dem Verbandkasten, notfalls eine Plastiktüte über der Hand.",
         "Ein Druckverband ersetzt deine Hand. Er muss so fest sitzen, dass die Blutung steht. Finger oder Zehen dahinter dürfen aber nicht blau, kalt oder taub werden."
       ],
+      "bilder": [{
+        "datei": "bilder/erstehilfe/druckverband-{n}.svg",
+        "titel": "So ist ein Druckverband aufgebaut",
+        "schritte": [
+          "Schnitt durch einen Arm: Auf der Wunde (rot) liegt die Kompresse (grün), darauf das Druckpolster (blau). Die Binde hält beides fest und drückt das Polster auf die Wunde."
+        ],
+        "quelle": "Zeichnung: Tkarcher, Wikimedia Commons (Druckverband.svg), Lizenz CC BY-SA 3.0 (creativecommons.org/licenses/by-sa/3.0)."
+      }, {
+        "datei": "bilder/erstehilfe/blutung-knebel.png",
+        "titel": "So geht Abbinden mit Knebel",
+        "schritte": [
+          "Nur wenn Drücken nicht reicht: Das Tuch oberhalb der Wunde verknoten, den Knebel darauflegen und noch einmal festknoten. Dann den Knebel drehen, bis die Blutung steht, und festbinden. Das Tuch sollte breiter sein als hier gezeichnet."
+        ],
+        "quelle": "Zeichnung: Pearson Scott Foresman, Wikimedia Commons (Tourniquet (PSF).png), gemeinfrei, für Fieldbook Beschriftung übersetzt."
+      }],
       "schritte": [
         "Handschuhe anziehen, wenn vorhanden.",
         "Die Person hinsetzen oder hinlegen und bei starker Blutung sofort den Notruf {notruf} wählen (oder wählen lassen).",
@@ -618,6 +683,17 @@
         "Bei Kopfverletzungen ist das Gehirn in Gefahr. Gefährliche Zeichen können erst nach Stunden auftreten: Benommenheit, Erbrechen, starke Kopfschmerzen, Verwirrtheit. Ein Alarmzeichen für eine schwere Verletzung des Schädels ist auch, wenn Blut oder klare Flüssigkeit (Gehirnwasser) aus Nase oder Ohren fließt.",
         "Nach einem Sturz aus großer Höhe oder einem schweren Unfall kann die Wirbelsäule verletzt sein. Dann bewegst du die Person so wenig wie möglich, außer sie ist in Gefahr oder atmet nicht normal."
       ],
+      "bilder": {
+        "datei": "bilder/erstehilfe/armschlinge-{n}.svg",
+        "titel": "So legst du eine Armschlinge mit dem Dreiecktuch an",
+        "schritte": [
+          "Das Tuch unter den verletzten Arm legen: die Spitze zum Ellenbogen, ein Ende über die gesunde Schulter.",
+          "Das untere Ende über den Unterarm hoch zur Schulter der verletzten Seite führen.",
+          "Beide Enden hinter dem Hals verknoten. Die Hand liegt etwas höher als der Ellenbogen.",
+          "Wenn nötig, ein zweites Tuch um Oberkörper und Arm binden. So bleibt der Arm ruhig."
+        ],
+        "quelle": "Zeichnung: Baedr-9439, Wikimedia Commons (Sling-and-swathe.svg), gemeinfrei (CC0), für Fieldbook in Einzelbilder aufgeteilt."
+      },
       "schritte": [
         "Bruch: nicht einrenken, nicht gerade ziehen. Die Person nimmt meistens selbst die Haltung ein, die am wenigsten schmerzt.",
         "Den Körperteil in dieser Lage ruhigstellen: mit Decken, Jacken oder Kissen abpolstern. Einen verletzten Arm kann die Person selbst halten, oder du legst ein Dreiecktuch als Schlinge an.",

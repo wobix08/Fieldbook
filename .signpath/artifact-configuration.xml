@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Artefakt-Konfiguration für SignPath (Slug "release-zip"), wird dort im Projekt "Fieldbook" eingetragen.
+     Das GitHub-Artefakt ist eine ZIP, die Fieldbook-<Version>.zip enthält. Signiert wird nur Fieldbook.exe.
+     Die Version kommt als Parameter aus .github/workflows/release.yml. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <zip-file path="Fieldbook-*.zip">
+      <pe-file path="Fieldbook/Fieldbook.exe" product-name="Fieldbook" product-version="${version}" file-version="${version}">
+        <authenticode-sign />
+      </pe-file>
+    </zip-file>
+  </zip-file>
+</artifact-configuration>

@@ -217,9 +217,10 @@ const ErsteHilfe = (() => {
       el("h3", {}, "1. Verstehen"),
       ...t.verstehen.map(s => el("p", {}, zeilen(s))),
       el("h3", {}, "2. Schritt für Schritt"),
-      t.bilder ? bilderReihe(t.bilder) : null,
+      ...bilderReihen(t.bilder),
       el("ol", { class: "eh-schritte" }, ...t.schritte.map(s => el("li", {}, zeilen(s)))),
-      t.kinder ? el("div", { class: "eh-kinder" }, el("b", {}, sym("baby"), " Bei Kindern: "), el("span", {}, zeilen(t.kinder))) : null,
+      t.kinder ? el("div", { class: "eh-kinder" }, el("b", {}, sym("baby"), " Bei Kindern: "), el("span", {}, zeilen(t.kinder)),
+        ...bilderReihen(t.kinderBilder)) : null,
       el("h3", {}, "3. Jetzt üben"),
       el("p", { class: "hinweis" }, "Am besten mit einer zweiten Person. Hake ab, was du geübt hast."),
       uebungen,
@@ -234,13 +235,21 @@ const ErsteHilfe = (() => {
     return d;
   }
 
-  // Schritt-Bilder (je Schritt eine Datei, {n} = Nummer), darunter die Quelle
+  // „bilder“ bzw. „kinderBilder“ ist eine Bildreihe oder eine Liste davon
+  function bilderReihen(b) {
+    if (!b) return [];
+    return (Array.isArray(b) ? b : [b]).map(bilderReihe);
+  }
+
+  // Schritt-Bilder (je Schritt eine Datei, {n} = Nummer, oder eine Liste „dateien“), darunter die Quelle
+  // Bei nur ein oder zwei Bildern werden sie größer gezeigt, ein Einzelbild hat keine Nummer.
   function bilderReihe(b) {
-    return el("div", { class: "eh-bilder" },
+    const anzahl = b.schritte.length;
+    return el("div", { class: "eh-bilder" + (anzahl <= 2 ? " eh-bilder-gross" : "") },
       b.titel ? el("b", {}, b.titel) : null,
       el("div", { class: "eh-bilder-reihe" }, ...b.schritte.map((text, i) => el("figure", {},
-        el("div", { class: "eh-bild-flaeche" }, el("img", { src: b.datei.replace("{n}", i + 1), alt: text })),
-        el("figcaption", {}, el("b", {}, (i + 1) + ". "), text)))),
+        el("div", { class: "eh-bild-flaeche" }, el("img", { src: b.dateien ? b.dateien[i] : b.datei.replace("{n}", i + 1), alt: text })),
+        el("figcaption", {}, anzahl > 1 ? el("b", {}, (i + 1) + ". ") : null, zeilen(text))))),
       b.quelle ? el("small", { class: "hinweis" }, b.quelle) : null);
   }
 

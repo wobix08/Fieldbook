@@ -29,7 +29,7 @@ function el(tag, attrs, ...kinder) {
 
 // Text aus den Konfigurationsdateien mit jedem Satz in eigener Zeile: el("p", {}, zeilen(text)).
 // Abkürzungen wie „z. B.“ und Zahlen wie „6. November“ trennen nicht. {notruf} wird ersetzt.
-const KEIN_SATZENDE = /(?:(?:^|\s)[a-zäöü]|\b(?:ca|bzw|evtl|ggf|usw|etc|inkl|nr|min|std|tel|bspw|vgl)|\d)\.$/i;
+const KEIN_SATZENDE = /(?:(?:^|[\s(„"])[a-zäöü]|\b(?:ca|bzw|evtl|ggf|usw|etc|inkl|nr|min|std|tel|bspw|vgl)|\d)\.$/i;
 function zeilen(text) {
   const t = typeof Land !== "undefined" ? Land.einsetzen(text) : String(text);
   const teile = [];
@@ -565,9 +565,17 @@ function statistikBitte(wahl) {
     el("input", { type: "checkbox", checked: !!wahl[feld], onchange: (e) => { wahl[feld] = e.target.checked; } }),
     el("span", {}, el("b", {}, titel), el("small", {}, text)));
   return el("div", { class: "stat-bitte" },
-    el("p", {}, "Ich mag es selbst nicht, wenn Programme ungefragt Nutzungsdaten sammeln, und schalte das bei anderen Programmen meist aus. Deshalb ist hier alles aus, solange du nichts anhakst."),
-    el("p", {}, "Trotzdem bitte ich dich, die beiden Haken zu setzen. Fieldbook läuft auf sehr unterschiedlichen Geräten. Ohne diese Angaben erfahre ich kaum, wo Fehler auftreten, was zu langsam ist und welche Bereiche tatsächlich genutzt werden. Mit ihnen kann ich Fieldbook gezielt verbessern."),
-    el("p", { class: "hinweis klein" }, "Inhalte werden nie gesendet: Deine Fragen, Chats, Suchbegriffe und Einträge bleiben auf deinem Gerät. Einmal pro Woche wird ein kleines Paket gesendet, nie über einen Handy-Hotspot. Was genau darin steht, siehst du jederzeit in den Einstellungen. Dort kannst du beides auch wieder abschalten."),
+    el("p", {}, "Ich mag es selbst nicht, wenn Programme ungefragt Nutzungsdaten sammeln, und schalte das bei anderen Programmen meist aus.", el("br"),
+      "Deshalb ist hier alles aus, solange du nichts anhakst."),
+    el("p", {}, "Trotzdem bitte ich dich, die beiden Haken zu setzen.", el("br"),
+      "Fieldbook läuft auf sehr unterschiedlichen Geräten.", el("br"),
+      "Ohne diese Angaben erfahre ich kaum, wo Fehler auftreten, was zu langsam ist und welche Bereiche tatsächlich genutzt werden.", el("br"),
+      "Mit ihnen kann ich Fieldbook gezielt verbessern."),
+    el("p", { class: "hinweis klein" }, "Inhalte werden nie gesendet: Deine Fragen, Chats, Suchbegriffe und Einträge bleiben auf deinem Gerät.", el("br"),
+      "Einmal pro Woche wird ein kleines Paket gesendet, nie über einen Handy-Hotspot.", el("br"),
+      "Was genau darin steht, siehst du jederzeit in den Einstellungen.", el("br"),
+      "Dort kannst du beides auch wieder abschalten.", el("br"),
+      "Alles Weitere steht in der ", el("a", { href: "https://github.com/wobix08/Fieldbook#datenschutz", target: "_blank", rel: "noopener" }, "Datenschutzerklärung"), "."),
     haken("fehler", "Fehlerberichte und Technik", "Fehler, die in Fieldbook auftreten, dein Gerät (Prozessor, Arbeitsspeicher, Grafik) und wie schnell die KI antwortet"),
     haken("nutzung", "Nutzungsstatistik", "Wie oft du die einzelnen Bereiche öffnest, welche Pakete und Karten installiert sind und dein Land"));
 }

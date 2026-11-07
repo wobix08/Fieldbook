@@ -60,7 +60,7 @@
           { "text": "Warm halten: alle in einem Raum, Türen schließen, Fenster nachts mit Decken oder Pappe abdichten, mehrere Schichten Kleidung, Mütze auch drinnen.", "mehr": "Auch Gas- und Ölheizungen brauchen Strom. Eine Wohnung kühlt in 2 bis 3 Tagen deutlich aus.", "verweis": { "text": "Erste Hilfe: Kälte und Hitze", "link": "#erstehilfe?l=temperatur" } },
           { "text": "Kommt kein Wasser mehr, die Toilette nicht mehr spülen und ein Notklo einrichten.", "lage": "wasser" },
           { "text": "Nach Nachbarn sehen, vor allem nach Älteren und Alleinlebenden.", "mehr": "Gemeinsam ist es leichter: ein warmer Raum, ein Kocher, Vorräte teilen." },
-          { "text": "Die Anlaufstelle der Gemeinde suchen (Feuerwehrhaus, Rathaus, Aushänge).", "mehr": "Dort kann man Notrufe absetzen und erfährt Neues. Sie ist oft erst ab dem zweiten Tag besetzt und bietet meist kein Essen und keinen Schlafplatz.", "verweis": { "text": "Erste Hilfe: Wenn keine Hilfe kommt", "link": "#erstehilfe?l=keinehilfe" } },
+          { "text": "Die Anlaufstelle der Gemeinde suchen (Feuerwehrhaus, Rathaus, Aushänge).", "mehr": "Dort kann man Notrufe absetzen und erfährt Neues. Sie ist oft erst nach einigen Stunden besetzt und bietet meist kein Essen und keinen Schlafplatz.", "verweis": { "text": "Erste Hilfe: Wenn keine Hilfe kommt", "link": "#erstehilfe?l=keinehilfe" } },
           { "text": "Für Kinder: Bücher, Spiele, Papier und Stifte.", "mehr": "Ohne Strom dauert vieles länger, und die Tage werden lang." },
           { "text": "Fieldbook im Sparmodus nutzen (KI ausschalten) und den Laptop im Auto oder an einer Powerbank laden." }
         ] }
@@ -226,7 +226,7 @@
           "punkte": [
             { "id": "vierzehn", "text": "Vorrat für 14 Tage statt 10", "mehr": "Der Rechner oben zeigt die Mengen für 10 Tage, für 14 Tage braucht ihr rund 40 Prozent mehr.", "verweis": { "text": "Zum Vorratsrechner", "link": "#vorsorge?k=essen&z=rechner" } },
             { "id": "kocher", "text": "Campingkocher mit passenden Kartuschen", "mehr": "Kartuschen passend zum Kocher kaufen und den Kocher einmal ausprobieren. Nach Herstellerangabe benutzen, meist nur draußen oder bei weit offenem Fenster.", "alt": ["vorraete/kocher", "stromausfall/kocher"], "verweis": { "text": "Kochen: Kochen ohne Strom", "link": "#kochen" } },
-            { "id": "probe", "frei": true, "text": "Einmal einen Tag nur aus dem Vorrat kochen, ohne Kühlschrank", "mehr": "So merkt man, was fehlt: Würze, Fett, Brennstoff oder Dinge, die keiner mag." },
+            { "id": "probe", "frei": true, "text": "Einmal einen Tag nur aus dem Vorrat kochen, ohne Kühlschrank", "mehr": "So merkt man, was fehlt: Würze, Fett, Brennstoff oder Dinge, die keiner mag.", "verweis": { "text": "Kochen: Rezepte aus dem Vorrat", "link": "#kochen?l=rezepte" } },
             { "id": "probieren", "frei": true, "text": "Neue Konserven erst einzeln probieren, bevor ihr mehr davon kauft" }
           ]
         },
@@ -243,7 +243,8 @@
         }
       ],
       "verweise": [
-        { "text": "Kochen: Rezepte aus dem Vorrat, Haltbarkeit, Trinkwasser", "link": "#kochen", "icon": "cooking-pot" }
+        { "text": "Kochen: Rezepte aus dem Vorrat", "link": "#kochen?l=rezepte", "icon": "cooking-pot" },
+        { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit", "icon": "cooking-pot" }
       ],
       "artikel": ["Notvorrat", "Mindesthaltbarkeitsdatum", "Konserve"]
     },
@@ -359,6 +360,7 @@
           ],
           "punkte": [
             { "id": "waermeecke", "text": "Eine Wärme-Ecke für den Winter", "mehr": "Decken, Mützen, Wärmflasche und Rettungsdecken zusammen an einem Ort.", "verweis": { "text": "Erste Hilfe: Kälte und Hitze", "link": "#erstehilfe?l=temperatur" } },
+            { "id": "comelder", "text": "Kohlenmonoxid-Melder (CO-Melder)", "mehr": "Für alle mit Gastherme, Kaminofen oder Gasherd. Er warnt vor dem giftigen Gas, das man weder riecht noch sieht. Ein Rauchmelder erkennt es nicht." },
             { "id": "rettungsdecke", "kiste": true, "text": "Rettungsdecken", "alt": ["aufbewahren/k-rettungsdecke"] },
             { "id": "notlicht", "text": "Akku-Notlichter für Flur und Treppe", "mehr": "Sie stecken in der Steckdose und gehen bei Stromausfall von selbst an." },
             { "id": "kerzen", "kiste": true, "text": "Kerzen oder Teelichter als Reserve", "mehr": "Nur in feuerfesten Haltern und nie unbeaufsichtigt. Fürs Licht sind Lampen sicherer.", "alt": ["stromausfall/kerzen"] }
@@ -390,12 +392,13 @@
           ],
           "punkte": [
             { "id": "nummern", "frei": true, "kiste": true, "text": "Wichtige Telefonnummern und Adressen auf Papier", "alt": ["stromausfall/nummern", "aufbewahren/k-nummern", "dokumente/nummernliste"] },
+            { "id": "treffpunkt", "frei": true, "text": "Einen Treffpunkt ausmachen, falls das Handynetz ausfällt", "mehr": "Wenn alle unterwegs sind und niemand anrufen kann, weiß jeder, wo man sich trifft, z. B. zu Hause oder bei Verwandten in der Nähe. Für Kinder auch mit der Schule oder Kita klären, wer sie abholt." },
             { "id": "radio", "frei": true, "text": "Wissen, wo man ohne Strom Radio hören kann", "mehr": "Im Auto, bei Nachbarn oder mit einem Batterieradio. Viele neue Handys haben kein UKW-Radio mehr, am eigenen Handy also vorher ausprobieren.", "alt": ["stromausfall/radio"] },
             { "id": "batterieradio", "kiste": true, "text": "Kleines Radio mit Batterien", "mehr": "Am besten mit denselben Batterien wie die Taschenlampe. Kurbelradios liefern für viel Kurbeln nur kurz Strom.", "alt": ["stromausfall/kurbelradio", "aufbewahren/k-radio"] },
             { "id": "sos", "frei": true, "text": "Die Notruf-Funktion am Handy einrichten", "mehr": "In den Einstellungen nach „SOS“ suchen. Viele Handys rufen dann nach mehrmaligem Drücken der Seitentaste den Notruf oder schicken den Standort an Vertraute." },
             { "id": "notfallpass", "frei": true, "text": "Den Notfallpass im Handy ausfüllen", "mehr": "Vorerkrankungen, Medikamente und Notfallkontakte. Rettungskräfte sehen ihn auch bei gesperrtem Handy." },
             { "id": "warnapp", "frei": true, "text": "Eine Warn-App einrichten", "mehr": "Deutschland: NINA, Österreich: KATWARN, Schweiz: Alertswiss. In den Handy-Einstellungen außerdem die Notfallwarnungen eingeschaltet lassen." },
-            { "id": "anlaufstelle", "frei": true, "text": "Wissen, wo die Anlaufstelle der Gemeinde für Notfälle ist", "mehr": "Die Adresse aufschreiben. Dort kann man Notrufe absetzen und erfährt Neues.", "alt": ["stromausfall/anlaufstelle"] }
+            { "id": "anlaufstelle", "frei": true, "text": "Die nächste Notfall-Anlaufstelle heraussuchen und die Adresse aufschreiben", "mehr": "Viele Städte und Gemeinden richten bei einem Stromausfall Stellen ein, an denen man Notrufe absetzen kann und Neues erfährt, oft im Feuerwehrhaus. Sie heißen je nach Ort anders, z. B. Notfalltreffpunkt, Katastrophenschutz-Leuchtturm, Notfall-Infopunkt oder Notrufmeldestelle. Wo sie sind, gibt nur die eigene Gemeinde bekannt: auf ihrer Internetseite, mit einem Flyer oder am Telefon. Den Flyer aufheben, er hilft auch ohne Strom.", "alt": ["stromausfall/anlaufstelle"] }
           ]
         },
         {

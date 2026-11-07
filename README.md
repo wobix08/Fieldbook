@@ -1,41 +1,38 @@
 # Fieldbook
 
 **Wissen, wo kein Netz ist**\
-Wikipedia, KI-Assistent, Karten, Kochen und Erste Hilfe auf dem Laptop, komplett ohne Internet.
+Wikipedia, KI-Assistent, Karten, Übersetzer, Kochen, Erste Hilfe und Vorsorge auf dem Laptop, komplett ohne Internet.
 
 Fieldbook ist ein portables Windows-Programm für Stromausfall, Reisen ohne Netz oder einfach für unterwegs.\
 Es braucht kein Linux, kein Docker und keine Installation: Ordner entpacken, Doppelklick, fertig.\
 Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und [Internet-in-a-Box](https://internet-in-a-box.org/).
 
+> [!NOTE]
+> Fieldbook läuft nur unter **Windows 10 und 11**.\
+> Für macOS, Linux, iPhone, iPad und Android gibt es keine Version.
+
+### **[Fieldbook 0.7.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.2/Fieldbook-0.7.2.zip)**
+
+Kostenlos, ohne Konto und ohne Werbung.\
+Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
+
+![Fieldbook beantwortet eine Frage zu Unterkühlung mit nummerierten Quellen aus der Offline-Bibliothek](.github/screenshots/fragen.png)
+
 ## Inhalt
 
-- [Warum Fieldbook?](#warum-fieldbook)
 - [Was drin ist](#was-drin-ist)
-- [Schnellstart](#schnellstart)
-- [Ist das sicher?](#ist-das-sicher)
 - [Systemanforderungen](#systemanforderungen)
+- [Schnellstart](#schnellstart)
+- [Warum Fieldbook?](#warum-fieldbook)
+- [Ist das sicher?](#ist-das-sicher)
 - [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
 - [Welche KI nutzt Fieldbook?](#welche-ki-nutzt-fieldbook)
 - [So funktioniert die Frage-Antwort-Funktion](#so-funktioniert-die-frage-antwort-funktion)
-- [Aufbau](#aufbau)
-- [Entwicklung](#entwicklung)
 - [Automatische Aktualisierung (optional)](#automatische-aktualisierung-optional)
 - [Programm-Updates (Fieldbook selbst)](#programm-updates-fieldbook-selbst)
-- [Länder und Sprachen](#länder-und-sprachen)
 - [Datenschutz](#datenschutz)
+- [Für Entwickler](#für-entwickler)
 - [Lizenz](#lizenz)
-
-## Warum Fieldbook?
-
-Project NOMAD hat mich sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf einem Gerät und ohne Internet.\
-Dafür braucht man aber ein eigenes Linux-System oder eine virtuelle Maschine, und darauf hatte ich keine Lust.\
-Ich wollte dieselbe Idee auf einem ganz normalen Windows-Laptop haben: entpacken, doppelklicken, fertig.
-
-Außerdem soll so eine Wissenssammlung nicht nur etwas für Technikbegeisterte sein.\
-Jeder, der einen Laptop hat, soll sie nutzen können, ob im Stromausfall, auf Reisen oder in einer einsamen Hütte im Wald.
-
-Fieldbook habe ich mit Hilfe der KI Claude entwickelt.\
-Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 
 ## Was drin ist
 
@@ -43,16 +40,28 @@ Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
 |---|---|---|
 | <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
 | <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, alles im Fieldbook-Design (hell oder dunkel), mit Übersetzer ins Deutsche |
-| <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, und Faustregeln zu Trinkwasser, Haltbarkeit und Einkochen |
+| <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und Einkochen |
 | <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
 | <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
 | <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Vorbereiten in drei Stufen (Vorräte, Hausapotheke, Licht, Dokumente …) und was zu tun ist, wenn Strom oder Wasser weg sind |
 
+| Karten | Übersetzer | Erste Hilfe |
+|---|---|---|
+| [![Offline-Karte von Freiburg mit allen Apotheken in der Nähe](.github/screenshots/karten.png)](.github/screenshots/karten.png) | [![Übersetzer mit einem Gespräch auf Deutsch und Schwedisch](.github/screenshots/uebersetzer.png)](.github/screenshots/uebersetzer.png) | [![Erste-Hilfe-Seite mit Notrufnummern, Spickzetteln und dem Kurs](.github/screenshots/erste-hilfe.png)](.github/screenshots/erste-hilfe.png) |
+
 > [!WARNING]
 > Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
 > KI-Antworten können Fehler enthalten.\
 > Bei wichtigen Entscheidungen immer die Quellen lesen.
+
+## Systemanforderungen
+
+- Windows 10 oder 11 (64 Bit), andere Betriebssysteme werden nicht unterstützt
+- Mindestens 4 GB Arbeitsspeicher, für die KI 8 GB oder mehr
+- Speicherplatz je nach Auswahl: etwa 20 GB („Das Wichtigste“ bei wenig Platz, mit KI) bis über 100 GB (alles)
+- Internet nur für die Einrichtung
+- Oberfläche auf Deutsch, Notrufnummern für Deutschland, Österreich und die Schweiz
 
 ## Schnellstart
 
@@ -70,6 +79,22 @@ Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [GUIDE.md](GUIDE.
 > Das ist nur einmal nötig.\
 > Warum das harmlos ist, steht unter [Ist das sicher?](#ist-das-sicher).
 
+## Warum Fieldbook?
+
+Ich bin gerne gut vorbereitet, ob auf einen Stromausfall, eine Reise ohne Netz oder eine Frage, auf die gerade niemand eine Antwort hat.
+
+Als Technikbegeisterter finde ich außerdem die Idee dahinter einfach großartig: einen gut ausgewählten Teil des Internets, also Wissen, Anleitungen und Karten, auf ein einziges Gerät zu packen, das auch ohne Netz funktioniert.\
+Deshalb hat mich Project NOMAD sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf einem Gerät und ohne Internet.\
+Ein richtig gutes Projekt.\
+Dafür braucht man aber ein eigenes Linux-System oder eine virtuelle Maschine, und darauf hatte ich keine Lust.\
+Ich wollte dieselbe Idee auf einem ganz normalen Windows-Laptop haben: entpacken, doppelklicken, fertig.
+
+Außerdem soll so eine Wissenssammlung nicht nur etwas für Technikbegeisterte sein.\
+Jeder, der einen Windows-Laptop hat, soll sie nutzen können, ob im Stromausfall, auf Reisen oder in einer einsamen Hütte im Wald.
+
+Fieldbook habe ich mit Hilfe der KI Claude entwickelt.\
+Ideen, Auswahl der Inhalte und alle Entscheidungen stammen von mir.
+
 ## Ist das sicher?
 
 Ein unbekanntes Programm aus dem Internet zu starten, erfordert Vertrauen.\
@@ -81,30 +106,20 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Sie macht nur eines: `app\Start.bat` starten.
 - **Ohne .exe starten**\
   Wer keine .exe starten möchte, kann stattdessen `app\Start.bat` doppelklicken.\
-  Das ist eine lesbare Textdatei, genau wie der restliche Programmcode in `app\`.
+  Das ist eine lesbare Textdatei, genau wie der restliche Programmcode in `app\`.\
+  Das hilft auch, wenn ein Virenschutz die .exe blockiert (mehr dazu unter [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)).
 - **Keine Installation, keine Administratorrechte**\
   Fieldbook verändert nichts an Windows und schreibt nur in seinen eigenen Ordner.\
   Zum Entfernen genügt es, den Ordner zu löschen.\
+  Hast du die automatische Aktualisierung eingeschaltet, schalte sie vorher in den Einstellungen aus.\
   Einzige Ausnahme: Die *optionale* automatische Aktualisierung legt zwei Aufgaben in der Windows-Aufgabenplanung an.\
   Ausschalten in den Einstellungen entfernt sie wieder.
 - **Deine Daten bleiben bei dir**\
   Kein Konto, keine Werbung.\
   Alles läuft auf `localhost`, also nur auf deinem Gerät.\
   Fragen an die KI, Chats und alles, was du in Fieldbook einträgst, verlassen dein Gerät nicht.\
-  Fehlerberichte und Nutzungsstatistik verschickt Fieldbook nur, wenn du ausdrücklich zustimmst, und du kannst das jederzeit wieder abschalten.\
-  Fieldbook fragt einmal danach, beide Haken sind am Anfang aus.\
-  Ganz ehrlich: Ich kann jeden verstehen, der das ausgeschaltet lässt, bei anderen Programmen mache ich es genauso.\
-  Über jedes Ja würde ich mich trotzdem sehr freuen.\
-  Fieldbook läuft auf ganz unterschiedlicher Hardware, und ohne solche Rückmeldungen bekomme ich kaum mit, wo es hakt oder zu langsam ist.
-- **Rückmeldungen nur, wenn du sie abschickst**\
-  Unter *Einstellungen → Rückmeldung geben* kannst du mir selbst schreiben, was gut läuft und was nicht.\
-  Die Nachricht geht erst raus, wenn du auf *Absenden* klickst.\
-  Sie läuft über einen kleinen Dienst bei Cloudflare (`fieldbook-feedback.wobix08.workers.dev`, Quellcode in [`tools/feedback-worker.js`](tools/feedback-worker.js)) und landet in einem privaten GitHub-Repository, das nur ich sehe.\
-  Mit geht nur, was im Formular unter *Was wird mitgeschickt?* steht.\
-  Logdateien schickt Fieldbook nur mit, wenn du den Haken dafür setzt, und macht darin deinen Benutzernamen und deine Ordnerpfade unkenntlich.\
-  Gegen Missbrauch nimmt der Dienst je Absender nur wenige Rückmeldungen pro Stunde an.\
-  Dafür merkt er sich eine Stunde lang einen unumkehrbaren Kurzwert, deine IP-Adresse selbst speichert er nicht.\
-  Alles Weitere steht unter [Datenschutz](#datenschutz).
+  Rückmeldungen, Fehlerberichte und Nutzungsstatistik verschickt Fieldbook nur, wenn du das ausdrücklich willst.\
+  Was genau wann übertragen wird, steht unter [Datenschutz](#datenschutz).
 - **Downloads nur aus offiziellen Quellen**\
   Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien:
 
@@ -132,18 +147,24 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Wer möchte, lädt die ZIP bei [VirusTotal](https://www.virustotal.com) hoch.\
   Dort prüfen rund 70 Virenscanner gleichzeitig.
 
-## Systemanforderungen
-
-- Windows 10 oder 11 (64 Bit)
-- Mindestens 4 GB Arbeitsspeicher, für die KI 8 GB oder mehr
-- Speicherplatz je nach Auswahl: etwa 20 GB („Das Wichtigste“ bei wenig Platz, mit KI) bis über 100 GB (alles)
-- Internet nur für die Einrichtung
-
 ## Downloads in Firmen- und Schulnetzen
 
 Fieldbook braucht Internet nur zum Herunterladen.\
-Sperren ein Werbeblocker (z. B. Pi-hole, AdGuard), eine Firewall oder ein Jugendschutzfilter einzelne Adressen, schlagen Downloads fehl.
+Sperren ein Werbeblocker (z. B. Pi-hole, AdGuard), eine Firewall oder ein Jugendschutzfilter einzelne Adressen, schlagen Downloads fehl.\
+In Firmen blockieren außerdem oft die HTTPS-Prüfung der Firewall oder der Virenschutz.\
+Das kann nur die IT freigeben.
 
+- **HTTPS-Prüfung (SSL-Inspection)**\
+  Viele Firmen-Firewalls entschlüsseln verschlüsselte Verbindungen, um sie zu prüfen.\
+  Dabei werden die großen Downloads von Fieldbook oft abgebrochen oder gesperrt.\
+  Dann muss die IT die Adressen aus der Tabelle unten von der HTTPS-Prüfung ausnehmen.
+- **Virenschutz und Endpoint-Schutz**\
+  Fieldbook ist ein kleines, neues Programm und steht deshalb in keiner Liste bekannter, vertrauenswürdiger Programme.\
+  Firmen-Virenschutz blockiert solche unbekannten Programme oft vorsorglich, auch wenn nichts Schädliches darin ist.\
+  Wird `Fieldbook.exe` blockiert, lässt sich Fieldbook stattdessen mit `app\Start.bat` starten.\
+  Strenge Schutzprogramme blockieren aber manchmal auch das, weil Fieldbook beim Start ein PowerShell-Skript ausführt und Hilfsprogramme startet.\
+  Dann muss die IT den Fieldbook-Ordner freigeben.\
+  Prüfen kann sie vorher alles selbst: Der komplette Quellcode liegt in diesem Repository, und zu jedem Release gibt es eine Prüfsumme (siehe [Ist das sicher?](#ist-das-sicher)).
 - **Verbindung prüfen**\
   Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
   Derselbe Knopf erscheint, wenn ein Download scheitert.
@@ -202,54 +223,6 @@ Eingescannte Bücher ohne Text bleiben dabei außen vor.\
 Im **Sparmodus** ist die KI aus.\
 Dann zeigt der Bereich „Fragen“ die passenden Artikel direkt an.
 
-## Aufbau
-
-```
-Fieldbook.exe           Startdatei (sucht app\Start.bat neben sich)
-app\
-  Start.bat, start.ps1        Starter (PowerShell, in Windows enthalten)
-  Server.cs                   Kleiner lokaler Server, wird beim Start kompiliert
-  config\                     Modelle, Wissenspakete, Karten, Kochen, Erste Hilfe (JSON)
-  web\                        Dashboard (HTML, CSS, JavaScript, MapLibre)
-programme\                    Wird vom Setup gefüllt: kiwix-serve, llama-server, pmtiles
-daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.gguf, karten\*.pmtiles
-```
-
-Alles läuft auf `localhost`.\
-Deine Fragen, Chats und Einträge bleiben auf deinem Gerät.\
-Nach der Einrichtung geht Fieldbook nur noch in vier Fällen ins Internet:
-- **Beim Start** fragt es kurz bei GitHub nach, ob es eine neue Version gibt.\
-  Heruntergeladen wird sie erst, wenn du dies bestätigst.\
-  Auch diese Anfrage kannst du in den Einstellungen abschalten.
-- **Neue Inhalte** lädt es, wenn du sie auf der Seite *Inhalte* auswählst.
-- **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
-  Dann prüft Fieldbook einmal pro Woche, ob es neue Inhalte gibt (auf Wunsch auch eine neue Fieldbook-Version), und fragt vorher oder lädt sie selbst, je nach Einstellung.\
-  Mehr dazu unter [Automatische Aktualisierung](#automatische-aktualisierung-optional).
-- **Links ins Internet** in einem Artikel: Fieldbook fragt die Adresse kurz an.\
-  Mit Internet zeigt Fieldbook erst das Ziel und öffnet es auf Knopfdruck in einem neuen Tab.\
-  Ohne Internet erscheint ein kurzer Hinweis.
-
-Verwendete Bausteine:
-- [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
-- [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`) für die KI
-- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) mit Parakeet (NVIDIA) und Whisper (OpenAI) für die Spracheingabe
-- [Piper](https://github.com/rhasspy/piper) mit freien Stimmen zum Vorlesen im Übersetzer
-- [Protomaps / PMTiles](https://protomaps.com) und [MapLibre](https://maplibre.org) für die Karten
-- [pdf.js](https://mozilla.github.io/pdf.js/) für den PDF-Leser und den Text aus PDF-Büchern
-- [GeoNames](https://www.geonames.org) für die Ortssuche
-
-## Entwicklung
-
-Der Code braucht keinen Build-Schritt.\
-Zum Testen `app\Start.bat` starten.
-
-- Startdatei mit Symbol neu bauen: `powershell -ExecutionPolicy Bypass -File tools\starter-bauen.ps1`
-- Release-ZIP bauen: `powershell -ExecutionPolicy Bypass -File tools\release-bauen.ps1 -Version 0.1.0`
-- Rückmeldungen: `tools/feedback-worker.js` läuft als Cloudflare Worker, die Adresse steht unter `feedback` in `app/config/fieldbook.json` (leer = Formular aus)
-- Neue Wissenspakete: Eintrag in `app/config/pakete.json` mit `name` und `flavour` wie im [Kiwix-Katalog](https://library.kiwix.org)
-- Eigene ZIM-Dateien kann man einfach in `daten\wissen` legen.\
-  Sie werden automatisch eingebunden.
-
 ## Automatische Aktualisierung (optional)
 
 Hält die Inhalte aktuell (Wissenspakete, Karten, Wegedaten).\
@@ -282,41 +255,34 @@ Ist sie eingeschaltet, kann sie auch neue Fieldbook-Versionen mitladen: Schalter
 Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch herunterladen“ lädt es die neue Version selbst und spielt sie beim nächsten Start ein.\
 Schaltest du das Mitladen aus, aktualisiert die Automatik nur noch Inhalte.
 
-**So läuft ein Update ab**\
-Fieldbook sucht in den GitHub-Releases nach den Dateien `Fieldbook-<version>.zip` und `Fieldbook-<version>.zip.sha256` (beide erzeugt `tools\release-bauen.ps1`).
-
-1. Herunterladen und Prüfsumme kontrollieren, dann unter `daten\cache\update\bereit` ablegen.
-2. Fieldbook startet neu.\
-   `app\start.ps1` sichert den bisherigen Programmteil nach `daten\cache\update\sicherung` und spielt die neue Version ein, **bevor** der Server geladen wird.
-3. Lässt sich die neue Version nicht laden, wird automatisch die Sicherung wiederhergestellt.
-
-Der Ordner `daten` wird dabei nie verändert.\
-Im Git-Entwicklungsordner sind Programm-Updates gesperrt.\
-Das Repository steht in [`app/config/fieldbook.json`](app/config/fieldbook.json) (`"github": "wobix08/Fieldbook"`).
-
-## Länder und Sprachen
-
-Vorerst ist Fieldbook auf Deutsch und für Deutschland, Österreich und die Schweiz eingerichtet.\
-Für andere Länder ist es vorbereitet:
-
-- Das Land wird aus der Windows-Regionseinstellung erkannt und lässt sich im Assistenten und in den Einstellungen ändern.
-- Notrufnummern und die vorgeschlagene Karte kommen aus [`app/config/laender.json`](app/config/laender.json).\
-  Ein neues Land braucht nur einen Eintrag dort (`"aktiv": true`).\
-  In den Erste-Hilfe-Texten steht `{notruf}`, das durch die Nummer des Landes ersetzt wird.
-- Sprachen: Deutsch und Englisch.\
-  Die Antwortsprache der KI folgt der Sprache des Landes.\
-  Die Oberfläche selbst ist noch nicht übersetzt.
+**Sicher bei Problemen**\
+Vor jedem Update sichert Fieldbook den bisherigen Programmteil.\
+Lässt sich die neue Version nicht starten, kommt automatisch die alte zurück.\
+Deine Inhalte im Ordner `daten` bleiben dabei immer unverändert.
 
 ## Datenschutz
 
 Fieldbook läuft auf deinem Gerät.\
 Fragen an die KI, Chats und alles, was du in Fieldbook einträgst, bleiben dort und werden nie übertragen.\
-Aufnahmen der Spracheingabe werden auf deinem Gerät erkannt und gleich danach gelöscht.\
-Ins Internet geht Fieldbook nur für Downloads, für die Frage nach einer neuen Version, für Rückmeldungen, die du selbst abschickst, und für Fehlerberichte und Nutzungsstatistik, wenn du zugestimmt hast.\
-Klickst du in einem Artikel auf einen Link ins Internet, fragt Fieldbook diese Adresse kurz an, um zu sehen, ob es Internet gibt.\
-Ohne Internet erscheint dann ein kurzer Hinweis statt einer Fehlerseite.
+Aufnahmen der Spracheingabe werden auf deinem Gerät erkannt und gleich danach gelöscht.
+
+**Wann Fieldbook ins Internet geht**\
+Nach der Einrichtung nur in diesen Fällen:
+- **Beim Start** fragt es kurz bei GitHub nach, ob es eine neue Version gibt.\
+  Heruntergeladen wird sie erst, wenn du dies bestätigst.\
+  Auch diese Anfrage kannst du in den Einstellungen abschalten.
+- **Neue Inhalte** lädt es, wenn du sie auf der Seite *Inhalte* auswählst.
+- **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
+  Mehr dazu unter [Automatische Aktualisierung](#automatische-aktualisierung-optional).
+- **Links ins Internet** in einem Artikel: Fieldbook fragt die Adresse kurz an, um zu sehen, ob es Internet gibt.\
+  Mit Internet zeigt Fieldbook erst das Ziel und öffnet es auf Knopfdruck in einem neuen Tab.\
+  Ohne Internet erscheint ein kurzer Hinweis statt einer Fehlerseite.
+- **Rückmeldungen**, die du selbst abschickst.
+- **Fehlerberichte und Nutzungsstatistik**, aber nur, wenn du zugestimmt hast.
 
 **Rückmeldungen**\
+Unter *Einstellungen → Rückmeldung geben* kannst du mir selbst schreiben, was gut läuft und was nicht.\
+Die Nachricht geht erst raus, wenn du auf *Absenden* klickst.\
 Was übertragen wird, steht im Formular unter *Was wird mitgeschickt?*:\
 dein Text, auf Wunsch eine Kontaktadresse, die Fieldbook-Version, die Windows-Version, die Größe des Arbeitsspeichers, der Name der eingerichteten KI und, nur mit Haken, die Enden der Logdateien.\
 In den Logdateien macht Fieldbook deinen Benutzernamen und deine Ordnerpfade unkenntlich.\
@@ -324,6 +290,7 @@ Schreib bitte nichts in den Text, was du nicht teilen möchtest.
 
 **Fehlerberichte und Nutzungsstatistik**\
 Beides ist aus, bis du es einschaltest (bei der Einrichtung oder unter *Einstellungen → Fieldbook-Programm*), und lässt sich dort jederzeit wieder ausschalten.\
+Fieldbook fragt einmal danach, beide Haken sind am Anfang aus.\
 Solange es aus ist, sammelt Fieldbook auch nichts.\
 *Fehlerberichte* enthalten Fehler, die in Fieldbook auftreten (Benutzername und Ordnerpfade unkenntlich gemacht), dein Gerät (Prozessor, Kerne, Arbeitsspeicher, Grafik), die Windows-Version und wie schnell die KI lädt und antwortet.\
 Die *Nutzungsstatistik* enthält, wie oft du die einzelnen Bereiche öffnest, welche Wissenspakete und Karten installiert sind (selbst hinzugefügte Pakete nur als „eigenes Paket“) und dein Land.\
@@ -333,11 +300,16 @@ Das nächste Paket kannst du dir unter *Was wird gesendet?* genau ansehen.\
 Statt eines Namens trägt es eine zufällige Kennung, damit ein Gerät nicht doppelt gezählt wird; du kannst sie jederzeit neu würfeln.\
 Schaltest du beides aus, löscht Fieldbook alles bisher Gesammelte.
 
+Ganz ehrlich: Ich kann jeden verstehen, der das ausgeschaltet lässt, bei anderen Programmen mache ich es genauso.\
+Über jedes Ja würde ich mich trotzdem sehr freuen.\
+Fieldbook läuft auf ganz unterschiedlicher Hardware, und ohne solche Rückmeldungen bekomme ich kaum mit, wo es hakt oder zu langsam ist.
+
 **Wohin die Daten gehen**\
 Rückmeldungen und Wochenpakete laufen über einen kleinen Dienst bei Cloudflare (`fieldbook-feedback.wobix08.workers.dev`, Quellcode in [`tools/feedback-worker.js`](tools/feedback-worker.js)).\
 Cloudflare verarbeitet dabei wie jeder Internetdienst deine IP-Adresse, um die Anfrage zuzustellen ([Datenschutz bei Cloudflare](https://www.cloudflare.com/de-de/privacypolicy/)).\
 Der Dienst selbst speichert die IP-Adresse nicht.\
-Gegen Missbrauch zählt er nur einen unumkehrbaren Kurzwert, der nach spätestens einer Stunde von selbst gelöscht wird.\
+Gegen Missbrauch nimmt er je Absender nur wenige Rückmeldungen pro Stunde an.\
+Dafür zählt er nur einen unumkehrbaren Kurzwert, der nach spätestens einer Stunde von selbst gelöscht wird.\
 Die Rückmeldung landet als Eintrag in einem privaten GitHub-Repository, das nur der Entwickler sehen kann ([Datenschutz bei GitHub](https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement)).\
 Sie wird nicht veröffentlicht, nicht weitergegeben und nur genutzt, um Fieldbook zu verbessern und dir auf Wunsch zu antworten.\
 Die Wochenpakete landen in einer Datenbank bei Cloudflare (D1), die nur der Entwickler auswerten kann.\
@@ -350,6 +322,68 @@ Möchtest du, dass etwas früher gelöscht wird, schreib das in eine Rückmeldun
 
 **Ohne Zustimmung**\
 Schickst du keine Rückmeldung ab und lässt Fehlerberichte und Nutzungsstatistik aus, wird nichts übertragen.
+
+## Für Entwickler
+
+### Aufbau
+
+```
+Fieldbook.exe           Startdatei (sucht app\Start.bat neben sich)
+app\
+  Start.bat, start.ps1        Starter (PowerShell, in Windows enthalten)
+  Server.cs                   Kleiner lokaler Server, wird beim Start kompiliert
+  config\                     Modelle, Wissenspakete, Karten, Kochen, Erste Hilfe (JSON)
+  web\                        Dashboard (HTML, CSS, JavaScript, MapLibre)
+programme\                    Wird vom Setup gefüllt: kiwix-serve, llama-server, pmtiles
+daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.gguf, karten\*.pmtiles
+```
+
+Verwendete Bausteine:
+- [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
+- [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`) für die KI
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) mit Parakeet (NVIDIA) und Whisper (OpenAI) für die Spracheingabe
+- [Piper](https://github.com/rhasspy/piper) mit freien Stimmen zum Vorlesen im Übersetzer
+- [Protomaps / PMTiles](https://protomaps.com) und [MapLibre](https://maplibre.org) für die Karten
+- [pdf.js](https://mozilla.github.io/pdf.js/) für den PDF-Leser und den Text aus PDF-Büchern
+- [GeoNames](https://www.geonames.org) für die Ortssuche
+
+### Entwicklung
+
+Der Code braucht keinen Build-Schritt.\
+Zum Testen `app\Start.bat` starten.
+
+- Startdatei mit Symbol neu bauen: `powershell -ExecutionPolicy Bypass -File tools\starter-bauen.ps1`
+- Release-ZIP bauen: `powershell -ExecutionPolicy Bypass -File tools\release-bauen.ps1 -Version 0.1.0`
+- Rückmeldungen: `tools/feedback-worker.js` läuft als Cloudflare Worker, die Adresse steht unter `feedback` in `app/config/fieldbook.json` (leer = Formular aus)
+- Neue Wissenspakete: Eintrag in `app/config/pakete.json` mit `name` und `flavour` wie im [Kiwix-Katalog](https://library.kiwix.org)
+- Eigene ZIM-Dateien kann man einfach in `daten\wissen` legen.\
+  Sie werden automatisch eingebunden.
+
+### So läuft ein Programm-Update ab
+
+Fieldbook sucht in den GitHub-Releases nach den Dateien `Fieldbook-<version>.zip` und `Fieldbook-<version>.zip.sha256` (beide erzeugt `tools\release-bauen.ps1`).
+
+1. Herunterladen und Prüfsumme kontrollieren, dann unter `daten\cache\update\bereit` ablegen.
+2. Fieldbook startet neu.\
+   `app\start.ps1` sichert den bisherigen Programmteil nach `daten\cache\update\sicherung` und spielt die neue Version ein, **bevor** der Server geladen wird.
+3. Lässt sich die neue Version nicht laden, wird automatisch die Sicherung wiederhergestellt.
+
+Der Ordner `daten` wird dabei nie verändert.\
+Im Git-Entwicklungsordner sind Programm-Updates gesperrt.\
+Das Repository steht in [`app/config/fieldbook.json`](app/config/fieldbook.json) (`"github": "wobix08/Fieldbook"`).
+
+### Länder und Sprachen
+
+Vorerst ist Fieldbook auf Deutsch und für Deutschland, Österreich und die Schweiz eingerichtet.\
+Für andere Länder ist es vorbereitet:
+
+- Das Land wird aus der Windows-Regionseinstellung erkannt und lässt sich im Assistenten und in den Einstellungen ändern.
+- Notrufnummern und die vorgeschlagene Karte kommen aus [`app/config/laender.json`](app/config/laender.json).\
+  Ein neues Land braucht nur einen Eintrag dort (`"aktiv": true`).\
+  In den Erste-Hilfe-Texten steht `{notruf}`, das durch die Nummer des Landes ersetzt wird.
+- Sprachen: Deutsch und Englisch.\
+  Die Antwortsprache der KI folgt der Sprache des Landes.\
+  Die Oberfläche selbst ist noch nicht übersetzt.
 
 ## Lizenz
 

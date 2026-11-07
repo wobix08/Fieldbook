@@ -1,6 +1,7 @@
 ﻿# Baut "Fieldbook.exe" (mit Symbol) in den Hauptordner.
 # Nutzt nur, was in Windows schon steckt: .NET Framework mit dem C#-Compiler csc.exe.
-param([string]$Ziel = (Split-Path -Parent $PSScriptRoot))
+# -Version schreibt Produktname und Version in die Dateieigenschaften (für Signatur und Virenschutz wichtig).
+param([string]$Ziel = (Split-Path -Parent $PSScriptRoot), [string]$Version = '0.0.0')
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
@@ -54,6 +55,14 @@ $bw.Close()
 
 $csc = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
 $exe = Join-Path $Ziel 'Fieldbook.exe'
-& $csc /nologo /target:winexe /optimize+ "/win32icon:$ico" /reference:System.Windows.Forms.dll "/out:$exe" (Join-Path $PSScriptRoot 'Starter.cs')
-if ($LASTEXITCODE -ne 0) { throw "Kompilieren fehlgeschlagen" }
+if ($Version -notmatch '^\d+(\.\d+){1,3}$') { throw "Ungültige Version: $Version" }
+$versionCs = Join-Path ([IO.Path]::GetTempPath()) ("fieldbook-version-" + [guid]::NewGuid() + '.cs')
+Set-Content -Path $versionCs -Encoding UTF8 -Value @(
+    "[assembly: System.Reflection.AssemblyVersion(""$Version"")]",
+    "[assembly: System.Reflection.AssemblyFileVersion(""$Version"")]",
+    "[assembly: System.Reflection.AssemblyInformationalVersion(""$Version"")]")
+try {
+    & $csc /nologo /target:winexe /optimize+ "/win32icon:$ico" /reference:System.Windows.Forms.dll "/out:$exe" (Join-Path $PSScriptRoot 'Starter.cs') $versionCs
+    if ($LASTEXITCODE -ne 0) { throw "Kompilieren fehlgeschlagen" }
+} finally { Remove-Item $versionCs -ErrorAction SilentlyContinue }
 Write-Host "Erstellt: $exe"
