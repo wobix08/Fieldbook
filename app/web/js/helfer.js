@@ -57,7 +57,8 @@ function symFeld(name, klasse) {
 
 // Abschnitt, der beim Anklicken nach unten aufklappt (Inhalte und Einrichtung). „offen“ merkt sich die
 // aufgeklappten Schlüssel, damit sie beim Neuzeichnen offen bleiben. Gibt { box, innen } zurück.
-function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts) {
+// einzeln: nur ein Abschnitt in der Liste offen, beim Aufklappen gehen die anderen zu (wie in der Bibliothek).
+function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts, einzeln) {
   const auf = offen.has(schluessel);
   const knopf = el("button", { type: "button", class: "eintrag klapp-kopf", "aria-expanded": String(auf) },
     symFeld(icon, "gross"),
@@ -67,13 +68,36 @@ function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts) {
   const innen = el("div", { class: "klapp-abschnitt-innen" });
   const box = el("div", { class: "klapp klapp-kat klapp-abschnitt" + (auf ? " auf" : "") }, knopf,
     el("div", { class: "klapp-huelle" }, el("div", { class: "klapp-innen" }, innen)));
-  knopf.addEventListener("click", () => {
-    const jetzt = !box.classList.contains("auf");
+  const setzen = (jetzt) => {
     box.classList.toggle("auf", jetzt);
     knopf.setAttribute("aria-expanded", String(jetzt));
     if (jetzt) offen.add(schluessel); else offen.delete(schluessel);
+  };
+  box._setzen = setzen;
+  knopf.addEventListener("click", () => {
+    const jetzt = !box.classList.contains("auf");
+    if (jetzt && einzeln && box.parentElement) {
+      const vorher = knopf.getBoundingClientRect().top;
+      let zu = false;
+      for (const nachbar of box.parentElement.children) {
+        if (nachbar !== box && nachbar.classList.contains("auf") && nachbar._setzen) { nachbar._setzen(false); zu = true; }
+      }
+      if (zu) festhalten(knopf, vorher);
+    }
+    setzen(jetzt);
   });
   return { box, innen };
+}
+
+// Hält eine Zeile an ihrer Stelle im Fenster, während darüber etwas zuklappt (Bewegung dauert 0,25 s)
+function festhalten(knopf, top) {
+  const ende = performance.now() + 400;
+  const schritt = () => {
+    const diff = knopf.getBoundingClientRect().top - top;
+    if (Math.abs(diff) >= 1) window.scrollBy(0, diff);
+    if (performance.now() < ende) requestAnimationFrame(schritt);
+  };
+  requestAnimationFrame(schritt);
 }
 
 // Schiebeschalter mit mehreren Stellungen (Vorauswahl im Assistenten: Nichts · Empfohlen · Alles · Eigene).
@@ -593,16 +617,29 @@ async function statistikNachfragen(s) {
   aktualisiereStatus();
 }
 
+// Erste eigene Stelle aus dem Stack ("pdfleser.js:303"), nur Dateiname und Zeile, keine Adressen mit Inhalt
+function fehlerStelle(stack) {
+  const zeilen = String(stack || "").split("\n");
+  const eigene = zeilen.find(z => /\/js\/[^/]+\.js/.test(z)) || zeilen.find(z => /\.js[?:]/.test(z));
+  const m = eigene && eigene.match(/\/([^/?#\s]+\.js)(?:\?[^:\s]*)?:(\d+)/);
+  return m ? m[1] + ":" + m[2] : "";
+}
+
 window.addEventListener("error", (e) => {
-  // Nur Dateiname und Zeile, keine Adressen mit Inhalt
-  const datei = (e.filename || "").split("/").pop().split("?")[0];
-  Statistik.fehler((e.message || "Fehler") + (datei ? " (" + datei + ":" + e.lineno + ")" : ""));
+  // Harmlose Meldung des Browsers: Ein ResizeObserver hat das Layout geändert, der Rest kommt ein Bild später
+  if (/^ResizeObserver loop/.test(e.message || "")) return;
+  const stelle = fehlerStelle(e.error && e.error.stack) || ((e.filename || "").split("/").pop().split("?")[0] + (e.filename ? ":" + e.lineno : ""));
+  Statistik.fehler((e.message || "Fehler") + (stelle ? " (" + stelle + ")" : ""));
 });
 window.addEventListener("unhandledrejection", (e) => {
   const r = e.reason;
   // Abgebrochene Anfragen (z. B. KI-Antwort gestoppt) sind keine Fehler
   if (r && r.name === "AbortError") return;
-  Statistik.fehler("Unbehandelt: " + (r && r.message ? r.message : String(r)));
+  const stelle = fehlerStelle(r && r.stack);
+  // Bekannter Fehler im Übersetzer von Mozilla (translator.js): Starten zwei Übersetzer-Worker zugleich,
+  // findet der zweite keine Arbeit mehr und stolpert. Ohne Folgen, übersetzt wird trotzdem.
+  if (r && /reading 'requests'/.test(r.message || "") && /^translator\.js:/.test(stelle)) return;
+  Statistik.fehler("Unbehandelt: " + (r && r.message ? r.message : String(r)) + (stelle ? " (" + stelle + ")" : ""));
 });
 
 // ---------------------------------------------------------------- KI

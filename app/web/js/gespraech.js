@@ -153,7 +153,8 @@ const Gespraech = (() => {
     };
     if (kopfBeobachter) kopfBeobachter.disconnect();
     let breiteVorher = -1;
-    kopfBeobachter = new ResizeObserver(() => { if (c.clientWidth !== breiteVorher) { breiteVorher = c.clientWidth; einpassen(); } });
+    // Einpassen erst im nächsten Bild: Es ändert selbst das Layout, sonst meldet der Browser eine Schleife
+    kopfBeobachter = new ResizeObserver(() => { if (c.clientWidth !== breiteVorher) { breiteVorher = c.clientWidth; requestAnimationFrame(einpassen); } });
     kopfBeobachter.observe(c);
     einpassen();
 

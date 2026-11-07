@@ -232,6 +232,8 @@ const Einstellungen = (() => {
         "Fragen, Chats, Suchbegriffe und Einträge gehen nie mit.",
         ...(st.gesendet ? [el("br"), "Zuletzt gesendet: " + new Date(st.gesendet).toLocaleDateString("de-DE") + "."] : []));
       teil.append(el("div", { style: "padding:8px 0 0" }, info));
+      if (st.entwickler) teil.append(el("p", { class: "warnung", style: "margin-top:8px" },
+        "In diesem Ordner liegt die Datei „.keine-statistik“.", el("br"), "Deshalb sendet Fieldbook hier nichts, auch wenn die Schalter an sind."));
       if (st.paket) {
         teil.append(el("details", { class: "fb-details" }, el("summary", {}, "Was wird gesendet?"),
           el("p", { class: "klein hinweis" }, "Das nächste Paket, genau so, wie es verschickt wird. „id“ ist eine zufällige Kennung, damit ein Gerät nicht doppelt gezählt wird. Sie hat nichts mit dir oder deinem Gerät zu tun."),

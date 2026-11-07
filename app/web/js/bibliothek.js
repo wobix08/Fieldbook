@@ -66,17 +66,6 @@ const Bibliothek = (() => {
     return box;
   }
 
-  // Hält eine Zeile an ihrer Stelle im Fenster, während darüber etwas zuklappt (Bewegung dauert 0,25 s)
-  function festhalten(knopf, top) {
-    const ende = performance.now() + 400;
-    const schritt = () => {
-      const diff = knopf.getBoundingClientRect().top - top;
-      if (Math.abs(diff) >= 1) window.scrollBy(0, diff);
-      if (performance.now() < ende) requestAnimationFrame(schritt);
-    };
-    requestAnimationFrame(schritt);
-  }
-
   // Alle Kategorien als Liste; jede klappt ihre Pakete auf, ein Klick aufs Paket öffnet es
   function zeichneRegal(params, buecher) {
     const regal = $("#regal"), kopf = $("#bib-kopf");

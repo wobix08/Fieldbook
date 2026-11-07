@@ -73,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.7.3.1";
+        public const string Version = "0.7.3.2";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -1984,6 +1984,10 @@ namespace OfflineWissen
         static string StatDatei { get { return Path.Combine(Daten, "statistik.json"); } }
         static readonly string[] StatBereiche = { "start", "fragen", "bibliothek", "lesen", "kochen", "karten", "erstehilfe", "vorsorge", "einstellungen", "inhalte", "setup" };
 
+        // Eigener Arbeitsordner des Entwicklers (Datei liegt nur dort, nie in der ZIP): nichts senden,
+        // damit Tests und Testfragen die Auswertung nicht verfälschen
+        static bool StatEntwickler() { return File.Exists(Path.Combine(Root, ".keine-statistik")); }
+
         static bool StatFehlerAn() { return Bool(einst, "statistikFehler"); }
         static bool StatNutzungAn() { return Bool(einst, "statistikNutzung"); }
 
@@ -2148,7 +2152,7 @@ namespace OfflineWissen
             return new Dictionary<string, object> {
                 { "eingerichtet", FeedbackUrl() != null },
                 { "fehler", StatFehlerAn() }, { "nutzung", StatNutzungAn() }, { "gefragt", Bool(einst, "statistikGefragt") },
-                { "gesendet", gesendet }, { "paket", an ? (object)StatPaket() : null } };
+                { "gesendet", gesendet }, { "entwickler", StatEntwickler() }, { "paket", an ? (object)StatPaket() : null } };
         }
 
         static Dictionary<string, object> StatEinstellen(Dictionary<string, object> b)
@@ -2219,6 +2223,7 @@ namespace OfflineWissen
         static int StatSenden(bool sofort)
         {
             if (!StatFehlerAn() && !StatNutzungAn()) return -1;
+            if (StatEntwickler()) { Log("Statistik: Entwicklerordner (.keine-statistik), nicht gesendet."); return -1; }
             string url = FeedbackUrl();
             if (url == null) return -1;
             // Einschalten und Hintergrund-Prüfung können zugleich kommen: nur einer sendet

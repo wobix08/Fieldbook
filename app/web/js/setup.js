@@ -348,7 +348,7 @@ const Setup = (() => {
         const g = e.pakete.filter(p => wahl.pakete.has(p.id));
         return e.titel + (e.gruppe ? " (" + g.map(p => p.variante).join(", ") + ")" : "") + (g.every(p => p.installiert) ? " (vorhanden)" : "");
       }).join(", ") : "Nichts ausgewählt";
-      const a = klappAbschnitt(aufgeklappt, gr.id, gr.icon, gr.titel, unter, gewaehlt.length + " von " + eintraege.length + " ausgewählt");
+      const a = klappAbschnitt(aufgeklappt, gr.id, gr.icon, gr.titel, unter, gewaehlt.length + " von " + eintraege.length + " ausgewählt", true);
       liste.append(a.box);
       const c = a.innen;
       for (const e of eintraege) c.append(e.gruppe ? variantenWahl(e) : paketWahl(e.pakete[0]));

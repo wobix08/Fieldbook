@@ -22,8 +22,9 @@ const Inhalte = (() => {
     catch (e) { $("#inhalte-liste").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
     // Vom Übersetzer aus den Abschnitt „Übersetzer“ gleich aufgeklappt zeigen
     const zuUe = params && params.get("zu");
-    if (zuUe === "sprachen" || zuUe === "sprechen" || zuUe === "vorlesen") aufgeklappt.add("uebersetzer");
-    if (zuUe === "karten") aufgeklappt.add("karten");
+    // (nur dieser, es ist immer höchstens ein Abschnitt offen)
+    if (zuUe === "sprachen" || zuUe === "sprechen" || zuUe === "vorlesen") { aufgeklappt.clear(); aufgeklappt.add("uebersetzer"); }
+    if (zuUe === "karten") { aufgeklappt.clear(); aufgeklappt.add("karten"); }
     await fortschritt();
     // Vom Übersetzer aus („Sprachen hinzufügen“) direkt zu den Sprachen springen, von der Karte aus zu den Karten
     const zu = params && params.get("zu");
@@ -200,7 +201,7 @@ const Inhalte = (() => {
     const liste = el("div", { class: "klapp-liste-abschnitte" });
     c.append(liste);
     const abschnitt = (schluessel, icon, titel, namen, ausgewaehlt, rechts) => {
-      const a = klappAbschnitt(aufgeklappt, schluessel, icon, titel, klappZusammenfassung(namen, ausgewaehlt), rechts);
+      const a = klappAbschnitt(aufgeklappt, schluessel, icon, titel, klappZusammenfassung(namen, ausgewaehlt), rechts, true);
       a.box.id = "inh-bereich-" + schluessel;
       a.box.style.scrollMarginTop = "110px";
       liste.append(a.box);
