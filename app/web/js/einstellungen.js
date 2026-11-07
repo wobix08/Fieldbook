@@ -228,8 +228,9 @@ const Einstellungen = (() => {
       teil.append(
         schalter("fehler", "Fehlerberichte senden", "Fehler, die in Fieldbook auftreten, dein Gerät (Prozessor, Arbeitsspeicher, Grafik) und wie schnell die KI antwortet. Hilft mir, Probleme zu finden."),
         schalter("nutzung", "Nutzungsstatistik senden", "Wie oft du die einzelnen Bereiche öffnest, welche Pakete und Karten installiert sind und dein Land. Zeigt mir, was wirklich genutzt wird."));
-      const info = el("small", { class: "hinweis" }, "Einmal pro Woche ein kleines Paket, nie über einen Handy-Hotspot. Fragen, Chats, Suchbegriffe und Einträge gehen nie mit." +
-        (st.gesendet ? " Zuletzt gesendet: " + new Date(st.gesendet).toLocaleDateString("de-DE") + "." : ""));
+      const info = el("small", { class: "hinweis" }, "Das erste kleine Paket geht gleich nach dem Einschalten raus, danach eins pro Woche, nie über einen Handy-Hotspot.", el("br"),
+        "Fragen, Chats, Suchbegriffe und Einträge gehen nie mit.",
+        ...(st.gesendet ? [el("br"), "Zuletzt gesendet: " + new Date(st.gesendet).toLocaleDateString("de-DE") + "."] : []));
       teil.append(el("div", { style: "padding:8px 0 0" }, info));
       if (st.paket) {
         teil.append(el("details", { class: "fb-details" }, el("summary", {}, "Was wird gesendet?"),

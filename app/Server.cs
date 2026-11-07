@@ -73,7 +73,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.7.3";
+        public const string Version = "0.7.3.1";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -1975,8 +1975,8 @@ namespace OfflineWissen
         // Nur mit ausdrücklicher Zustimmung, zwei getrennte Schalter (Standard aus):
         //   statistikFehler:  Fehler (Dienste, Downloads, Oberfläche), Gerät, KI-Tempo
         //   statistikNutzung: wie oft die Bereiche geöffnet werden, installierte Pakete und Karten, Land
-        // Gezählt wird nur auf dem Gerät (daten\statistik.json), und nur, solange der Schalter an ist. Einmal pro
-        // Woche geht ein kleines Paket an den Feedback-Dienst, nie über getaktete Verbindungen. Fragen, Chats,
+        // Gezählt wird nur auf dem Gerät (daten\statistik.json), und nur, solange der Schalter an ist. Das erste
+        // Paket geht gleich nach dem Einschalten raus, danach eins pro Woche, nie über getaktete Verbindungen. Fragen, Chats,
         // Suchbegriffe und Einträge gehen nie mit. Die Kennung ist zufällig und lässt sich neu würfeln.
 
         static readonly object StatLk = new object();
@@ -2173,8 +2173,10 @@ namespace OfflineWissen
                     var s = StatLaden();
                     if (!StatFehlerAn()) { s.Remove("fehler"); s.Remove("ki"); }
                     if (!StatNutzungAn()) s.Remove("bereiche");
-                    if (Str(s, "gesendet") == null && Str(s, "seit") == null) s["seit"] = DateTime.UtcNow.ToString("o");
                     StatSpeichern();
+                    // Noch nie gesendet: das erste Paket gleich verschicken (nach ein paar Sekunden, im Hintergrund)
+                    if (Str(s, "gesendet") == null)
+                        new Thread(delegate () { Thread.Sleep(5000); try { StatSenden(false); } catch { } }) { IsBackground = true }.Start();
                 }
             }
             return StatInfo();
@@ -2209,25 +2211,29 @@ namespace OfflineWissen
             }
         }
 
-        // Schickt das Wochenpaket, wenn es fällig ist (oder sofort, nur zum Testen).
+        static int statSendetGerade;
+
+        // Schickt das Paket, wenn es fällig ist (oder sofort, nur zum Testen): das erste, sobald eine passende
+        // Verbindung da ist, danach 7 Tage nach dem letzten.
         // Gibt den Antwortcode zurück, -1 = nicht fällig oder aus, 0 = keine passende Verbindung.
         static int StatSenden(bool sofort)
         {
             if (!StatFehlerAn() && !StatNutzungAn()) return -1;
             string url = FeedbackUrl();
             if (url == null) return -1;
+            // Einschalten und Hintergrund-Prüfung können zugleich kommen: nur einer sendet
+            if (Interlocked.Exchange(ref statSendetGerade, 1) == 1) return -1;
+            try { return StatSendenJetzt(sofort, url); }
+            finally { statSendetGerade = 0; }
+        }
+
+        static int StatSendenJetzt(bool sofort, string url)
+        {
+            string gesendet;
+            lock (StatLk) gesendet = Str(StatLaden(), "gesendet");
             DateTime zuletzt;
-            lock (StatLk)
-            {
-                var s = StatLaden();
-                if (!DateTime.TryParse(Str(s, "gesendet") ?? Str(s, "seit") ?? "", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out zuletzt))
-                {
-                    zuletzt = DateTime.UtcNow;
-                    s["seit"] = zuletzt.ToString("o");
-                    StatSpeichern();
-                }
-            }
-            if (!sofort && (DateTime.UtcNow - zuletzt.ToUniversalTime()).TotalDays < 7) return -1;
+            if (!sofort && gesendet != null && DateTime.TryParse(gesendet, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out zuletzt)
+                && (DateTime.UtcNow - zuletzt.ToUniversalTime()).TotalDays < 7) return -1;
             var v = Verbindung();
             if (!Bool(v, "online") || Bool(v, "getaktet")) return 0;
             int code = SendePost(url, Json.Serialize(StatPaket()));
@@ -4145,7 +4151,13 @@ namespace OfflineWissen
             {
                 // Automatisch nie über getaktete Verbindungen; beim Nachfragen entscheidet der Nutzer
                 if (modus == "auto") ok = !getaktet;
-                else if (popup) { ok = FrageNutzer(updates, getaktet); if (ok && getaktet) d["getaktetErlaubt"] = true; }
+                else if (popup)
+                {
+                    int wahl = FrageNutzer(updates, getaktet);
+                    ok = wahl > 0;
+                    if (ok && getaktet) d["getaktetErlaubt"] = true;
+                    if (wahl == 2) KuenftigAutomatisch();
+                }
             }
             d["freigegeben"] = ok;
             File.WriteAllText(AktDatei, Json.Serialize(d), Utf8);
@@ -4175,9 +4187,12 @@ namespace OfflineWissen
             return erg;
         }
 
-        static bool FrageNutzer(List<Dictionary<string, object>> updates, bool getaktet)
+        // Fenster nach der wöchentlichen Prüfung. 0 = Später, 1 = Herunterladen, 2 = Immer automatisch.
+        // Eigenes Fenster statt MessageBox, weil die keine eigenen Knopfbeschriftungen kennt. Ohne Typen aus
+        // System.Drawing (Größen, Schriften), damit die Referenzliste in start.ps1/aktualisieren.ps1 reicht.
+        static int FrageNutzer(List<Dictionary<string, object>> updates, bool getaktet)
         {
-            bool ja = false;
+            int wahl = 0;
             var t = new Thread(delegate ()
             {
                 long bytes = updates.Sum(u => (long)Num(u, "bytes"));
@@ -4186,15 +4201,72 @@ namespace OfflineWissen
                 string text = "Für Fieldbook gibt es neue Daten:\n\n" + liste + "\n\nGröße insgesamt: ca. " + (bytes / 1e9).ToString("0.0", CultureInfo.GetCultureInfo("de-DE")) + " GB\n\n" +
                     (getaktet ? "ACHTUNG: Du bist gerade mit einer getakteten Verbindung verbunden (z. B. Handy-Hotspot). Das Herunterladen kann dein Datenvolumen verbrauchen.\n\n" : "") +
                     (leerlauf ? "Herunterladen? Das passiert nur, wenn der Computer am Strom hängt und gerade nicht benutzt wird."
-                              : "Jetzt herunterladen? Das läuft mit niedriger Priorität im Hintergrund, du kannst normal weiterarbeiten.");
-                var r = System.Windows.Forms.MessageBox.Show(text, "Fieldbook: neue Daten", System.Windows.Forms.MessageBoxButtons.YesNo,
-                    System.Windows.Forms.MessageBoxIcon.Information, System.Windows.Forms.MessageBoxDefaultButton.Button1, System.Windows.Forms.MessageBoxOptions.DefaultDesktopOnly);
-                ja = r == System.Windows.Forms.DialogResult.Yes;
+                              : "Jetzt herunterladen? Das läuft mit niedriger Priorität im Hintergrund, du kannst normal weiterarbeiten.") +
+                    "\n\n„Immer automatisch“ lädt neue Daten künftig ohne Nachfrage.\nIn Fieldbook kannst du das unter Einstellungen wieder auf „Vorher fragen“ stellen.";
+                System.Windows.Forms.Application.EnableVisualStyles();
+                var form = new System.Windows.Forms.Form {
+                    Text = "Fieldbook: neue Daten", FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
+                    MaximizeBox = false, MinimizeBox = false, ShowIcon = false, TopMost = true,
+                    StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+                    AutoSize = true, AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink };
+                var spalte = new System.Windows.Forms.FlowLayoutPanel {
+                    FlowDirection = System.Windows.Forms.FlowDirection.TopDown, AutoSize = true, WrapContents = false,
+                    AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink, Padding = new System.Windows.Forms.Padding(16) };
+                spalte.Controls.Add(new System.Windows.Forms.Label { Text = text, AutoSize = true, Margin = new System.Windows.Forms.Padding(0, 0, 0, 16) });
+                var reihe = new System.Windows.Forms.FlowLayoutPanel {
+                    FlowDirection = System.Windows.Forms.FlowDirection.LeftToRight, AutoSize = true, WrapContents = false,
+                    AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink, Anchor = System.Windows.Forms.AnchorStyles.Right, Margin = new System.Windows.Forms.Padding(0) };
+                Func<string, int, System.Windows.Forms.Button> knopf = (beschriftung, wert) =>
+                {
+                    var b = new System.Windows.Forms.Button { Text = beschriftung, AutoSize = true, Padding = new System.Windows.Forms.Padding(8, 2, 8, 2), Margin = new System.Windows.Forms.Padding(8, 0, 0, 0) };
+                    b.Click += delegate { wahl = wert; form.Close(); };
+                    reihe.Controls.Add(b);
+                    return b;
+                };
+                var herunterladen = knopf("Herunterladen", 1);
+                knopf("Immer automatisch", 2);
+                var spaeter = knopf("Später", 0);
+                spalte.Controls.Add(reihe);
+                form.Controls.Add(spalte);
+                form.AcceptButton = herunterladen;
+                form.CancelButton = spaeter;
+                // Aus der Windows-Aufgabe heraus nach vorne holen
+                form.Shown += delegate { form.Activate(); };
+                System.Windows.Forms.Application.Run(form);
             });
             t.SetApartmentState(ApartmentState.STA);
             t.Start();
             t.Join();
-            return ja;
+            return wahl;
+        }
+
+        // Knopf „Immer automatisch“: Einstellung auf automatisch stellen. Läuft in der Windows-Aufgabe, also frisch
+        // aus der Datei lesen; läuft Fieldbook gerade, bekommt es die Änderung auch mit (sonst überschriebe es sie später).
+        static void KuenftigAutomatisch()
+        {
+            try
+            {
+                einst = LadeJson(Path.Combine(Daten, "einstellungen.json")) ?? einst;
+                var a = AktEinst() ?? new Dictionary<string, object> { { "an", true } };
+                a["modus"] = "auto";
+                einst["aktualisierung"] = a;
+                SpeichereEinst();
+                AktLog("Künftig automatisch (im Fenster gewählt).");
+                try
+                {
+                    var req = (HttpWebRequest)WebRequest.Create("http://localhost:8090/api/aktualisierung");
+                    req.Method = "POST";
+                    req.Proxy = null;
+                    req.Timeout = 3000;
+                    req.ContentType = "application/json; charset=utf-8";
+                    byte[] b = Utf8.GetBytes(Json.Serialize(a));
+                    req.ContentLength = b.Length;
+                    using (var s = req.GetRequestStream()) s.Write(b, 0, b.Length);
+                    using (req.GetResponse()) { }
+                }
+                catch { }
+            }
+            catch (Exception e) { AktLog("Automatisch einstellen: " + e.Message); }
         }
 
         // FSCTL_SET_SPARSE (0x900C4) für Kartendateien, siehe KarteVersuch

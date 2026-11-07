@@ -250,7 +250,8 @@ Dann sieht Windows einmal pro Woche nach, ob es neue Ausgaben deiner Wissenspake
 Wähle dann:
 
 - **Vorher fragen**\
-  Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll.
+  Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll.\
+  Mit **Immer automatisch** stellst du dort gleich auf „Automatisch herunterladen“ um.
 - **Automatisch herunterladen**\
   Ohne Nachfrage, aber nie über getaktete Verbindungen wie einen Handy-Hotspot.
 
@@ -280,7 +281,7 @@ Ohne Automatik geht es jederzeit von Hand mit **Inhalte aktualisieren**.
   Ohne Internet merkt sich Fieldbook die Nachricht und schickt sie später.
 - **Fehlerberichte und Nutzungsstatistik**\
   Im selben Kasten lassen sich beide ein- und ausschalten.\
-  Unter **Was wird gesendet?** siehst du das nächste Wochenpaket genau so, wie es verschickt wird.\
+  Unter **Was wird gesendet?** siehst du das nächste Paket genau so, wie es verschickt wird.\
   Schaltest du beides aus, löscht Fieldbook alles bisher Gesammelte.
 
 ## 8. Häufige Fragen
@@ -317,5 +318,6 @@ Deine Fragen, Chats und Einträge nicht, sie bleiben auf deinem Gerät.\
 Internet braucht Fieldbook nur für Downloads und um nach einer neuen Version zu fragen.\
 Klickst du in einem Artikel auf einen Link ins Internet, fragt Fieldbook diese Adresse kurz an, um zu sehen, ob es Internet gibt.\
 Eine **Rückmeldung** geht nur raus, wenn du sie selbst abschickst.\
-Fehlerberichte und Nutzungsstatistik verschickt Fieldbook nur, wenn du zugestimmt hast, einmal pro Woche und nie über einen Handy-Hotspot.\
+Fehlerberichte und Nutzungsstatistik verschickt Fieldbook nur, wenn du zugestimmt hast, und nie über einen Handy-Hotspot.\
+Das erste Paket geht gleich nach dem Einschalten raus, danach eins pro Woche.\
 Was dabei übertragen wird, steht in der README auf GitHub im Abschnitt **Datenschutz**.

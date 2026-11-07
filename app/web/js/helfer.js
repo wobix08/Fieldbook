@@ -572,7 +572,7 @@ function statistikBitte(wahl) {
       "Ohne diese Angaben erfahre ich kaum, wo Fehler auftreten, was zu langsam ist und welche Bereiche tatsächlich genutzt werden.", el("br"),
       "Mit ihnen kann ich Fieldbook gezielt verbessern."),
     el("p", { class: "hinweis klein" }, "Inhalte werden nie gesendet: Deine Fragen, Chats, Suchbegriffe und Einträge bleiben auf deinem Gerät.", el("br"),
-      "Einmal pro Woche wird ein kleines Paket gesendet, nie über einen Handy-Hotspot.", el("br"),
+      "Das erste kleine Paket geht gleich nach dem Einschalten raus, danach eins pro Woche, nie über einen Handy-Hotspot.", el("br"),
       "Was genau darin steht, siehst du jederzeit in den Einstellungen.", el("br"),
       "Dort kannst du beides auch wieder abschalten.", el("br"),
       "Alles Weitere steht in der ", el("a", { href: "https://github.com/wobix08/Fieldbook#datenschutz", target: "_blank", rel: "noopener" }, "Datenschutzerklärung"), "."),

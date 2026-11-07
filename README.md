@@ -250,7 +250,7 @@ Stattdessen legt Fieldbook zwei Aufgaben in der Windows-Aufgabenplanung an:
 
 | Aufgabe | Wann | Was |
 |---|---|---|
-| *Fieldbook Daten pruefen* | einmal pro Woche (Sonntag 19 Uhr oder beim nächsten Einschalten) | ein paar kleine Anfragen, dauert unter einer Sekunde; im Modus „Vorher fragen“ danach ein Pop-up |
+| *Fieldbook Daten pruefen* | einmal pro Woche (Sonntag 19 Uhr oder beim nächsten Einschalten) | ein paar kleine Anfragen, dauert unter einer Sekunde; im Modus „Vorher fragen“ danach ein Fenster mit „Herunterladen“, „Immer automatisch“ und „Später“ |
 | *Fieldbook Daten herunterladen* | nur wenn der Computer 10 Minuten unbenutzt am Strom hängt | lädt freigegebene Daten mit niedrigster Priorität; bei Maus, Tastatur oder Akkubetrieb sofort Pause, beim nächsten Leerlauf geht es weiter |
 
 Nicht über getaktete Verbindungen (z. B. Handy-Hotspot).\
@@ -313,7 +313,8 @@ Solange es aus ist, sammelt Fieldbook auch nichts.\
 *Fehlerberichte* enthalten Fehler, die in Fieldbook auftreten (Benutzername und Ordnerpfade unkenntlich gemacht), dein Gerät (Prozessor, Kerne, Arbeitsspeicher, Grafik), die Windows-Version und wie schnell die KI lädt und antwortet.\
 Die *Nutzungsstatistik* enthält, wie oft du die einzelnen Bereiche öffnest, welche Wissenspakete und Karten installiert sind (selbst hinzugefügte Pakete nur als „eigenes Paket“) und dein Land.\
 Nie dabei sind Fragen, Chats, Suchbegriffe, gelesene Artikel, Orte oder Einträge.\
-Fieldbook zählt auf deinem Gerät mit und schickt einmal pro Woche ein kleines Paket, nie über eine getaktete Verbindung wie einen Handy-Hotspot.\
+Fieldbook zählt auf deinem Gerät mit und schickt ein kleines Paket, nie über eine getaktete Verbindung wie einen Handy-Hotspot.\
+Das erste geht gleich nach dem Einschalten raus, danach eins pro Woche.\
 Das nächste Paket kannst du dir unter *Was wird gesendet?* genau ansehen.\
 Statt eines Namens trägt es eine zufällige Kennung, damit ein Gerät nicht doppelt gezählt wird; du kannst sie jederzeit neu würfeln.\
 Schaltest du beides aus, löscht Fieldbook alles bisher Gesammelte.
