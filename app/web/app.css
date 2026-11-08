@@ -41,7 +41,11 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
+/* body wächst mit dem Inhalt: Bei fester Fensterhöhe rutschte die Kopfzeile (sticky) auf langen Seiten
+   nach einer Bildschirmhöhe mit weg. Karten, Lesefenster und PDF-Leser füllen genau das Fenster. */
+html { margin: 0; height: 100%; }
+body { margin: 0; min-height: 100%; }
+body:has(.ansicht-voll.sichtbar) { height: 100%; }
 /* Platz für die Bildlaufleiste immer freihalten, sonst springt der Inhalt zwischen kurzen und langen Seiten.
    Karten und Lesefenster füllen das Fenster selbst und brauchen keinen leeren Rand. */
 html { scrollbar-gutter: stable; }
