@@ -5,7 +5,6 @@
 const Gespraech = (() => {
   const DEUTSCH = { code: "de", name: "Deutsch", eigen: "Deutsch" };
   let sprachen = null;          // aus config/sprachen.json
-  let translator = null, translatorSig = "";
   let ich = "de", du = null;
   const verlauf = [];           // { wer: "ich" | "du", von, nach, text, uebers, zurueck, fehler }
   let zeichneVerlauf = () => { };
@@ -50,22 +49,10 @@ const Gespraech = (() => {
   const info = (code) => code === "de" ? DEUTSCH : sprachen.find(s => s.code === code) || { code, name: code, eigen: code };
   const richtung = (code) => info(code).rtl ? "rtl" : "ltr";
 
-  function holen() {
-    const sig = ((OW.status && OW.status.sprachen) || []).join(",");
-    if (translator && sig === translatorSig) return translator;
-    translatorSig = sig;
-    translator = import("/uebersetzer/lib/translator.js").then((mod) => {
-      const kerne = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
-      return new mod.BatchTranslator({ registryUrl: "/api/uebersetzer/modelle", pivotLanguage: "en", downloadTimeout: 0, workers: kerne, batchSize: 8 });
-    }).catch((e) => { translator = null; throw e; });
-    return translator;
-  }
-
+  // Gemeinsame Warteschlange aus uebersetzer.js (ersetzt abgestürzte oder hängende Worker)
   async function uebersetze(von, nach, text) {
     if (von === nach || !text.trim()) return text;
-    const t = await holen();
-    const r = await t.translate({ from: von, to: nach, text, html: false });
-    return r.target.text;
+    return Uebersetzer.textUebersetzen(von, nach, text);
   }
 
   function zeichne() {

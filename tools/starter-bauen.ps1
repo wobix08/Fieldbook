@@ -62,7 +62,7 @@ Set-Content -Path $versionCs -Encoding UTF8 -Value @(
     "[assembly: System.Reflection.AssemblyFileVersion(""$Version"")]",
     "[assembly: System.Reflection.AssemblyInformationalVersion(""$Version"")]")
 try {
-    & $csc /nologo /target:winexe /optimize+ "/win32icon:$ico" /reference:System.Windows.Forms.dll "/out:$exe" (Join-Path $PSScriptRoot 'Starter.cs') $versionCs
+    & $csc /nologo /target:winexe /optimize+ "/win32icon:$ico" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "/out:$exe" (Join-Path $PSScriptRoot 'Starter.cs') $versionCs
     if ($LASTEXITCODE -ne 0) { throw "Kompilieren fehlgeschlagen" }
 } finally { Remove-Item $versionCs -ErrorAction SilentlyContinue }
 Write-Host "Erstellt: $exe"

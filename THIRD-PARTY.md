@@ -73,7 +73,7 @@ Stimmen mit Nicht-kommerziell-Lizenz oder unklarer Lizenz lädt Fieldbook nicht.
 
 | Inhalt | Lizenz |
 |---|---|
-| Wikipedia, Wikibooks, Wikivoyage, Wiktionary, Wikiversity, Wikisource | CC BY-SA 4.0 |
+| Wikipedia, Wikibooks, Wikivoyage, Wiktionary, Wikiversity, Wikisource, Wikiquote | CC BY-SA 4.0 |
 | iFixit | CC BY-NC-SA 3.0 |
 | Klexikon | CC BY-SA 4.0 |
 | Stack Exchange | CC BY-SA |

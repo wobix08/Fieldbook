@@ -448,6 +448,11 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 /* Stellen, die das Bild des Drucks zeigt: Text unsichtbar darüber, nur zum Markieren */
 .pdf-kasten.pdf-unsichtbar { color: transparent; }
 .pdf-kasten::selection { background: rgba(159, 183, 143, .45); }
+/* „Auf Deutsch“ über Stellen aus dem Druck: Abdeckung in der Farbe des Grunds, Zellen und Aufzählungszeichen
+   sind nur Anzeige (markiert wird der Text darunter) */
+.pdf-abdeckung { position: absolute; pointer-events: none; }
+.pdf-zelle, .pdf-marke { pointer-events: none; user-select: none; }
+.pdf-zelle { overflow-wrap: normal; hyphens: manual; }   /* lieber kleiner als mitten im Wort umbrechen */
 .pdf-seiten.dunkel .pdf-seite { background: var(--bg); box-shadow: none; outline: 1px solid var(--linie); }
 .pdf-seite canvas { display: block; }
 /* Textansicht: wie ein Artikel in Fieldbook */

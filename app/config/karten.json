@@ -1,6 +1,8 @@
 {
   "_hinweis": "Kartenregionen, nur Einzelländer (Fieldbook zeigt alle installierten Karten nahtlos zusammen). bbox = West,Süd,Ost,Nord. orte = GeoNames-Dateien für die Ortssuche (Ländercode oder cities5000/cities15000). mb/mbSparen = ungefähre Größe in MB bei Zoom 15/13, gemessen am 3. Nov. 2026 (genaue Größe rechnet Fieldbook beim Auswählen nach).",
   "regionen": [
+    { "id": "europa",       "titel": "Europa (ganz)", "bbox": [-25.0, 34.5, 45.0, 71.5], "orte": ["cities5000"], "mb": 49000, "mbSparen": 13000 },
+    { "id": "welt",         "titel": "Weltkarte (grob, nur große Straßen und Städte)", "bbox": [-180, -85, 180, 85], "orte": ["cities15000"], "maxzoom": 7, "routen": false, "mb": 190 },
     { "id": "deutschland",  "titel": "Deutschland", "bbox": [5.86, 47.27, 15.05, 55.06], "orte": ["DE"], "mb": 7200, "mbSparen": 1800 },
     { "id": "oesterreich",  "titel": "Österreich", "bbox": [9.53, 46.37, 17.17, 49.02], "orte": ["AT"], "mb": 2000, "mbSparen": 570 },
     { "id": "schweiz",      "titel": "Schweiz", "bbox": [5.95, 45.81, 10.50, 47.81], "orte": ["CH"], "mb": 1000, "mbSparen": 260 },
@@ -20,8 +22,6 @@
     { "id": "irland",       "titel": "Irland", "bbox": [-10.48, 51.42, -5.99, 55.39], "orte": ["IE"], "mb": 530, "mbSparen": 130 },
     { "id": "norwegen",     "titel": "Norwegen", "bbox": [4.5, 57.9, 31.2, 71.2], "orte": ["NO"], "mb": 7300, "mbSparen": 2300 },
     { "id": "schweden",     "titel": "Schweden", "bbox": [10.9, 55.3, 24.2, 69.1], "orte": ["SE"], "mb": 4400, "mbSparen": 1400 },
-    { "id": "finnland",     "titel": "Finnland", "bbox": [19.0, 59.7, 31.6, 70.1], "orte": ["FI"], "mb": 3000, "mbSparen": 940 },
-    { "id": "europa",       "titel": "Europa (ganz)", "bbox": [-25.0, 34.5, 45.0, 71.5], "orte": ["cities5000"], "mb": 49000, "mbSparen": 13000 },
-    { "id": "welt",         "titel": "Weltkarte (grob, nur große Straßen und Städte)", "bbox": [-180, -85, 180, 85], "orte": ["cities15000"], "maxzoom": 7, "routen": false, "mb": 190 }
+    { "id": "finnland",     "titel": "Finnland", "bbox": [19.0, 59.7, 31.6, 70.1], "orte": ["FI"], "mb": 3000, "mbSparen": 940 }
   ]
 }

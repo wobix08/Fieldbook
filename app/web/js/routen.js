@@ -9,6 +9,7 @@ const Routen = (() => {
   ];
   let offen = false, profil = PROFILE[0], start = null, ziel = null, wartetAuf = null;
   let markerStart = null, markerZiel = null, geojson = null, anfrageNr = 0;
+  const feldPruefer = {}; // pro Feld die Funktion "getippten Namen übernehmen"
 
   const karte = () => Karten.karte;
 
@@ -40,7 +41,7 @@ const Routen = (() => {
     const s = OW.status || {};
     if (!s.routen) {
       p.append(el("div", { class: "routen-hinweis" },
-        (s.routenKacheln && s.routenKacheln.length) ? "Die Routenplanung startet gerade oder konnte nicht starten (siehe daten\\logs\\routen.log)." :
+        (s.routenKacheln && s.routenKacheln.length) ? "Die Routenplanung startet gerade oder konnte nicht starten. " :
           "Die Routenplanung ist noch nicht eingerichtet. ", el("a", { href: "#inhalte?zu=karten" }, "Jetzt einrichten")));
       return;
     }
@@ -50,6 +51,7 @@ const Routen = (() => {
     p.append(el("div", { class: "routen-hinweis", id: "routen-status" },
       wartetAuf === "start" ? "Start suchen oder in die Karte klicken." :
         wartetAuf === "ziel" ? "Ziel suchen oder in die Karte klicken." : ""));
+    p.append(el("button", { type: "button", class: "knopf knopf-klein", onclick: () => { alleUebernehmen(); } }, "Route berechnen"));
     p.append(el("div", { id: "routen-ergebnis" }));
     if (start || ziel) p.append(el("button", { type: "button", class: "knopf knopf-klein", onclick: () => { loeschen(); zeichnePanel(); } }, "Neue Route"));
   }
@@ -57,22 +59,91 @@ const Routen = (() => {
   function punktFeld(marke, titel, wert, art) {
     const feld = el("input", { type: "search", placeholder: titel + " suchen …", value: wert ? wert.name : "", autocomplete: "off" });
     const treffer = el("div", { class: "ort-treffer" });
-    let t = null;
+    // Klick auf einen Vorschlag: mousedown darf dem Feld den Fokus nicht nehmen,
+    // sonst kommt blur (und die Auto-Übernahme) vor dem click
+    treffer.addEventListener("mousedown", e => e.preventDefault());
+    let t = null, letzte = null; // letzte = { q, versprechen } der zuletzt gestarteten Suche
+
+    // Sucht Orte zu q (gleiche Anfrage wird nur einmal gestellt) und zeigt die Vorschläge an
+    function suchen(q) {
+      if (letzte && letzte.q === q) return letzte.versprechen;
+      const versprechen = (async () => {
+        if (q.length < 2 || !OW.status.orte) return [];
+        const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => null);
+        if (feld.isConnected && feld.value.trim() === q) {
+          treffer.innerHTML = "";
+          if (!liste) treffer.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar."));
+          else for (const o of liste.slice(0, 8)) {
+            treffer.append(el("button", { type: "button", onclick: () => { treffer.innerHTML = ""; waehle(o, false); } },
+              el("b", {}, o.name), " ", el("small", {}, o.art + " · " + o.land)));
+          }
+        }
+        return liste;
+      })();
+      letzte = { q, versprechen };
+      return versprechen;
+    }
+
+    function waehle(o, ohnePanel) {
+      const punkt = { lon: o.lon, lat: o.lat, name: o.name };
+      feld.value = o.name;
+      setze(art, punkt, ohnePanel);
+      karte().flyTo({ center: [o.lon, o.lat], zoom: Math.max(karte().getZoom(), 12) });
+    }
+
+    // Übernimmt den besten Vorschlag zum getippten Text (falls noch kein Ort gewählt ist)
+    async function uebernehmen() {
+      const q = feld.value.trim();
+      if (!q) return;
+      const aktuell = art === "start" ? start : ziel;
+      if (aktuell && aktuell.name === q) return;
+      clearTimeout(t);
+      const liste = await suchen(q);
+      if (!feld.isConnected || feld.value.trim() !== q) return; // inzwischen anders getippt oder neu gezeichnet
+      const jetzt = art === "start" ? start : ziel;
+      if (jetzt && jetzt.name === q) return;
+      if (!liste || !liste.length) {
+        const st = $("#routen-status");
+        if (st) st.replaceChildren(!OW.status.orte ? "Die Ortssuche ist noch nicht eingerichtet." : "Zu „" + q + "“ wurde kein Ort gefunden.", el("br"),
+          "Bitte anders schreiben oder den Punkt in der Karte anklicken.");
+        return;
+      }
+      // Liegt der Fokus in einem anderen Feld, würde ein Neuzeichnen das Tippen dort stören
+      const f = document.activeElement;
+      const fokusWoanders = f && f !== feld && f.tagName === "INPUT" && f.closest("#routen-panel");
+      treffer.innerHTML = "";
+      waehle(liste[0], !!fokusWoanders);
+    }
+    feldPruefer[art] = uebernehmen;
+
     feld.addEventListener("focus", () => { wartetAuf = art; const st = $("#routen-status"); if (st) st.textContent = titel + " suchen oder in die Karte klicken."; });
+    feld.addEventListener("blur", () => { uebernehmen(); });
+    feld.addEventListener("keydown", async e => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      if (art === "start" && !ziel) { await uebernehmen(); const z = document.querySelectorAll("#routen-panel .punkt input")[1]; if (z && !ziel) z.focus(); return; }
+      await alleUebernehmen();
+    });
     feld.addEventListener("input", () => {
       clearTimeout(t);
-      t = setTimeout(async () => {
+      t = setTimeout(() => {
         const q = feld.value.trim();
         treffer.innerHTML = "";
-        if (q.length < 2 || !OW.status.orte) return;
-        const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => []);
-        for (const o of liste.slice(0, 8)) {
-          treffer.append(el("button", { type: "button", onclick: () => { treffer.innerHTML = ""; setze(art, { lon: o.lon, lat: o.lat, name: o.name }); karte().flyTo({ center: [o.lon, o.lat], zoom: Math.max(karte().getZoom(), 12) }); } },
-            el("b", {}, o.name), " ", el("small", {}, o.art + " · " + o.land)));
-        }
+        suchen(q);
       }, 250);
     });
     return el("div", { class: "punkt" }, el("span", { class: "p-marke" }, marke), feld, treffer);
+  }
+
+  // Übernimmt getippte Namen in beiden Feldern (wartet auf laufende Suchen) und berechnet dann die Route
+  async function alleUebernehmen() {
+    if (feldPruefer.start) await feldPruefer.start();
+    if (feldPruefer.ziel) await feldPruefer.ziel();
+    if (start && ziel) berechnen();
+    else {
+      const st = $("#routen-status");
+      if (st && !st.textContent) st.replaceChildren(!start ? "Der Start fehlt noch." : "Das Ziel fehlt noch.", el("br"), "Bitte einen Ort eingeben oder in die Karte klicken.");
+    }
   }
 
   // Klick in die Karte setzt Start bzw. Ziel
@@ -82,11 +153,11 @@ const Routen = (() => {
     setze(art, { lon: e.lngLat.lng, lat: e.lngLat.lat, name: "Punkt auf der Karte" });
   }
 
-  function setze(art, punkt) {
+  function setze(art, punkt, ohnePanel) {
     if (art === "start") start = punkt; else ziel = punkt;
     wartetAuf = !start ? "start" : !ziel ? "ziel" : null;
     zeichneMarker();
-    zeichnePanel();
+    if (!ohnePanel) zeichnePanel();
     berechnen();
   }
 
@@ -121,7 +192,8 @@ const Routen = (() => {
     const erg = $("#routen-ergebnis");
     const status = $("#routen-status");
     if (!abgedeckt(start) || !abgedeckt(ziel)) {
-      if (status) status.textContent = "Für diesen Ort fehlen die Wegedaten. Im Assistenten die passende Karte mit Routenplanung laden.";
+      if (status) status.replaceChildren("Für diesen Ort fehlen die Wegedaten.", el("br"),
+        el("a", { href: "#inhalte?zu=karten" }, "Unter Inhalte die Routenplanung für dieses Gebiet laden"));
       return;
     }
     const nr = ++anfrageNr;

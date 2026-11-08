@@ -46,6 +46,8 @@ Dann bitte abbrechen.
 
 ### Danach
 
+- Zuerst zeigt ein kleines Startfenster, was gerade passiert.\
+  Es schließt sich von selbst, sobald Fieldbook im Browser offen ist.
 - Unten in der Taskleiste erscheint ein kleines Fenster namens **Fieldbook**, es startet minimiert.\
   Darin läuft Fieldbook.\
   Lass es offen, solange du das Programm benutzt; schließt du es, wird Fieldbook beendet.\
@@ -91,6 +93,7 @@ Der Assistent führt in sechs Schritten durch die Einrichtung:
 
 Danach öffnet sich die Seite **Inhalte** mit dem Fortschritt der Downloads.\
 Bis zu drei Downloads laufen gleichzeitig, kleine zuerst.\
+Dabei mischt Fieldbook die Arten (Karten, Wissen, KI, Sprachen), damit ein langsamer Server nicht alles aufhält.\
 Fertige Pakete kannst du sofort benutzen, auch wenn der Rest noch lädt.\
 Du kannst das Fenster jederzeit schließen: Beim nächsten Start geht es an derselben Stelle weiter.\
 Läuft gerade ein Download, zeigt oben in der Kopfzeile den Stand, etwa „40 %“; ein Klick darauf führt zu den Downloads.

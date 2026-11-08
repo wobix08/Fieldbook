@@ -93,8 +93,11 @@ const Fragen = (() => {
   async function oeffneChat(id) {
     if (beschaeftigt) return;
     let c;
-    try { c = await api("chat?id=" + encodeURIComponent(id)); } catch (e) { return; }
-    if (!c || c.fehler) return;
+    try { c = await api("chat?id=" + encodeURIComponent(id)); } catch (e) { c = null; }
+    if (!c || c.fehler) {
+      dialog("Chat nicht geöffnet", "Dieser Chat ließ sich gerade nicht öffnen. Bitte versuche es noch einmal.", [{ text: "OK", wert: true, haupt: true }]);
+      return;
+    }
     chatId = id;
     eintraege = Array.isArray(c.eintraege) ? c.eintraege : [];
     verlauf.length = 0;
@@ -109,7 +112,11 @@ const Fragen = (() => {
   async function loescheChat(id, titel) {
     const ok = await dialog("Chat löschen?", "„" + titel + "“ wird endgültig gelöscht.", [{ text: "Abbrechen", wert: false }, { text: "Löschen", wert: true, haupt: true }]);
     if (!ok) return;
-    try { await api("chat/loeschen", { id }); } catch { }
+    try { await api("chat/loeschen", { id }); }
+    catch (e) {
+      dialog("Chat nicht gelöscht", "Der Chat ließ sich gerade nicht löschen. Bitte versuche es noch einmal.", [{ text: "OK", wert: true, haupt: true }]);
+      return;
+    }
     if (id === chatId) neuerChat();
     ladeListe();
   }
@@ -119,7 +126,7 @@ const Fragen = (() => {
     eintraege.push(eintrag);
     if (!chatId) chatId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
     const titel = eintraege[0].frage.length > 60 ? eintraege[0].frage.slice(0, 57) + " …" : eintraege[0].frage;
-    try { await api("chat/speichern", { id: chatId, titel, eintraege }); } catch { }
+    try { await api("chat/speichern", { id: chatId, titel, eintraege }); } catch (e) { console.warn("Chat speichern:", e); }
     ladeListe();
   }
 
@@ -317,7 +324,10 @@ const Fragen = (() => {
       merke({ frage, suchFrage, antwort, medizin, quellen: kurzQuellen(quellen), suche });
     } catch (e) {
       text.classList.remove("cursor");
-      text.append(el("div", { class: "fehlerbox" }, "Fehler: " + e.message));
+      console.error(e);
+      // Verständlich statt „Failed to fetch“; die technische Meldung nur als Tooltip
+      text.append(fehlerBox("Die KI hat nicht geantwortet. Bitte prüfe oben den KI-Status und versuche es noch einmal.",
+        () => { $("#frage-feld").value = frage; senden(); }, "Nochmal fragen", e.message));
     } finally {
       beschaeftigt = false;
       $("#frage-senden").disabled = false;

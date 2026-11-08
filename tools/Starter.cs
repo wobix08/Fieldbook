@@ -7,7 +7,9 @@
 // Unterprozesse (Job-Objekt), damit nichts im Hintergrund weiterläuft.
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -39,8 +41,178 @@ static class Starter
         };
         // Läuft Fieldbook schon, holt es den offenen Browser-Tab nach vorne; das darf es nur mit dieser Erlaubnis
         try { AllowSetForegroundWindow(-1); } catch { }
-        Process.Start(psi);
+        // Statusdatei vorbereiten: start.ps1 und Server schreiben hier den Fortschritt hinein
+        string statusDatei = Path.Combine(ordner, "daten", "cache", "startstatus.txt");
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(statusDatei));
+            File.WriteAllText(statusDatei, "Wird gestartet " + (char)0x2026, new UTF8Encoding(false));
+        }
+        catch { }
+        // Erst starten, dann das Fenster zeigen: der Start wird nicht verzögert
+        Process proc = Process.Start(psi);
+        try { SetProcessDPIAware(); } catch { }
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        try { Application.Run(new Startfenster(proc, statusDatei, ordner)); } catch { }
         return 0;
+    }
+
+    // Kleines Startfenster: Logo, Statuszeile und Laufbalken, bis Fieldbook offen ist
+    class Startfenster : Form
+    {
+        static readonly Color Hintergrund = Color.FromArgb(0x1C, 0x1D, 0x1B);
+        static readonly Color Rahmen = Color.FromArgb(0x33, 0x35, 0x2F);
+        static readonly Color Spur = Color.FromArgb(0x26, 0x29, 0x25);
+        static readonly Color Moos = Color.FromArgb(0x9F, 0xB7, 0x8F);
+        int BalkenX, BalkenY, BalkenBreite, BalkenHoehe, StueckBreite, Schritt;
+        float k = 1f; // Skalierung für 125/150 % Anzeige
+
+        Process proc;
+        string statusDatei;
+        Label status;
+        Image logo;
+        Timer timer = new Timer();
+        DateTime start = DateTime.Now;
+        int pos;
+        int takt = 0;
+        string zuletzt = "";
+
+        public Startfenster(Process p, string datei, string ordner)
+        {
+            proc = p;
+            statusDatei = datei;
+            DoubleBuffered = true;
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.CenterScreen;
+            ShowInTaskbar = false;
+            AutoScaleMode = AutoScaleMode.None;
+            try { using (var gr = CreateGraphics()) k = gr.DpiX / 96f; } catch { }
+            ClientSize = new Size(S(440), S(190));
+            BalkenX = S(24); BalkenY = S(134); BalkenBreite = S(392); BalkenHoehe = Math.Max(S(4), 2);
+            StueckBreite = S(110); Schritt = S(6); pos = -StueckBreite;
+            BackColor = Hintergrund;
+
+            logo = LogoLaden(ordner);
+
+            string titelSchrift = "Segoe UI Semibold";
+            try
+            {
+                foreach (FontFamily f in FontFamily.Families)
+                    if (f.Name == "Barlow Semi Condensed") { titelSchrift = f.Name; break; }
+            }
+            catch { }
+
+            // Sonderzeichen als Zeichencode: csc liest diese Datei ohne BOM als ANSI
+            Beschriftung("Fieldbook", new Font(titelSchrift, 20f), Color.FromArgb(0xF7, 0xF5, 0xF1), 94, 12, 322, 48);
+            Beschriftung("Wissen, wo kein Netz ist", new Font("Segoe UI", 10f), Color.FromArgb(0xE6, 0xE2, 0xDC), 98, 57, 318, 26);
+            status = Beschriftung("Wird gestartet " + (char)0x2026, new Font("Segoe UI", 10f), Color.FromArgb(0xE6, 0xE2, 0xDC), 24, 102, 392, 26);
+            status.AutoEllipsis = true;
+
+            string version = VersionLesen(ordner);
+            if (version != null)
+                Beschriftung(version, new Font("Segoe UI", 8f), Color.FromArgb(0xA9, 0xA6, 0x9F), 24, 156, 392, 18);
+
+            timer.Interval = 30;
+            timer.Tick += Takt;
+            timer.Start();
+        }
+
+        int S(int wert) { return (int)Math.Round(wert * k); }
+
+        Label Beschriftung(string text, Font schrift, Color farbe, int x, int y, int b, int h)
+        {
+            var l = new Label();
+            l.Text = text; l.Font = schrift; l.ForeColor = farbe; l.BackColor = Color.Transparent;
+            l.AutoSize = false; l.Location = new Point(S(x), S(y)); l.Size = new Size(S(b), S(h));
+            Controls.Add(l);
+            return l;
+        }
+
+        // Logo in großer Auflösung aus dem Symbol der eigenen exe holen
+        // (256 px als Bild: DrawImage verkleinert sauberer als DrawIcon)
+        static Image LogoLaden(string ordner)
+        {
+            try
+            {
+                string exe = Process.GetCurrentProcess().MainModule.FileName;
+                IntPtr[] icons = new IntPtr[1];
+                int[] ids = new int[1];
+                if (PrivateExtractIcons(exe, 0, 256, 256, icons, ids, 1, 0) > 0 && icons[0] != IntPtr.Zero)
+                    using (var ic = Icon.FromHandle(icons[0])) return ic.ToBitmap();
+            }
+            catch { }
+            return null;
+        }
+
+        // Version aus app\Server.cs lesen; ohne Treffer keine Anzeige
+        static string VersionLesen(string ordner)
+        {
+            try
+            {
+                string text = File.ReadAllText(Path.Combine(ordner, "app", "Server.cs"));
+                var m = System.Text.RegularExpressions.Regex.Match(text, "Version\\s*=\\s*\"(\\d+(?:\\.\\d+)+[^\"]*)\"");
+                if (m.Success) return "Version " + m.Groups[1].Value;
+            }
+            catch { }
+            return null;
+        }
+
+        protected override bool ShowWithoutActivation { get { return true; } }
+
+        void Takt(object s, EventArgs e)
+        {
+            pos += Schritt;
+            if (pos > BalkenBreite) pos = -StueckBreite;
+            Invalidate(new Rectangle(BalkenX, BalkenY, BalkenBreite, BalkenHoehe));
+            takt++;
+            if (takt % 7 != 0) return; // etwa alle 200 ms
+            if ((DateTime.Now - start).TotalSeconds > 180) { Close(); return; }
+            try { if (proc != null && proc.HasExited) { Close(); return; } } catch { }
+            string z = StatusLesen();
+            if (z == null || z == zuletzt) return;
+            zuletzt = z;
+            string klein = z.ToLowerInvariant();
+            if (klein == "fertig" || klein == "fehler") { Close(); return; }
+            if (z.Length > 0) status.Text = z;
+        }
+
+        string StatusLesen()
+        {
+            try
+            {
+                using (var fs = new FileStream(statusDatei, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var sr = new StreamReader(fs, Encoding.UTF8))
+                    return sr.ReadToEnd().Trim();
+            }
+            catch { return null; }
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            using (var stift = new Pen(Rahmen))
+                g.DrawRectangle(stift, 0, 0, Width - 1, Height - 1);
+            if (logo != null)
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.DrawImage(logo, new Rectangle(S(24), S(20), S(56), S(56)));
+            }
+            using (var b = new SolidBrush(Spur))
+                g.FillRectangle(b, BalkenX, BalkenY, BalkenBreite, BalkenHoehe);
+            int von = Math.Max(pos, 0), bis = Math.Min(pos + StueckBreite, BalkenBreite);
+            if (bis > von)
+                using (var b = new SolidBrush(Moos))
+                    g.FillRectangle(b, BalkenX + von, BalkenY, bis - von, BalkenHoehe);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) timer.Dispose();
+            base.Dispose(disposing);
+        }
     }
 
     static int Aktualisieren(string ordner, string modus)
@@ -73,6 +245,8 @@ static class Starter
     struct EXT { public BASIC Basic; public IOC Io; public UIntPtr a, b, c, d; }
 
     [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
+    [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint PrivateExtractIcons(string datei, int index, int bx, int by, IntPtr[] icons, int[] ids, uint anzahl, uint flags);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern IntPtr CreateJobObject(IntPtr a, string name);
     [DllImport("kernel32.dll")] static extern bool SetInformationJobObject(IntPtr job, int cls, IntPtr info, uint len);
     [DllImport("kernel32.dll")] static extern bool AssignProcessToJobObject(IntPtr job, IntPtr proc);

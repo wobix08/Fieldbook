@@ -4,39 +4,276 @@
 "use strict";
 
 const Uebersetzer = (() => {
-  let translator = null;
-  let laden = null;
   let an = false;              // Übersetzen eingeschaltet? Gilt dann auch für weitere Artikel
   let lauf = 0;                // Zählt Übersetzungsläufe, damit ein alter Lauf abbricht
   let originale = new Map();   // Element → ursprüngliches HTML
   let aktuellesDok = null;
-
-  let translatorSig = "";
 
   try { an = localStorage.getItem("ow-uebersetzen") === "1"; } catch { }
 
   const verfuegbar = () => !!(OW.status && OW.status.uebersetzer);
   const installiert = () => new Set((OW.status && OW.status.sprachen) || []);
 
+  // ---------------------------------------------------------------- Warteschlange und Worker
+  // Eigene Warteschlange statt des BatchTranslator aus der Bibliothek. Mit dem blieb die Übersetzung im
+  // PDF-Leser hängen oder wurde sehr langsam:
+  // - Starten zwei Worker zugleich und findet der zweite keine Arbeit mehr, stolpert er (Fehler „reading
+  //   'requests'“) und gilt danach für immer als beschäftigt. Ein hängender oder abgestürzter Worker wurde nie
+  //   ersetzt, Fehler wurden still verschluckt: danach passierte gar nichts mehr.
+  // - Aufträge liefen streng der Reihe nach. Nach Seitenwechseln oder einem Wechsel der Ansicht wurden alte,
+  //   längst unsichtbare Seiten zuerst übersetzt, die neue Seite wartete dahinter.
+  // Hier hat jeder Auftrag einen Vorrang (eine Zahl oder eine Funktion, die bei jedem Verteilen neu gefragt
+  // wird, z. B. Abstand zur sichtbaren Seite) und eine Prüfung, ob er noch gebraucht wird. Verteilt wird immer
+  // das Wichtigste, nicht mehr Gebrauchtes fällt weg. Antwortet ein Worker nicht oder meldet er einen Fehler,
+  // wird er beendet und durch einen neuen ersetzt. Fertige Übersetzungen merkt sich ein Zwischenspeicher, und
+  // gleiche Texte werden nur einmal übersetzt (Zurückblättern geht dann sofort).
   // Andere Sprachen gehen über Englisch (wie im Übersetzer): z. B. Spanisch → Englisch → Deutsch.
-  // Kommt eine Sprache dazu, wird der Übersetzer neu angelegt, damit er ihre Modelle kennt.
-  function holen() {
+
+  const WORKER_URL = "/uebersetzer/lib/worker/translator-worker.js";
+  const STAPEL_STUECKE = 10;      // höchstens so viele Texte in einem Aufruf …
+  const STAPEL_ZEICHEN = 1200;    // … und so viele Zeichen (kleinere Stapel: die sichtbare Seite ist schneller da)
+  const SPEICHER_MAX = 3000;      // gemerkte Übersetzungen
+  const START_MS = 180000;        // Worker starten oder Modell laden darf so lange dauern
+  // Ein bis zwei Rechenkerne: schnell genug, ohne den Laptop zu blockieren
+  const maxWorker = () => Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
+
+  let modul = null;               // Promise der Bibliothek (translator.js)
+  let backing = null, backingSig = "";   // Promise eines TranslatorBacking (Modellregister und Modelldateien)
+  const warte = [];               // wartende Aufträge
+  const offen = new Map();        // Schlüssel → Auftrag (wartend oder in Arbeit), gleiche Texte nur einmal
+  const worker = [];              // { w, zustand: "startet" | "frei" | "arbeitet" | "weg", modelle, aufrufe }
+  const speicher = new Map();     // Schlüssel → fertige Übersetzung (älteste fliegen zuerst raus)
+  let nr = 0, rufNr = 0, startFehler = 0, geplant = false;
+  // Zum Prüfen in der Konsole: Uebersetzer.zustand()
+  const zahlen = { erledigt: 0, ausSpeicher: 0, verworfen: 0, fehler: 0, neustarts: 0, letzterFehler: "", letzterStapel: "" };
+
+  class Verworfen extends Error { constructor() { super("nicht mehr gebraucht"); this.name = "Verworfen"; } }
+
+  const holeModul = () => modul || (modul = import("/uebersetzer/lib/translator.js").catch((e) => { modul = null; throw e; }));
+
+  // Modellregister: Kommt eine Sprache dazu, neu anlegen, damit es ihre Modelle kennt
+  function backingHolen() {
     const sig = [...installiert()].sort().join(",");
-    if (translator && sig === translatorSig) return Promise.resolve(translator);
-    if (!laden || sig !== translatorSig) {
-      translatorSig = sig;
-      translator = null;
-      laden = import("/uebersetzer/lib/translator.js").then((mod) => {
-        // Ein bis zwei Rechenkerne: schnell genug, ohne den Laptop zu blockieren
-        const kerne = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
-        translator = new mod.BatchTranslator({
-          registryUrl: "/api/uebersetzer/modelle", pivotLanguage: "en", downloadTimeout: 0,
-          workers: kerne, batchSize: 8, cacheSize: 4000,
-        });
-        return translator;
-      }).catch((e) => { laden = null; throw e; });
+    if (!backing || sig !== backingSig) {
+      backingSig = sig;
+      const p = backing = holeModul().then((m) => {
+        const b = new m.TranslatorBacking({ registryUrl: "/api/uebersetzer/modelle", pivotLanguage: "en", downloadTimeout: 0 });
+        b.registry.catch(() => { });   // Fehler kommt beim Abfragen an, nicht als „unbehandelt“
+        return b;
+      });
+      p.catch(() => { if (backing === p) backing = null; });
     }
-    return laden;
+    return backing;
+  }
+
+  const gilt = (x) => { try { return !x.gueltig || !!x.gueltig(); } catch { return false; } };
+  const vorrangVon = (x) => { let p = x.prio; try { if (typeof p === "function") p = p(); } catch { p = 99; } return Number.isFinite(+p) ? +p : 0; };
+  const vorrang = (a) => Math.min(...a.wer.map(vorrangVon));
+
+  // Ein Auftrag: { from, to, text, html, priority (Zahl oder Funktion, kleiner = früher), gueltig() }.
+  // Ergebnis wie bei der Bibliothek: { request, target: { text } }. Nicht mehr gebrauchte Aufträge enden mit
+  // einem Fehler namens "Verworfen".
+  function uebersetze(anfrage) {
+    const key = anfrage.from + ">" + anfrage.to + (anfrage.html ? "|h|" : "|t|") + anfrage.text;
+    if (speicher.has(key)) {
+      const text = speicher.get(key);
+      speicher.delete(key); speicher.set(key, text);   // wieder nach hinten: zuletzt gebraucht
+      zahlen.ausSpeicher++;
+      return Promise.resolve({ request: anfrage, target: { text } });
+    }
+    return new Promise((resolve, reject) => {
+      const wer = { resolve, reject, prio: anfrage.priority, gueltig: anfrage.gueltig, anfrage };
+      const a = offen.get(key);
+      if (a) { a.wer.push(wer); return; }              // derselbe Text ist schon unterwegs
+      const neu = { key, from: anfrage.from, to: anfrage.to, text: String(anfrage.text), html: !!anfrage.html,
+        wer: [wer], nr: ++nr, versuche: 0, einzeln: false };
+      offen.set(key, neu);
+      warte.push(neu);
+      anstossen();
+    });
+  }
+
+  // Alle Aufträge eines Durchgangs sammeln, dann einmal verteilen (so entstehen volle Stapel)
+  function anstossen() {
+    if (geplant) return;
+    geplant = true;
+    setTimeout(() => { geplant = false; verteilen(); }, 0);
+  }
+
+  // Aufträge, die niemand mehr braucht, verwerfen
+  function aufraeumen() {
+    for (let i = warte.length - 1; i >= 0; i--) {
+      const a = warte[i];
+      a.wer = a.wer.filter((x) => { if (gilt(x)) return true; zahlen.verworfen++; x.reject(new Verworfen()); return false; });
+      if (!a.wer.length) { warte.splice(i, 1); offen.delete(a.key); }
+    }
+  }
+
+  // Wie remove() der Bibliothek: filter(anfrage) === true heißt verwerfen
+  function entfernen(filter) {
+    for (const a of warte) for (const x of a.wer) if (filter(x.anfrage)) x.gueltig = () => false;
+    aufraeumen();
+  }
+
+  function verteilen() {
+    aufraeumen();
+    while (warte.length) {
+      const w = worker.find((x) => x.zustand === "frei");
+      if (!w) {
+        // Noch Platz für einen Worker? Der meldet sich, sobald er bereit ist
+        const startend = worker.filter((x) => x.zustand === "startet").length;
+        if (worker.length < maxWorker() && warte.length > startend * STAPEL_STUECKE) neuerWorker();
+        return;
+      }
+      arbeiten(w, stapelBilden());
+    }
+  }
+
+  // Das Wichtigste zuerst, dazu weitere Texte derselben Sprache (in Vorrang-Reihenfolge), bis der Stapel voll ist
+  function stapelBilden() {
+    const sortiert = warte.map((a) => ({ a, p: vorrang(a) })).sort((x, y) => x.p - y.p || x.a.nr - y.a.nr);
+    const erster = sortiert[0].a, stapel = [erster];
+    let zeichen = erster.text.length;
+    if (!erster.einzeln) {
+      for (const { a } of sortiert.slice(1)) {
+        if (stapel.length >= STAPEL_STUECKE || zeichen >= STAPEL_ZEICHEN) break;
+        if (a.einzeln || a.from !== erster.from || a.to !== erster.to) continue;
+        if (zeichen + a.text.length > STAPEL_ZEICHEN) break;
+        stapel.push(a);
+        zeichen += a.text.length;
+      }
+    }
+    for (const a of stapel) warte.splice(warte.indexOf(a), 1);
+    return stapel;
+  }
+
+  async function arbeiten(w, stapel) {
+    w.zustand = "arbeitet";
+    let abschnitt = "modelle";
+    const t0 = performance.now(), zeichen = stapel.reduce((n, a) => n + a.text.length, 0);
+    try {
+      const b = await backingHolen();
+      const modelle = await b.getModels({ from: stapel[0].from, to: stapel[0].to });
+      for (const { from, to } of modelle) {
+        if (w.modelle.has(from + to)) continue;
+        abschnitt = "modelle";
+        const puffer = await b.getTranslationModel({ from, to });
+        abschnitt = "worker";
+        await w.rufe("loadTranslationModel", [{ from, to }, puffer], START_MS);
+        w.modelle.add(from + to);
+      }
+      abschnitt = "worker";
+      // Großzügige Frist: ein langsamer Laptop braucht für einen vollen Stapel einige Sekunden
+      const antworten = await w.rufe("translate", [{
+        models: modelle.map(({ from, to }) => ({ from, to })),
+        texts: stapel.map((a) => ({ text: a.text, html: a.html, qualityScores: false })),
+      }], 60000 + zeichen * 50);
+      zahlen.letzterStapel = stapel.length + " Texte, " + zeichen + " Zeichen, " + Math.round(performance.now() - t0) + " ms";
+      stapel.forEach((a, i) => fertigMelden(a, antworten[i] && antworten[i].target ? antworten[i].target.text : null));
+    } catch (e) {
+      zahlen.fehler++;
+      zahlen.letzterFehler = (e && e.message) || String(e);
+      console.warn("Übersetzer:", zahlen.letzterFehler);
+      // Fehler im Worker: der ist danach nicht mehr verlässlich, ersetzen. Fehler beim Laden der Modelle:
+      // Register beim nächsten Mal neu holen.
+      if (abschnitt === "worker") wegwerfen(w, e); else backing = null;
+      // Noch einmal versuchen, aus einem Stapel einzeln (ein Text, der Fehler auslöst, legt so nicht alle lahm)
+      for (const a of stapel) {
+        a.versuche++;
+        if (a.versuche >= 2) { offen.delete(a.key); for (const x of a.wer) x.reject(e); continue; }
+        if (stapel.length > 1) a.einzeln = true;
+        warte.push(a);
+      }
+    } finally {
+      if (w.zustand === "arbeitet") w.zustand = "frei";
+      anstossen();
+    }
+  }
+
+  function fertigMelden(a, text) {
+    offen.delete(a.key);
+    if (typeof text !== "string") { for (const x of a.wer) x.reject(new Error("keine Übersetzung erhalten")); return; }
+    zahlen.erledigt++;
+    speicher.set(a.key, text);
+    if (speicher.size > SPEICHER_MAX) speicher.delete(speicher.keys().next().value);
+    for (const x of a.wer) x.resolve({ request: x.anfrage, target: { text } });
+  }
+
+  // Ein Worker der Bibliothek (Bergamot als WebAssembly). Jeder Aufruf hat eine Frist.
+  function neuerWorker() {
+    const w = { zustand: "startet", modelle: new Set(), aufrufe: new Map(), w: null };
+    worker.push(w);
+    try { w.w = new Worker(WORKER_URL); }
+    catch (e) { wegwerfen(w, e); startFehlschlag(e); return w; }
+    w.w.addEventListener("message", ({ data }) => {
+      const ruf = data && w.aufrufe.get(data.id);
+      if (!ruf) return;
+      w.aufrufe.delete(data.id);
+      clearTimeout(ruf.uhr);
+      if (data.error !== undefined) ruf.reject(Object.assign(new Error((data.error && data.error.message) || "Fehler im Übersetzer"), { name: (data.error && data.error.name) || "Error" }));
+      else ruf.resolve(data.result);
+    });
+    // Absturz im Worker (z. B. zu wenig Speicher): ersetzen
+    w.w.addEventListener("error", (e) => { if (e.preventDefault) e.preventDefault(); wegwerfen(w, new Error("Übersetzer-Worker abgestürzt: " + (e.message || "unbekannt"))); });
+    w.w.addEventListener("messageerror", () => wegwerfen(w, new Error("Übersetzer-Worker: Nachricht unlesbar")));
+    w.rufe = (name, args, ms) => new Promise((resolve, reject) => {
+      if (w.zustand === "weg") { reject(new Error("Übersetzer-Worker beendet")); return; }
+      const id = ++rufNr;
+      const uhr = setTimeout(() => wegwerfen(w, new Error("Übersetzer antwortet nicht (" + name + ")")), ms);
+      w.aufrufe.set(id, { resolve, reject, uhr });
+      try { w.w.postMessage({ id, name, args }); }
+      catch (e) { clearTimeout(uhr); w.aufrufe.delete(id); reject(e); }
+    });
+    w.rufe("initialize", [{ cacheSize: 4000, useNativeIntGemm: false }], START_MS).then(() => {
+      if (w.zustand !== "startet") return;
+      startFehler = 0;
+      w.zustand = "frei";
+      anstossen();
+    }, (e) => { wegwerfen(w, e); startFehlschlag(e); });
+    return w;
+  }
+
+  // Startet der Worker zweimal hintereinander nicht, die wartenden Aufträge mit dem Fehler beenden
+  // (sonst würde es endlos neu versucht). Der nächste neue Auftrag versucht es wieder.
+  function startFehlschlag(e) {
+    zahlen.letzterFehler = (e && e.message) || String(e);
+    console.warn("Übersetzer startet nicht:", zahlen.letzterFehler);
+    if (++startFehler < 2) { anstossen(); return; }
+    startFehler = 0;
+    for (const a of warte.splice(0)) { offen.delete(a.key); for (const x of a.wer) x.reject(e); }
+  }
+
+  function wegwerfen(w, fehler) {
+    if (w.zustand === "weg") return;
+    w.zustand = "weg";
+    const i = worker.indexOf(w);
+    if (i >= 0) worker.splice(i, 1);
+    zahlen.neustarts++;
+    try { if (w.w) w.w.terminate(); } catch { }
+    for (const ruf of w.aufrufe.values()) { clearTimeout(ruf.uhr); ruf.reject(fehler); }
+    w.aufrufe.clear();
+    anstossen();
+  }
+
+  // Für Artikel und PDF-Leser: lädt die Bibliothek (Fehler kommen hier an) und gibt die Warteschlange
+  const schlange = { translate: uebersetze, remove: entfernen };
+  function holen() { return holeModul().then(() => schlange); }
+
+  // Für den Übersetzer (Gespräch): einen Text übersetzen, vor Artikeln und PDF-Seiten
+  async function textUebersetzen(von, nach, text) {
+    const t = await holen();
+    const r = await t.translate({ from: von, to: nach, text, html: false, priority: -1 });
+    return r.target.text;
+  }
+
+  // Zum Prüfen in der Konsole
+  function zustand() {
+    return Object.assign({
+      warten: warte.length,
+      wartenTexte: warte.reduce((n, a) => n + a.wer.length, 0),
+      worker: worker.map((w) => w.zustand + (w.modelle.size ? " (" + [...w.modelle].join(",") + ")" : "")),
+      gemerkt: speicher.size,
+    }, zahlen);
   }
 
   // Spracherkennung mit franc (Codes nach ISO 639-3). Baskisch und Isländisch kennt franc nicht.
@@ -187,7 +424,8 @@ const Uebersetzer = (() => {
       const oben = e.getBoundingClientRect().top;
       const prio = oben < hoehe * 1.5 ? 0 : oben < hoehe * 4 ? 1 : 2;
       const html = e.innerHTML;
-      return t.translate({ from: s, to: "de", text: html, html: true, priority: prio }).then((r) => {
+      // Neuer Artikel oder „Original“: wartende Aufträge dieses Laufs fallen weg, statt abgearbeitet zu werden
+      return t.translate({ from: s, to: "de", text: html, html: true, priority: prio, gueltig: () => meinLauf === lauf && e.isConnected }).then((r) => {
         if (meinLauf !== lauf || !e.isConnected) return;
         originale.set(e, html);
         e.innerHTML = r.target.text;
@@ -204,7 +442,7 @@ const Uebersetzer = (() => {
     lauf++;
     for (const [e, html] of originale) if (e.isConnected) e.innerHTML = html;
     originale = new Map();
-    if (translator) translator.remove(() => true);
+    aufraeumen();               // wartende Aufträge des Artikels verwerfen (sie gehören zum alten Lauf)
     anzeige("", "Auf Deutsch");
   }
 
@@ -245,8 +483,13 @@ const Uebersetzer = (() => {
   // Beliebige Textstellen ins Deutsche übersetzen (PDF-Leser): Sprache wie bei Artikeln je Absatz erkennen,
   // deutsche Absätze und nicht installierte Sprachen bleiben. Ergebnis: Anzahl übersetzter Stellen und die
   // Namen fehlender Sprachen. fertig(e) wird nach jeder übersetzten Stelle aufgerufen (z. B. zum Einpassen).
-  async function elementeUebersetzen(elemente, fertig) {
-    if (!elemente.length) return { anzahl: 0, fehlt: [] };
+  // optionen.prio: Zahl oder Funktion (kleiner = früher; wird bei jedem Verteilen neu gefragt, z. B. Abstand
+  // zur sichtbaren Seite). optionen.gueltig(): false, sobald die Stellen nicht mehr gebraucht werden; ihre
+  // wartenden Aufträge fallen dann weg. Stellen, die aus der Seite entfernt wurden, fallen immer weg.
+  async function elementeUebersetzen(elemente, fertig, optionen) {
+    const opt = optionen || {};
+    const nochGebraucht = () => { try { return !opt.gueltig || !!opt.gueltig(); } catch { return false; } };
+    if (!elemente.length) return { anzahl: 0, fehlt: [], verworfen: 0 };
     let francAll = null;
     try { francAll = await holeErkenner(); } catch { /* ohne Erkennung nur Englisch */ }
     const text = elemente.map((e) => e.textContent).join(" ");
@@ -260,12 +503,27 @@ const Uebersetzer = (() => {
       if (!s || s === "de") continue;
       if (da.has(s)) liste.push({ e, s }); else fehlt.add(s);
     }
-    if (!liste.length) return { anzahl: 0, fehlt: [...fehlt] };
+    if (!liste.length) return { anzahl: 0, fehlt: [...fehlt], verworfen: 0 };
     const t = await holen();
-    await Promise.all(liste.map(({ e, s }) => t.translate({ from: s, to: "de", text: e.innerHTML, html: true, priority: 0 })
-      .then((r) => { if (e.isConnected) { e.innerHTML = r.target.text; if (fertig) fertig(e); } })
-      .catch(() => { })));
-    return { anzahl: liste.length, fehlt: [...fehlt] };
+    if (!nochGebraucht()) return { anzahl: 0, fehlt: [...fehlt], verworfen: liste.length };
+    const prio = opt.prio === undefined ? 0 : opt.prio;
+    let anzahl = 0, verworfen = 0, fehler = null;
+    await Promise.all(liste.map(({ e, s }) => {
+      // Ohne Auszeichnung (fett, kursiv …) als reiner Text: spart dem Übersetzer das Zuordnen der Tags
+      const html = e.children.length > 0;
+      return t.translate({ from: s, to: "de", text: html ? e.innerHTML : e.textContent, html, priority: prio,
+        gueltig: () => e.isConnected && nochGebraucht() })
+        .then((r) => {
+          if (!e.isConnected) return;
+          if (html) e.innerHTML = r.target.text; else e.textContent = r.target.text;
+          anzahl++;
+          if (fertig) fertig(e);
+        })
+        .catch((err) => { if (err && err.name === "Verworfen") verworfen++; else fehler = err; });
+    }));
+    // Ging gar nichts, den Fehler melden (sonst bliebe die Seite still englisch)
+    if (fehler && !anzahl && !verworfen) throw fehler;
+    return { anzahl, fehlt: [...fehlt], verworfen };
   }
 
   // Gemeinsamer Schalter „Auf Deutsch“ (gilt für Artikel und PDF-Bücher, wird gemerkt)
@@ -275,5 +533,5 @@ const Uebersetzer = (() => {
     try { localStorage.setItem("ow-uebersetzen", an ? "1" : "0"); } catch { }
   }
 
-  return { anbinden, neueSeite, verfuegbar, elementeUebersetzen, istAn, setzeAn };
+  return { anbinden, neueSeite, verfuegbar, elementeUebersetzen, textUebersetzen, istAn, setzeAn, zustand };
 })();

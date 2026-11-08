@@ -88,7 +88,8 @@ const Kochen = (() => {
       zeigeRezepte(ziel, bewertet, zutaten, ohneOfen);
     } catch (e) {
       ziel.innerHTML = "";
-      ziel.append(el("p", { class: "fehlerbox" }, "Die Suche hat nicht geklappt: " + e.message));
+      console.error(e);
+      ziel.append(fehlerBox("Die Suche hat nicht geklappt. Bitte versuche es noch einmal.", null, null, e.message));
     } finally { beschaeftigt = false; }
   }
 
@@ -138,7 +139,15 @@ const Kochen = (() => {
     if (!zeilen.length) return null;
     const zubereitung = abschnitt("Zubereitung").concat(abschnitt("Kochgeschirr")).map(n => n.textContent).join(" ");
     const titel = (doc.querySelector("h1") || {}).textContent || t.titel;
-    return { titel: titel.trim() || t.titel, url: t.url, zeilen, ofen: /backofen|\bofen\b|\brohr\b|umluft|unterhitze/i.test(zubereitung) ? 1 : 0 };
+    return { titel: titel.trim() || t.titel, url: t.url, zeilen, ofen: brauchtOfen(zubereitung) ? 1 : 0 };
+  }
+
+  // Satzweise prüfen: "im Ofen warm halten" oder "Grill oder Backofen" heißt nicht, dass man einen Ofen braucht
+  function brauchtOfen(text) {
+    return text.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ])|\n+/).some(s =>
+      /backofen|backrohr|\bofen\b|\brohr\b|umluft|unterhitze/i.test(s) &&
+      !/warm\s*(zu\s*)?(halten|stellen)|warmhalten|warmstellen|(vorgewärmt|angewärmt)\w*\s+(back)?ofen/i.test(s) &&
+      !/(grill|pfanne|herd|feuer)\s+oder\s+(back)?ofen|(back)?ofen\s+oder\s+(grill|pfanne|herd)/i.test(s));
   }
 
   function bewerten(r, staemme) {

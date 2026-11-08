@@ -214,21 +214,168 @@ const PdfLeser = (() => {
     if (grenze > rechts) e.style.width = (grenze - x) + "px";
   }
 
+  // ---- Stellen, die den Druck zeigen, auf Deutsch
+  // Dort liegt der Text unsichtbar über dem Bild des Drucks. Mit „Auf Deutsch“ wird er übersetzt und sichtbar
+  // darübergelegt; eine Abdeckung in der Farbe des Grunds darunter lässt den englischen Druck verschwinden.
+  // Ausgelassen: schräger Text, Punktlinien, Stellen ohne Wörter (Zahlen, Zeichen) und die Ansicht „Original“.
+  // Tabellen werden Zelle für Zelle überdeckt, damit die Spalten bleiben. Absätze mit Aufzählungszeichen
+  // und Abstand („•    Text“) behalten das Zeichen an seiner Stelle.
+  // Kasten → { marke, zellen } (aus kaestenBauen), beim Vorbereiten dazu vorher: Maße der Stelle im Druck
+  const kastenInfo = new WeakMap();
+
+  // Kästen zum Überdecken heraussuchen (Tabellen: neue Kästen je Zelle). Ein zweiter Aufruf je Seite tut nichts.
+  function ueberdeckenVorbereiten(s) {
+    const schicht = s.box.querySelector(".pdf-textschicht");
+    if (original || !schicht || !s.canvas || s.box.dataset.ueberdeckt) return [];
+    s.box.dataset.ueberdeckt = "1";
+    const liste = [];
+    const masse = (e) => ({ x: parseFloat(e.style.left), y: parseFloat(e.style.top), w: parseFloat(e.style.width) - 2, h: +e.dataset.h });
+    const kaesten = [...schicht.querySelectorAll(".pdf-kasten")];
+    // Inhaltsverzeichnis oder Register (mehrere Punktlinien): Einträge, Punkte und Seitenzahlen gehören
+    // zusammen und würden halb deutsch, halb englisch. Dort nur die Überschriften.
+    const verzeichnis = kaesten.filter(e => PUNKTLINIE.test(e.textContent)).length >= 2;
+    for (const e of kaesten.filter(e => e.classList.contains("pdf-unsichtbar"))) {
+      const info = kastenInfo.get(e) || {};
+      if (e.dataset.warum === "schraeg") continue;
+      if (verzeichnis && !e.classList.contains("pdf-kasten-titel")) continue;
+      if (e.dataset.warum === "tabelle" && !info.marke) {
+        for (const z of info.zellen || []) {
+          if (!/\p{L}{2}/u.test(z.text) || PUNKTLINIE.test(z.text)) continue;
+          const c = el("div", { class: "pdf-kasten pdf-zelle pdf-unsichtbar" + (z.zeilen === 1 ? " pdf-einzeilig" : "") }, z.text);
+          c.style.cssText = "left:" + z.x.toFixed(1) + "px;top:" + z.y.toFixed(1) + "px;width:" + (z.w + 2).toFixed(1) + "px";
+          c.dataset.gr = z.gr.toFixed(2);
+          c.dataset.zh = z.zh.toFixed(2);
+          c.dataset.h = z.h.toFixed(1);
+          schicht.append(c);
+          einpassen(c, 0.74);
+          kastenInfo.set(c, { vorher: masse(c), rechts: z.rechts });
+          liste.push(c);
+        }
+        continue;
+      }
+      if (!/\p{L}{2}/u.test(e.textContent) || PUNKTLINIE.test(e.textContent)) continue;
+      // Aufzählungszeichen nicht mitübersetzen: Es kommt nachher wieder an seine Stelle
+      if (info.marke) textVorneKuerzen(e, info.marke.text);
+      kastenInfo.set(e, Object.assign({}, info, { vorher: masse(e) }));
+      liste.push(e);
+    }
+    return liste;
+  }
+
+  // Die ersten Zeichen (ein Aufzählungszeichen) aus dem Text eines Kastens nehmen, samt Leerraum danach
+  function textVorneKuerzen(e, vorn) {
+    const gang = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+    let rest = vorn.replace(/\s+/g, "").length;
+    while (gang.nextNode() && rest >= 0) {
+      const t = gang.currentNode;
+      let i = 0;
+      while (i < t.nodeValue.length && rest > 0) { if (!/\s/.test(t.nodeValue[i])) rest--; i++; }
+      if (rest === 0) { while (i < t.nodeValue.length && /\s/.test(t.nodeValue[i])) i++; }
+      t.nodeValue = t.nodeValue.slice(i);
+      if (rest === 0 && t.nodeValue) break;
+    }
+  }
+
+  // Farbe des Grunds unter einer Stelle (Maße in CSS-Pixeln der Textschicht), aus dem Seitenbild, wie es zu
+  // sehen ist (im dunklen Design schon umgerechnet). Häufigste Farbe; ist sie selten (Foto), null.
+  function grundFarbe(s, r) {
+    const c = s.canvas, schicht = s.box.querySelector(".pdf-textschicht");
+    if (!c || !c.width || !schicht) return null;
+    const f = c.width / parseFloat(c.style.width), oben = parseFloat(schicht.style.top) || 0;
+    const x = Math.max(0, Math.floor((r.x - 3) * f)), y = Math.max(0, Math.floor((r.y + oben - 3) * f));
+    const w = Math.min(c.width - x, Math.ceil((r.w + 6) * f)), h = Math.min(c.height - y, Math.ceil((r.h + 6) * f));
+    if (w < 1 || h < 1) return null;
+    const d = c.getContext("2d").getImageData(x, y, w, h).data;
+    const zahl = new Map(), summe = new Map();
+    const schritt = Math.max(1, Math.floor(d.length / 4 / 6000)) * 4;
+    let n = 0;
+    for (let i = 0; i < d.length; i += schritt) {
+      const fach = (d[i] >> 4) << 8 | (d[i + 1] >> 4) << 4 | d[i + 2] >> 4;
+      zahl.set(fach, (zahl.get(fach) || 0) + 1);
+      const s3 = summe.get(fach) || [0, 0, 0];
+      s3[0] += d[i]; s3[1] += d[i + 1]; s3[2] += d[i + 2];
+      summe.set(fach, s3);
+      n++;
+    }
+    let bestes = -1, anzahl = 0;
+    for (const [fach, z] of zahl) if (z > anzahl) { anzahl = z; bestes = fach; }
+    // Text bedeckt höchstens etwa ein Drittel seines Kastens: Der Rest ist der Grund
+    if (anzahl < n * 0.5) return null;
+    return summe.get(bestes).map(v => Math.round(v / anzahl));
+  }
+
+  // Übersetzten Kasten sichtbar über den Druck legen (Rückruf je fertig übersetztem Kasten)
+  function ueberdecken(s, e) {
+    const info = kastenInfo.get(e), schicht = e.parentElement;
+    if (!info || !info.vorher || !schicht) return;
+    const v = info.vorher;
+    // Mit Aufzählungszeichen: Text beginnt, wo er im Druck nach dem Abstand beginnt
+    if (info.marke) {
+      e.style.left = info.marke.textX.toFixed(1) + "px";
+      e.style.width = (v.x + v.w - info.marke.textX + 2).toFixed(1) + "px";
+    }
+    e.classList.remove("pdf-unsichtbar");
+    e.classList.add("pdf-ueberdeckt");
+    breiterMachen(e);
+    // Tabellenzellen möglichst nur bis zum rechten Rand der Tabelle (außer, der Text würde dann zu klein)
+    const weit = e.style.width;
+    if (info.rechts && e.offsetLeft + e.offsetWidth > info.rechts + 2) e.style.width = Math.max(v.w + 2, info.rechts - e.offsetLeft + 2).toFixed(1) + "px";
+    if (!einpassen(e, 0.6) && e.style.width !== weit) { e.style.width = weit; einpassen(e, 0.6); }
+    // Einzeilig: nur so breit wie der Text (die Abdeckung soll nicht unnötig über Nachbarn reichen)
+    if (e.classList.contains("pdf-einzeilig")) {
+      const breit = parseFloat(e.style.width);
+      e.style.width = "max-content";
+      const natur = e.offsetWidth;
+      e.style.width = Math.min(breit, Math.max(natur + 2, v.w + 2)).toFixed(1) + "px";
+    }
+    const farbe = grundFarbe(s, v);
+    // Einfarbiger Grund: deckend in dieser Farbe. Foto oder unruhiger Grund: halbdurchsichtig in Fieldbook-Farben
+    const grund = farbe ? "rgb(" + farbe.join(",") + ")" : dunkleSeiten() ? "rgba(22,23,21,.82)" : "rgba(255,255,255,.84)";
+    const hell = farbe ? 0.2126 * farbe[0] + 0.7152 * farbe[1] + 0.0722 * farbe[2] < 115 : dunkleSeiten();
+    e.classList.toggle("pdf-hell", hell);
+    // Abdeckung: Stelle im Druck und der neue Text zusammen, mit etwas Rand (der Druck reicht etwas über den
+    // Kasten; seitlich mehr, oben und unten wenig, sonst litten die Unterlängen der Zeile darüber)
+    const x1 = Math.min(v.x, e.offsetLeft), y1 = Math.min(v.y, e.offsetTop);
+    const x2 = Math.max(v.x + v.w, e.offsetLeft + e.offsetWidth), y2 = Math.max(v.y + v.h, e.offsetTop + e.offsetHeight);
+    const rx = Math.max(1.5, 3 / (s.canvas ? s.canvas.width / parseFloat(s.canvas.style.width) : 1)) + 0.5, ry = 1;
+    const ab = el("div", { class: "pdf-abdeckung" });
+    ab.style.cssText = "left:" + (x1 - rx).toFixed(1) + "px;top:" + (y1 - ry).toFixed(1) + "px;width:" + (x2 - x1 + 2 * rx).toFixed(1) +
+      "px;height:" + (y2 - y1 + 2 * ry).toFixed(1) + "px;background:" + grund;
+    schicht.prepend(ab);          // unter allen Kästen
+    if (info.marke) {
+      const m = el("div", { class: "pdf-kasten pdf-einzeilig pdf-marke" + (hell ? " pdf-hell" : "") }, info.marke.text);
+      m.style.cssText = "left:" + info.marke.x.toFixed(1) + "px;top:" + v.y.toFixed(1) + "px;font-size:" + e.style.fontSize + ";line-height:" + e.style.lineHeight;
+      schicht.append(m);
+    }
+  }
+
   async function seiteUebersetzen(s) {
     if (!deutsch()) return;
     const textansicht = s.box.classList.contains("pdf-textseite");
     const elemente = textansicht
       ? [...s.box.querySelectorAll("p:not(.pdf-ohne-text), h2, h3")]
-      : [...s.box.querySelectorAll(".pdf-kasten:not(.pdf-unsichtbar)")];
+      : [...s.box.querySelectorAll(".pdf-kasten:not(.pdf-unsichtbar)")].concat(ueberdeckenVorbereiten(s));
     if (!elemente.length) return;
+    const meinLauf = lauf, n = +s.box.dataset.seite;
     offen++;
     deutschAnzeigen();
     try {
-      // Deutscher Text ist länger: in der Seitenansicht neu einpassen, notfalls etwas kleiner als sonst
-      const r = await Uebersetzer.elementeUebersetzen(elemente, textansicht ? null : (e) => { breiterMachen(e); einpassen(e, 0.6); });
+      // Deutscher Text ist länger: in der Seitenansicht neu einpassen, notfalls etwas kleiner als sonst.
+      // Stellen aus dem Druck werden dabei sichtbar darübergelegt.
+      const r = await Uebersetzer.elementeUebersetzen(elemente, textansicht ? null : (e) => {
+        if (e.classList.contains("pdf-unsichtbar")) ueberdecken(s, e);
+        else { breiterMachen(e); einpassen(e, 0.6); }
+      }, {
+        // Sichtbare Seite zuerst, dann die folgenden, Seiten darüber etwas später (wird beim Verteilen neu gefragt)
+        prio: () => n >= aktuelleSeite ? n - aktuelleSeite : aktuelleSeite - n + 0.5,
+        // Nicht mehr gebraucht nach Neuaufbau (Ansicht, Zoom, Buch), „Original“ oder beim Verlassen des Lesers.
+        // Freigegebene Seiten fallen von selbst weg (ihre Kästen hängen nicht mehr in der Seite).
+        gueltig: () => meinLauf === lauf && deutsch() && location.hash.startsWith("#pdf"),
+      });
       r.fehlt.forEach(c => fehlend.add(c));
     } catch (e) {
-      $("#pdf-uebersetzen-status").textContent = "Übersetzer konnte nicht starten: " + e.message;
+      $("#pdf-uebersetzen-status").textContent = "Übersetzung fehlgeschlagen: " + e.message;
+      return;
     } finally { offen--; }
     deutschAnzeigen();
   }
@@ -1031,6 +1178,8 @@ const PdfLeser = (() => {
         teile, text: nurText(teile), art: g.art,
         schwierig: zs.some(z => z.luecke || z.schraeg),
       };
+      // Warum schwierig (für „Auf Deutsch“: welche Stellen sich überdecken lassen)
+      k.warum = zs.some(z => z.schraeg) ? "schraeg" : zs.some(z => z.luecke) ? "tabelle" : "";
       const hoehen = zs.map(z => z.h).sort((a, b) => a - b);
       const groesse = hoehen[Math.floor(hoehen.length / 2)] * vp.scale * 0.9;
       const abstand = zs.length > 1 ? (zs[0].y - zs[zs.length - 1].y) / (zs.length - 1) * vp.scale : groesse * 1.25;
@@ -1043,7 +1192,8 @@ const PdfLeser = (() => {
       k.el.dataset.gr = groesse.toFixed(2);
       k.el.dataset.zh = zeilenHoehe.toFixed(2);
       k.el.dataset.h = k.h.toFixed(1);
-      if (!einpassen(k.el, 0.74)) k.schwierig = true;
+      if (!einpassen(k.el, 0.74)) { k.schwierig = true; k.warum = k.warum || "eng"; }
+      if (k.warum === "tabelle") Object.assign(k, tabelleZerlegen(zs, vp));
       kaesten.push(k);
     }
     // Überlappen sich zwei Kästen, sind beide schwierig
@@ -1051,9 +1201,90 @@ const PdfLeser = (() => {
     for (let i = 0; i < kaesten.length; i++) for (let j = i + 1; j < kaesten.length; j++) {
       const a = r[i], b = r[j];
       const ix = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), iy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-      if (ix > 3 && iy > 3) { kaesten[i].schwierig = true; kaesten[j].schwierig = true; }
+      if (ix > 3 && iy > 3) {
+        for (const k of [kaesten[i], kaesten[j]]) { k.schwierig = true; k.warum = k.warum || "ueberlappt"; }
+      }
+    }
+    // Für „Auf Deutsch“ merken (ändert am Aussehen nichts)
+    for (const k of kaesten) {
+      if (k.warum) k.el.dataset.warum = k.warum;
+      if (k.marke || k.zellen) kastenInfo.set(k.el, { marke: k.marke, zellen: k.zellen });
     }
     return kaesten;
+  }
+
+  // Abschnitte einer Zeile, getrennt an großen Lücken (Spalten einer Tabelle, Abstand nach einem
+  // Aufzählungspunkt). luecke: ab wie vielen Schrifthöhen Abstand (zeilenAus nimmt anderthalb).
+  function abschnitte(z, luecke) {
+    const teile = [];
+    let a = null, rechts = -Infinity;
+    for (const st of z.stuecke) {
+      if (!a || st.x - rechts > st.h * luecke) { a = { x: st.x, r: st.r, s: st.s }; teile.push(a); }
+      else {
+        if (st.x - a.r > st.h * 0.15 && !/\s$/.test(a.s) && !/^\s/.test(st.s)) a.s += " ";
+        a.s += st.s;
+        a.r = Math.max(a.r, st.r);
+      }
+      rechts = Math.max(rechts, st.r);
+    }
+    for (const t of teile) t.s = t.s.replace(/\s+/g, " ").trim();
+    return teile.filter(t => t.s);
+  }
+
+  const PUNKTLINIE = /(\.\s?){4,}|…{2,}|_{4,}/;
+  // Aufzählungszeichen oder Nummer vor einem Absatz: „•“, „–“, „1.“, „(a)“, „iv)“ (auch Zeichen aus Symbolschriften)
+  const MARKE = /^([^\p{L}\p{N}\s]{1,2}|o|\(?\d{1,3}[.)]|\(?[a-zA-Z][.)]|\(?[ivxIVX]{1,4}[.)])$/u;
+
+  // Ein Kasten mit großen Lücken: entweder ein Absatz mit Aufzählungszeichen und Abstand („•    Text …“, nur
+  // in der ersten Zeile) oder eine Tabelle. Für „Auf Deutsch“ wird das Zeichen bzw. werden die Zellen gemerkt
+  // (Maße in CSS-Pixeln der Seite). Zellen untereinander in derselben Spalte, deren Text klein weitergeht,
+  // gehören zu einer Zelle (umbrochener Text).
+  function tabelleZerlegen(zs, vp) {
+    const rechteck = (z, x1, x2) => {
+      const p1 = vp.convertToViewportPoint(x1, z.y + z.h * 0.88), p2 = vp.convertToViewportPoint(x2, z.y - z.h * 0.24);
+      return { x: Math.min(p1[0], p2[0]), y: Math.min(p1[1], p2[1]), w: Math.abs(p2[0] - p1[0]), h: Math.abs(p2[1] - p1[1]) };
+    };
+    const ab = zs.map(z => abschnitte(z, 1.5));
+    if (ab[0].length === 2 && MARKE.test(ab[0][0].s) && ab.slice(1).every(a => a.length <= 1) && !zs.some(z => PUNKTLINIE.test(z.text))) {
+      const m = rechteck(zs[0], ab[0][0].x, ab[0][0].r);
+      return { marke: { text: ab[0][0].s, x: m.x, textX: rechteck(zs[0], ab[0][1].x, ab[0][1].r).x } };
+    }
+    const zellen = [];
+    let vorige = [];
+    zs.forEach((z, i) => {
+      const jetzt = [];
+      // Spalten stehen in Tabellen oft enger als anderthalb Schrifthöhen: hier schon ab einer halben trennen
+      for (const a of abschnitte(z, 0.5)) {
+        const r = rechteck(z, a.x, a.r);
+        const gr = z.h * vp.scale * 0.9;
+        // Zelle darüber in derselben Spalte (Fortsetzungszeilen sind oft eingerückt oder mittig gesetzt)
+        const oben = vorige.find(c => r.x < c.x + c.w && c.x < r.x + r.w && r.y - (c.y + c.h) < gr * 0.8 && r.y > c.y);
+        if (oben && /^[a-zà-ÿ]/.test(a.s) && !PUNKTLINIE.test(a.s + oben.text)) {
+          oben.text = /[A-Za-zÀ-ÿ]-$/.test(oben.text) ? oben.text.slice(0, -1) + a.s : oben.text + " " + a.s;
+          const x2 = Math.max(oben.x + oben.w, r.x + r.w);
+          oben.zeilen++;
+          oben.bis = i;
+          oben.zh = (r.y + r.h - oben.y) / oben.zeilen;
+          oben.x = Math.min(oben.x, r.x); oben.w = x2 - oben.x; oben.h = r.y + r.h - oben.y;
+          jetzt.push(oben);
+        } else {
+          const c = Object.assign(r, { text: a.s, gr, zh: Math.max(gr * 1.05, r.h), zeilen: 1, von: i, bis: i });
+          zellen.push(c);
+          jetzt.push(c);
+        }
+      }
+      vorige = jetzt;
+    });
+    // Liefert das PDF mehrere Spalten als ein Textstück, ginge die Spaltenordnung beim Übersetzen verloren:
+    // Beginnen in anderen Zeilen mindestens zwei Zellen mitten in dieser, bleibt sie im Druck
+    for (const c of zellen) {
+      const innen = zellen.filter(o => (o.bis < c.von || o.von > c.bis) && o.x > c.x + c.gr && o.x < c.x + c.w - c.gr);
+      c.quer = new Set(innen.map(o => Math.round(o.x / c.gr))).size >= 2;
+    }
+    // Rechter Rand der Tabelle: Übersetzte Zellen sollen nicht darüber hinauswachsen
+    const rechts = Math.max(...zellen.map(c => c.x + c.w));
+    for (const c of zellen) c.rechts = rechts;
+    return { zellen: zellen.filter(c => !c.quer) };
   }
 
   // ---------------------------------------------------------------- Bedienung

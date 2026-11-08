@@ -40,6 +40,18 @@ function zeilen(text) {
   return teile.flatMap((s, i) => i ? [el("br"), s] : [s]);
 }
 
+// Text für „Fieldbook läuft nicht mehr oder antwortet nicht“ (jeder Satz in eigener Zeile über zeilen())
+const NICHT_ERREICHBAR = "Fieldbook antwortet gerade nicht. Läuft das schwarze Fieldbook-Fenster noch? Sonst Fieldbook neu starten.";
+
+// Roter Fehlerkasten mit Knopf zum nochmal Versuchen: fehlerBox("Text", () => neuLaden()).
+// nochmal fehlt: kein Knopf. knopfText: Beschriftung des Knopfs. technisch: nur als Tooltip (title), nicht im Text.
+function fehlerBox(text, nochmal, knopfText, technisch) {
+  const box = el("div", { class: "fehlerbox", role: "alert", title: technisch ? String(technisch) : null }, zeilen(text));
+  if (nochmal) box.append(el("div", { style: "margin-top:8px" },
+    el("button", { type: "button", class: "knopf knopf-klein", onclick: nochmal }, knopfText || "Erneut versuchen")));
+  return box;
+}
+
 // Linien-Symbol aus symbole.svg (Lucide), färbt sich wie der Text: sym("map")
 function sym(name) {
   const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -346,15 +358,27 @@ function aktualisierungBox(akt, sofort, opt) {
 
 // Einfaches Dialogfenster mit eigenen Knöpfen. Gibt den Wert des gedrückten Knopfs zurück.
 // knoepfe: [{ text, wert, haupt }]
+let dialogZaehler = 0;
 function dialog(titel, inhalt, knoepfe) {
   return new Promise((fertig) => {
     const hinter = el("div", { class: "dialog-hinter" });
-    const box = el("div", { class: "dialog", role: "dialog", "aria-modal": "true" },
-      el("h2", {}, titel), typeof inhalt === "string" ? el("p", {}, inhalt) : inhalt,
+    const titelId = "dialog-titel-" + (++dialogZaehler);
+    const schliessen = (wert) => { document.removeEventListener("keydown", taste, true); hinter.remove(); fertig(wert); };
+    // Escape wirkt wie ein Klick auf den Hintergrund; nur beim obersten Dialog
+    const taste = (e) => {
+      if (e.key !== "Escape") return;
+      const alle = document.querySelectorAll(".dialog-hinter");
+      if (alle[alle.length - 1] !== hinter) return;
+      e.preventDefault();
+      schliessen(null);
+    };
+    const box = el("div", { class: "dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": titelId },
+      el("h2", { id: titelId }, titel), typeof inhalt === "string" ? el("p", {}, zeilen(inhalt)) : inhalt,
       el("div", { class: "knopfreihe", style: "justify-content:flex-end" },
-        ...knoepfe.map(k => el("button", { class: "knopf" + (k.haupt ? " knopf-haupt" : ""), onclick: () => { hinter.remove(); fertig(k.wert); } }, k.text))));
+        ...knoepfe.map(k => el("button", { class: "knopf" + (k.haupt ? " knopf-haupt" : ""), onclick: () => schliessen(k.wert) }, k.text))));
     hinter.append(box);
-    hinter.addEventListener("click", (e) => { if (e.target === hinter) { hinter.remove(); fertig(null); } });
+    hinter.addEventListener("click", (e) => { if (e.target === hinter) schliessen(null); });
+    document.addEventListener("keydown", taste, true);
     document.body.append(hinter);
     box.querySelector(".knopf-haupt, .knopf").focus();
   });
@@ -451,16 +475,18 @@ async function ladeKonfigSprache(name) {
 // ---------------------------------------------------------------- Kiwix
 
 const Kiwix = {
-  // Liste aller installierten Bücher aus dem Kiwix-Katalog
+  // Liste aller installierten Bücher aus dem Kiwix-Katalog.
+  // Nur eine leere Liste, wenn wirklich nichts installiert ist; ist Fieldbook nicht erreichbar, gibt es einen Fehler (Exception).
   async buecher(neu) {
     if (OW.buecher && OW.buecher.length && !neu) return OW.buecher;
-    if (!OW.status || !OW.status.bibliothek) return [];
+    if (!OW.status) throw new Error("Kein Status von Fieldbook");
+    if (!OW.status.bibliothek) return [];
     if (!OW.pakete) {
       try { const pk = await ladeKonfig("pakete"); OW.pakete = pk.pakete || []; OW.kategorien = pk.kategorien || []; }
       catch { OW.pakete = []; OW.kategorien = []; }
     }
     const r = await fetch("/kiwix/catalog/v2/entries?count=-1");
-    if (!r.ok) return [];
+    if (!r.ok) throw new Error("Bibliothek antwortet nicht (" + r.status + ")");
     const xml = new DOMParser().parseFromString(await r.text(), "application/xml");
     const liste = [];
     for (const e of xml.querySelectorAll("entry")) {
@@ -641,9 +667,6 @@ window.addEventListener("unhandledrejection", (e) => {
   // Abgebrochene Anfragen (z. B. KI-Antwort gestoppt) sind keine Fehler
   if (r && r.name === "AbortError") return;
   const stelle = fehlerStelle(r && r.stack);
-  // Bekannter Fehler im Übersetzer von Mozilla (translator.js): Starten zwei Übersetzer-Worker zugleich,
-  // findet der zweite keine Arbeit mehr und stolpert. Ohne Folgen, übersetzt wird trotzdem.
-  if (r && /reading 'requests'/.test(r.message || "") && /^translator\.js:/.test(stelle)) return;
   Statistik.fehler("Unbehandelt: " + (r && r.message ? r.message : String(r)) + (stelle ? " (" + stelle + ")" : ""));
 });
 

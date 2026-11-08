@@ -40,14 +40,40 @@ function navigiere() {
   // Paket-Startseiten und PDF-Bücher gehören zur Bibliothek
   const menue = ziel === "paketstart" || ziel === "pdf" ? "bibliothek" : ziel;
   $$("#hauptnav a").forEach(a => a.classList.toggle("aktiv", a.getAttribute("href") === "#" + menue));
-  try { Ansichten[ziel].zeigen(params); } catch (e) { console.error(e); Statistik.fehler("Ansicht " + ziel + ": " + e.message); }
+  $$(".ansicht-fehler").forEach(x => x.remove());
+  // Antwortet Fieldbook nicht, würde jede Seite „nichts installiert“ o. ä. zeigen: stattdessen den Fehler
+  if (OW.nichtErreichbar && ziel !== "lesen" && ziel !== "pdf") ansichtFehler(ziel, null);
+  // Fehler auch aus asynchronen Ansichten abfangen, sonst bliebe die Seite leer
+  else try { Promise.resolve(Ansichten[ziel].zeigen(params)).catch(e => ansichtFehler(ziel, e)); } catch (e) { ansichtFehler(ziel, e); }
   Statistik.bereich(ziel);
   if (ziel !== "lesen" && ziel !== "pdf") window.scrollTo(0, 0);
+}
+
+// Fehlerkasten oben in der Ansicht, mit „Erneut versuchen“
+async function ansichtFehler(ziel, e) {
+  if (e) {
+    console.error(e);
+    await aktualisiereStatus(); // war es ein Fehler der Seite oder antwortet Fieldbook gar nicht?
+    if (!OW.nichtErreichbar) Statistik.fehler("Ansicht " + ziel + ": " + e.message);
+  }
+  const sek = document.querySelector('.ansicht[data-ansicht="' + ziel + '"]');
+  if (!sek) return;
+  sek.querySelectorAll(".ansicht-fehler").forEach(x => x.remove());
+  const text = OW.nichtErreichbar ? NICHT_ERREICHBAR : "Diese Seite konnte nicht geladen werden. Bitte versuche es noch einmal.";
+  // Kommt Fieldbook wieder, baut aktualisiereStatus die Seite selbst neu auf; sonst hier
+  const box = fehlerBox(text, async () => { const weg = OW.nichtErreichbar; await aktualisiereStatus(); if (!weg || OW.nichtErreichbar) navigiere(); }, null, e && e.message);
+  box.classList.add("ansicht-fehler");
+  box.style.margin = "16px 0";
+  sek.prepend(box);
 }
 
 async function aktualisiereStatus() {
   try {
     const s = await api("status");
+    // Fieldbook antwortet wieder: eine Fehlerseite von eben neu aufbauen
+    const warWeg = OW.nichtErreichbar;
+    OW.nichtErreichbar = false;
+    if (warWeg && document.querySelector(".ansicht-fehler")) setTimeout(navigiere, 0);
     const vorher = OW.status;
     // Fieldbook wurde neu gestartet und nutzt diesen Tab weiter: einmal frisch laden
     if (vorher && vorher.start && s.start && vorher.start !== s.start && !document.querySelector(".dialog-hinter[data-neustart]")) { location.reload(); return s; }
@@ -58,8 +84,9 @@ async function aktualisiereStatus() {
     PdfText.pruefen();
     return s;
   } catch (e) {
+    OW.nichtErreichbar = true;
     const p = $("#ki-pill");
-    p.textContent = "Server nicht erreichbar";
+    p.textContent = "Fieldbook antwortet nicht";
     p.className = "pill fehler";
     return null;
   }
@@ -282,4 +309,11 @@ window.addEventListener("hashchange", navigiere);
   if (s && !s.setupFertig && s.wissen === 0 && !s.modell && !location.hash) location.hash = "#setup";
   navigiere();
   setInterval(aktualisiereStatus, 5000);
+  // Solange Fieldbook nicht antwortet, jede Sekunde nachfragen (ein neu gestartetes Fieldbook findet den Tab schneller)
+  let schnellLaeuft = false;
+  setInterval(async () => {
+    if (!OW.nichtErreichbar || schnellLaeuft) return;
+    schnellLaeuft = true;
+    try { await aktualisiereStatus(); } finally { schnellLaeuft = false; }
+  }, 1000);
 })();

@@ -158,8 +158,11 @@ const Bibliothek = (() => {
     // Mehr holen als gezeigt wird: Der Filter unten wirft schwache Treffer weg
     const anzahl = nurBuch ? 20 : 8;
     const woerter = suchWoerter(q);
+    // Zählen, wie viele Abfragen scheitern: scheitern alle, ist das kein „keine Treffer“
+    let fehlgeschlagen = 0;
     const gruppen = await Promise.all(buecher.map(async b => {
-      const [titel, voll] = await Promise.all([Kiwix.vorschlaege(b, q, anzahl).catch(() => []), Kiwix.suche(b, q, anzahl).catch(() => [])]);
+      const [titel, voll] = await Promise.all([Kiwix.vorschlaege(b, q, anzahl).catch(() => { fehlgeschlagen++; return []; }),
+        Kiwix.suche(b, q, anzahl).catch(() => { fehlgeschlagen++; return []; })]);
       const gesehen = new Set();
       const liste = [];
       let imTitel = false;
@@ -199,7 +202,9 @@ const Bibliothek = (() => {
         ...liste.map(t => el("a", { class: "treffer", href: trefferLink(t) },
           el("b", {}, t.titel), t.auszug ? el("small", {}, t.auszug.slice(0, 200)) : null))));
     }
-    if (!gefunden) {
+    if (!gefunden && buecher.length && fehlgeschlagen === buecher.length * 2) {
+      ziel.append(fehlerBox("Die Suche ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.", () => suchen(q, nurBuch)));
+    } else if (!gefunden) {
       // PDF-Bücher sind erst durchsuchbar, wenn Fieldbook ihren Text einmal ausgelesen hat
       const pdfTexte = (OW.status && OW.status.pdfTexte) || {};
       const unfertig = eins && eins.pdf && pdfTexte[eins.id] !== true;

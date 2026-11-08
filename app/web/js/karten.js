@@ -247,8 +247,9 @@ const Karten = (() => {
     const ziel = $("#ort-treffer");
     if (q.length < 2) { ziel.innerHTML = ""; return; }
     if (!OW.status.orte) { ziel.innerHTML = '<div class="leer">Ortsliste nicht installiert.</div>'; return; }
-    const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => []);
+    const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => null);
     ziel.innerHTML = "";
+    if (!liste) { ziel.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar.")); return; }
     if (!liste.length) { ziel.append(el("div", { class: "leer" }, "Nichts gefunden.")); return; }
     for (const o of liste.slice(0, 12)) {
       ziel.append(el("button", { onclick: () => geheZu(o) },
