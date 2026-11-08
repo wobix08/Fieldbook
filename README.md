@@ -45,27 +45,15 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Inhalt
 
-- [Systemanforderungen](#systemanforderungen)
 - [Schnellstart](#schnellstart)
 - [Warum Fieldbook?](#warum-fieldbook)
 - [Ist das sicher?](#ist-das-sicher)
-- [Code-Signatur](#code-signatur)
-- [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
-- [Welche KI nutzt Fieldbook?](#welche-ki-nutzt-fieldbook)
-- [So funktioniert die Frage-Antwort-Funktion](#so-funktioniert-die-frage-antwort-funktion)
-- [Automatische Aktualisierung (optional)](#automatische-aktualisierung-optional)
-- [Programm-Updates (Fieldbook selbst)](#programm-updates-fieldbook-selbst)
+- [Die KI](#die-ki)
+- [Updates](#updates)
 - [Datenschutz](#datenschutz)
+- [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
 - [Für Entwickler](#für-entwickler)
 - [Lizenz](#lizenz)
-
-## Systemanforderungen
-
-- Windows 10 oder 11 (64 Bit), andere Betriebssysteme werden nicht unterstützt
-- Mindestens 4 GB Arbeitsspeicher, für die KI 8 GB oder mehr
-- Speicherplatz je nach Auswahl: etwa 20 GB („Das Wichtigste“ bei wenig Platz, mit KI) bis über 100 GB (alles)
-- Internet nur für die Einrichtung
-- Oberfläche auf Deutsch, Notrufnummern für Deutschland, Österreich und die Schweiz
 
 ## Schnellstart
 
@@ -82,6 +70,13 @@ Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [GUIDE.md](GUIDE.
 > Dann auf **Weitere Informationen → Trotzdem ausführen** klicken.\
 > Das ist nur einmal nötig.\
 > Warum das harmlos ist, steht unter [Ist das sicher?](#ist-das-sicher).
+
+**Systemanforderungen**
+- Windows 10 oder 11 (64 Bit), andere Betriebssysteme werden nicht unterstützt
+- Mindestens 4 GB Arbeitsspeicher, für die KI 8 GB oder mehr
+- Speicherplatz je nach Auswahl: etwa 20 GB („Das Wichtigste“ bei wenig Platz, mit KI) bis über 100 GB (alles)
+- Internet nur für die Einrichtung
+- Oberfläche auf Deutsch, Notrufnummern für Deutschland, Österreich und die Schweiz
 
 ## Warum Fieldbook?
 
@@ -114,10 +109,9 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Das hilft auch, wenn ein Virenschutz die .exe blockiert (mehr dazu unter [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)).
 - **Keine Installation, keine Administratorrechte**\
   Fieldbook verändert nichts an Windows und schreibt nur in seinen eigenen Ordner.\
-  Zum Entfernen genügt es, den Ordner zu löschen.\
-  Hast du die automatische Aktualisierung eingeschaltet, schalte sie vorher in den Einstellungen aus.\
   Einzige Ausnahme: Die *optionale* automatische Aktualisierung legt zwei Aufgaben in der Windows-Aufgabenplanung an.\
-  Ausschalten in den Einstellungen entfernt sie wieder.
+  Zum Entfernen genügt es, den Ordner zu löschen.\
+  Hast du die automatische Aktualisierung eingeschaltet, schalte sie vorher in den Einstellungen aus, dann verschwinden auch die beiden Aufgaben.
 - **Deine Daten bleiben bei dir**\
   Kein Konto, keine Werbung.\
   Alles läuft auf `localhost`, also nur auf deinem Gerät.\
@@ -147,63 +141,17 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
+- **Noch nicht signiert**\
+  `Fieldbook.exe` hat noch keine digitale Signatur.\
+  Kostenlose Signaturen für Open-Source-Projekte gibt es erst, wenn ein Projekt schon bekannter ist.\
+  Fieldbook beantragt sie später erneut.\
+  Gebaut wird jede Version automatisch auf GitHub aus dem Quellcode dieses Repositorys ([`.github/workflows/release.yml`](.github/workflows/release.yml)).\
+  Ob die heruntergeladene Datei unverändert ist, zeigt die Prüfsumme.
 - **Selbst prüfen lassen**\
   Wer möchte, lädt die ZIP bei [VirusTotal](https://www.virustotal.com) hoch.\
   Dort prüfen rund 70 Virenscanner gleichzeitig.
 
-## Code-Signatur
-
-`Fieldbook.exe` ist noch nicht digital signiert.\
-Kostenlose Signaturen für Open-Source-Projekte gibt es erst, wenn ein Projekt schon bekannter ist.\
-Fieldbook beantragt sie später erneut.
-
-Gebaut wird jede Version automatisch auf GitHub aus dem Quellcode dieses Repositorys ([`.github/workflows/release.yml`](.github/workflows/release.yml)).\
-Ob die heruntergeladene Datei unverändert ist, zeigt die Prüfsumme (siehe oben).
-
-Was Fieldbook überträgt, steht unter [Datenschutz](#datenschutz).
-
-## Downloads in Firmen- und Schulnetzen
-
-Fieldbook braucht Internet nur zum Herunterladen.\
-Sperren ein Werbeblocker (z. B. Pi-hole, AdGuard), eine Firewall oder ein Jugendschutzfilter einzelne Adressen, schlagen Downloads fehl.\
-In Firmen blockieren außerdem oft die HTTPS-Prüfung der Firewall oder der Virenschutz.\
-Das kann nur die IT freigeben.
-
-- **HTTPS-Prüfung (SSL-Inspection)**\
-  Viele Firmen-Firewalls entschlüsseln verschlüsselte Verbindungen, um sie zu prüfen.\
-  Dabei werden die großen Downloads von Fieldbook oft abgebrochen oder gesperrt.\
-  Dann muss die IT die Adressen aus der Tabelle unten von der HTTPS-Prüfung ausnehmen.
-- **Virenschutz und Endpoint-Schutz**\
-  Fieldbook ist ein kleines, neues Programm und steht deshalb in keiner Liste bekannter, vertrauenswürdiger Programme.\
-  Firmen-Virenschutz blockiert solche unbekannten Programme oft vorsorglich, auch wenn nichts Schädliches darin ist.\
-  Wird `Fieldbook.exe` blockiert, lässt sich Fieldbook stattdessen mit `app\Start.bat` starten.\
-  Strenge Schutzprogramme blockieren aber manchmal auch das, weil Fieldbook beim Start ein PowerShell-Skript ausführt und Hilfsprogramme startet.\
-  Dann muss die IT den Fieldbook-Ordner freigeben.\
-  Prüfen kann sie vorher alles selbst: Der komplette Quellcode liegt in diesem Repository, und zu jedem Release gibt es eine Prüfsumme (siehe [Ist das sicher?](#ist-das-sicher)).
-- **Verbindung prüfen**\
-  Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
-  Derselbe Knopf erscheint, wenn ein Download scheitert.
-- **Proxy**\
-  Fieldbook übernimmt den Proxy aus den Windows-Einstellungen automatisch.\
-  Falls nötig, lässt sich unter *Einstellungen → Internetverbindung* ein eigener eintragen (z. B. `proxy.schule.de:8080`).
-- **Ohne Internet**\
-  Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*).\
-  So kann man zum Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.
-
-Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbeblocker):
-
-| Wofür | Adressen |
-|---|---|
-| Wissenspakete | `library.kiwix.org`, `download.kiwix.org` und dessen Spiegelserver (z. B. `ftp.fau.de`, `mirror.download.kiwix.org`) |
-| Karten | `build-metadata.protomaps.dev`, `build.protomaps.com` |
-| KI-Modelle, Spracheingabe und Stimmen | `huggingface.co`, `*.hf.co` (Download-Server von Hugging Face) |
-| Hilfsprogramme und Updates | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `objects.githubusercontent.com` |
-| Übersetzer | `cdn.jsdelivr.net`, `firefox.settings.services.mozilla.com`, `firefox-settings-attachments.cdn.mozilla.net` |
-| Ortsnamen | `download.geonames.org` |
-| Wegedaten | `brouter.de` |
-| Rückmeldungen, Fehlerberichte und Statistik (nur mit Zustimmung) | `fieldbook-feedback.wobix08.workers.dev` |
-
-## Welche KI nutzt Fieldbook?
+## Die KI
 
 Im Moment bietet Fieldbook nur **Qwen 3.5 (4B)** an (2,7 GB Download).\
 Es läuft auf jedem Laptop mit 8 GB Arbeitsspeicher, auch ohne Grafikkarte.\
@@ -211,16 +159,7 @@ Weitere KIs folgen, sobald sie mit den Testfragen geprüft sind.\
 Bei weniger als 8 GB Arbeitsspeicher schlägt der Assistent „Keine KI“ vor.\
 Bibliothek, Karten und Erste Hilfe laufen trotzdem.
 
-Mit der KI kommt eine kleine **Suchhilfe** (EmbeddingGemma von Google, 330 MB).\
-Sie sortiert die gefundenen Artikel nach ihrer Bedeutung statt nur nach gleichen Wörtern, damit die KI passendere Quellen bekommt.\
-Sie läuft immer auf dem Prozessor und braucht etwa eine Sekunde pro Frage.
-
-Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt, die KI antwortet damit viel schneller.\
-Es ist keine Treiber-Zusatzinstallation wie CUDA nötig.\
-Ob die Grafikkarte genutzt wird, lässt sich jederzeit in den Einstellungen oder unter *Inhalte* umschalten.\
-Die Liste der KIs steht in [`app/config/modelle.json`](app/config/modelle.json).
-
-## So funktioniert die Frage-Antwort-Funktion
+**So entsteht eine Antwort**
 
 ```
 Frage ──► KI erzeugt Suchbegriffe ──► Suche in allen Wissenspaketen (Kiwix)
@@ -230,17 +169,30 @@ Antwort mit Quellen [1] [2] ◄── KI liest die besten Abschnitte
 
 Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
 Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
-Pakete aus PDF-Büchern (z. B. die Medizin-Handbücher) kann Kiwix nicht durchsuchen.\
-Deshalb liest Fieldbook ihren Text nach der Installation einmal im Hintergrund aus (mit pdf.js) und legt ihn unter `daten\wissen\pdf-texte` ab.\
-Die Bücher selbst zeigt ein eigener PDF-Leser an: Er baut jede Seite beim Lesen mit echtem, markierbarem Text in Fieldbook-Schrift nach, auch im dunklen Design.\
-Man kann im ganzen Buch und in allen Büchern eines Pakets suchen und es offline ins Deutsche übersetzen.\
+Auch Pakete aus PDF-Büchern durchsucht sie: Fieldbook liest deren Text nach der Installation einmal im Hintergrund aus.\
 Eingescannte Bücher ohne Text bleiben dabei außen vor.\
+Die Bücher selbst öffnet ein eigener PDF-Leser, mit markierbarem Text in Fieldbook-Schrift, im dunklen Design und auf Knopfdruck auf Deutsch.\
 Im **Sparmodus** ist die KI aus.\
 Dann zeigt der Bereich „Fragen“ die passenden Artikel direkt an.
 
-## Automatische Aktualisierung (optional)
+**Suchhilfe**\
+Mit der KI kommt eine kleine Suchhilfe (EmbeddingGemma von Google, 330 MB).\
+Sie sortiert die gefundenen Artikel nach ihrer Bedeutung statt nur nach gleichen Wörtern, damit die KI passendere Quellen bekommt.\
+Sie läuft immer auf dem Prozessor und braucht etwa eine Sekunde pro Frage.
 
-Hält die Inhalte aktuell (Wissenspakete, Karten, Wegedaten).\
+**Grafikkarte**\
+Grafikkarten von NVIDIA, AMD und Intel Arc werden über Vulkan genutzt, die KI antwortet damit viel schneller.\
+Es ist keine Treiber-Zusatzinstallation wie CUDA nötig.\
+Ob die Grafikkarte genutzt wird, lässt sich jederzeit in den Einstellungen oder unter *Inhalte* umschalten.\
+Die Liste der KIs steht in [`app/config/modelle.json`](app/config/modelle.json).
+
+## Updates
+
+Fieldbook kann die Inhalte und sich selbst aktuell halten.\
+Beides passiert nur, wenn du es willst.
+
+**Inhalte automatisch aktualisieren (optional)**\
+Hält Wissenspakete, Karten und Wegedaten aktuell.\
 Im Assistenten ganz am Anfang einschaltbar oder später in den Einstellungen im Kasten *Inhalte*, standardmäßig aus.\
 Es gibt keinen Autostart und kein Programm, das dauerhaft im Hintergrund läuft.\
 Stattdessen legt Fieldbook zwei Aufgaben in der Windows-Aufgabenplanung an:
@@ -255,20 +207,13 @@ Aktualisiert werden Wissenspakete (neue Ausgaben im Kiwix-Katalog), Wegedaten (h
 Ausschalten in den Einstellungen entfernt beide Aufgaben wieder.\
 Protokoll: `daten\logs\aktualisierung.log`.
 
-## Programm-Updates (Fieldbook selbst)
-
-**Du entscheidest über Updates**\
+**Neue Fieldbook-Versionen**\
 Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
 Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen im Kasten *Fieldbook-Programm*).\
-Heruntergeladen und eingespielt wird sie erst, wenn du dies bestätigst.\
 Möchtest du auch diese kurze Anfrage nicht, schaltest du sie dort bei *Beim Start nach neuer Fieldbook-Version fragen* aus.\
-Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach neuer Version suchen* klickst oder die automatische Aktualisierung neue Versionen mitladen darf.
-
-**Mit automatischer Aktualisierung**\
-Die automatische Aktualisierung ist für die Inhalte gedacht (Wissenspakete, Karten, Wegedaten) und standardmäßig aus.\
-Ist sie eingeschaltet, kann sie auch neue Fieldbook-Versionen mitladen: Schalter *Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen* im Kasten *Fieldbook-Programm*.\
-Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch herunterladen“ lädt es die neue Version selbst und spielt sie beim nächsten Start ein.\
-Schaltest du das Mitladen aus, aktualisiert die Automatik nur noch Inhalte.
+Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach neuer Version suchen* klickst.\
+Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Schalter *Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen*).\
+Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch herunterladen“ spielt es die neue Version beim nächsten Start ein.
 
 **Sicher bei Problemen**\
 Vor jedem Update sichert Fieldbook den bisherigen Programmteil.\
@@ -288,7 +233,7 @@ Nach der Einrichtung nur in diesen Fällen:
   Auch diese Anfrage kannst du in den Einstellungen abschalten.
 - **Neue Inhalte** lädt es, wenn du sie auf der Seite *Inhalte* auswählst.
 - **Automatische Aktualisierung**, wenn du sie einschaltest (standardmäßig aus).\
-  Mehr dazu unter [Automatische Aktualisierung](#automatische-aktualisierung-optional).
+  Mehr dazu unter [Updates](#updates).
 - **Links ins Internet** in einem Artikel: Fieldbook fragt die Adresse kurz an, um zu sehen, ob es Internet gibt.\
   Mit Internet zeigt Fieldbook erst das Ziel und öffnet es auf Knopfdruck in einem neuen Tab.\
   Ohne Internet erscheint ein kurzer Hinweis statt einer Fehlerseite.
@@ -339,6 +284,47 @@ Möchtest du, dass etwas früher gelöscht wird, schreib das in eine Rückmeldun
 **Ohne Zustimmung**\
 Schickst du keine Rückmeldung ab und lässt Fehlerberichte und Nutzungsstatistik aus, wird nichts übertragen.
 
+## Downloads in Firmen- und Schulnetzen
+
+Fieldbook braucht Internet nur zum Herunterladen.\
+Sperren ein Werbeblocker (z. B. Pi-hole, AdGuard), eine Firewall oder ein Jugendschutzfilter einzelne Adressen, schlagen Downloads fehl.\
+In Firmen blockieren außerdem oft die HTTPS-Prüfung der Firewall oder der Virenschutz.\
+Das kann nur die IT freigeben.
+
+- **HTTPS-Prüfung (SSL-Inspection)**\
+  Viele Firmen-Firewalls entschlüsseln verschlüsselte Verbindungen, um sie zu prüfen.\
+  Dabei werden die großen Downloads von Fieldbook oft abgebrochen oder gesperrt.\
+  Dann muss die IT die Adressen aus der Tabelle unten von der HTTPS-Prüfung ausnehmen.
+- **Virenschutz und Endpoint-Schutz**\
+  Fieldbook ist ein kleines, neues Programm und steht deshalb in keiner Liste bekannter, vertrauenswürdiger Programme.\
+  Firmen-Virenschutz blockiert solche unbekannten Programme oft vorsorglich, auch wenn nichts Schädliches darin ist.\
+  Wird `Fieldbook.exe` blockiert, lässt sich Fieldbook stattdessen mit `app\Start.bat` starten.\
+  Strenge Schutzprogramme blockieren aber manchmal auch das, weil Fieldbook beim Start ein PowerShell-Skript ausführt und Hilfsprogramme startet.\
+  Dann muss die IT den Fieldbook-Ordner freigeben.\
+  Prüfen kann sie vorher alles selbst: Der komplette Quellcode liegt in diesem Repository, und zu jedem Release gibt es eine Prüfsumme (siehe [Ist das sicher?](#ist-das-sicher)).
+- **Verbindung prüfen**\
+  Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
+  Derselbe Knopf erscheint, wenn ein Download scheitert.
+- **Proxy**\
+  Fieldbook übernimmt den Proxy aus den Windows-Einstellungen automatisch.\
+  Falls nötig, lässt sich unter *Einstellungen → Internetverbindung* ein eigener eintragen (z. B. `proxy.schule.de:8080`).
+- **Ohne Internet**\
+  Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*).\
+  So kann man zum Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.
+
+Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbeblocker):
+
+| Wofür | Adressen |
+|---|---|
+| Wissenspakete | `library.kiwix.org`, `download.kiwix.org` und dessen Spiegelserver (z. B. `ftp.fau.de`, `mirror.download.kiwix.org`) |
+| Karten | `build-metadata.protomaps.dev`, `build.protomaps.com` |
+| KI-Modelle, Spracheingabe und Stimmen | `huggingface.co`, `*.hf.co` (Download-Server von Hugging Face) |
+| Hilfsprogramme und Updates | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `objects.githubusercontent.com` |
+| Übersetzer | `cdn.jsdelivr.net`, `firefox.settings.services.mozilla.com`, `firefox-settings-attachments.cdn.mozilla.net` |
+| Ortsnamen | `download.geonames.org` |
+| Wegedaten | `brouter.de` |
+| Rückmeldungen, Fehlerberichte und Statistik (nur mit Zustimmung) | `fieldbook-feedback.wobix08.workers.dev` |
+
 ## Für Entwickler
 
 ### Aufbau
@@ -348,10 +334,12 @@ Fieldbook.exe           Startdatei (sucht app\Start.bat neben sich)
 app\
   Start.bat, start.ps1        Starter (PowerShell, in Windows enthalten)
   Server.cs                   Kleiner lokaler Server, wird beim Start kompiliert
-  config\                     Modelle, Wissenspakete, Karten, Kochen, Erste Hilfe (JSON)
-  web\                        Dashboard (HTML, CSS, JavaScript, MapLibre)
-programme\                    Wird vom Setup gefüllt: kiwix-serve, llama-server, pmtiles
-daten\                        Wird vom Setup gefüllt: wissen\*.zim, modelle\*.gguf, karten\*.pmtiles
+  config\                     Wissenspakete, KI, Karten, Sprachen, Kochen, Erste Hilfe, Vorsorge (JSON)
+  web\                        Oberfläche (HTML, CSS, JavaScript, MapLibre, pdf.js)
+programme\                    Wird beim Einrichten gefüllt: kiwix-serve, llama.cpp, whisper.cpp,
+                              Piper, BRouter mit Java, PMTiles, Übersetzer
+daten\                        Wird beim Einrichten gefüllt: Wissenspakete, KI-Modelle, Karten,
+                              Wegedaten, Ortsnamen, Chats, Einstellungen, Logs
 ```
 
 Verwendete Bausteine:
@@ -359,7 +347,9 @@ Verwendete Bausteine:
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`) für die KI
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) mit Parakeet (NVIDIA) und Whisper (OpenAI) für die Spracheingabe
 - [Piper](https://github.com/rhasspy/piper) mit freien Stimmen zum Vorlesen im Übersetzer
+- [Bergamot](https://github.com/browsermt/bergamot-translator) mit den Übersetzungsmodellen von Mozilla für den Übersetzer
 - [Protomaps / PMTiles](https://protomaps.com) und [MapLibre](https://maplibre.org) für die Karten
+- [BRouter](https://github.com/abrensch/brouter) (läuft mit Java von Eclipse Temurin) für die Routenplanung
 - [pdf.js](https://mozilla.github.io/pdf.js/) für den PDF-Leser und den Text aus PDF-Büchern
 - [GeoNames](https://www.geonames.org) für die Ortssuche
 
