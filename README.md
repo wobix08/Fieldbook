@@ -1,46 +1,33 @@
 # Fieldbook
 
-**Wissen, wo kein Netz ist**\
-Wikipedia, KI-Assistent, Karten, Übersetzer, Kochen, Erste Hilfe und Vorsorge auf dem Laptop, komplett ohne Internet.
+**Wissen, wo kein Netz ist**
 
-Fieldbook ist ein portables Windows-Programm für Stromausfall, Reisen ohne Netz oder einfach für unterwegs.\
-Es braucht kein Linux, kein Docker und keine Installation: Ordner entpacken, Doppelklick, fertig.\
-Inspiriert von [Project NOMAD](https://www.projectnomad.us/) und [Internet-in-a-Box](https://internet-in-a-box.org/).
+## Was ist Fieldbook?
 
-> [!NOTE]
-> Fieldbook läuft nur unter **Windows 10 und 11**.\
-> Für macOS, Linux, iPhone, iPad und Android gibt es keine Version.
+Fieldbook holt eine riesige Bibliothek auf deinen Windows-Laptop, die auch ohne Internet funktioniert.\
+Darin steckt die komplette deutsche Wikipedia mit allen Bildern, medizinisches Wissen und über 56.000 Reparaturanleitungen von iFixit.\
+Dazu kommen Reiseführer, Lehrbücher, ein Kinderlexikon und Klassiker der Literatur.\
+Eine KI beantwortet Fragen aus dieser Bibliothek, außerdem gibt es Offline-Karten, einen Übersetzer, einen Erste-Hilfe-Kurs und eine Vorsorge-Checkliste.\
+Du lädst einmal herunter, was du brauchst, danach läuft alles offline: beim Stromausfall, auf Reisen oder draußen in der Natur.\
+Installieren musst du nichts: entpacken, doppelklicken, fertig.
+
+[![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
 
 ### **[Fieldbook 0.7.3 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.3/Fieldbook-0.7.3.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
-![Fieldbook beantwortet eine Frage zu Unterkühlung mit nummerierten Quellen aus der Offline-Bibliothek](.github/screenshots/fragen.png)
-
-## Inhalt
-
-- [Was drin ist](#was-drin-ist)
-- [Systemanforderungen](#systemanforderungen)
-- [Schnellstart](#schnellstart)
-- [Warum Fieldbook?](#warum-fieldbook)
-- [Ist das sicher?](#ist-das-sicher)
-- [Code-Signatur](#code-signatur)
-- [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
-- [Welche KI nutzt Fieldbook?](#welche-ki-nutzt-fieldbook)
-- [So funktioniert die Frage-Antwort-Funktion](#so-funktioniert-die-frage-antwort-funktion)
-- [Automatische Aktualisierung (optional)](#automatische-aktualisierung-optional)
-- [Programm-Updates (Fieldbook selbst)](#programm-updates-fieldbook-selbst)
-- [Datenschutz](#datenschutz)
-- [Für Entwickler](#für-entwickler)
-- [Lizenz](#lizenz)
+> [!NOTE]
+> Fieldbook läuft nur unter **Windows 10 und 11**.\
+> Für macOS, Linux, iPhone, iPad und Android gibt es keine Version.
 
 ## Was drin ist
 
 | | Bereich | Was es kann |
 |---|---|---|
+| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design (hell oder dunkel):<br>• Wikipedia auf Deutsch, komplett mit Bildern (49&nbsp;GB), ohne Bilder (19&nbsp;GB) oder kompakt (5&nbsp;GB)<br>• Medizin: Wikipedia-Medizin, MDWiki und Handbücher für Notlagen<br>• Reparieren: über 56.000 Reparaturanleitungen von iFixit (die meisten auf Englisch, Fieldbook übersetzt sie auf Knopfdruck ins Deutsche)<br>• Draußen und Selbstversorgung: Wasser aufbereiten, Knoten, Einkochen, Gärtnern, Energie ohne Netz<br>• Wikivoyage (Reiseführer), Wikibooks (Lehrbücher), Klexikon (Kinderlexikon), Project Gutenberg (Literatur) und mehr |
 | <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
-| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Wikipedia, Medizin, iFixit-Reparaturanleitungen, Lehrbücher, Kinderlexikon, Reiseführer und mehr, alles im Fieldbook-Design (hell oder dunkel), mit Übersetzer ins Deutsche |
 | <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und Einkochen |
 | <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
 | <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
@@ -55,6 +42,22 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 > Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
 > KI-Antworten können Fehler enthalten.\
 > Bei wichtigen Entscheidungen immer die Quellen lesen.
+
+## Inhalt
+
+- [Systemanforderungen](#systemanforderungen)
+- [Schnellstart](#schnellstart)
+- [Warum Fieldbook?](#warum-fieldbook)
+- [Ist das sicher?](#ist-das-sicher)
+- [Code-Signatur](#code-signatur)
+- [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)
+- [Welche KI nutzt Fieldbook?](#welche-ki-nutzt-fieldbook)
+- [So funktioniert die Frage-Antwort-Funktion](#so-funktioniert-die-frage-antwort-funktion)
+- [Automatische Aktualisierung (optional)](#automatische-aktualisierung-optional)
+- [Programm-Updates (Fieldbook selbst)](#programm-updates-fieldbook-selbst)
+- [Datenschutz](#datenschutz)
+- [Für Entwickler](#für-entwickler)
+- [Lizenz](#lizenz)
 
 ## Systemanforderungen
 
@@ -85,9 +88,9 @@ Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [GUIDE.md](GUIDE.
 Ich bin gerne gut vorbereitet, ob auf einen Stromausfall, eine Reise ohne Netz oder eine Frage, auf die gerade niemand eine Antwort hat.
 
 Als Technikbegeisterter finde ich außerdem die Idee dahinter einfach großartig: einen gut ausgewählten Teil des Internets, also Wissen, Anleitungen und Karten, auf ein einziges Gerät zu packen, das auch ohne Netz funktioniert.\
-Deshalb hat mich Project NOMAD sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf einem Gerät und ohne Internet.\
-Ein richtig gutes Projekt.\
-Dafür braucht man aber ein eigenes Linux-System oder eine virtuelle Maschine, und darauf hatte ich keine Lust.\
+Deshalb hat mich [Project NOMAD](https://www.projectnomad.us/) sehr beeindruckt: Wikipedia, Karten, Anleitungen und eine KI, alles auf einem Gerät und ohne Internet.\
+Ein richtig gutes Projekt, genau wie [Internet-in-a-Box](https://internet-in-a-box.org/), das mich ebenfalls inspiriert hat.\
+Dafür braucht man aber ein eigenes Linux-System, Docker oder eine virtuelle Maschine, und darauf hatte ich keine Lust.\
 Ich wollte dieselbe Idee auf einem ganz normalen Windows-Laptop haben: entpacken, doppelklicken, fertig.
 
 Außerdem soll so eine Wissenssammlung nicht nur etwas für Technikbegeisterte sein.\
@@ -150,18 +153,12 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
 
 ## Code-Signatur
 
-Fieldbook hat eine kostenlose Code-Signatur bei der [SignPath Foundation](https://signpath.org) beantragt, die Open-Source-Projekte unterstützt.\
-Sobald sie zugesagt ist, wird `Fieldbook.exe` digital signiert, und hier steht dann:\
-*Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).*
+`Fieldbook.exe` ist noch nicht digital signiert.\
+Kostenlose Signaturen für Open-Source-Projekte gibt es erst, wenn ein Projekt schon bekannter ist.\
+Fieldbook beantragt sie später erneut.
 
 Gebaut wird jede Version automatisch auf GitHub aus dem Quellcode dieses Repositorys ([`.github/workflows/release.yml`](.github/workflows/release.yml)).\
-Signiert wird nur `Fieldbook.exe`, und jede Version wird vor dem Signieren von Hand freigegeben.
-
-| Rolle | Wer |
-|---|---|
-| Entwicklung (Committer) | [wobix08](https://github.com/wobix08) |
-| Prüfung (Reviewer) | [wobix08](https://github.com/wobix08) |
-| Freigabe (Approver) | [wobix08](https://github.com/wobix08) |
+Ob die heruntergeladene Datei unverändert ist, zeigt die Prüfsumme (siehe oben).
 
 Was Fieldbook überträgt, steht unter [Datenschutz](#datenschutz).
 
