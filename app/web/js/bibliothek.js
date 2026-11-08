@@ -54,11 +54,10 @@ const Bibliothek = (() => {
       if (auf) {
         // Nur ein Eintrag je Ebene offen: die anderen klappen zu
         const vorher = knopf.getBoundingClientRect().top;
-        let zu = false;
         for (const nachbar of box.parentElement.children) {
-          if (nachbar !== box && nachbar.classList.contains("auf") && nachbar._setzen) { nachbar._setzen(false); zu = true; }
+          if (nachbar !== box && nachbar.classList.contains("auf") && nachbar._setzen) nachbar._setzen(false);
         }
-        if (zu) festhalten(knopf, vorher);
+        nachOben(knopf, vorher);
       }
       setzen(auf);
     });

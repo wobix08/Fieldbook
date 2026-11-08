@@ -78,24 +78,29 @@ function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts, einzeln) 
     const jetzt = !box.classList.contains("auf");
     if (jetzt && einzeln && box.parentElement) {
       const vorher = knopf.getBoundingClientRect().top;
-      let zu = false;
       for (const nachbar of box.parentElement.children) {
-        if (nachbar !== box && nachbar.classList.contains("auf") && nachbar._setzen) { nachbar._setzen(false); zu = true; }
+        if (nachbar !== box && nachbar.classList.contains("auf") && nachbar._setzen) nachbar._setzen(false);
       }
-      if (zu) festhalten(knopf, vorher);
+      nachOben(knopf, vorher);
     }
     setzen(jetzt);
   });
   return { box, innen };
 }
 
-// Hält eine Zeile an ihrer Stelle im Fenster, während darüber etwas zuklappt (Bewegung dauert 0,25 s)
-function festhalten(knopf, top) {
-  const ende = performance.now() + 400;
+// Schiebt eine gerade aufgeklappte Zeile sanft nach oben unter die Kopfzeile, während andere zuklappen
+// (Bewegung dauert 0,25 s). top: Lage der Zeile vor dem Klick.
+function nachOben(knopf, top) {
+  const kopf = document.querySelector(".kopf");
+  const ziel = (kopf ? kopf.getBoundingClientRect().bottom : 0) + 12;
+  const start = performance.now(), dauer = 450;
   const schritt = () => {
-    const diff = knopf.getBoundingClientRect().top - top;
+    const t = Math.min(1, (performance.now() - start) / dauer);
+    const weich = 1 - Math.pow(1 - t, 3);
+    const soll = top + (ziel - top) * weich;
+    const diff = knopf.getBoundingClientRect().top - soll;
     if (Math.abs(diff) >= 1) window.scrollBy(0, diff);
-    if (performance.now() < ende) requestAnimationFrame(schritt);
+    if (t < 1) requestAnimationFrame(schritt);
   };
   requestAnimationFrame(schritt);
 }
