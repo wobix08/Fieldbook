@@ -20,8 +20,10 @@ const Karten = (() => {
   }
   function ladeBibliotheken() {
     if (!libsGeladen) {
-      document.head.append(el("link", { rel: "stylesheet", href: "vendor/maplibre-gl.css" }));
-      libsGeladen = Promise.all([ladeSkript("vendor/maplibre-gl.js"), ladeSkript("vendor/pmtiles.js"), ladeSkript("vendor/basemaps.js")]);
+      if (!document.querySelector('link[href="vendor/maplibre-gl.css"]')) document.head.append(el("link", { rel: "stylesheet", href: "vendor/maplibre-gl.css" }));
+      // Scheitert das Laden, nicht für immer merken: der nächste Versuch lädt neu
+      libsGeladen = Promise.all([ladeSkript("vendor/maplibre-gl.js"), ladeSkript("vendor/pmtiles.js"), ladeSkript("vendor/basemaps.js")])
+        .catch((e) => { libsGeladen = null; throw e; });
     }
     return libsGeladen;
   }
@@ -37,8 +39,15 @@ const Karten = (() => {
       return;
     }
     leer.hidden = true;
+    try { await ladeBibliotheken(); }
+    catch (e) {
+      $("#karte-wrap").hidden = true;
+      leer.hidden = false;
+      leer.innerHTML = "";
+      leer.append(el("h1", {}, "Karten"), fehlerBox("Die Karte konnte nicht geladen werden. Bitte noch einmal versuchen.", zeigen, "Erneut versuchen", e && e.message));
+      return;
+    }
     $("#karte-wrap").hidden = false;
-    await ladeBibliotheken();
     const stand = s.karten.map(k => k.id).join(","), geaendert = stand !== kartenStand;
     if (geaendert) { await ladeKartenliste(s); kartenStand = stand; }
     if (!karte) erstelle();
@@ -190,6 +199,7 @@ const Karten = (() => {
       center: gemerkt ? gemerkt.center : undefined,
       zoom: gemerkt ? gemerkt.zoom : undefined,
       attributionControl: { compact: true },
+      fadeDuration: 0, // keine Einblendungen: spart Rechenzeit ohne Grafikkarte
     });
     Routen.verbinden(karte);
     karte.addControl(new maplibregl.NavigationControl(), "bottom-right");
@@ -241,13 +251,16 @@ const Karten = (() => {
   $("#ort-feld").addEventListener("input", () => { clearTimeout(suchTimer); suchTimer = setTimeout(() => sucheOrt($("#ort-feld").value), 250); });
   $("#ort-suche").addEventListener("submit", (e) => { e.preventDefault(); sucheOrt($("#ort-feld").value); });
 
+  let ortLauf = 0;
   async function sucheOrt(q) {
     q = (q || "").trim();
+    const nr = ++ortLauf;
     $("#ort-feld").value = q;
     const ziel = $("#ort-treffer");
     if (q.length < 2) { ziel.innerHTML = ""; return; }
     if (!OW.status.orte) { ziel.innerHTML = '<div class="leer">Ortsliste nicht installiert.</div>'; return; }
     const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => null);
+    if (nr !== ortLauf) return; // inzwischen neu gesucht
     ziel.innerHTML = "";
     if (!liste) { ziel.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar.")); return; }
     if (!liste.length) { ziel.append(el("div", { class: "leer" }, "Nichts gefunden.")); return; }
@@ -402,7 +415,8 @@ const Karten = (() => {
   const kachelSpeicher = new Map();
 
   // Alle Einrichtungen (Ebene "pois") aus den Kacheln, die den Bereich abdecken
-  async function poisImBereich(z, w, s, o, n) {
+  // Gibt null zurück, wenn inzwischen neu gesucht wurde (lauf !== suchLauf)
+  async function poisImBereich(z, w, s, o, n, lauf) {
     const anzahl = 2 ** z, rad = Math.PI / 180;
     const kx = (l) => Math.floor((l + 180) / 360 * anzahl);
     const ky = (b) => Math.floor((1 - Math.log(Math.tan(b * rad) + 1 / Math.cos(b * rad)) / Math.PI) / 2 * anzahl);
@@ -416,6 +430,7 @@ const Karten = (() => {
       }
     // Nicht alle auf einmal anfragen, sonst stauen sich hunderte Anfragen
     for (let i = 0; i < fehlend.length; i += 12) {
+      if (lauf !== suchLauf) return null;
       await Promise.all(fehlend.slice(i, i + 12).map(async ([x, y, key]) => {
         const data = await holeKachel(z, x, y);
         const gefunden = data ? kachelPois(new Uint8Array(data), z, x, y) : [];
@@ -423,6 +438,7 @@ const Karten = (() => {
         pois.push(...gefunden);
       }));
     }
+    if (lauf !== suchLauf) return null;
     return pois;
   }
 

@@ -3,6 +3,7 @@
 
 const Fragen = (() => {
   let beschaeftigt = false;
+  let wartendeFrage = null; // Frage, die während einer laufenden Antwort kam
   const verlauf = []; // [{frage, antwort}] für Rückfragen
   // Aktueller Chat: wird nach jeder Antwort in daten\chats gespeichert
   let chatId = null;
@@ -16,6 +17,15 @@ const Fragen = (() => {
     const q = params && params.get("q");
     if (q) {
       history.replaceState(null, "", "#fragen");
+      // Läuft gerade eine Antwort: Frage merken, sie wird danach gestellt (bis dahin steht sie im Feld)
+      if (beschaeftigt) {
+        wartendeFrage = q;
+        $("#frage-feld").value = q;
+        const h = el("div", { class: "hinweis klein" }, "Deine Frage wird gestellt, sobald die laufende Antwort fertig ist.");
+        $("#chat").append(h);
+        h.scrollIntoView({ block: "end" });
+        return;
+      }
       $("#frage-feld").value = q;
       senden();
       return;
@@ -76,6 +86,9 @@ const Fragen = (() => {
     let chats = [];
     try { chats = (await api("chats")).chats || []; } catch { }
     ziel.innerHTML = "";
+    const alleKnopf = $("#chats-loeschen");
+    alleKnopf.hidden = !chats.length;
+    alleKnopf.dataset.anzahl = chats.length;
     if (!chats.length) { ziel.append(el("div", { class: "leer" }, "Noch keine Chats. Deine Fragen werden hier gespeichert.")); return; }
     for (const c of chats) {
       ziel.append(el("div", { class: "chat-eintrag", "data-id": c.id },
@@ -109,9 +122,29 @@ const Fragen = (() => {
     $("#chat").lastElementChild && $("#chat").lastElementChild.scrollIntoView({ block: "end" });
   }
 
+  // Hilfen: Frist für Anfragen, sicheres Dekodieren, begrenzt parallel laden
+  async function mitFrist(ms, f) {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), ms);
+    try { return await f(c.signal); }
+    catch (e) { if (c.signal.aborted) throw new Error("Zeitüberschreitung: keine Antwort innerhalb von " + Math.round(ms / 1000) + " Sekunden."); throw e; }
+    finally { clearTimeout(t); }
+  }
+  function dekodiert(s) { try { return decodeURIComponent(s); } catch { return String(s); } }
+  async function parallel(liste, max, f) {
+    let i = 0;
+    const lauf = async () => { while (i < liste.length) { const x = liste[i++]; await f(x); } };
+    await Promise.all(Array.from({ length: Math.min(max, liste.length) }, lauf));
+  }
+
   async function loescheChat(id, titel) {
+    // Während einer Antwort gesperrt: Der Chat würde beim Speichern der Antwort wieder auftauchen
+    if (beschaeftigt) {
+      dialog("Bitte warten", "Gerade wird eine Antwort geschrieben. Danach lässt sich der Chat löschen.", [{ text: "OK", wert: true, haupt: true }]);
+      return;
+    }
     const ok = await dialog("Chat löschen?", "„" + titel + "“ wird endgültig gelöscht.", [{ text: "Abbrechen", wert: false }, { text: "Löschen", wert: true, haupt: true }]);
-    if (!ok) return;
+    if (!ok || beschaeftigt) return;
     try { await api("chat/loeschen", { id }); }
     catch (e) {
       dialog("Chat nicht gelöscht", "Der Chat ließ sich gerade nicht löschen. Bitte versuche es noch einmal.", [{ text: "OK", wert: true, haupt: true }]);
@@ -120,6 +153,20 @@ const Fragen = (() => {
     if (id === chatId) neuerChat();
     ladeListe();
   }
+
+  // Alle früheren Chats auf einmal löschen
+  $("#chats-loeschen").addEventListener("click", async () => {
+    if (beschaeftigt) return;
+    const n = +$("#chats-loeschen").dataset.anzahl || 0;
+    const ok = await dialog("Alle Chats löschen?", el("p", {}, (n === 1 ? "Der frühere Chat wird" : "Alle " + n + " früheren Chats werden") + " endgültig gelöscht.", el("br"), "Das lässt sich nicht rückgängig machen."),
+      [{ text: "Abbrechen", wert: false }, { text: "Alle löschen", wert: true, haupt: true }]);
+    if (!ok) return;
+    let r;
+    try { r = await api("chats/loeschen", {}); } catch (e) { r = { fehler: "Fieldbook antwortet gerade nicht." }; }
+    if (r.fehler) dialog("Nicht alles gelöscht", el("p", {}, r.fehler, el("br"), "Bitte versuche es noch einmal."), [{ text: "OK", wert: true, haupt: true }]);
+    if (chatId) neuerChat();
+    ladeListe();
+  });
 
   // Nach jeder Antwort speichern. Der Titel ist die erste Frage
   async function merke(eintrag) {
@@ -212,15 +259,27 @@ const Fragen = (() => {
     const suchFrage = ergaenzung ? vorher.frage + " " + frage : frage;
     const kontext = !ergaenzung && vorher && vorher.antwort ? vorher : null;
 
+    // Antwort nur einmal pro Bild neu aufbauen (nicht bei jedem Token)
+    let neuerText = null, rafId = 0;
+    const zeigeGedrosselt = (t, quellen) => {
+      neuerText = t;
+      if (!rafId) rafId = requestAnimationFrame(() => { rafId = 0; if (neuerText !== null) zeigeAntwort(text, neuerText, quellen); });
+    };
+    const stopGedrosselt = () => { if (rafId) cancelAnimationFrame(rafId); rafId = 0; neuerText = null; };
+    let bibFehler = false;   // Fehler kam von der Bibliothek, nicht von der KI
+    const holeBuecher = async (neu) => {
+      try { return await Kiwix.buecher(neu); } catch (e) { bibFehler = true; throw e; }
+    };
+
     try {
-      let buecher = (await Kiwix.buecher()).filter(b => b.durchsuchen);
+      let buecher = (await holeBuecher()).filter(b => b.durchsuchen);
       // Die Bibliothek startet gerade neu (z. B. nach einem Absturz von kiwix-serve): kurz warten, noch einmal versuchen
       if (!buecher.length) {
         await new Promise(r => setTimeout(r, 4000));
         await aktualisiereStatus();
-        buecher = (await Kiwix.buecher(true)).filter(b => b.durchsuchen);
+        buecher = (await holeBuecher(true)).filter(b => b.durchsuchen);
       }
-      if (!buecher.length) throw new Error("Keine durchsuchbare Bibliothek installiert.");
+      if (!buecher.length) { bibFehler = true; throw new Error("Keine durchsuchbare Bibliothek installiert."); }
       const mitKi = KI.bereit();
       const hatEnglisch = buecher.some(b => b.englisch);
       const nummern = codes(suchFrage);
@@ -310,28 +369,40 @@ const Fragen = (() => {
       // 4. Antworten
       const s4 = schritt("Antwort wird geschrieben …");
       text.classList.add("cursor");
-      const antwort = await antworten(suchFrage, quellen, einfach, kontext, lage, (t) => { zeigeAntwort(text, t, quellen); });
+      const antwort = await antworten(suchFrage, quellen, einfach, kontext, lage, (t) => zeigeGedrosselt(t, quellen));
       text.classList.remove("cursor");
-      zeigeAntwort(text, antwort, quellen);
+      stopGedrosselt();
+      zeigeAntwort(text, antwort, quellen);   // letzter Stand immer direkt
       fertig(s4, "Antwort fertig");
       box.append(quellenListe(quellen));
       const suche = weiterBegriffe(begriffe);
       box.append(weitersuchen(suche));
-      const medizin =quellen.some(q => /medicine|mdwiki|medizin/i.test(q.buch.name)) || /wunde|blut|schmerz|vergift|fieber|verbrenn|bruch|medikament|krank|atem|herz/i.test(frage);
+      // Wortanfänge statt Teilstrings: „Bruchrechnung“, „herzlich“ lösen nichts aus, „Herzinfarkt“, „Knochenbruch“ schon
+      const medizin = quellen.some(q => /medicine|mdwiki|medizin/i.test(q.buch.name)) ||
+        /wunde(?!r)|\bblut|schmerz|vergift|fieber|\bverbrenn|(knochen|bein|arm|rippen|schädel|fuß|hand|wirbel)bruch|\bbruch(?!rechn|stück|teil|zahl)|gebrochen|medikament|\w*krank|\batem|\bherz(?!lich|og|los|ig|chen)/i.test(frage);
       if (medizin) box.append(medizinHinweis());
       verlauf.push({ frage: suchFrage, antwort });
       if (verlauf.length > 3) verlauf.shift();
       merke({ frage, suchFrage, antwort, medizin, quellen: kurzQuellen(quellen), suche });
     } catch (e) {
       text.classList.remove("cursor");
+      stopGedrosselt();
       console.error(e);
       // Verständlich statt „Failed to fetch“; die technische Meldung nur als Tooltip
-      text.append(fehlerBox("Die KI hat nicht geantwortet. Bitte prüfe oben den KI-Status und versuche es noch einmal.",
+      text.append(fehlerBox(bibFehler ? "Die Bibliothek ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal."
+        : "Die KI hat nicht geantwortet. Bitte prüfe oben den KI-Status und versuche es noch einmal.",
         () => { $("#frage-feld").value = frage; senden(); }, "Nochmal fragen", e.message));
     } finally {
       beschaeftigt = false;
       $("#frage-senden").disabled = false;
       box.scrollIntoView({ behavior: "smooth", block: "end" });
+      // Frage, die während der Antwort über ?q= kam, jetzt stellen
+      if (wartendeFrage) {
+        const w = wartendeFrage;
+        wartendeFrage = null;
+        $("#frage-feld").value = w;
+        setTimeout(senden, 0);
+      }
     }
   }
 
@@ -393,10 +464,10 @@ const Fragen = (() => {
       },
       required: englisch ? ["thema", "de", "en"] : ["thema", "de"],
     };
-    const roh = await KI.chat([
+    const roh = await mitFrist(30000, (signal) => KI.chat([
       { role: "system", content: sys },
       { role: "user", content: kontext + "Frage: " + frage },
-    ], { max_tokens: 120, temperature: ohneErfolg ? 0.7 : 0.1, response_format: { type: "json_schema", json_schema: { name: "suche", schema } } });
+    ], { max_tokens: 120, temperature: ohneErfolg ? 0.7 : 0.1, response_format: { type: "json_schema", json_schema: { name: "suche", schema } }, signal }));
     let j;
     try { j = JSON.parse(roh); } catch { const m = roh.match(/\{[\s\S]*\}/); j = m ? JSON.parse(m[0]) : null; }
     if (!j || !Array.isArray(j.de) || !j.de.length) throw new Error("keine Begriffe");
@@ -432,13 +503,20 @@ const Fragen = (() => {
     const frage = "task: search result | query: " + begriffe.frage + (begriffe.thema ? " (" + begriffe.thema + ")" : "");
     // Treffer der Titelsuche haben keinen Auszug. Nur mit dem Titel verlieren sie gegen jeden Absatz,
     // deshalb kommt der Anfang des Artikels dazu
-    await Promise.all(treffer.filter(t => !t.auszug && !t.pdf).map(t => artikel(t.url).then(a => {
+    // höchstens 4 Artikel gleichzeitig laden
+    await parallel(treffer.filter(t => !t.auszug && !t.pdf), 4, t => artikel(t.url).then(a => {
       t.auszug = a.abschnitte.slice(0, 2).map(s => s.text).join(" ").slice(0, 300);
-    }).catch(() => {})));
+    }).catch(() => {}));
     const texte = treffer.map(t => "title: " + t.titel + " | text: " + String(t.auszug || "").replace(/<[^>]+>/g, "").slice(0, 300));
-    const r = await fetch("/suchhilfe/v1/embeddings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input: [frage].concat(texte) }) });
-    if (!r.ok) throw new Error("Suchhilfe antwortet nicht");
-    const v = (await r.json()).data.sort((a, b) => a.index - b.index).map(d => d.embedding);
+    // Frist 20 s: hängt die Suchhilfe, geht es ohne sie weiter
+    const daten = await mitFrist(20000, async (signal) => {
+      const r = await fetch("/suchhilfe/v1/embeddings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input: [frage].concat(texte) }), signal });
+      if (!r.ok) throw new Error("Suchhilfe antwortet nicht");
+      return (await r.json()).data;
+    });
+    // Falsche Anzahl Vektoren: nicht sortieren (sonst NaN), wie bei einem Fehler ohne Suchhilfe weitermachen
+    if (!Array.isArray(daten) || daten.length !== texte.length + 1) throw new Error("Suchhilfe: falsche Anzahl Vektoren");
+    const v = daten.sort((a, b) => a.index - b.index).map(d => d.embedding);
     const aehnlich = (a, b) => { let s = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++) { s += a[i] * b[i]; x += a[i] * a[i]; y += b[i] * b[i]; } return s / Math.sqrt(x * y); };
     return v.slice(1).map(x => aehnlich(v[0], x));
   }
@@ -471,7 +549,7 @@ const Fragen = (() => {
     const nachUrl = new Map();
     for (const t of alle) {
       // Dasselbe Buch steckt manchmal in zwei PDF-Paketen: gleiche Stelle nur einmal
-      const key = t.pdf ? "pdf:" + (t.auszug || "").slice(0, 120) : decodeURIComponent(t.url).toLowerCase();
+      const key = t.pdf ? "pdf:" + (t.auszug || "").slice(0, 120) : dekodiert(t.url).toLowerCase();
       const v = nachUrl.get(key);
       if (v) { v.punkte += t.punkte * 0.6; if (!v.auszug && t.auszug) v.auszug = t.auszug; } else nachUrl.set(key, Object.assign({}, t));
     }
@@ -544,7 +622,7 @@ const Fragen = (() => {
       if (voll.length < 300) return false;
       if (/California Energy Commission|Date Added: \d{4}/.test(voll) && !/\b(step|schritt|replace|austausch|remove|entfern)/i.test(voll)) return false;
       // Auch über verschiedene Adressen derselbe Artikel (z. B. Klexikon „Wolf“ zweimal) nur einmal
-      const k = decodeURIComponent(x.a.url).toLowerCase();
+      const k = dekodiert(x.a.url).toLowerCase();
       const k2 = x.t.buch.id + "|" + String(x.a.titel || x.t.titel).toLowerCase();
       if (gesehen.has(k) || gesehen.has(k2)) return false;
       gesehen.add(k);
@@ -609,8 +687,8 @@ const Fragen = (() => {
       "Allgemeine Artikel und Anleitungen, die das Thema im Ganzen erklären, kommen vor Einzelversuchen, Sonderfällen und Forenfragen. " +
       "Antworte nur mit JSON: die Nummern der hilfreichen Artikel, der hilfreichste zuerst.";
     const schema = { type: "object", properties: { passend: { type: "array", items: { type: "integer" }, maxItems: 7 } }, required: ["passend"] };
-    const roh = await KI.chat([{ role: "system", content: sys }, { role: "user", content: "FRAGE: " + frage + (thema ? "\nKERN DER FRAGE: " + thema : "") + "\n\nARTIKEL:\n" + liste }],
-      { max_tokens: 60, temperature: 0, response_format: { type: "json_schema", json_schema: { name: "pruefung", schema } } });
+    const roh = await mitFrist(30000, (signal) => KI.chat([{ role: "system", content: sys }, { role: "user", content: "FRAGE: " + frage + (thema ? "\nKERN DER FRAGE: " + thema : "") + "\n\nARTIKEL:\n" + liste }],
+      { max_tokens: 60, temperature: 0, response_format: { type: "json_schema", json_schema: { name: "pruefung", schema } }, signal }));
     const j = JSON.parse(roh);
     return [...new Set((j.passend || []).map(n => n - 1).filter(i => i >= 0 && i < artikel.length))];
   }
@@ -683,7 +761,8 @@ const Fragen = (() => {
     if (vorher) nachrichten.push({ role: "user", content: vorher.frage }, { role: "assistant", content: vorher.antwort.slice(0, 800) });
     nachrichten.push({ role: "user", content: "QUELLEN:\n" + block + "\n\nFRAGE: " + frage +
       (vorher ? "\n\n(Beantworte nur diese FRAGE mit diesen QUELLEN. Ist es ein neues Thema, erwähne das vorherige Gespräch nicht.)" : "") });
-    return KI.chat(nachrichten, { max_tokens: 700, temperature: 0.3 }, onText);
+    // Frist 180 s; bei Seitenwechsel wird nicht abgebrochen
+    return mitFrist(180000, (signal) => KI.chat(nachrichten, { max_tokens: 700, temperature: 0.3, signal }, onText));
   }
 
   function zeigeAntwort(ziel, text, quellen) {
@@ -710,5 +789,5 @@ const Fragen = (() => {
         mitAuszug ? el("div", { class: "klein hinweis" }, q.text.slice(0, 280) + " …") : null))));
   }
 
-  return { zeigen };
+  return { zeigen, beschaeftigt: () => beschaeftigt };
 })();

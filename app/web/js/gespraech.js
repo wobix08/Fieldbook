@@ -28,7 +28,7 @@ const Gespraech = (() => {
   let gezeigt = null;            // Bühne: angeklickte ältere Nachricht, null = die neueste
   try { du = localStorage.getItem("fb-gespraech-du"); if (localStorage.getItem("fb-gespraech-ansicht") === "chat") ansicht = "chat"; } catch { }
   // Seite verlassen: Mikrofon im Sprechmodus aus, Vorlesen anhalten
-  window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#uebersetzen")) { smStopp(); vorlesenStopp(); modus = "schreiben"; } });
+  window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#uebersetzen")) { if (aufnahme) aufnahme.abbrechen(); smStopp(); vorlesenStopp(); modus = "schreiben"; } });
 
   async function zeigen() {
     const c = $("#gs-inhalt");
@@ -288,10 +288,14 @@ const Gespraech = (() => {
 
   let aufnahme = null;   // laufende Aufnahme { f (Feld), fertig(), abbrechen() }
   const MAX_SEKUNDEN = 30;
+  const SPRECHEN_MS = 90000;   // Frist für die Spracherkennung auf dem Server
 
   function zeigeMeldung(f, text) { f.meldung.textContent = text || ""; f.meldung.hidden = !text; }
 
+  let startet = false;   // Aufnahme wartet noch auf die Mikrofon-Freigabe (ein zweiter Klick darf keine zweite starten)
+
   async function aufnehmen(f) {
+    if (startet) return;
     if (aufnahme) {
       const a = aufnahme;
       if (a.f.knopf === f.knopf) { a.fertig(); return; }
@@ -300,19 +304,29 @@ const Gespraech = (() => {
     zeigeMeldung(f, "");
     if (wiedergabe) { vorlesenStopp(); zeichneVerlauf(); }   // nicht gleichzeitig vorlesen und aufnehmen
     let strom;
+    startet = true;
     try {
       strom = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (e) {
-      const n = e && e.name;
-      zeigeMeldung(f, n === "NotAllowedError" || n === "SecurityError"
-        ? "Der Browser darf das Mikrofon nicht benutzen. Klicke links in der Adresszeile auf das Schloss- oder Mikrofon-Symbol und erlaube das Mikrofon für diese Seite."
-        : n === "NotFoundError" ? "Kein Mikrofon gefunden. Ist eines angeschlossen und in Windows eingeschaltet?"
-        : "Das Mikrofon lässt sich nicht starten (" + (e && e.message || e) + ").");
+      startet = false;
+      zeigeMeldung(f, micFehler(e));
       return;
     }
-    const ctx = new AudioContext({ sampleRate: 16000 });
-    const quelle = ctx.createMediaStreamSource(strom);
-    const proz = ctx.createScriptProcessor(4096, 1, 1);
+    // Seite wurde währenddessen verlassen: Mikrofon gleich wieder freigeben
+    if (!location.hash.startsWith("#uebersetzen")) { startet = false; strom.getTracks().forEach(t => t.stop()); return; }
+    let ctx, quelle, proz;
+    try {
+      ctx = new AudioContext({ sampleRate: 16000 });
+      quelle = ctx.createMediaStreamSource(strom);
+      proz = ctx.createScriptProcessor(4096, 1, 1);
+    } catch (e) {
+      // Sonst bliebe das Mikrofon an
+      startet = false;
+      strom.getTracks().forEach(t => t.stop());
+      if (ctx) ctx.close().catch(() => { });
+      zeigeMeldung(f, "Das Mikrofon lässt sich nicht starten (" + (e && e.message || e) + ").");
+      return;
+    }
     const stuecke = [];
     let laenge = 0, spitze = 0, ende = false;
     proz.onaudioprocess = (e) => {
@@ -351,6 +365,7 @@ const Gespraech = (() => {
       }
     };
     aufnahme = a;
+    startet = false;
     f.knopf.classList.add("gs-aufnahme");
     f.knopf.lastChild.textContent = f.wer === "ich" ? "Fertig" : "…";
     if (f.wer === "du") uebersetze("de", f.sprache, "Aufnahme beenden").then(t => { if (aufnahme === a) f.knopf.lastChild.textContent = t; }).catch(() => { });
@@ -383,7 +398,7 @@ const Gespraech = (() => {
     f.text.placeholder = "Wird erkannt …";
     zeigeMeldung(f, "");
     try {
-      const r = await fetch("/api/sprechen?sprache=" + encodeURIComponent(f.sprache), { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob });
+      const r = await fetch("/api/sprechen?sprache=" + encodeURIComponent(f.sprache), { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob, signal: AbortSignal.timeout(SPRECHEN_MS) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.fehler) throw new Error(j.fehler || ("Fehler " + r.status));
       if (!j.text) zeigeMeldung(f, "Es wurde kein Text erkannt. Bitte noch einmal deutlicher sprechen.");
@@ -496,10 +511,19 @@ const Gespraech = (() => {
       return;
     }
     if (sm !== s) { s.strom.getTracks().forEach(t => t.stop()); return; }
-    s.ctx = new AudioContext({ sampleRate: 16000 });
-    s.ctx.resume().catch(() => { });
-    s.quelle = s.ctx.createMediaStreamSource(s.strom);
-    s.proz = s.ctx.createScriptProcessor(BLOCK, 1, 1);
+    try {
+      s.ctx = new AudioContext({ sampleRate: 16000 });
+      s.ctx.resume().catch(() => { });
+      s.quelle = s.ctx.createMediaStreamSource(s.strom);
+      s.proz = s.ctx.createScriptProcessor(BLOCK, 1, 1);
+    } catch (e) {
+      // Mikrofon wieder freigeben (smStopp stoppt die Tracks und schließt den AudioContext), Zustand zurücksetzen
+      smStopp();
+      s.feld.querySelector(".gs-sm-status").textContent = "Mikrofon aus";
+      s.feld.dataset.zustand = "fehler";
+      s.fehler(micFehler(e));
+      return;
+    }
     const rate = s.ctx.sampleRate, blockMs = BLOCK / rate * 1000;
     let rausch = 0, laut = 0, stille = 0, satz = [], vorlauf = [], laenge = 0, spitze = 0;
     const balken = s.feld.querySelector(".gs-sm-pegel span");
@@ -576,7 +600,7 @@ const Gespraech = (() => {
       // Wartet noch eine Nachricht aufs Vorlesen, redet vermutlich dieselbe Person weiter
       const offen = s.ungelesen[s.ungelesen.length - 1];
       const erwartet = offen ? offen.von : s.erwartet;
-      const r = await fetch("/api/sprechen?paar=" + encodeURIComponent(ich + "," + du) + "&erwartet=" + encodeURIComponent(erwartet), { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob });
+      const r = await fetch("/api/sprechen?paar=" + encodeURIComponent(ich + "," + du) + "&erwartet=" + encodeURIComponent(erwartet), { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob, signal: AbortSignal.timeout(SPRECHEN_MS) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.fehler) throw new Error(j.fehler || ("Fehler " + r.status));
       if (sm !== s) return;
@@ -595,7 +619,8 @@ const Gespraech = (() => {
       }
       s.feld.scrollIntoView({ block: "nearest" });
     } catch (e) {
-      if (sm === s) s.fehler("Das hat nicht geklappt (" + (e && e.message || e) + ").");
+      if (sm === s) s.fehler(e && e.name === "TimeoutError" ? "Die Spracherkennung braucht zu lange. Bitte sprich den Satz noch einmal."
+        : "Das hat nicht geklappt (" + (e && e.message || e) + ").");
     }
   }
 
@@ -606,6 +631,9 @@ const Gespraech = (() => {
       zeichneVerlauf();
       uebersetze(m.nach, m.von, m.uebers).then(z => { m.zurueck = z; zeichneVerlauf(); }).catch(() => { m.zurueck = "–"; zeichneVerlauf(); });
     } catch (e) {
+      // Der alte Text passt nicht mehr zum gewachsenen Original: nicht anzeigen und nicht vorlesen
+      m.uebers = null;
+      m.zurueck = null;
       m.fehler = "Die Übersetzung hat nicht geklappt (" + (e && e.message || e) + ").";
       zeichneVerlauf();
     }
@@ -691,6 +719,7 @@ const Gespraech = (() => {
     const w = wiedergabe;
     wiedergabe = null;
     if (!w) return;
+    if (w.abbruch) w.abbruch.abort();   // Anfrage an den Server sofort beenden
     if (w.audio) { w.audio.pause(); URL.revokeObjectURL(w.audio.src); }
     stummBis = performance.now() + 400;
     if (w.ende) w.ende();
@@ -701,12 +730,12 @@ const Gespraech = (() => {
     const lief = wiedergabe && wiedergabe.m === m;
     vorlesenStopp();
     if (lief) { danach(); return; }
-    const w = { m, audio: null, ende: null };
+    const w = { m, audio: null, ende: null, abbruch: new AbortController() };
     wiedergabe = w;
     m.vorlesenFehler = null;
     danach();
     try {
-      const r = await fetch("/api/vorlesen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sprache: m.nach, text: m.uebers }) });
+      const r = await fetch("/api/vorlesen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sprache: m.nach, text: m.uebers }), signal: w.abbruch.signal });
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.fehler || ("Fehler " + r.status)); }
       const blob = await r.blob();
       if (wiedergabe !== w) return;

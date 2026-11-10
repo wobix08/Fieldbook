@@ -11,7 +11,20 @@ const ErsteHilfe = (() => {
   async function zeigen(params) {
     taktStopp();
     if (!konf) konf = await ladeKonfigSprache("erstehilfe");
-    if (!stand) stand = await api("erstehilfe").catch(() => ({}));
+    if (!stand) {
+      // Nur ein erfolgreich geladener Stand wird übernommen; sonst bleibt der gespeicherte Lernstand unberührt
+      let geladen;
+      try {
+        geladen = await api("erstehilfe");
+        if (!geladen || typeof geladen !== "object" || geladen.fehler) throw new Error((geladen && geladen.fehler) || "Ungültige Antwort");
+      } catch (e) {
+        const z = $("#eh-inhalt");
+        z.innerHTML = "";
+        z.append(fehlerBox("Dein Lernstand konnte nicht geladen werden.", () => zeigen(params), "Erneut versuchen", e && e.message));
+        return;
+      }
+      stand = geladen;
+    }
     if (!stand.lektionen) stand.lektionen = {};
     if (!stand.faelle) stand.faelle = {};
 
@@ -82,10 +95,10 @@ const ErsteHilfe = (() => {
         artikelKnopf,
         lektion ? el("a", { class: "knopf", href: "#erstehilfe?l=" + lektion.id }, sym("graduation-cap"), "Zur Lektion") : null,
         kiKnopf(t.titel + ": Was muss ich tun?")));
-    finde(t.id, t.artikel).then(a => {
-      if (a) artikelKnopf.replaceWith(artikelLink(a));
+    finde(t.id, t.artikel || []).then(a => {
+      if (a && a.url) artikelKnopf.replaceWith(artikelLink(a));
       else artikelKnopf.textContent = "Kein Artikel gefunden. Dafür wird die Medizin-Wikipedia oder die Wikipedia gebraucht.";
-    });
+    }).catch(() => { artikelKnopf.textContent = "Artikel gerade nicht erreichbar"; });
     return d;
   }
 
@@ -161,7 +174,18 @@ const ErsteHilfe = (() => {
 
   function istFertig(id) { return !!(stand.lektionen[id] && stand.lektionen[id].fertig); }
   function lernstand(id) { return stand.lektionen[id] || (stand.lektionen[id] = { geuebt: [] }); }
-  function speichern() { return api("erstehilfe/speichern", stand).catch(() => { }); }
+  // Speichert den Lernstand; scheitert es (auch mit Antwort {fehler}), erscheint ein kleiner Hinweis oben
+  async function speichern() {
+    let ok = true;
+    try {
+      const r = await api("erstehilfe/speichern", stand);
+      if (r && r.fehler) ok = false;
+    } catch { ok = false; }
+    const ziel = $("#eh-inhalt");
+    const alt = document.getElementById("eh-speicherfehler");
+    if (ok) { if (alt) alt.remove(); return; }
+    if (!alt && ziel) ziel.prepend(el("p", { id: "eh-speicherfehler", class: "hinweis", role: "alert" }, "Konnte nicht gespeichert werden."));
+  }
 
   // ---------------------------------------------------------------- Lektion
 
@@ -200,10 +224,11 @@ const ErsteHilfe = (() => {
     }
 
     const mehr = el("div", { class: "knoepfe" }, el("span", { class: "hinweis" }, "Artikel werden gesucht …"));
-    findeAlle(t.id, t.artikel || []).then(liste => {
+    findeAlle(t.id, t.artikel || []).catch(() => null).then(liste => {
       mehr.innerHTML = "";
-      for (const a of liste) mehr.append(artikelLink(a));
-      if (!liste.length) mehr.append(el("span", { class: "hinweis" }, "Keine Artikel gefunden. Dafür wird die Medizin-Wikipedia oder die Wikipedia gebraucht."));
+      for (const a of liste || []) mehr.append(artikelLink(a));
+      if (!liste) mehr.append(el("span", { class: "hinweis" }, "Artikel gerade nicht erreichbar"));
+      else if (!liste.length) mehr.append(el("span", { class: "hinweis" }, "Keine Artikel gefunden. Dafür wird die Medizin-Wikipedia oder die Wikipedia gebraucht."));
       const ki = kiKnopf(t.titel + ": ");
       if (ki) mehr.append(ki);
     });
@@ -510,6 +535,7 @@ const ErsteHilfe = (() => {
       el("div", { class: "takt-rechts" }, info,
         el("div", { class: "knoepfe" }, knopf, el("label", { class: "hinweis" }, mitBeatmung, " Nach 30 Mal: 2 Mal beatmen"))));
 
+    let beatmungsTimer = [];      // Timeouts für die Beatmungstöne, werden bei stopp() gelöscht
     let audio = null, timer = null, start = 0, naechster = 0, zaehler = 0, laeuft = false;
     const ton = (freq, ms) => {
       try {
@@ -536,8 +562,8 @@ const ErsteHilfe = (() => {
         if (mitBeatmung.checked) {
           // Kurze Pause zum Beatmen, zwei tiefe Töne
           naechster += TAKT;
-          setTimeout(() => { if (laeuft) { zahl.textContent = "2× beatmen"; zahl.classList.add("beatmen"); ton(440, 300); } }, TAKT);
-          setTimeout(() => { if (laeuft) ton(440, 300); }, TAKT + 1500);
+          beatmungsTimer.push(setTimeout(() => { if (laeuft) { zahl.textContent = "2× beatmen"; zahl.classList.add("beatmen"); ton(440, 300); } }, TAKT));
+          beatmungsTimer.push(setTimeout(() => { if (laeuft) ton(440, 300); }, TAKT + 1500));
           naechster += 4500;
           timer = setTimeout(() => { zahl.classList.remove("beatmen"); weiter(); }, naechster - performance.now());
           return;
@@ -552,6 +578,8 @@ const ErsteHilfe = (() => {
     const stopp = (geschafft) => {
       laeuft = false;
       clearTimeout(timer);
+      beatmungsTimer.forEach(clearTimeout);
+      beatmungsTimer = [];
       zahl.classList.remove("beatmen", "puls");
       zahl.textContent = "30";
       info.textContent = opt.dauer ? "2 Minuten im Takt drücken" : "Piepton im richtigen Takt";
@@ -619,7 +647,7 @@ const ErsteHilfe = (() => {
         if (v[0]) return (artikelCache[id] = v[0]);
       }
     }
-    return (artikelCache[id] = null);
+    return null;            // „nichts gefunden“ wird nicht gemerkt (die Bibliothek startet vielleicht noch)
   }
 
   // Alle Titel, die es exakt gibt (für „Mehr lesen“ in einer Lektion)
@@ -631,7 +659,8 @@ const ErsteHilfe = (() => {
       const e = await exakt(titel);
       if (e && !liste.some(x => x.url === e.url)) liste.push(e);
     }
-    return (artikelCache[schluessel] = liste);
+    if (liste.length) artikelCache[schluessel] = liste;     // leere Ergebnisse nicht merken
+    return liste;
   }
 
   return { zeigen };

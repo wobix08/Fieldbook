@@ -42,10 +42,21 @@ const PdfText = (() => {
   // Text jeder Seite; Zeilenumbrüche bleiben erhalten (der Server setzt daraus Absätze zusammen)
   async function seitenText(url) {
     const lib = await bibliothek();
-    const doc = await lib.getDocument({ url, isEvalSupported: false }).promise;
+    const aufgabe = lib.getDocument({ url, isEvalSupported: false });
+    let doc;
+    try { doc = await aufgabe.promise; }
+    catch (e) {
+      // Laden fehlgeschlagen: Ladevorgang aufräumen, damit nichts im Hintergrund hängen bleibt
+      try { await aufgabe.destroy(); } catch (_) { /* egal */ }
+      throw e;
+    }
     const seiten = [];
     try {
       for (let i = 1; i <= doc.numPages; i++) {
+        // Kleine Pause alle paar Seiten, damit die KI und die Oberfläche nicht ausgebremst werden
+        if (i % 4 === 0) await new Promise(res => setTimeout(res, 30));
+        // Solange die KI eine Frage beantwortet, nur warten (kein Abbruch); Fragen kann fehlen
+        while (typeof Fragen !== "undefined" && Fragen.beschaeftigt && Fragen.beschaeftigt()) await new Promise(res => setTimeout(res, 500));
         const seite = await doc.getPage(i);
         const inhalt = await seite.getTextContent();
         let s = "";
@@ -83,10 +94,8 @@ const PdfText = (() => {
       let seiten;
       try { seiten = await seitenText(url); }
       catch (e) {
-        // Ist die Datei erreichbar, ist das PDF selbst nicht lesbar: leer merken, sonst beim nächsten Mal neu versuchen
-        const da = await fetch(url, { method: "HEAD" }).then(r => r.ok).catch(() => false);
-        if (!da) throw e;
-        seiten = [];
+        // Nicht leer speichern: Der nächste Start versucht dieses Buch noch einmal
+        throw e;
       }
       const r = await api("pdftext/speichern", { buch: buch.id, datei: p.datei, titel: p.titel, seiten });
       if (r.fehler) throw new Error(r.fehler);

@@ -34,6 +34,8 @@ const Uebersetzer = (() => {
   const STAPEL_ZEICHEN = 1200;    // … und so viele Zeichen (kleinere Stapel: die sichtbare Seite ist schneller da)
   const SPEICHER_MAX = 3000;      // gemerkte Übersetzungen
   const START_MS = 180000;        // Worker starten oder Modell laden darf so lange dauern
+  const MODELL_MS = 60000;        // Modellregister und Modelldateien holen darf so lange dauern
+  const LEERLAUF_MS = 180000;     // Worker ohne Arbeit wird nach so langer Zeit beendet
   // Ein bis zwei Rechenkerne: schnell genug, ohne den Laptop zu blockieren
   const maxWorker = () => Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
 
@@ -151,13 +153,16 @@ const Uebersetzer = (() => {
     w.zustand = "arbeitet";
     let abschnitt = "modelle";
     const t0 = performance.now(), zeichen = stapel.reduce((n, a) => n + a.text.length, 0);
+    clearTimeout(w.leerlauf);
     try {
-      const b = await backingHolen();
-      const modelle = await b.getModels({ from: stapel[0].from, to: stapel[0].to });
+      // Holen der Modelle mit Frist: hängt der Server, bleibt der Worker sonst ewig „arbeitet“. Bei Ablauf
+      // landet der Fehler im Abschnitt „modelle“ (Register wird verworfen, Auftrag einmal neu eingereiht).
+      const b = await mitFrist(backingHolen(), MODELL_MS, "Modellregister");
+      const modelle = await mitFrist(b.getModels({ from: stapel[0].from, to: stapel[0].to }), MODELL_MS, "Modellliste");
       for (const { from, to } of modelle) {
         if (w.modelle.has(from + to)) continue;
         abschnitt = "modelle";
-        const puffer = await b.getTranslationModel({ from, to });
+        const puffer = await mitFrist(b.getTranslationModel({ from, to }), MODELL_MS, "Sprachmodell");
         abschnitt = "worker";
         await w.rufe("loadTranslationModel", [{ from, to }, puffer], START_MS);
         w.modelle.add(from + to);
@@ -185,9 +190,25 @@ const Uebersetzer = (() => {
         warte.push(a);
       }
     } finally {
-      if (w.zustand === "arbeitet") w.zustand = "frei";
+      if (w.zustand === "arbeitet") { w.zustand = "frei"; leerlaufPlanen(w); }
       anstossen();
     }
+  }
+
+  // Promise mit Zeitgrenze (Promise.race); der Timer wird immer aufgeräumt
+  function mitFrist(p, ms, was) {
+    let uhr;
+    const ablauf = new Promise((_, reject) => { uhr = setTimeout(() => reject(new Error(was + ": keine Antwort vom Server")), ms); });
+    return Promise.race([p, ablauf]).finally(() => clearTimeout(uhr));
+  }
+
+  // Ein Worker ohne Arbeit gibt nach einigen Minuten seinen Speicher frei; bei Bedarf entsteht ein neuer
+  function leerlaufPlanen(w) {
+    clearTimeout(w.leerlauf);
+    w.leerlauf = setTimeout(() => {
+      if (w.zustand !== "frei") return;
+      wegwerfen(w, new Error("Übersetzer-Worker beendet (Leerlauf)"), true);
+    }, LEERLAUF_MS);
   }
 
   function fertigMelden(a, text) {
@@ -228,6 +249,7 @@ const Uebersetzer = (() => {
       if (w.zustand !== "startet") return;
       startFehler = 0;
       w.zustand = "frei";
+      leerlaufPlanen(w);
       anstossen();
     }, (e) => { wegwerfen(w, e); startFehlschlag(e); });
     return w;
@@ -243,12 +265,13 @@ const Uebersetzer = (() => {
     for (const a of warte.splice(0)) { offen.delete(a.key); for (const x of a.wer) x.reject(e); }
   }
 
-  function wegwerfen(w, fehler) {
+  function wegwerfen(w, fehler, leise) {
     if (w.zustand === "weg") return;
     w.zustand = "weg";
+    clearTimeout(w.leerlauf);
     const i = worker.indexOf(w);
     if (i >= 0) worker.splice(i, 1);
-    zahlen.neustarts++;
+    if (!leise) zahlen.neustarts++;
     try { if (w.w) w.w.terminate(); } catch { }
     for (const ruf of w.aufrufe.values()) { clearTimeout(ruf.uhr); ruf.reject(fehler); }
     w.aufrufe.clear();
@@ -418,7 +441,7 @@ const Uebersetzer = (() => {
 
     // Sichtbares zuerst
     const hoehe = (doc.defaultView && doc.defaultView.innerHeight) || 800;
-    let fertig = 0;
+    let fertig = 0, erfolge = 0, fehler = 0, letzterGrund = "";
     anzeige("Übersetze … 0 %", "Original");
     await Promise.all(liste.map(({ e, s }) => {
       const oben = e.getBoundingClientRect().top;
@@ -429,13 +452,25 @@ const Uebersetzer = (() => {
         if (meinLauf !== lauf || !e.isConnected) return;
         originale.set(e, html);
         e.innerHTML = r.target.text;
-      }).catch(() => { }).finally(() => {
+        erfolge++;
+      }).catch((err) => {
+        // Nicht mehr gebrauchte Aufträge sind kein Fehler; alles andere zählen und merken
+        if (err && err.name === "Verworfen") return;
+        fehler++;
+        letzterGrund = (err && err.message) || String(err);
+      }).finally(() => {
         fertig++;
         if (meinLauf === lauf && (fertig % 5 === 0 || fertig === liste.length))
           anzeige("Übersetze … " + Math.round(fertig / liste.length * 100) + " %", "Original");
       });
     }));
-    if (meinLauf === lauf) anzeige("Maschinell übersetzt" + (fehltText ? ", außer " + fehltText + " (nicht installiert)" : ""), "Original");
+    if (meinLauf !== lauf) return;
+    if (!erfolge && fehler) {
+      anzeige("Die Übersetzung hat nicht geklappt." + (letzterGrund ? " (" + letzterGrund + ")" : ""), "Auf Deutsch");
+      an = false;
+      return;
+    }
+    anzeige("Maschinell übersetzt" + (fehler ? " (" + fehler + " Stellen nicht übersetzbar)" : "") + (fehltText ? ", außer " + fehltText + " (nicht installiert)" : ""), "Original");
   }
 
   function original() {

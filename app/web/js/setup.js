@@ -53,7 +53,6 @@ const Setup = (() => {
     }, "Vorauswahl");
     return el("div", { class: "stufen-zeile" }, schalter, hinweis ? el("p", { class: "hinweis klein" }, hinweis) : null);
   }
-  function stellungText(bereich, aktuell, sets) { return STELLUNG_NAME[stellung(bereich, aktuell, sets)]; }
 
   // Wissen: Mengen der Vorauswahl (Installiertes bleibt immer gewählt; „alles“ wählt je Variantengruppe die größte)
   // Bei schwachem Gerät und wenig Platz mit der kompakten Wikipedia
@@ -144,11 +143,16 @@ const Setup = (() => {
   async function zeigen(params) {
     const start = parseInt(params && params.get("schritt"), 10);
     const neu = params && params.get("neu");
-    if (!hw || !kat || neu) {
+    // Der Katalog wird bei jedem Öffnen neu geladen (installiert sich zwischendurch etwas, stimmt er sonst nicht);
+    // die gewählten Mengen (wahl) bleiben dabei erhalten
+    const ersteMal = !hw || !kat || neu;
+    {
       if (neu) wahl = neueWahl(); // "Einrichtung neu starten": mit dem aktuellen Stand vorbelegen
-      $("#setup-inhalt").innerHTML = '<p class="hinweis">Gerät wird geprüft …</p>';
-      $("#setup-knoepfe").innerHTML = "";
-      zeichneSchritte();
+      if (ersteMal) {
+        $("#setup-inhalt").innerHTML = '<p class="hinweis">Gerät wird geprüft …</p>';
+        $("#setup-knoepfe").innerHTML = "";
+        zeichneSchritte();
+      }
       try {
         let sk, st, pk;
         [hw, kat, akt, sk, st, pk] = await Promise.all([api("hardware"), api("katalog"), api("aktualisierung"),
@@ -157,10 +161,13 @@ const Setup = (() => {
         sprachen = sk.sprachen || [];
         stimmen = st.stimmen || [];
       } catch (e) {
-        $("#setup-inhalt").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>";
-        return;
+        // Beim erneuten Öffnen gelten dann die alten Daten weiter
+        if (ersteMal) {
+          $("#setup-inhalt").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>";
+          return;
+        }
       }
-      vorbelegen();
+      if (ersteMal) vorbelegen();
     }
     const f = await api("fortschritt").catch(() => null);
     downloadAktiv = !!(f && f.aktiv);
@@ -204,7 +211,14 @@ const Setup = (() => {
     k.innerHTML = "";
     k.append(zurueck ? el("button", { class: "knopf", onclick: zurueck }, "← Zurück") : el("span"));
     if (weiter) k.append(el("button", { class: "knopf knopf-haupt", onclick: weiter }, weiterText || "Weiter →"));
+    // Beim ersten Start ist das Menü oben ausgeblendet; wer erst einmal nur schauen will, kommt hier heraus
+    let sp = $("#setup-spaeter");
+    if (!sp) { sp = el("p", { id: "setup-spaeter", class: "hinweis klein" }); k.after(sp); }
+    sp.hidden = !ersteEinrichtung();
+    sp.replaceChildren(el("a", { href: "#start" }, "Später einrichten"), el("br"), "Erste Hilfe und Vorsorge funktionieren auch ohne Einrichtung.");
   }
+  // Erste Einrichtung: Fieldbook wurde noch nie fertig eingerichtet (dann ist das Menü oben ausgeblendet, siehe app.js)
+  function ersteEinrichtung() { return !!(OW.status && !OW.status.setupFertig); }
 
   function geheZu(n) { schritt = n; zeichne(); window.scrollTo(0, 0); }
 
@@ -225,41 +239,39 @@ const Setup = (() => {
     c.innerHTML = "";
     c.append(
       el("h1", {}, "Willkommen bei Fieldbook"),
-      el("p", {}, "Der Assistent richtet alles in wenigen Schritten ein. Dafür wird einmal Internet gebraucht. Danach funktioniert alles offline."),
-      el("div", { class: "karte-box" },
-        el("h2", { style: "margin-top:0" }, "Dein Gerät"),
+      el("p", {}, "Der Assistent richtet alles in wenigen Schritten ein.", el("br"), "Dafür wird einmal Internet gebraucht.", el("br"), "Danach funktioniert alles offline."));
+    // Ohne Internet: Hinweis und die Übernahme vom USB-Stick (z. B. von einem anderen Fieldbook-Laptop)
+    if (!kat.katalogOnline) c.append(el("div", { class: "warnung", style: "display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px" },
+      el("span", {}, "Keine Internetverbindung erkannt.", el("br"), "Zum Herunterladen wird Internet gebraucht.", el("br"), "Hast du die Inhalte auf einem USB-Stick, kannst du sie von dort übernehmen."),
+      el("button", { class: "knopf knopf-klein", onclick: () => Inhalte.importDialog() }, sym("usb"), "Von USB-Stick übernehmen")));
+    // Gerät nur als eine Zeile, die Einzelwerte zum Aufklappen
+    c.append(el("div", {},
+      el("div", { class: "stufe", style: "margin:0" },
+        el("span", { class: "stufe-punkte" }, "●".repeat(st) + "○".repeat(4 - st)),
+        el("div", {}, el("b", {}, "Dein Gerät: " + STUFEN[st].name),
+          ...(STUFEN[st].text + (g && g.vramGB >= 4 ? " Die Grafikkarte wird für die KI genutzt." : "")).split(/(?<=\.) /).flatMap(t => [el("br"), t]))),
+      el("details", { class: "fb-details", style: "margin:8px 0 0 16px" }, el("summary", {}, "Einzelheiten zum Gerät"),
         el("table", { class: "hw-tabelle" },
           el("tr", {}, el("td", {}, "Prozessor"), el("td", {}, hw.cpu + " (" + hw.kerne + " Kerne)")),
           el("tr", {}, el("td", {}, "Arbeitsspeicher"), el("td", {}, Math.round(hw.ramGB) + " GB")),
           el("tr", {}, el("td", {}, "Grafikkarte"), el("td", {}, gpuText)),
-          el("tr", {}, el("td", {}, "Freier Speicherplatz"), el("td", {}, Math.round(hw.freiGB) + " GB auf " + (hw.laufwerk || "dem Laufwerk"))),
-        ),
-        el("div", { class: "stufe" },
-          el("span", { class: "stufe-punkte" }, "●".repeat(st) + "○".repeat(4 - st)),
-          el("div", {}, el("b", {}, STUFEN[st].name),
-            ...(STUFEN[st].text + (g && g.vramGB >= 4 ? " Die Grafikkarte wird für die KI genutzt." : "")).split(/(?<=\.) /).flatMap(t => [el("br"), t])),
-        ),
-      ),
-    );
-    // Land: bestimmt Notrufnummern und die vorgeschlagene Karte
+          el("tr", {}, el("td", {}, "Freier Speicherplatz"), el("td", {}, Math.round(hw.freiGB) + " GB auf " + (hw.laufwerk || "dem Laufwerk")))))));
+    // Land, Desktop-Symbol und Aktualisierung in einem Kasten
     const land = Land.aktuell();
     const auswahl = landAuswahl(land, async (neu) => {
       OW.status = await api("einstellungen", { land: neu.code, sprache: neu.sprache });
       // Vorgeschlagene Karte anpassen, solange noch keine Karte installiert ist
       if (!kat.karten.some(r => r.installiert) && neu.karte) { wahl.karten.clear(); wahl.karten.set(neu.karte, { bytes: null }); }
     });
-    c.append(el("div", { class: "karte-box", style: "margin-top:16px" },
-      el("div", { class: "einst-zeile", style: "border:0;padding:0" },
+    c.append(el("div", { class: "karte-box", style: "margin-top:16px;padding-top:8px;padding-bottom:8px" },
+      el("div", { class: "einst-zeile" },
         el("div", {}, el("b", {}, "Land"), el("small", {}, "Für Notrufnummern und die vorgeschlagene Karte." + (OW.status && OW.status.landErkannt ? " Aus Windows erkannt: " + OW.status.landErkannt + "." : ""))),
-        auswahl)));
-    c.append(el("div", { class: "karte-box", style: "margin-top:16px" },
-      el("label", { class: "schalter" },
-        el("input", { type: "checkbox", checked: wahl.desktop, onchange: (e) => { wahl.desktop = e.target.checked; } }),
-        el("b", {}, "Symbol auf dem Desktop anlegen")),
-      el("p", { class: "hinweis klein", style: "margin:6px 0 0" }, "Damit startest du Fieldbook bequem vom Desktop aus. Wird der Ordner verschoben, passt Fieldbook das Symbol beim nächsten Start an.")));
-    c.append(aktualisierungBox(akt, false));
+        auswahl),
+      el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, "Symbol auf dem Desktop"), el("small", {}, "Damit startest du Fieldbook bequem vom Desktop aus.")),
+        anAus(el("input", { type: "checkbox", checked: wahl.desktop, onchange: (e) => { wahl.desktop = e.target.checked; } }))),
+      aktualisierungBox(akt, false, { kurz: true })));
     if (land && !(OW.status && OW.status.land)) api("einstellungen", { land: land.code, sprache: land.sprache }).then(s => { OW.status = s; });
-    if (!kat.katalogOnline) c.append(el("p", { class: "warnung" }, "Keine Internetverbindung erkannt. Zum Herunterladen wird Internet gebraucht. Bereits geladene Inhalte funktionieren trotzdem."));
     knoepfe(null, () => geheZu(1));
   }
 
@@ -344,10 +356,11 @@ const Setup = (() => {
           eintraege.push({ gruppe: p.gruppeExklusiv, titel: (gruppen[p.gruppeExklusiv] || {}).titel || p.titel, pakete: pakete.filter(x => x.gruppeExklusiv === p.gruppeExklusiv) });
       }
       const gewaehlt = eintraege.filter(e => e.pakete.some(p => wahl.pakete.has(p.id)));
-      const unter = gewaehlt.length ? gewaehlt.map(e => {
+      // Zugeklappt kurz: alles, nichts oder die gewählten Namen
+      const unter = !gewaehlt.length ? "Nichts ausgewählt" : gewaehlt.length === eintraege.length ? "Alles ausgewählt" : gewaehlt.map(e => {
         const g = e.pakete.filter(p => wahl.pakete.has(p.id));
-        return e.titel + (e.gruppe ? " (" + g.map(p => p.variante).join(", ") + ")" : "") + (g.every(p => p.installiert) ? " (vorhanden)" : "");
-      }).join(", ") : "Nichts ausgewählt";
+        return e.titel + (e.gruppe ? " (" + g.map(p => p.variante).join(", ") + ")" : "");
+      }).join(", ");
       const a = klappAbschnitt(aufgeklappt, gr.id, gr.icon, gr.titel, unter, gewaehlt.length + " von " + eintraege.length + " ausgewählt", true);
       liste.append(a.box);
       const c = a.innen;
@@ -569,7 +582,7 @@ const Setup = (() => {
     const r = await api("routengroesse?ids=" + encodeURIComponent(ids)).catch(() => null);
     if (routenAnfrage !== ids) return;
     wahl.routenGroesse = r || { bytes: 0 };
-    if (schritt === 3) schrittKarten();
+    if (schritt === 3 && kat && location.hash.startsWith("#setup")) schrittKarten();
   }
 
   function maxzoom(r) { return r.maxzoom || (wahl.sparen ? 13 : 15); }
@@ -583,10 +596,12 @@ const Setup = (() => {
         const r = kat.karten.find(x => x.id === id);
         if (!r || r.installiert || k.bytes) continue;
         const erg = await api("kartengroesse?id=" + encodeURIComponent(id) + "&maxzoom=" + maxzoom(r)).catch(e => ({ fehler: e.message }));
+        // Nach „Einrichtung abschließen“ ist der Katalog weg (kat = null): nichts mehr zeichnen
+        if (!kat) return;
         if (!wahl.karten.has(id)) continue;
         k.bytes = erg.bytes > 0 ? erg.bytes : -1;
         if (erg.fehler) k.fehler = erg.fehler;
-        if (schritt === 3) schrittKarten();
+        if (schritt === 3 && location.hash.startsWith("#setup")) schrittKarten();
       }
     } finally { rechnet = false; }
   }
@@ -602,35 +617,54 @@ const Setup = (() => {
     const zeile = (titel, schrittNr, ...inhalt) => tabelle.append(el("tr", {},
       el("td", {}, schrittNr == null ? titel : el("a", { href: "#setup?schritt=" + schrittNr }, titel)), el("td", {}, ...inhalt)));
     const vorhanden = () => el("span", { class: "marke-tag tag-ok" }, "✓ vorhanden");
+    // Je Bereich höchstens zwei Zeilen: was schon da ist und was neu dazukommt
+    const daNeu = (da, neu) => [
+      da ? el("div", {}, el("span", { class: "hinweis" }, "Schon da: "), da) : null,
+      el("div", {}, el("span", { class: "hinweis" }, "Neu: "), neu || "nichts")];
+    const liste = (namen, max) => namen.length <= max ? namen.join(", ") : namen.length + " Stück";
+    const st = OW.status || {};
     const m = kat.modelle.find(x => x.id === wahl.modell);
     zeile("KI-Assistent", 1, m ? m.name + " · " + m.modell : "keine",
       m ? el("div", { class: "hinweis klein" }, (wahl.backend === "vulkan" ? "mit Grafikkarte" : "auf dem Prozessor") + (m.installiert ? "" : " · " + groesse(m.bytes))) : null,
       m && m.installiert ? vorhanden() : null);
+    // Wissen: Zahl der Pakete, die Liste zum Aufklappen (nach Hauptkategorie gruppiert, wie im Schritt „Wissen“)
     const pk = kat.pakete.filter(p => wahl.pakete.has(p.id));
-    const wissen = el("div");
-    const vorText = t => el("div", { class: "uebersicht-gruppe" }, "Vorauswahl: " + t);
-    wissen.append(vorText(stellungText("wissen", wahl.pakete, wissenSets())));
-    if (!pk.length) wissen.append("keine");
-    // Nach Hauptkategorie gruppiert, wie im Schritt „Wissen“
-    for (const gr of kat.kategorien) {
-      const inGr = pk.filter(p => (p.kategorien || [])[0] === gr.id);
-      if (!inGr.length) continue;
-      wissen.append(el("div", { class: "uebersicht-gruppe" }, gr.titel),
-        el("ul", { class: "uebersicht-liste" }, ...inGr.map(p => el("li", {}, p.titel, " ",
-          p.installiert && !p.update ? vorhanden() : el("span", { class: "hinweis klein" }, groesse(p.bytes))))));
+    const pkDa = pk.filter(p => p.installiert && !p.update), pkNeu = pk.filter(p => !p.installiert || p.update);
+    const wissen = el("div", {}, ...daNeu(pkDa.length ? pkDa.length + (pkDa.length === 1 ? " Paket" : " Pakete") : null,
+      pkNeu.length ? (pkNeu.length <= 3 ? pkNeu.map(p => p.titel).join(", ") : pkNeu.length + " Pakete") + " (" + groesse(paketBytes(new Set(pkNeu.map(p => p.id)))) + ")" : null));
+    if (pk.length) {
+      const alle = el("details", { class: "fb-details", style: "margin-top:6px" }, el("summary", {}, "Alle Pakete zeigen"));
+      for (const gr of kat.kategorien) {
+        const inGr = pk.filter(p => (p.kategorien || [])[0] === gr.id);
+        if (!inGr.length) continue;
+        alle.append(el("div", { class: "uebersicht-gruppe" }, gr.titel),
+          el("ul", { class: "uebersicht-liste" }, ...inGr.map(p => el("li", {}, p.titel, " ",
+            p.installiert && !p.update ? vorhanden() : el("span", { class: "hinweis klein" }, groesse(p.bytes))))));
+      }
+      const ohneGr = pk.filter(p => !kat.kategorien.some(g => g.id === (p.kategorien || [])[0]));
+      if (ohneGr.length) alle.append(el("ul", { class: "uebersicht-liste" }, ...ohneGr.map(p => el("li", {}, p.titel))));
+      wissen.append(alle);
     }
-    const ohneGr = pk.filter(p => !kat.kategorien.some(g => g.id === (p.kategorien || [])[0]));
-    if (ohneGr.length) wissen.append(el("ul", { class: "uebersicht-liste" }, ...ohneGr.map(p => el("li", {}, p.titel))));
-    zeile("Wissen (" + pk.length + " Pakete)", 2, wissen);
+    zeile("Wissen", 2, wissen);
+    // Karten samt Routenplanung
     const kk = kat.karten.filter(r => wahl.karten.has(r.id));
-    zeile("Karten", 3, vorText(stellungText("karten", new Set(wahl.karten.keys()), kartenSets())), kk.length ? el("ul", { class: "uebersicht-liste" }, ...kk.map(r => el("li", {}, r.titel, " ", r.installiert ? vorhanden() : null))) : "keine");
-    zeile("Routenplanung", 3, wahl.routen && kk.length ? "ja" : "nein");
-    zeile("Artikel übersetzen", 4, OW.status && OW.status.uebersetzer ? vorhanden() : wahl.uebersetzer || sprachenNeu().length ? "ja" : "nein");
-    const spNamen = [...wahl.sprachen].map(c => { const sp = sprachen.find(x => x.code === c); return sp ? sp.name + (wahl.stimmen.has(c) ? " (Text + Sprache)" : "") : c; });
-    zeile("Sprachen", 4, vorText(stellungText("sprachen", sprachSchluessel(wahl.sprachen, wahl.stimmen), sprachSets())), spNamen.length ? el("ul", { class: "uebersicht-liste" }, ...spNamen.map(n => el("li", {}, n))) : "keine neuen");
-    zeile("Spracheingabe", 4, OW.status && OW.status.spracheingabe && OW.status.spracheingabeKomplett ? vorhanden() : wahl.spracheingabe ? "ja" : "nein");
-    zeile("Desktop-Symbol", 0, wahl.desktop ? "ja" : "nein");
-    zeile("Automatische Aktualisierung", 0, akt.an ? (akt.modus === "auto" ? "an, automatisch" : "an, mit Nachfrage") + (akt.wann === "leerlauf" ? ", nur im Leerlauf" : ", sofort im Hintergrund") + (akt.mbit ? ", höchstens " + akt.mbit + " MBit/s" : "") : "aus");
+    const kDa = kk.filter(r => r.installiert).map(r => r.titel), kNeu = kk.filter(r => !r.installiert).map(r => r.titel);
+    const routen = wahl.routen && kk.length;
+    const kNeuTeile = [];
+    if (kNeu.length) kNeuTeile.push(liste(kNeu, 4) + " (" + groesse(kartenBytes(new Set(kk.filter(r => !r.installiert).map(r => r.id)))) + ")");
+    if (routen && !st.routen) kNeuTeile.push("Routenplanung");
+    zeile("Karten", 3, ...daNeu(kDa.length ? liste(kDa, 4) + (st.routen ? " · Routenplanung" : "") : null, kNeuTeile.join(" · ") || null));
+    // Sprachen samt „Artikel übersetzen“ und Spracheingabe
+    const spName = c => { const sp = sprachen.find(x => x.code === c); return sp ? sp.name : c; };
+    const spDa = (st.sprachen || []).map(spName);
+    if (st.uebersetzer && !st.uebersetzerAlt) spDa.unshift("Artikel übersetzen");
+    if (st.spracheingabe && st.spracheingabeKomplett) spDa.push("Spracheingabe");
+    const spNeu = [...wahl.sprachen].filter(c => !(st.sprachen || []).includes(c)).map(c => spName(c) + (wahl.stimmen.has(c) ? " (Text + Sprache)" : ""));
+    if ((wahl.uebersetzer || spNeu.length) && !(st.uebersetzer && !st.uebersetzerAlt)) spNeu.unshift("Artikel übersetzen");
+    if (wahl.spracheingabe && !(st.spracheingabe && st.spracheingabeKomplett)) spNeu.push("Spracheingabe");
+    zeile("Sprachen", 4, ...daNeu(spDa.length ? liste(spDa, 5) : null, spNeu.length ? liste(spNeu, 5) + (sprachenBytes() ? " (" + groesse(sprachenBytes()) + ")" : "") : null));
+    zeile("Einstellungen", 0, "Desktop-Symbol " + (wahl.desktop ? "an" : "aus"), el("br"),
+      "Automatische Aktualisierung " + (akt.an ? "an" : "aus"));
     c.append(el("div", { class: "karte-box" }, tabelle), summenZeile());
     if (downloadAktiv) {
       c.append(el("p", { class: "warnung" }, "Gerade laufen noch Downloads. Bitte warte, bis sie fertig sind, oder brich sie unter ",
@@ -643,11 +677,22 @@ const Setup = (() => {
       if (!wahl.statistik) wahl.statistik = { fehler: !!OW.status.statistikFehler, nutzung: !!OW.status.statistikNutzung };
       c.append(el("h2", {}, "Eine Bitte"), el("div", { class: "karte-box" }, statistikBitte(wahl.statistik)));
     }
-    c.append(el("p", { class: "hinweis" }, "Nach dem Abschließen startet der Download. Den Fortschritt siehst du unter „Inhalte“. Das Dashboard kannst du währenddessen schon benutzen: Fertige Pakete stehen sofort zur Verfügung."));
+    c.append(el("p", { class: "hinweis" }, "Nach dem Abschließen startet der Download.", el("br"), "Den Fortschritt siehst du unter „Inhalte“.", el("br"), "Fieldbook kannst du währenddessen schon benutzen: Fertige Pakete stehen sofort zur Verfügung."));
     knoepfe(() => geheZu(UEBERSICHT - 1), abschliessen, "✓ Einrichtung abschließen und herunterladen");
   }
 
-  async function abschliessen() {
+  let abschliesst = false;
+  async function abschliessen(ev) {
+    // Doppelklick-Sperre
+    if (abschliesst) return;
+    abschliesst = true;
+    const k = ev && ev.currentTarget;
+    if (k) k.disabled = true;
+    try { await abschliessenStarten(); }
+    finally { abschliesst = false; if (k && k.isConnected) k.disabled = false; }
+  }
+
+  async function abschliessenStarten() {
     const karten = [];
     for (const [id, k] of wahl.karten) {
       const r = kat.karten.find(x => x.id === id);

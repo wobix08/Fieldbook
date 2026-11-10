@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
 
-### **[Fieldbook 0.7.4 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.4/Fieldbook-0.7.4.zip)**
+### **[Fieldbook 0.8.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.0/Fieldbook-0.8.0.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -57,7 +57,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.7.4 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.7.4/Fieldbook-0.7.4.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.0/Fieldbook-0.8.0.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -137,7 +137,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.7.4.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.8.0.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -193,7 +193,7 @@ Beides passiert nur, wenn du es willst.
 
 **Inhalte automatisch aktualisieren (optional)**\
 Hält Wissenspakete, Karten und Wegedaten aktuell.\
-Im Assistenten ganz am Anfang einschaltbar oder später in den Einstellungen im Kasten *Inhalte*, standardmäßig aus.\
+Im Assistenten ganz am Anfang einschaltbar oder später in den Einstellungen unter *Fieldbook und Updates*, standardmäßig aus.\
 Es gibt keinen Autostart und kein Programm, das dauerhaft im Hintergrund läuft.\
 Stattdessen legt Fieldbook zwei Aufgaben in der Windows-Aufgabenplanung an:
 
@@ -209,10 +209,10 @@ Protokoll: `daten\logs\aktualisierung.log`.
 
 **Neue Fieldbook-Versionen**\
 Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
-Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen im Kasten *Fieldbook-Programm*).\
+Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen ganz oben unter *Fieldbook und Updates*).\
 Möchtest du auch diese kurze Anfrage nicht, schaltest du sie dort bei *Beim Start nach neuer Fieldbook-Version fragen* aus.\
-Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach neuer Version suchen* klickst.\
-Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Schalter *Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen*).\
+Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach Updates suchen* klickst.\
+Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Haken *Dabei auch neue Fieldbook-Versionen mitladen*).\
 Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch herunterladen“ spielt es die neue Version beim nächsten Start ein.
 
 **Sicher bei Problemen**\
@@ -241,7 +241,7 @@ Nach der Einrichtung nur in diesen Fällen:
 - **Fehlerberichte und Nutzungsstatistik**, aber nur, wenn du zugestimmt hast.
 
 **Rückmeldungen**\
-Unter *Einstellungen → Rückmeldung geben* kannst du mir selbst schreiben, was gut läuft und was nicht.\
+Unter *Einstellungen → Rückmeldung und Datenschutz* kannst du mir selbst schreiben, was gut läuft und was nicht.\
 Die Nachricht geht erst raus, wenn du auf *Absenden* klickst.\
 Was übertragen wird, steht im Formular unter *Was wird mitgeschickt?*:\
 dein Text, auf Wunsch eine Kontaktadresse, die Fieldbook-Version, die Windows-Version, die Größe des Arbeitsspeichers, der Name der eingerichteten KI und, nur mit Haken, die Enden der Logdateien.\
@@ -249,7 +249,7 @@ In den Logdateien macht Fieldbook deinen Benutzernamen und deine Ordnerpfade unk
 Schreib bitte nichts in den Text, was du nicht teilen möchtest.
 
 **Fehlerberichte und Nutzungsstatistik**\
-Beides ist aus, bis du es einschaltest (bei der Einrichtung oder unter *Einstellungen → Fieldbook-Programm*), und lässt sich dort jederzeit wieder ausschalten.\
+Beides ist aus, bis du es einschaltest (bei der Einrichtung oder unter *Einstellungen → Rückmeldung und Datenschutz*), und lässt sich dort jederzeit wieder ausschalten.\
 Fieldbook fragt einmal danach, beide Haken sind am Anfang aus.\
 Solange es aus ist, sammelt Fieldbook auch nichts.\
 *Fehlerberichte* enthalten Fehler, die in Fieldbook auftreten (Benutzername und Ordnerpfade unkenntlich gemacht), dein Gerät (Prozessor, Kerne, Arbeitsspeicher, Grafik), die Windows-Version und wie schnell die KI lädt und antwortet.\
@@ -301,13 +301,14 @@ Das kann nur die IT freigeben.
   Wird `Fieldbook.exe` blockiert, lässt sich Fieldbook stattdessen mit `app\Start.bat` starten.\
   Strenge Schutzprogramme blockieren aber manchmal auch das, weil Fieldbook beim Start ein PowerShell-Skript ausführt und Hilfsprogramme startet.\
   Dann muss die IT den Fieldbook-Ordner freigeben.\
+  Ist PowerShell auf dem Rechner eingeschränkt (Constrained Language Mode), meldet Fieldbook das beim Start; dann läuft es dort nicht.\
   Prüfen kann sie vorher alles selbst: Der komplette Quellcode liegt in diesem Repository, und zu jedem Release gibt es eine Prüfsumme (siehe [Ist das sicher?](#ist-das-sicher)).
 - **Verbindung prüfen**\
-  Unter *Einstellungen → Internetverbindung → Prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
+  Unter *Einstellungen → Erweitert → Verbindung prüfen* testet Fieldbook alle Adressen und sagt, welche gesperrt ist.\
   Derselbe Knopf erscheint, wenn ein Download scheitert.
 - **Proxy**\
   Fieldbook übernimmt den Proxy aus den Windows-Einstellungen automatisch.\
-  Falls nötig, lässt sich unter *Einstellungen → Internetverbindung* ein eigener eintragen (z. B. `proxy.schule.de:8080`).
+  Falls nötig, lässt sich unter *Einstellungen → Erweitert* ein eigener eintragen (z. B. `proxy.schule.de:8080`).
 - **Ohne Internet**\
   Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*).\
   So kann man zum Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.

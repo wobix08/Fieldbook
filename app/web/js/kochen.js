@@ -5,7 +5,7 @@
 const Kochen = (() => {
   let konf = null;
   let aufgebaut = false;
-  let nachgelesen = false;
+  let nachgelesen = false, wiederholung = null;
   const leitfadenLinks = [];
   let beschaeftigt = false;
 
@@ -30,7 +30,8 @@ const Kochen = (() => {
     $("#koch-start").hidden = !startet;
     if (startet) {
       $("#koch-fehlt").hidden = $("#koch-form").hidden = true;
-      setTimeout(async () => { if (location.hash.startsWith("#kochen")) { await aktualisiereStatus(); zeigen(); } }, 3000);
+      clearTimeout(wiederholung);
+      wiederholung = setTimeout(async () => { if (location.hash.startsWith("#kochen")) { await aktualisiereStatus(); zeigen(); } }, 3000);
       return;
     }
     if (!nachgelesen && buecher.length) { nachgelesen = true; nachlesen(); }
@@ -105,11 +106,13 @@ const Kochen = (() => {
     for (const liste of listen)
       for (const t of liste) {
         // Kategorie-, Zutaten- und Hilfsseiten sind keine Rezepte
-        if (/[:]|^_/.test(decodeURIComponent(t.url.split("/").pop())) || gesehen.has(t.url)) continue;
+        let titel = t.url.split("/").pop();
+        try { titel = decodeURIComponent(titel); } catch { }
+        if (/[:]|^_/.test(titel) || gesehen.has(t.url)) continue;
         gesehen.add(t.url);
         kandidaten.push(t);
       }
-    return kandidaten.slice(0, 150);
+    return kandidaten.slice(0, 80);
   }
 
   async function nachEinander(liste, gleichzeitig, fn) {

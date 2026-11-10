@@ -30,11 +30,13 @@
   });
   // Links ins Internet: erst fragen, ob es Internet gibt. Mit Internet zeigt Fieldbook einen Hinweis mit dem
   // Ziel und „Im Browser öffnen“ (neuer Tab), ohne Internet „Kein Internet“ statt einer Fehlerseite des Browsers.
-  document.addEventListener("click", function (e) {
+  // Linksklick und Mittelklick (der würde sonst direkt einen neuen Tab öffnen) werden gleich behandelt
+  function linkKlick(e) {
     var a = e.target.closest && e.target.closest("a[href]");
-    if (!a || e.defaultPrevented || e.button !== 0) return;
-    var url;
-    try { url = new URL(a.href, document.baseURI); } catch (x) { return; }
+    if (!a || e.defaultPrevented || (e.button !== 0 && e.button !== 1)) return;
+    var url, roh = a.getAttribute("href");
+    if (roh === null && a.href && a.href.baseVal !== undefined) roh = a.href.baseVal;
+    try { url = new URL(roh, document.baseURI); } catch (x) { return; }
     if ((url.protocol !== "http:" && url.protocol !== "https:") || url.origin === location.origin) return;
     e.preventDefault();
     e.stopPropagation();
@@ -50,7 +52,9 @@
           else keinInternet(wiki.suche);
         });
     });
-  }, true);
+  }
+  document.addEventListener("click", linkKlick, true);
+  document.addEventListener("auxclick", linkKlick, true);
 
   // Links auf Wikipedia, Wikivoyage, Wiktionary usw. (z. B. de.wikipedia.org/wiki/GSM): Ist das passende Paket
   // installiert und hat es den Artikel, öffnet Fieldbook ihn dort statt im Internet.
@@ -117,13 +121,14 @@
   // Kasten über dem Artikel (wie eine eigene Seite); Escape oder „Zurück“ schließt ihn
   function kasten(inhalt) {
     var alt = document.getElementById("fb-offline");
-    if (alt) alt.remove();
+    if (alt) { if (alt.fbZu) alt.fbZu(); else alt.remove(); }
     var box = document.createElement("div");
     box.id = "fb-offline";
     box.innerHTML = '<div class="fb-offline-box">' + inhalt + '</div>';
     function zu() { box.remove(); removeEventListener("keydown", taste, true); }
     function taste(e) { if (e.key === "Escape") zu(); }
     addEventListener("keydown", taste, true);
+    box.fbZu = zu;
     box.querySelector(".fb-zurueck").addEventListener("click", zu);
     document.body.appendChild(box);
     return { box: box, zu: zu };

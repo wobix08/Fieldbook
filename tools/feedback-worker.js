@@ -13,13 +13,15 @@
 //   Variablen:  GITHUB_TOKEN  (Geheimnis)  Fine-grained Token, nur für das Feedback-Repository, Recht "Issues: Read and write"
 //               REPO          (Text)       wobix08/Fieldbook-Feedback
 //               AUSWERTUNG    (Geheimnis)  langer zufälliger Text, Schlüssel für die Auswertungsseite
-//   Bindungen:  ZAEHLER       KV-Namespace (Schutz gegen Missbrauch bei Rückmeldungen)
-//               DB            D1-Datenbank (Nutzungsstatistik; die Tabellen legt der Dienst selbst an)
+//   Bindungen:  DB            D1-Datenbank (Nutzungsstatistik und Grenzen gegen Missbrauch; die Tabellen legt der Dienst selbst an)
+//               ZAEHLER       KV-Namespace (nur als Rückfall für die Grenzen, falls DB fehlt; nicht atomar)
 //   Trigger:    Cron-Trigger  einmal täglich, z. B. "0 3 * * *" (merkt sich die Download-Zähler)
 //
 // Schutz gegen Missbrauch (die Adresse steht offen im Quellcode, jeder kann sie aufrufen):
 //   - Rückmeldungen: je Absender höchstens 1 pro Minute und 5 pro Stunde, insgesamt 50 pro Tag,
-//   - Statistik: je Kennung ein Paket pro Woche (ein neues ersetzt das alte), insgesamt 5000 pro Tag,
+//     (Zähler in D1, atomar; IPv6 nach /64-Präfix),
+//   - Statistik: je Kennung ein Paket pro Woche (ein neues ersetzt das alte), je Absender 10 Pakete pro Tag,
+//     insgesamt 5000 pro Tag, höchstens 2000 verschiedene Fehlerarten,
 //     höchstens 10 neue Fehler-Einträge pro Tag im Repository,
 //   - Größengrenzen für alles, unbekannte Felder werden verworfen.
 // Absender von Rückmeldungen werden nur als unumkehrbarer Kurzwert (Hash) gezählt, der nach spätestens
@@ -33,6 +35,11 @@ const MAX_LOG = 60000;            // Zeichen je Logdatei (ein GitHub-Kommentar f
 const JE_MINUTE = 1, JE_STUNDE = 5, JE_TAG = 50;
 
 const STAT_JE_TAG = 5000, NEUE_FEHLER_JE_TAG = 10;
+const STAT_JE_ABSENDER = 10;      // Pakete je Absender und Tag
+const MAX_FEHLERTYPEN = 2000;     // verschiedene Fehlerarten insgesamt
+
+// Tabellen und Index nur einmal je Worker-Instanz anlegen
+let eingerichtet = false;
 
 export default {
   // Cron-Trigger: einmal am Tag die Download-Zähler merken
@@ -41,18 +48,27 @@ export default {
   },
 
   async fetch(request, env) {
+    // Unerwartete Fehler (GitHub, Datenbank) als JSON melden statt als HTML-Fehlerseite
+    try { return await verarbeiten(request, env); }
+    catch (e) { return antwort(500, { fehler: "Interner Fehler" }); }
+  }
+};
+
+async function verarbeiten(request, env) {
     const pfad = new URL(request.url).pathname;
     if (request.method === "GET" && pfad === "/auswertung") return auswertung(request, env);
     if (request.method !== "POST") return antwort(405, { fehler: "Nur POST" });
-    if (!env.GITHUB_TOKEN || !env.REPO || !env.ZAEHLER) return antwort(500, { fehler: "Dienst nicht eingerichtet" });
+    if (!env.GITHUB_TOKEN || !env.REPO || !(env.DB || env.ZAEHLER)) return antwort(500, { fehler: "Dienst nicht eingerichtet" });
 
     // Erst prüfen, ob die Anfrage überhaupt eine Rückmeldung ist (Unsinn verbraucht keine Zähler)
+    const laenge = parseInt(request.headers.get("Content-Length") || "0", 10);
+    if (laenge > MAX_ANFRAGE) return antwort(413, { fehler: "Zu groß" });
     const roh = await request.text();
     if (roh.length > MAX_ANFRAGE) return antwort(413, { fehler: "Zu groß" });
     let d;
     try { d = JSON.parse(roh); } catch { return antwort(400, { fehler: "Kein JSON" }); }
     if (!d || typeof d !== "object") return antwort(400, { fehler: "Kein JSON" });
-    if (d.art === "statistik") return statistik(d, roh.length, env);
+    if (d.art === "statistik") return statistik(request, d, roh.length, env);
     const r = {
       art: d.art === "fehler" ? "fehler" : "feedback",
       text: str(d.text, MAX_TEXT).trim(),
@@ -70,22 +86,59 @@ export default {
     if (sperre) return antwort(429, { fehler: sperre });
 
     return eintragen(r, env);
-  }
-};
+}
 
-// Zählt im KV-Speicher mit und gibt einen Text zurück, wenn eine Grenze erreicht ist
+// Absender-Kurzwert aus der IP; bei IPv6 nur das /64-Präfix (sonst wechselt jeder Nutzer beliebig die Adresse)
+async function absenderKurz(request) {
+  let ip = request.headers.get("CF-Connecting-IP") || "unbekannt";
+  if (ip.includes(":") && !ip.includes(".")) {
+    const teile = ip.toLowerCase().split("::");
+    const vorn = teile[0] ? teile[0].split(":") : [];
+    const hinten = teile.length > 1 && teile[1] ? teile[1].split(":") : [];
+    const gruppen = teile.length > 1 ? [...vorn, ...Array(Math.max(0, 8 - vorn.length - hinten.length)).fill("0"), ...hinten] : vorn;
+    ip = gruppen.slice(0, 4).map(g => g.padStart(4, "0")).join(":");
+  }
+  return kurzwert(ip + "|fieldbook");
+}
+
+// Zählt in D1 atomar hoch (abgelaufenes Fenster beginnt wieder bei 1) und gibt den neuen Stand zurück
+async function hochzaehlen(env, schluessel, jetzt, fensterMs) {
+  const bis = (Math.floor(jetzt / fensterMs) + 1) * fensterMs;
+  const z = await env.DB.prepare(
+    "INSERT INTO grenzen (schluessel, zahl, bis) VALUES (?1, 1, ?3) " +
+    "ON CONFLICT(schluessel) DO UPDATE SET zahl = CASE WHEN bis <= ?2 THEN 1 ELSE zahl + 1 END, bis = CASE WHEN bis <= ?2 THEN ?3 ELSE bis END " +
+    "RETURNING zahl").bind(schluessel, jetzt, bis).first();
+  return z ? z.zahl : 1;
+}
+
+// Gibt einen Text zurück, wenn eine Grenze erreicht ist. Mit D1 atomar, sonst Rückfall auf KV.
 async function grenzenPruefen(request, env) {
-  const absender = await kurzwert((request.headers.get("CF-Connecting-IP") || "unbekannt") + "|fieldbook");
+  const absender = await absenderKurz(request);
   const jetzt = Date.now();
-  const k = [
-    "m:" + absender + ":" + Math.floor(jetzt / 60000),
-    "h:" + absender + ":" + Math.floor(jetzt / 3600000),
-    "t:" + new Date(jetzt).toISOString().slice(0, 10)
-  ];
+  const TAG = "Heute sind schon sehr viele Rückmeldungen eingegangen. Bitte versuch es morgen noch einmal.";
+  const STUNDE = "Du hast in dieser Stunde schon " + JE_STUNDE + " Rückmeldungen geschickt. Bitte versuch es später noch einmal.";
+  const MINUTE = "Bitte warte eine Minute bis zur nächsten Rückmeldung.";
+  const tagKey = "t:" + new Date(jetzt).toISOString().slice(0, 10);
+
+  if (env.DB) {
+    await einrichten(env);
+    // Erst nur lesen, damit abgewiesene Anfragen den Tageszähler nicht verbrauchen
+    const t0 = await env.DB.prepare("SELECT zahl FROM grenzen WHERE schluessel = ? AND bis > ?").bind(tagKey, jetzt).first();
+    if (t0 && t0.zahl >= JE_TAG) return TAG;
+    // Minute und Stunde je Absender; erst wenn beide frei sind, zählt der Tag
+    if (await hochzaehlen(env, "m:" + absender, jetzt, 60000) > JE_MINUTE) return MINUTE;
+    if (await hochzaehlen(env, "h:" + absender, jetzt, 3600000) > JE_STUNDE) return STUNDE;
+    if (await hochzaehlen(env, tagKey, jetzt, 86400000) > JE_TAG) return TAG;
+    if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM grenzen WHERE bis < ?").bind(jetzt).run();
+    return null;
+  }
+
+  // Rückfall: KV (nicht atomar, parallele Anfragen können die Grenzen umgehen)
+  const k = ["m:" + absender + ":" + Math.floor(jetzt / 60000), "h:" + absender + ":" + Math.floor(jetzt / 3600000), tagKey];
   const [m, h, t] = await Promise.all(k.map(async s => parseInt(await env.ZAEHLER.get(s) || "0", 10)));
-  if (t >= JE_TAG) return "Heute sind schon sehr viele Rückmeldungen eingegangen. Bitte versuch es morgen noch einmal.";
-  if (h >= JE_STUNDE) return "Du hast in dieser Stunde schon " + JE_STUNDE + " Rückmeldungen geschickt. Bitte versuch es später noch einmal.";
-  if (m >= JE_MINUTE) return "Bitte warte eine Minute bis zur nächsten Rückmeldung.";
+  if (t >= JE_TAG) return TAG;
+  if (h >= JE_STUNDE) return STUNDE;
+  if (m >= JE_MINUTE) return MINUTE;
   await Promise.all([
     env.ZAEHLER.put(k[0], String(m + 1), { expirationTtl: 120 }),
     env.ZAEHLER.put(k[1], String(h + 1), { expirationTtl: 3700 }),
@@ -146,16 +199,29 @@ const TABELLEN = [
   "CREATE TABLE IF NOT EXISTS fehlertypen (schluessel TEXT PRIMARY KEY, art TEXT, text TEXT, anzahl INTEGER, meldungen INTEGER, zuerst TEXT, zuletzt TEXT, version TEXT, issue INTEGER)",
   "CREATE TABLE IF NOT EXISTS downloads (tag TEXT NOT NULL, version TEXT NOT NULL, veroeffentlicht TEXT, zip INTEGER, sha INTEGER, PRIMARY KEY (tag, version))"
 ];
+const EINRICHTUNG = [
+  ...TABELLEN,
+  "CREATE TABLE IF NOT EXISTS grenzen (schluessel TEXT PRIMARY KEY, zahl INTEGER, bis INTEGER)",
+  "CREATE INDEX IF NOT EXISTS berichte_tag ON berichte(tag)"
+];
+async function einrichten(env) {
+  if (eingerichtet) return;
+  await env.DB.batch(EINRICHTUNG.map(s => env.DB.prepare(s)));
+  eingerichtet = true;
+}
 const BEREICHE = ["start", "fragen", "bibliothek", "lesen", "kochen", "karten", "erstehilfe", "vorsorge", "einstellungen", "inhalte", "setup"];
 
-async function statistik(d, groesse, env) {
+async function statistik(request, d, groesse, env) {
   if (!env.DB) return antwort(500, { fehler: "Statistik nicht eingerichtet" });
   if (groesse > 64 * 1024) return antwort(413, { fehler: "Zu groß" });
   const id = str(d.id, 16), version = str(d.version, 30);
   if (!/^[0-9a-f]{16}$/.test(id) || !/^\d+\.\d+\.\d+(\.\d+)?$/.test(version)) return antwort(400, { fehler: "Kennung oder Version fehlt" });
 
-  await env.DB.batch(TABELLEN.map(s => env.DB.prepare(s)));
-  const tag = new Date().toISOString().slice(0, 10);
+  await einrichten(env);
+  const jetzt = Date.now();
+  const tag = new Date(jetzt).toISOString().slice(0, 10);
+  // Grenze je Absender und Tag
+  if (await hochzaehlen(env, "s:" + await absenderKurz(request), jetzt, 86400000) > STAT_JE_ABSENDER) return antwort(429, { fehler: "Heute schon zu viele Pakete" });
   const heute = await env.DB.prepare("SELECT COUNT(*) AS n FROM berichte WHERE tag = ?").bind(tag).first();
   if (heute && heute.n >= STAT_JE_TAG) return antwort(429, { fehler: "Heute schon zu viele Pakete" });
 
@@ -187,13 +253,23 @@ async function statistik(d, groesse, env) {
   ]);
 
   // Fehlerarten zusammenzählen; eine neue Art bekommt einen Eintrag im Repository
+  const typen = await env.DB.prepare("SELECT COUNT(*) AS n FROM fehlertypen").first();
+  let typenAnzahl = typen ? typen.n : 0;
   for (const f of fehler) {
     const schluessel = f.art + "|" + f.text.replace(/\d+/g, "#");
+    // Über der Obergrenze nur noch bekannte Fehlerarten weiterzählen, keine neuen anlegen
+    if (typenAnzahl >= MAX_FEHLERTYPEN) {
+      const da = await env.DB.prepare("SELECT 1 AS x FROM fehlertypen WHERE schluessel = ?").bind(schluessel).first();
+      if (!da) continue;
+    }
     const z = await env.DB.prepare(
       "INSERT INTO fehlertypen (schluessel, art, text, anzahl, meldungen, zuerst, zuletzt, version) VALUES (?, ?, ?, ?, 1, ?, ?, ?) " +
       "ON CONFLICT(schluessel) DO UPDATE SET anzahl = anzahl + excluded.anzahl, meldungen = meldungen + 1, zuletzt = excluded.zuletzt, version = excluded.version " +
       "RETURNING meldungen, issue").bind(schluessel, f.art, f.text, f.anzahl, tag, tag, version).first();
-    if (!z || z.meldungen !== 1 || z.issue) continue;
+    if (z && z.meldungen === 1) typenAnzahl++;
+    // Noch kein Eintrag im Repository (neu, oder GitHub war beim ersten Mal nicht erreichbar):
+    // bei den ersten fünf Meldungen versuchen, danach nicht mehr
+    if (!z || z.issue || z.meldungen > 5) continue;
     const neu = await env.DB.prepare("SELECT COUNT(*) AS n FROM fehlertypen WHERE zuerst = ? AND issue IS NOT NULL").bind(tag).first();
     if (neu && neu.n >= NEUE_FEHLER_JE_TAG) continue;
     const body = zitat(f.text) + "\n\n| | |\n|---|---|\n| Bereich | " + zelle(f.art) + " |\n| Fieldbook | " + zelle(version) + " |\n| Windows | " + zelle(p.windows) + " |\n" +
@@ -243,7 +319,7 @@ async function downloadsHolen(env) {
 }
 
 async function downloadsSpeichern(env) {
-  await env.DB.batch(TABELLEN.map(s => env.DB.prepare(s)));
+  await einrichten(env);
   const jetzt = await downloadsHolen(env);
   const tag = new Date().toISOString().slice(0, 10);
   if (jetzt.length) await env.DB.batch(jetzt.map(v => env.DB.prepare(

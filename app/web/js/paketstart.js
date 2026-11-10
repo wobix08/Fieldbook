@@ -14,7 +14,11 @@ const Paketstart = (() => {
   const lesen = (pfad, titel) => "#lesen?url=" + encodeURIComponent(buch.start + "/" + pfad) + "&titel=" + encodeURIComponent(titel);
   const bildUrl = (a) => a && a.B ? "/kiwix/content/" + encodeURIComponent(buchId) + "/" + a.B : null;
 
+  // Timer der Abfrage-Schleifen: je Art nur einer, sonst vervielfachen sie sich bei Hin und Zurück
+  let startTimer = null, listeTimer = null, ifixitTimer = null;
+
   async function zeigen(params) {
+    clearTimeout(startTimer); clearTimeout(listeTimer); clearTimeout(ifixitTimer);
     const id = params.get("buch");
     const c = $("#paketstart-inhalt");
     const buecher = await Kiwix.buecher();
@@ -24,7 +28,7 @@ const Paketstart = (() => {
       // Kurz nach dem Start läuft die Bibliothek noch nicht und kennt noch keine Pakete: warten statt „nicht installiert“
       if (!buecher.length && (OW.status || {}).wissen > 0) {
         c.append(el("p", { class: "hinweis" }, "Die Bibliothek wird gerade gestartet …"));
-        setTimeout(async () => { if (location.hash.startsWith("#paketstart")) { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, 3000);
+        startTimer = setTimeout(async () => { if (location.hash.startsWith("#paketstart")) { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, 3000);
         return;
       }
       c.append(el("p", { class: "fehlerbox" }, "Dieses Paket ist nicht installiert."), el("a", { href: "#bibliothek" }, "Zur Bibliothek"));
@@ -38,13 +42,14 @@ const Paketstart = (() => {
 
   async function laden() {
     const id = buchId;
-    const r = await api("artikelliste?buch=" + encodeURIComponent(id)).catch(e => ({ fehler: e.message }));
+    clearTimeout(listeTimer);
+    const r = (await api("artikelliste?buch=" + encodeURIComponent(id)).catch(e => ({ fehler: e.message }))) || {};
     if (id !== buchId || !location.hash.startsWith("#paketstart")) return;
-    if (r.status === "fertig") { artikel = r.artikel; zeichne(); return; }
+    if (r.status === "fertig" && Array.isArray(r.artikel)) { artikel = r.artikel; zeichne(); return; }
     const z = $("#ps-laden");
     if (z) z.textContent = r.fehler ? "Die Liste aller Artikel ist gerade nicht verfügbar: " + r.fehler
       : "Die Liste aller Artikel wird einmalig erstellt … (" + (r.gelesen || 0) + " Artikel)";
-    if (!r.fehler) setTimeout(laden, 2000);
+    if (!r.fehler) listeTimer = setTimeout(laden, 2000);
   }
 
   function zeichne() {
@@ -142,15 +147,18 @@ const Paketstart = (() => {
   async function zeichneIfixit(ziel, knoten) {
     const id = buchId;
     ifixitKnoten = knoten;
-    const r = await api("ifixit?buch=" + encodeURIComponent(id) + "&pfad=" + encodeURIComponent(knoten)).catch(e => ({ fehler: e.message }));
+    clearTimeout(ifixitTimer);
+    const r = (await api("ifixit?buch=" + encodeURIComponent(id) + "&pfad=" + encodeURIComponent(knoten)).catch(e => ({ fehler: e.message }))) || {};
     if (ifixitKnoten !== knoten || buchId !== id || !ziel.isConnected) return;
     ziel.innerHTML = "";
     if (r.status === "laeuft") {
       ziel.append(el("p", { class: "hinweis" }, "Die Übersicht wird einmalig erstellt, das dauert ein paar Minuten (" + (r.gelesen || 0) + " Seiten gelesen).", el("br"), "Suche und Zufall gehen schon."));
-      setTimeout(() => { if (ziel.isConnected) zeichneIfixit(ziel, knoten); }, 3000);
+      ifixitTimer = setTimeout(() => { if (ziel.isConnected) zeichneIfixit(ziel, knoten); }, 3000);
       return;
     }
-    if (r.fehler) { ziel.append(el("p", { class: "fehlerbox" }, "Übersicht nicht verfügbar: " + r.fehler)); return; }
+    if (r.fehler || !Array.isArray(r.weg) || !Array.isArray(r.kinder) || !Array.isArray(r.anleitungen)) {
+      ziel.append(el("p", { class: "fehlerbox" }, "Übersicht nicht verfügbar" + (r.fehler ? ": " + r.fehler : "."))); return;
+    }
     const gehe = (pfad, ...inhalt) => el("a", { href: ifixitLink(pfad) }, ...inhalt);
     const anz = (n) => n === 1 ? "1 Anleitung" : n.toLocaleString("de-DE") + " Anleitungen";
     ziel.append(el("h3", { class: "ifixit-weg" },

@@ -14,7 +14,7 @@
     <svg class="logo" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20c-2.6-1.7-6-2.1-10-1.5V9.6l3.6-2.7 2.2 1.7L12 4"/><path d="M12 20c2.6-1.7 6-2.1 10-1.5V9.6l-4-3.6-2 1.8L12 4"/><path d="M12 4v16"/></svg>
     <span>Fieldbook</span>
   </a>
-  <nav class="hauptnav" id="hauptnav">
+  <nav class="hauptnav" id="hauptnav" aria-label="Hauptmenü">
     <a href="#fragen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#message-circle"/></svg><span>Fragen</span></a>
     <a href="#bibliothek"><svg class="sym" aria-hidden="true"><use href="symbole.svg#library"/></svg><span>Bibliothek</span></a>
     <a href="#kochen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#cooking-pot"/></svg><span>Kochen</span></a>
@@ -52,7 +52,7 @@
   <section class="ansicht" data-ansicht="start">
     <div class="start-wrap">
       <form class="suche-gross" id="start-suche">
-        <input type="search" id="start-suche-feld" placeholder="Stichwort suchen oder Frage stellen, z. B. Wie mache ich Wasser ohne Strom trinkbar?" autocomplete="off">
+        <input type="search" id="start-suche-feld" aria-label="Stichwort suchen oder Frage stellen" placeholder="Stichwort suchen oder Frage stellen, z. B. Wie mache ich Wasser ohne Strom trinkbar?" autocomplete="off">
         <button type="submit">Suchen</button>
       </form>
       <div class="kacheln-start">
@@ -75,6 +75,7 @@
       <button type="button" id="neuer-chat" class="knopf knopf-haupt" title="Neues Thema: Die KI vergisst das bisherige Gespräch"><svg class="sym" aria-hidden="true"><use href="symbole.svg#plus"/></svg>Neuer Chat</button>
       <div class="verlauf-titel">Frühere Chats</div>
       <div id="chat-liste" class="chat-liste"></div>
+      <button type="button" id="chats-loeschen" class="knopf knopf-klein knopf-rot" hidden>Alle Chats löschen</button>
     </aside>
     <div class="spalte">
       <div class="titel-zeile">
@@ -84,7 +85,7 @@
       <p id="pdf-hinweis" class="hinweis klein" hidden></p>
       <div id="chat" class="chat"></div>
       <form id="frage-form" class="frage-form">
-        <textarea id="frage-feld" rows="2" placeholder="Zum Beispiel: Wie versorge ich eine Schnittwunde?"></textarea>
+        <textarea id="frage-feld" aria-label="Frage an die KI" rows="2" placeholder="Zum Beispiel: Wie versorge ich eine Schnittwunde?"></textarea>
         <div class="frage-leiste">
           <div class="frage-optionen">
             <label class="lage-wahl" title="Die KI richtet die Antwort nach deiner Lage aus">Lage:
@@ -112,7 +113,7 @@
         <h1>Bibliothek</h1>
       </div>
       <form class="suche-gross" id="bib-suche">
-        <input type="search" id="bib-suche-feld" placeholder="In allen Paketen suchen …" autocomplete="off">
+        <input type="search" id="bib-suche-feld" aria-label="In allen Paketen suchen" placeholder="In allen Paketen suchen …" autocomplete="off">
         <button type="submit">Suchen</button>
       </form>
       <div id="bib-treffer"></div>
@@ -180,7 +181,7 @@
         </div>
         <div id="routen-panel" class="routen-panel" hidden></div>
         <form id="ort-suche" class="ort-suche">
-          <input type="search" id="ort-feld" placeholder="Ort suchen …" autocomplete="off">
+          <input type="search" id="ort-feld" aria-label="Ort suchen" placeholder="Ort suchen …" autocomplete="off">
         </form>
         <div id="ort-treffer" class="ort-treffer"></div>
         <div class="chips" id="poi-chips"></div>
@@ -289,7 +290,6 @@
       <div class="titel-zeile">
         <h1>Einstellungen</h1>
         <div class="knopfreihe" style="margin:0">
-          <a class="knopf" href="#setup?schritt=0&amp;neu=1"><svg class="sym" aria-hidden="true"><use href="symbole.svg#rotate-ccw"/></svg>Einrichtung neu starten</a>
           <a class="knopf knopf-haupt" href="#inhalte"><svg class="sym" aria-hidden="true"><use href="symbole.svg#plus"/></svg>Inhalte hinzufügen oder aktualisieren</a>
         </div>
       </div>

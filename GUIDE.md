@@ -57,11 +57,14 @@ Dann bitte abbrechen.
 
 ## 3. Einrichten (einmalig, mit Internet)
 
-Der Assistent führt in sechs Schritten durch die Einrichtung:
+Der Assistent führt in sechs Schritten durch die Einrichtung.\
+Solange du Fieldbook zum ersten Mal einrichtest, ist das Menü oben ausgeblendet.\
+Mit **Später einrichten** ganz unten kommst du trotzdem heraus; Erste Hilfe und Vorsorge funktionieren auch ohne Einrichtung.
 
 1. **Dein Gerät**\
-   Das Programm prüft Prozessor, Arbeitsspeicher, Grafikkarte und freien Platz.\
-   Hier wählst du auch dein Land, ob ein **Symbol auf dem Desktop** angelegt werden soll und ob Fieldbook sich automatisch aktuell hält.
+   Das Programm prüft Prozessor, Arbeitsspeicher, Grafikkarte und freien Platz und zeigt in einer Zeile, wie stark dein Gerät ist (die Einzelheiten klappen auf).\
+   Hier wählst du auch dein Land, ob ein **Symbol auf dem Desktop** angelegt werden soll und ob Fieldbook die Inhalte automatisch aktuell hält.\
+   Ohne Internet kannst du hier Inhalte **Von USB-Stick übernehmen**.
 2. **KI-Assistent**\
    Die passende KI ist schon vorausgewählt („Empfohlen“).\
    Im Moment gibt es nur Qwen 3.5 (4B), das auf jedem Laptop mit 8 GB Arbeitsspeicher läuft.\
@@ -87,7 +90,7 @@ Der Assistent führt in sechs Schritten durch die Einrichtung:
    Auch hier gibt es den Schalter **Nichts**, **Alles** und **Eigene**.\
    Das geht auch später unter **Inhalte**.
 6. **Übersicht**\
-   Prüfe deine Auswahl.\
+   Prüfe deine Auswahl: Je Bereich steht, was schon da ist und was neu dazukommt.\
    Darunter steht eine Bitte: Mit zwei Haken kannst du **Fehlerberichte** und eine **Nutzungsstatistik** erlauben, beide sind am Anfang aus.\
    Dann klicke auf **Einrichtung abschließen und herunterladen**.
 
@@ -117,7 +120,7 @@ Das dauert ein, zwei Minuten, solange Fieldbook offen ist; oben im Bereich steht
   Für ein ganz anderes Thema lieber einen neuen Chat starten.
 - **Frühere Chats** stehen links in der Liste (auf dem Handy unter **Verlauf**).\
   Ein Klick öffnet den Chat wieder, dort kannst du weiterfragen.\
-  Mit ✕ löschst du einen Chat.\
+  Mit ✕ löschst du einen Chat, mit **Alle Chats löschen** unter der Liste alle auf einmal.\
   Die Chats liegen im Ordner `daten\chats` und wandern mit, wenn du Fieldbook auf einen USB-Stick kopierst.
 - Eine Modellnummer oder einen Namen kannst du auch als eigene Nachricht hinterherschicken, zum Beispiel erst „Wie repariere ich einen Kühlschrank von LG?“ und dann „LFX25973“.
 - **Lage** (unter dem Fragefeld) sagt der KI, was dir zur Verfügung steht: *Zuhause*, *Stromausfall* (keine Steckdose), *Draußen / unterwegs* (nur was du dabei hast oder findest) oder *Krise* (keine Läden, keine Hilfe).\
@@ -242,15 +245,15 @@ Drucken kannst du nur das Wichtigste oder alles.
   Einschalten: oben rechts auf „KI bereit“ klicken und „KI ausschalten (Sparmodus)“ wählen.\
   Im selben Menü wechselst du zwischen den installierten KIs.\
   Bei wenig Akku schlägt das Programm den Sparmodus selbst vor.
-- Oben rechts wechselt der Knopf mit Sonne bzw. Mond zwischen heller und dunkler Ansicht.\
+- Hell oder dunkel stellst du in den Einstellungen unter **Darstellung und Land** ein.\
   Standard ist dunkel; hell ist zum Lesen und Lernen oft angenehmer.
 - Bildschirmhelligkeit herunterdrehen spart am meisten.
 
 ## 6. Inhalte aktuell halten
 
-Im ersten Schritt des Assistenten (oder später in den Einstellungen im Kasten **Inhalte**) kannst du **Inhalte automatisch aktuell halten** einschalten.\
+Im ersten Schritt des Assistenten (oder später in den Einstellungen unter **Fieldbook und Updates**) kannst du **Inhalte automatisch aktuell halten** einschalten.\
 Dann sieht Windows einmal pro Woche nach, ob es neue Ausgaben deiner Wissenspakete, Karten oder Wegedaten gibt.\
-Wähle dann:
+In den Einstellungen wählst du außerdem:
 
 - **Vorher fragen**\
   Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll.\
@@ -260,30 +263,34 @@ Wähle dann:
 
 Außerdem wählst du, ob sofort im Hintergrund geladen wird oder nur, wenn der Computer am Strom hängt und gerade nicht benutzt wird.\
 Geladen wird immer mit niedrigster Priorität, damit du normal weiterarbeiten kannst.\
-Ohne Automatik geht es jederzeit von Hand mit **Inhalte aktualisieren**.
+Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Einstellungen oder **Nach Aktualisierungen suchen** auf der Seite **Inhalte**.
 
 ## 7. Später erweitern oder ändern
 
-- Einstellungen (Zahnrad oben rechts) → **Inhalte hinzufügen oder aktualisieren** öffnet die Seite **Inhalte**.\
-  Jeder Bereich klappt per Klick auf; zugeklappt steht darunter, was schon installiert ist.\
+- Die **Einstellungen** (Zahnrad oben rechts) sind in Kategorien gegliedert, die per Klick aufklappen: **Fieldbook und Updates**, **Darstellung und Land**, **KI-Assistent**, **Inhalte**, **Rückmeldung und Datenschutz** und **Erweitert**.\
+  Zugeklappt steht unter jeder Kategorie, wie sie gerade eingestellt ist.
+- Einstellungen → **Inhalte hinzufügen oder aktualisieren** öffnet die Seite **Inhalte**.\
+  Sie hat dieselben vier Bereiche wie der Assistent: KI-Assistent, Wissen (darin die Kategorien), Karten und Sprachen.\
+  Jeder Bereich klappt per Klick auf; zugeklappt steht darunter, was schon installiert ist oder was noch fehlt.\
   Dort hakst du an, was neu dazukommen soll (Pakete, Karten für eine Reise, ein anderes KI-Modell, Routenplanung), und klickst auf **Auswahl herunterladen**.\
   Dort kannst du Inhalte auch löschen.\
   Neue Versionen werden markiert.
-- **Einrichtung neu starten** (ebenfalls in den Einstellungen) führt noch einmal durch den ganzen Assistenten, zum Beispiel um die KI oder grundlegende Einstellungen zu ändern.\
+- **Einrichtung neu starten** (in den Einstellungen unter **Inhalte**) führt noch einmal durch den ganzen Assistenten, zum Beispiel um die KI oder grundlegende Einstellungen zu ändern.\
   Bereits Installiertes bleibt erhalten und ist vorausgewählt.
 - **Fieldbook selbst aktualisieren**\
-  In den Einstellungen im Kasten **Fieldbook-Programm** steht, ob es eine neue Programmversion gibt.\
-  Ein Klick lädt sie, Fieldbook startet kurz neu.\
+  In den Einstellungen ganz oben unter **Fieldbook und Updates** stehen die Version und ob es eine neue gibt.\
+  **Nach Updates suchen** sucht nach einer neuen Programmversion und nach neuen Inhalten zugleich.\
+  Ein Klick lädt die neue Version, Fieldbook startet kurz neu.\
   Deine Inhalte und Einstellungen bleiben erhalten.\
   Fieldbook fragt beim Start kurz nach einer neuen Version; das lässt sich dort mit **Beim Start nach neuer Fieldbook-Version fragen** abschalten.\
-  Ist die automatische Aktualisierung der Inhalte eingeschaltet, kann sie neue Fieldbook-Versionen mitladen (Schalter **Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen**).
+  Ist die automatische Aktualisierung der Inhalte eingeschaltet, kann sie neue Fieldbook-Versionen mitladen (Haken **Dabei auch neue Fieldbook-Versionen mitladen**).
 - **Rückmeldung geben**\
-  In den Einstellungen im Kasten **Fieldbook-Programm** kannst du über **Schreiben** dem Entwickler schreiben, was gut läuft, was nicht klappt oder was dir fehlt.\
+  In den Einstellungen unter **Rückmeldung und Datenschutz** kannst du über **Schreiben** dem Entwickler schreiben, was gut läuft, was nicht klappt oder was dir fehlt.\
   Eine Kontaktadresse ist freiwillig, gib sie an, wenn du eine Antwort möchtest.\
   Bei Fehlern hilft der Haken **Logdateien mitschicken**; unter **Was wird mitgeschickt?** steht genau, was dabei ist.\
   Ohne Internet merkt sich Fieldbook die Nachricht und schickt sie später.
 - **Fehlerberichte und Nutzungsstatistik**\
-  Im selben Kasten lassen sich beide ein- und ausschalten.\
+  In derselben Kategorie lassen sich beide ein- und ausschalten.\
   Unter **Was wird gesendet?** siehst du das nächste Paket genau so, wie es verschickt wird.\
   Schaltest du beides aus, löscht Fieldbook alles bisher Gesammelte.
 
@@ -302,6 +309,11 @@ Firmen-Firewalls und Virenschutz-Programme sperren unbekannte Programme und gro�
 Statt `Fieldbook.exe` kannst du `app\Start.bat` doppelklicken.\
 Hilft das nicht, muss die IT Fieldbook freigeben.\
 Was sie dafür braucht, steht in der README auf GitHub im Abschnitt **Downloads in Firmen- und Schulnetzen**.
+
+**Meldung „PowerShell ist hier eingeschränkt“**\
+Auf manchen Firmen- und Schulrechnern ist PowerShell gesperrt.\
+Fieldbook braucht es zum Starten und kann dort deshalb nicht laufen.\
+Frag die IT, ob Fieldbook erlaubt werden kann, oder nimm einen privaten Rechner.
 
 **„KI-Fehler“ oben rechts**\
 Meist reicht der Arbeitsspeicher nicht.\

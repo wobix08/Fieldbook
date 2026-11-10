@@ -50,13 +50,48 @@ static class Starter
         }
         catch { }
         // Erst starten, dann das Fenster zeigen: der Start wird nicht verzögert
-        Process proc = Process.Start(psi);
+        Process proc;
+        try { proc = Process.Start(psi); }
+        catch (Exception e)
+        {
+            // z. B. cmd.exe oder Start.bat per Richtlinie gesperrt
+            MessageBox.Show(T("Fieldbook konnte nicht gestartet werden.\nWindows hat den Start blockiert (" + e.Message + ").\n\nAuf Firmen- und Schulrechnern ist das oft so eingestellt.\nBitte frag im Zweifel die IT."),
+                "Fieldbook", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return 1;
+        }
         try { SetProcessDPIAware(); } catch { }
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         try { Application.Run(new Startfenster(proc, statusDatei, ordner)); } catch { }
+        // Hat das Startfenster einen Fehler erkannt, jetzt (nach dem Schließen) erklären
+        if (Meldung != null) MessageBox.Show(Meldung, "Fieldbook", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return 0;
     }
+
+    // Meldung, die nach dem Schließen des Startfensters gezeigt wird (null = alles gut)
+    static string Meldung;
+
+    // csc liest diese Datei ohne BOM als ANSI: Umlaute in Meldungen deshalb als Platzhalter schreiben
+    static string T(string s)
+    {
+        return s.Replace("{ae}", ((char)0xE4).ToString()).Replace("{oe}", ((char)0xF6).ToString())
+            .Replace("{ue}", ((char)0xFC).ToString()).Replace("{Ue}", ((char)0xDC).ToString())
+            .Replace("{ss}", ((char)0xDF).ToString())
+            .Replace("{<}", ((char)0x201E).ToString()).Replace("{>}", ((char)0x201C).ToString());
+    }
+
+    const string TextEingeschraenkt =
+        "Fieldbook kann auf diesem Rechner nicht starten.\n" +
+        "PowerShell ist hier eingeschr{ae}nkt, das ist auf Firmen- und Schulrechnern oft so.\n\n" +
+        "Bitte frag die IT, ob Fieldbook erlaubt werden kann.\n" +
+        "Auf einem privaten Rechner l{ae}uft es ohne Einschr{ae}nkung.";
+
+    const string TextKeinFortschritt =
+        "Fieldbook startet nicht.\n" +
+        "Wahrscheinlich verhindert eine Einstellung auf diesem Rechner, dass PowerShell-Skripte laufen.\n" +
+        "Das ist auf Firmen- und Schulrechnern oft so.\n\n" +
+        "Genaueres steht im Fenster der Eingabeaufforderung in der Taskleiste.\n" +
+        "Bitte frag im Zweifel die IT.";
 
     // Kleines Startfenster: Logo, Statuszeile und Laufbalken, bis Fieldbook offen ist
     class Startfenster : Form
@@ -73,7 +108,8 @@ static class Starter
         Label status;
         Image logo;
         Timer timer = new Timer();
-        DateTime start = DateTime.Now;
+        DateTime letzteAenderung = DateTime.Now;
+        bool gemeldet; // hat start.ps1 schon etwas in die Statusdatei geschrieben?
         int pos;
         int takt = 0;
         string zuletzt = "";
@@ -167,13 +203,26 @@ static class Starter
             Invalidate(new Rectangle(BalkenX, BalkenY, BalkenBreite, BalkenHoehe));
             takt++;
             if (takt % 7 != 0) return; // etwa alle 200 ms
-            if ((DateTime.Now - start).TotalSeconds > 180) { Close(); return; }
             try { if (proc != null && proc.HasExited) { Close(); return; } } catch { }
             string z = StatusLesen();
-            if (z == null || z == zuletzt) return;
+            if (z == null || z == zuletzt)
+            {
+                double still = (DateTime.Now - letzteAenderung).TotalSeconds;
+                // Das Startskript hat sich nach einer Minute noch nie gemeldet: PowerShell läuft hier wohl nicht
+                if (!gemeldet && still > 60) { Meldung = T(TextKeinFortschritt); Close(); return; }
+                // Sonst wie bisher: nach drei Minuten ohne Änderung still schließen
+                if (still > 180) Close();
+                return;
+            }
             zuletzt = z;
+            letzteAenderung = DateTime.Now;
             string klein = z.ToLowerInvariant();
-            if (klein == "fertig" || klein == "fehler") { Close(); return; }
+            // "fehler:eingeschraenkt" schreibt start.ps1 bei eingeschränkter PowerShell; schlichtes "fehler" zeigt
+            // start.ps1 selbst im Konsolenfenster (z. B. fehlgeschlagenes Update, das danach weiterstartet)
+            if (klein.StartsWith("fehler:eingeschr")) { Meldung = T(TextEingeschraenkt); Close(); return; }
+            if (klein == "fertig" || klein.StartsWith("fehler")) { Close(); return; }
+            // Der Anfangstext stammt von dieser exe selbst und zählt nicht als Lebenszeichen
+            if (!klein.StartsWith("wird gestartet")) gemeldet = true;
             if (z.Length > 0) status.Text = z;
         }
 

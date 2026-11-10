@@ -33,13 +33,19 @@ function navigiere() {
   const roh = location.hash.slice(1) || "start";
   const [name, query] = roh.split("?");
   const params = new URLSearchParams(query || "");
-  const ziel = Ansichten[name] ? name : "start";
+  const ziel = Object.prototype.hasOwnProperty.call(Ansichten, name) ? name : "start";
   if (ziel !== "lesen") Bibliothek.anhalten();
   if (ziel !== "pdf") PdfLeser.verlassen();
   $$(".ansicht").forEach(a => a.classList.toggle("sichtbar", a.dataset.ansicht === ziel));
+  // Erste Einrichtung: Menü oben ausblenden, bis der Assistent fertig ist (oder „Später einrichten“)
+  document.documentElement.classList.toggle("einrichtung", ziel === "setup" && !!OW.status && !OW.status.setupFertig);
   // Paket-Startseiten und PDF-Bücher gehören zur Bibliothek
   const menue = ziel === "paketstart" || ziel === "pdf" ? "bibliothek" : ziel;
-  $$("#hauptnav a").forEach(a => a.classList.toggle("aktiv", a.getAttribute("href") === "#" + menue));
+  $$("#hauptnav a").forEach(a => {
+    const an = a.getAttribute("href") === "#" + menue;
+    a.classList.toggle("aktiv", an);
+    if (an) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
   $$(".ansicht-fehler").forEach(x => x.remove());
   // Antwortet Fieldbook nicht, würde jede Seite „nichts installiert“ o. ä. zeigen: stattdessen den Fehler
   if (OW.nichtErreichbar && ziel !== "lesen" && ziel !== "pdf") ansichtFehler(ziel, null);
@@ -67,9 +73,21 @@ async function ansichtFehler(ziel, e) {
   sek.prepend(box);
 }
 
-async function aktualisiereStatus() {
+// Statusabfrage: nie zwei zugleich, mit Frist; eine ältere Antwort überschreibt keine neuere
+let statusLauf = null, statusZaehler = 0, statusBeendet = false, statusTimer = null, schnellTimer = null;
+function aktualisiereStatus() {
+  if (statusBeendet) return Promise.resolve(null);
+  if (!statusLauf) statusLauf = holeStatus().finally(() => { statusLauf = null; });
+  return statusLauf;
+}
+
+async function holeStatus() {
+  const nr = ++statusZaehler;
   try {
-    const s = await api("status");
+    const r = await fetch("/api/status", { signal: AbortSignal.timeout(4000) });
+    if (!r.ok) throw new Error("Server antwortet mit " + r.status);
+    const s = await r.json();
+    if (nr !== statusZaehler) return OW.status || s;
     // Fieldbook antwortet wieder: eine Fehlerseite von eben neu aufbauen
     const warWeg = OW.nichtErreichbar;
     OW.nichtErreichbar = false;
@@ -84,30 +102,40 @@ async function aktualisiereStatus() {
     PdfText.pruefen();
     return s;
   } catch (e) {
+    if (statusBeendet) return null;
     OW.nichtErreichbar = true;
     const p = $("#ki-pill");
-    p.textContent = "Fieldbook antwortet nicht";
-    p.className = "pill fehler";
+    if (p) pillSetzen(p, "weg", () => { p.textContent = "Fieldbook antwortet nicht"; p.className = "pill fehler"; });
     return null;
   }
+}
+
+// Pill nur neu aufbauen, wenn sich ihr Inhalt geändert hat (sonst gehen Klicks verloren)
+function pillSetzen(p, sig, bau) {
+  if (p.dataset.sig === sig) return;
+  p.dataset.sig = sig;
+  bau();
 }
 
 function zeigeKopfStatus(s) {
   const p = $("#ki-pill");
   const ki = s.ki || {};
-  if (!s.modell) { p.textContent = "KI: keine"; p.className = "pill"; p.title = "Keine KI eingerichtet"; }
-  // Bei schmalem Fenster steht nur die Kurzform (CSS), damit die Kopfzeile in eine Zeile passt
-  else if (s.sparmodus) { p.replaceChildren(sym("zap"), el("span", { class: "lang" }, "Sparmodus (KI aus)"), el("span", { class: "kurz" }, "KI aus")); p.className = "pill warn"; p.title = "Sparmodus: Klicken, um die KI einzuschalten"; }
-  else if (ki.status === "bereit") { p.textContent = "KI bereit"; p.className = "pill ok"; p.title = ki.modell + " – klicken für Sparmodus"; }
-  else if (ki.status === "laedt") { p.textContent = "KI lädt …"; p.className = "pill warn"; p.title = ki.modell; }
-  else if (ki.status === "fehler") { p.textContent = "KI-Fehler"; p.className = "pill fehler"; p.title = ki.fehler; }
-  else { p.textContent = "KI aus"; p.className = "pill"; }
+  const kiSig = [s.modell, s.sparmodus, ki.status, ki.modell, ki.fehler].join("|");
+  pillSetzen(p, kiSig, () => {
+    if (!s.modell) { p.textContent = "KI: keine"; p.className = "pill"; p.title = "Keine KI eingerichtet"; }
+    // Bei schmalem Fenster steht nur die Kurzform (CSS), damit die Kopfzeile in eine Zeile passt
+    else if (s.sparmodus) { p.replaceChildren(sym("zap"), el("span", { class: "lang" }, "Sparmodus (KI aus)"), el("span", { class: "kurz" }, "KI aus")); p.className = "pill warn"; p.title = "Sparmodus: Klicken, um die KI einzuschalten"; }
+    else if (ki.status === "bereit") { p.textContent = "KI bereit"; p.className = "pill ok"; p.title = ki.modell + " – klicken für Sparmodus"; }
+    else if (ki.status === "laedt") { p.textContent = "KI lädt …"; p.className = "pill warn"; p.title = ki.modell; }
+    else if (ki.status === "fehler") { p.textContent = "KI-Fehler"; p.className = "pill fehler"; p.title = ki.fehler; }
+    else { p.textContent = "KI aus"; p.className = "pill"; }
+  });
 
   // Laufende Downloads: kleiner Hinweis in der Kopfzeile, Klick führt zu "Inhalte"
   const dp = $("#download-pill");
   dp.hidden = !s.downloadAktiv || location.hash.startsWith("#inhalte");
   if (s.downloadAktiv) api("fortschritt").then(f => {
-    if (f.gesamt > 0) dp.replaceChildren(sym("download"), Math.floor(f.bytes / f.gesamt * 100) + " %");
+    if (f.gesamt > 0) { const t = Math.floor(f.bytes / f.gesamt * 100) + " %"; pillSetzen(dp, t, () => dp.replaceChildren(sym("download"), t)); }
   }).catch(() => { });
 
   // Akku: Prozent und Restzeit (die Restzeit fällt bei schmalem Fenster weg), gelb ab 30 %, rot ab 15 %
@@ -116,26 +144,36 @@ function zeigeKopfStatus(s) {
   $("#akku-box").hidden = !a.vorhanden;
   if (a.vorhanden) {
     const ap = $("#akku-pill");
-    ap.replaceChildren(sym(a.netz ? "plug" : akkuWarn ? "battery-low" : "battery"), a.prozent + " %",
-      !a.netz && a.restMinuten > 0 ? el("span", { class: "lang" }, " · " + akkuZeit(a.restMinuten)) : "");
-    ap.className = "pill" + (akkuWarn ? (a.prozent <= 15 ? " fehler" : " warn") : "");
+    pillSetzen(ap, [a.netz, akkuWarn, a.prozent, a.restMinuten].join("|"), () => {
+      ap.replaceChildren(sym(a.netz ? "plug" : akkuWarn ? "battery-low" : "battery"), a.prozent + " %",
+        !a.netz && a.restMinuten > 0 ? el("span", { class: "lang" }, " · " + akkuZeit(a.restMinuten)) : "");
+      ap.className = "pill" + (akkuWarn ? (a.prozent <= 15 ? " fehler" : " warn") : "");
+    });
     if (!$("#akku-liste").hidden) fuelleAkkuMenue();
   }
 
   // Hinweis bei schwachem Akku
   const b = $("#banner");
   if (akkuWarn && s.modell && !s.sparmodus && sessionStorage.getItem("akkuHinweis") !== "weg") {
-    b.hidden = false;
-    b.innerHTML = "";
-    b.append(
-      sym("battery-low"), " Akku schwach (" + a.prozent + " %).", el("br"),
-      "Antworten der KI brauchen viel Strom.", el("br"),
-      "Der Sparmodus schaltet sie ab, damit der Akku länger hält.",
-      el("button", { class: "knopf knopf-klein", onclick: () => schalteKi(false) }, "Sparmodus einschalten"),
-      el("button", { class: "knopf knopf-klein", onclick: () => { sessionStorage.setItem("akkuHinweis", "weg"); b.hidden = true; } }, "Später"),
-    );
+    // Nur neu bauen, wenn sich der Inhalt geändert hat
+    const sig = "akku|" + a.prozent;
+    if (b.dataset.sig !== sig || b.hidden) {
+      b.dataset.sig = sig;
+      b.hidden = false;
+      b.innerHTML = "";
+      b.append(
+        sym("battery-low"), " Akku schwach (" + a.prozent + " %).", el("br"),
+        "Antworten der KI brauchen viel Strom.", el("br"),
+        "Der Sparmodus schaltet sie ab, damit der Akku länger hält.",
+        el("button", { class: "knopf knopf-klein", onclick: () => schalteKi(false) }, "Sparmodus einschalten"),
+        el("button", { class: "knopf knopf-klein", onclick: () => { sessionStorage.setItem("akkuHinweis", "weg"); b.hidden = true; } }, "Später"),
+      );
+    }
   } else if ((s.programmNeu || s.programmBereit) && sessionStorage.getItem("updateHinweis") !== "weg") {
     // Hinweis auf eine neue Fieldbook-Version
+    const sig = "update|" + s.programmBereit + "|" + s.programmNeu;
+    if (b.dataset.sig === sig && !b.hidden) return;
+    b.dataset.sig = sig;
     b.hidden = false;
     b.innerHTML = "";
     b.append(
@@ -144,7 +182,7 @@ function zeigeKopfStatus(s) {
       el("a", { class: "knopf knopf-klein", href: "#einstellungen" }, "Ansehen"),
       el("button", { class: "knopf knopf-klein", onclick: () => { sessionStorage.setItem("updateHinweis", "weg"); b.hidden = true; } }, "Später"),
     );
-  } else if (!b.dataset.fest) b.hidden = true;
+  } else { b.dataset.sig = ""; if (!b.dataset.fest) b.hidden = true; }
 }
 
 async function schalteKi(an) {
@@ -182,22 +220,29 @@ function fuelleAkkuMenue() {
   $("#akku-liste").replaceChildren(...teile);
 }
 
+// Kopfmenüs: nur eines zugleich offen
+const MENUES = [];
+function andereMenuesZu(liste) { MENUES.forEach(m => { if (m.liste !== liste) m.zu(); }); }
+
 (function () {
   const knopf = $("#akku-pill"), liste = $("#akku-liste");
-  const zu = () => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); };
+  const zu = (fokus) => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); if (fokus === true) knopf.focus(); };
+  MENUES.push({ liste, zu });
   knopf.addEventListener("click", () => {
     liste.hidden = !liste.hidden;
+    if (!liste.hidden) andereMenuesZu(liste);
     knopf.setAttribute("aria-expanded", String(!liste.hidden));
     if (!liste.hidden) fuelleAkkuMenue();
   });
   document.addEventListener("click", (e) => { if (!liste.contains(e.target) && !knopf.contains(e.target)) zu(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") zu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !liste.hidden) zu(true); });
 })();
 
 // KI-Menü in der Kopfzeile: KI wechseln, aus- und einschalten
 (function () {
   const knopf = $("#ki-pill"), liste = $("#ki-liste");
-  const zu = () => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); };
+  const zu = (fokus) => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); if (fokus === true) knopf.focus(); };
+  MENUES.push({ liste, zu });
   const eintrag = (text, onclick, klasse) => el("button", { class: klasse || null, onclick: () => { zu(); onclick(); } }, ...text);
   async function fuellen() {
     const s = OW.status || {};
@@ -212,7 +257,7 @@ function fuelleAkkuMenue() {
       const text = [el("span", { class: "menue-haken" }, aktiv ? "✓" : ""), m.name + " · " + m.modell, !m.installiert ? el("small", {}, " wird geladen") : null];
       teile.push(aktiv || !m.installiert ? el("button", { disabled: true, class: aktiv ? "menue-aktiv" : null }, ...text)
         : eintrag(text, async () => {
-          knopf.textContent = "KI wechselt …"; knopf.className = "pill warn";
+          knopf.textContent = "KI wechselt …"; knopf.className = "pill warn"; knopf.dataset.sig = "";
           OW.status = await api("einstellungen", { modell: m.id }); zeigeKopfStatus(OW.status);
         }));
     }
@@ -225,11 +270,12 @@ function fuelleAkkuMenue() {
   knopf.addEventListener("click", () => {
     if (!OW.status) return;
     liste.hidden = !liste.hidden;
+    if (!liste.hidden) andereMenuesZu(liste);
     knopf.setAttribute("aria-expanded", String(!liste.hidden));
     if (!liste.hidden) fuellen();
   });
   document.addEventListener("click", (e) => { if (!liste.contains(e.target) && !knopf.contains(e.target)) zu(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") zu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !liste.hidden) zu(true); });
 })();
 
 async function zeigeStart() {
@@ -255,20 +301,26 @@ $("#start-suche").addEventListener("submit", (e) => {
 // Ausschalten-Menü in der Kopfzeile
 (function () {
   const knopf = $("#aus-knopf"), liste = $("#aus-liste");
-  const zu = () => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); };
+  const zu = (fokus) => { liste.hidden = true; knopf.setAttribute("aria-expanded", "false"); if (fokus === true) knopf.focus(); };
+  MENUES.push({ liste, zu });
   knopf.addEventListener("click", (e) => {
     e.stopPropagation();
     liste.hidden = !liste.hidden;
+    if (!liste.hidden) andereMenuesZu(liste);
     knopf.setAttribute("aria-expanded", String(!liste.hidden));
   });
   document.addEventListener("click", (e) => { if (!liste.contains(e.target)) zu(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") zu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !liste.hidden) zu(true); });
   $("#menue-beenden").addEventListener("click", () => { zu(); programmBeenden(); });
 })();
 
 async function programmBeenden() {
   if (!confirm("Fieldbook beenden? Bibliothek, KI und Karten werden geschlossen.")) return;
   await api("beenden", {}).catch(() => { });
+  // Keine Statusabfragen mehr, sonst Fehler jede Sekunde
+  statusBeendet = true;
+  clearInterval(statusTimer);
+  clearInterval(schnellTimer);
   document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:Segoe UI,sans-serif"><h1>Fieldbook wurde beendet.</h1><p>Du kannst dieses Fenster schließen.</p></div>';
 }
 
@@ -305,13 +357,16 @@ window.addEventListener("hashchange", navigiere);
 (async function init() {
   const s = await aktualisiereStatus();
   await Land.laden();
-  document.documentElement.lang = Land.sprache();
+  // Die Oberfläche ist Deutsch (Land.sprache() gilt nur für Inhalte)
+  document.documentElement.lang = "de";
   if (s && !s.setupFertig && s.wissen === 0 && !s.modell && !location.hash) location.hash = "#setup";
   navigiere();
-  setInterval(aktualisiereStatus, 5000);
+  // Bei verstecktem Tab nur jede 4. Runde fragen
+  let runde = 0;
+  statusTimer = setInterval(() => { if (document.hidden && ++runde % 4) return; aktualisiereStatus(); }, 5000);
   // Solange Fieldbook nicht antwortet, jede Sekunde nachfragen (ein neu gestartetes Fieldbook findet den Tab schneller)
   let schnellLaeuft = false;
-  setInterval(async () => {
+  schnellTimer = setInterval(async () => {
     if (!OW.nichtErreichbar || schnellLaeuft) return;
     schnellLaeuft = true;
     try { await aktualisiereStatus(); } finally { schnellLaeuft = false; }

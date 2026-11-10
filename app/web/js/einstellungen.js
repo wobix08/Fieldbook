@@ -1,85 +1,51 @@
-// Einstellungen: KI, Version, Aktualisierung, Darstellung. Inhalte verwaltet inhalte.js.
+// Einstellungen: Kategorien zum Aufklappen (Programm und Updates, Darstellung, KI, Inhalte, Datenschutz, Erweitert).
+// Zugeklappt steht unter jeder Kategorie, wie sie gerade eingestellt ist. Inhalte verwaltet inhalte.js.
 "use strict";
 
 const Einstellungen = (() => {
-  async function zeigen() {
+  // Aufgeklappte Kategorie (bleibt beim Neuzeichnen offen); es ist immer höchstens eine offen
+  const aufgeklappt = new Set();
+
+  // behalten: Neuaufbau aus einem Knopf heraus, die Scrollposition bleibt (von außen: false, dann ganz oben)
+  async function zeigen(behalten = true) {
     const c = $("#einst-inhalt");
+    const y = behalten ? window.scrollY : 0;
     c.innerHTML = '<p class="hinweis">Wird geladen …</p>';
-    const [kat, s, hw] = await Promise.all([api("katalog"), api("status"), api("hardware").catch(() => ({}))]);
+    const [kat, s, hw, akt] = await Promise.all([api("katalog"), api("status"), api("hardware").catch(() => ({})), api("aktualisierung")]);
     c.innerHTML = "";
+    // Gibt es eine neue Fieldbook-Version, ist „Fieldbook und Updates“ gleich offen (der Hinweis oben führt hierher)
+    if ((s.programmNeu || s.programmBereit) && !aufgeklappt.size) aufgeklappt.add("programm");
+    const liste = el("div", { class: "klapp-liste-abschnitte einst-liste" });
+    c.append(liste);
+    const kategorie = (schluessel, icon, titel, unter) => {
+      const a = klappAbschnitt(aufgeklappt, schluessel, icon, titel, unter || " ", null, true);
+      liste.append(a.box);
+      const u = a.box.querySelector(".klapp-unter");
+      return { box: a.box, innen: a.innen, unter: (t) => { u.textContent = t; } };
+    };
+    const zeileMitSchalter = (titel, text, input) => el("div", { class: "einst-zeile" },
+      el("div", {}, el("b", {}, titel), text ? el("small", {}, ...[].concat(text)) : null), anAus(input));
 
-    // KI
-    const ki = el("div", { class: "karte-box" }, el("h2", { style: "margin-top:0" }, "KI-Assistent"));
-    const inst = kat.modelle.filter(m => m.installiert);
-    if (!inst.length) ki.append(el("p", {}, "Keine KI installiert."));
-    for (const m of inst) {
-      const aktiv = s.modell === m.id;
-      ki.append(el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, m.name + " · " + m.modell), el("small", {}, groesse(m.bytes) + (aktiv ? " · aktiv" : ""))),
-        el("div", { class: "knopfreihe", style: "margin:0" },
-          aktiv ? el("span", { class: "ok-text" }, "✓ aktiv") : el("button", { class: "knopf knopf-klein", onclick: async () => { await api("einstellungen", { modell: m.id }); zeigen(); } }, "Benutzen"),
-          el("button", { class: "knopf knopf-klein knopf-rot", onclick: () => entfernen("modell", m.id, m.name) }, "Löschen"))));
-    }
-    const gpu = Setup.besteGpu(hw);
-    if (gpu && gpu.vramGB >= 4) ki.append(el("div", { class: "einst-zeile" },
-      el("div", {}, el("b", {}, "Grafikkarte nutzen"), el("small", {}, gpu.name + ", " + gpu.vramGB + " GB. Die KI antwortet damit viel schneller.", el("br"), "Ohne rechnet der Prozessor.")),
-      el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.backend === "vulkan", onchange: async (e) => {
-        e.target.disabled = true;
-        await rechenwegSetzen(e.target.checked ? "vulkan" : "cpu");
-        zeigen();
-      } }), "an")));
-    ki.append(el("div", { class: "einst-zeile" },
-      el("div", {}, el("b", {}, "Sparmodus"), el("small", {}, "Schaltet die KI ab und gibt den Arbeitsspeicher frei, den sie belegt. Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt.")),
-      el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.sparmodus, onchange: (e) => schalteKi(!e.target.checked) }), "an")));
-    if (s.ki.fehler) ki.append(el("p", { class: "fehlerbox" }, s.ki.fehler));
-    c.append(ki);
-
-    // Ganz oben zwei getrennte Kästen: das Fieldbook-Programm und die Inhalte
-    const pv = el("div"), mitladen = el("div");
-    const programmBox = el("div", { class: "karte-box", style: "margin-bottom:16px" },
-      el("h2", { style: "margin-top:0" }, "Fieldbook-Programm"), pv,
-      el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, "Beim Start nach neuer Fieldbook-Version fragen"),
-          el("small", {}, "Fieldbook fragt beim Start kurz bei GitHub, ob es eine neue Programmversion gibt. Heruntergeladen wird dabei nichts.")),
-        el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: s.updateBeimStart !== false, onchange: async (e) => {
-          s.updateBeimStart = e.target.checked;
-          OW.status = await api("einstellungen", { updateBeimStart: e.target.checked });
-        } }), "an")),
-      mitladen);
-    const aktInfo = el("div"), autoTeil = el("div");
-    const pk = kat.pakete.filter(p => p.installiert).length, kk = kat.karten.filter(r => r.installiert).length;
-    const inhalteBox = el("div", { class: "karte-box", style: "margin-bottom:16px" },
-      el("h2", { style: "margin-top:0" }, "Inhalte"),
-      el("div", { class: "einst-zeile", style: "border:0;padding-top:0" },
-        el("div", {}, el("b", {}, "Installiert"),
-          el("small", {}, pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : ""))),
-        el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten")),
-      aktInfo, autoTeil);
-    c.prepend(programmBox, inhalteBox);
-    // Rückmeldung an den Entwickler, im Kasten Fieldbook-Programm (nur wenn in fieldbook.json ein Dienst eingetragen ist)
-    // Danach Fehlerberichte und Nutzungsstatistik (Reihenfolge fest, auch wenn die Antworten verschieden schnell kommen)
-    const fbPlatz = el("div"), statPlatz = el("div");
-    programmBox.append(fbPlatz, statPlatz);
-    api("feedback").then(fb => { if (fb && fb.eingerichtet) fbPlatz.append(rueckmeldungTeil(fb)); }).catch(() => { });
-    api("statistik").then(st => { if (st && st.eingerichtet) statPlatz.append(statistikTeil(st)); }).catch(() => { });
-    const zeigeVersion = (u) => {
-      pv.innerHTML = "";
-      pv.append(
-        el("div", { class: "einst-zeile", style: "border:0;padding-top:0" },
-          el("div", {}, el("b", {}, "Fieldbook-Version " + s.version),
-            el("small", {}, !u.eingerichtet ? "Programm-Updates sind noch nicht eingerichtet (kein GitHub-Repository in app\\config\\fieldbook.json)."
-              : u.entwicklung ? "Entwicklungsordner: Hier wird nicht automatisch aktualisiert."
-              : u.fehler ? "Suche fehlgeschlagen (Internet?)."
-              : u.bereit ? "Version " + u.bereit + " ist heruntergeladen und wird beim nächsten Start eingespielt."
-              : u.verfuegbar ? "Neue Version " + u.neu + " verfügbar" + (u.bytes ? " (" + groesse(u.bytes) + ")" : "") + "."
-              : u.neu ? "Das ist die neueste Version." : "")),
-          el("button", { class: "knopf knopf-klein", onclick: async (e) => {
-            e.target.disabled = true; e.target.textContent = "Suche …";
-            zeigeVersion(await api("programmupdate").catch(err => ({ fehler: err.message, eingerichtet: true })));
-          } }, "Nach neuer Version suchen")));
-      if (u.verfuegbar && u.notizen) pv.append(el("details", {}, el("summary", {}, "Was ist neu in " + u.neu + "?"), el("pre", { style: "white-space:pre-wrap;font-family:inherit" }, u.notizen)));
+    // ---------------- Fieldbook und Updates (ganz oben, mit der Version)
+    const prog = kategorie("programm", "refresh-cw", "Fieldbook und Updates");
+    let programmInfo = { eingerichtet: true, neu: s.programmNeu, verfuegbar: !!s.programmNeu, bereit: s.programmBereit };
+    const progText = el("small"), progExtra = el("div");
+    const programmStatus = (u) => !u.eingerichtet ? "Programm-Updates sind noch nicht eingerichtet (kein GitHub-Repository in app\\config\\fieldbook.json)."
+      : u.entwicklung ? "Entwicklungsordner: Hier wird nicht automatisch aktualisiert."
+      : u.fehler ? "Suche fehlgeschlagen (Internet?)."
+      : u.bereit ? "Version " + u.bereit + " ist heruntergeladen und wird beim nächsten Start eingespielt."
+      : u.verfuegbar ? "Neue Version " + u.neu + " verfügbar" + (u.bytes ? " (" + groesse(u.bytes) + ")" : "") + "."
+      : u.neu ? "Das ist die neueste Version." : "";
+    const inhalteStatus = () => "Inhalte: " + (akt.geprueft ? "zuletzt geprüft " + akt.geprueft + " · " +
+      (akt.anzahl ? akt.anzahl + " Aktualisierung(en), ca. " + groesse(akt.bytes) : "alles aktuell") : "noch nicht geprüft");
+    const zeichneProgramm = () => {
+      const u = programmInfo;
+      const st = programmStatus(u);
+      progText.replaceChildren(...(st ? [st, el("br")] : []), inhalteStatus());
+      progExtra.innerHTML = "";
+      if (u.verfuegbar && u.notizen) progExtra.append(el("details", {}, el("summary", {}, "Was ist neu in " + u.neu + "?"), el("pre", { style: "white-space:pre-wrap;font-family:inherit" }, u.notizen)));
       if ((u.verfuegbar || u.bereit) && !u.entwicklung) {
-        pv.append(el("div", { class: "knopfreihe" }, el("button", { class: "knopf knopf-haupt", onclick: async () => {
+        progExtra.append(el("div", { class: "knopfreihe" }, el("button", { class: "knopf knopf-haupt", onclick: async () => {
           const ziel = u.verfuegbar ? u.neu : u.bereit;
           const ok = await dialog("Fieldbook aktualisieren?",
             "Fieldbook lädt Version " + ziel + " herunter, beendet sich kurz und startet neu. Deine Wissenspakete, KI-Modelle, Karten und Einstellungen bleiben erhalten. Vom bisherigen Programm wird vorher eine Sicherung angelegt.",
@@ -91,75 +57,128 @@ const Einstellungen = (() => {
           else location.hash = "#inhalte";
         } }, u.bereit && !u.verfuegbar ? "⟳ Jetzt neu starten und einspielen" : "⟳ Auf Version " + u.neu + " aktualisieren")));
       }
+      const kurz = u.bereit ? "Version " + u.bereit + " wird beim nächsten Start eingespielt"
+        : u.verfuegbar ? "Neue Version " + u.neu + " verfügbar"
+        : u.entwicklung ? "Entwicklungsordner" : u.neu ? "aktuell" : "";
+      prog.unter("Version " + s.version + (kurz ? " · " + kurz : "") + " · Inhalte " + (akt.an ? "werden automatisch aktuell gehalten" : "nicht automatisch aktuell"));
     };
-    zeigeVersion({ eingerichtet: true, neu: s.programmNeu, verfuegbar: !!s.programmNeu, bereit: s.programmBereit });
-    if (s.updateBeimStart !== false) api("programmupdate").then(zeigeVersion).catch(() => { });
+    // Ein Knopf sucht beides: neue Fieldbook-Version und neue Inhalte
+    const suchKnopf = el("button", { class: "knopf knopf-klein", onclick: async (e) => {
+      const k = e.currentTarget, t = k.textContent;
+      k.disabled = true; k.textContent = "Suche …";
+      programmInfo = await api("programmupdate").catch(err => ({ fehler: err.message, eingerichtet: true }));
+      zeichneProgramm();
+      k.textContent = t;
+      const r = await jetztAktualisieren(k, { programmNeu: programmInfo.verfuegbar && !programmInfo.entwicklung ? programmInfo.neu : null });
+      if (r) { Object.assign(akt, { geprueft: r.geprueft, anzahl: r.anzahl, bytes: r.bytes, titel: r.titel }); zeichneProgramm(); }
+    } }, "Nach Updates suchen");
+    prog.innen.append(
+      el("div", { class: "einst-zeile", style: "padding-top:0" }, el("div", {}, el("b", {}, "Fieldbook-Version " + s.version), progText), suchKnopf),
+      progExtra,
+      zeileMitSchalter("Beim Start nach neuer Fieldbook-Version fragen",
+        ["Fieldbook fragt beim Start kurz bei GitHub, ob es eine neue Programmversion gibt.", el("br"), "Heruntergeladen wird dabei nichts."],
+        el("input", { type: "checkbox", checked: s.updateBeimStart !== false, onchange: async (e) => {
+          s.updateBeimStart = e.target.checked;
+          OW.status = await api("einstellungen", { updateBeimStart: e.target.checked });
+        } })),
+      el("h3", { style: "margin-top:14px" }, "Automatische Aktualisierung"),
+      aktualisierungBox(akt, true, { eingebettet: true, programm: true, geaendert: zeichneProgramm }));
+    zeichneProgramm();
+    if (s.updateBeimStart !== false) api("programmupdate").then(u => { programmInfo = u; zeichneProgramm(); }).catch(() => { });
 
-    // Inhalte aktualisieren und automatische Aktualisierung der Inhalte
-    const akt = await api("aktualisierung");
-    const zeigeAkt = (a) => {
-      aktInfo.innerHTML = "";
-      aktInfo.append(el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, "Nach neuen Inhalten suchen"),
-          el("small", {}, "Wissenspakete, Karten und Wegedaten · " +
-            (a.geprueft ? "zuletzt geprüft: " + a.geprueft + " · " + (a.anzahl ? a.anzahl + " Aktualisierung(en), ca. " + groesse(a.bytes) + ": " + a.titel.join(", ") : "alles aktuell") : "noch nicht geprüft"))),
-        el("button", { class: "knopf knopf-klein", onclick: async (e) => {
-          const r = await jetztAktualisieren(e.currentTarget);
-          if (r && location.hash.startsWith("#einstellungen")) zeigeAkt(r);
-        } }, "⟳ Inhalte aktualisieren")));
-    };
-    zeigeAkt(akt);
-    // Fieldbook-Versionen bei der wöchentlichen Aktualisierung mitladen (gehört zum Programm, wirkt nur mit eingeschalteter Automatik)
-    const zeigeMitladen = () => {
-      mitladen.innerHTML = "";
-      mitladen.append(el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, "Neue Fieldbook-Versionen bei der automatischen Aktualisierung mitladen"),
-          el("small", {}, akt.an
-            ? "Sucht die wöchentliche Aktualisierung nach neuen Inhalten, sucht sie auch nach einer neuen Programmversion. Eingespielt wird sie beim nächsten Start."
-            : "Wirkt nur, wenn bei den Inhalten „Inhalte automatisch aktuell halten“ eingeschaltet ist.")),
-        el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: akt.programm !== false, disabled: !akt.an,
-          onchange: (e) => aktualisierungSpeichern(akt, { programm: e.target.checked }, true) }), "an")));
-    };
-    zeigeMitladen();
-    autoTeil.append(el("h3", { style: "margin-top:12px" }, "Automatische Aktualisierung"),
-      aktualisierungBox(akt, true, { eingebettet: true, geaendert: zeigeMitladen }));
+    // ---------------- Darstellung und Land
+    const dar = kategorie("darstellung", "sun", "Darstellung und Land");
+    const THEMA = { dark: "Dunkel", light: "Hell", system: "Wie Windows" };
+    const darUnter = () => dar.unter((THEMA[aktuellesThema()] || "Dunkel") + " · " + Land.text((Land.aktuell() || {}).name) + " · Desktop-Symbol " + (s.desktopSymbol ? "an" : "aus"));
+    const sel = el("select", { onchange: (e) => { setzeThema(e.target.value); darUnter(); } },
+      el("option", { value: "dark" }, "Dunkel (Standard)"), el("option", { value: "light" }, "Hell (gut zum Lernen und Lesen)"), el("option", { value: "system" }, "Wie Windows"));
+    sel.value = aktuellesThema();
+    const landSel = landAuswahl(Land.aktuell(), async (neu) => {
+      OW.status = await api("einstellungen", { land: neu.code, sprache: neu.sprache });
+      darUnter();
+    });
+    dar.innen.append(
+      el("div", { class: "einst-zeile", style: "padding-top:0" }, el("b", {}, "Farbschema"), sel),
+      el("div", { class: "einst-zeile" }, el("div", {}, el("b", {}, "Land"), el("small", {}, "Bestimmt die Notrufnummern")), landSel),
+      zeileMitSchalter("Desktop-Symbol", "Fieldbook vom Desktop aus starten", el("input", { type: "checkbox", checked: !!s.desktopSymbol, onchange: async (e) => {
+        const r = await api("desktopsymbol", { an: e.target.checked });
+        if (r.fehler) { alert("Das Desktop-Symbol konnte nicht geändert werden: " + r.fehler); e.target.checked = !!r.vorhanden; e.target.nextElementSibling.textContent = e.target.checked ? "an" : "aus"; return; }
+        s.desktopSymbol = e.target.checked;
+        darUnter();
+      } })));
+    darUnter();
 
-    // Internetverbindung: Test und Proxy für Firmen- und Schulnetze
-    const netz = el("div", { class: "karte-box", style: "margin-top:16px" }, el("h2", { style: "margin-top:0" }, "Internetverbindung"));
-    netz.append(el("div", { class: "einst-zeile" },
+    // ---------------- KI-Assistent
+    const ki = kategorie("ki", "message-circle", "KI-Assistent");
+    const inst = kat.modelle.filter(m => m.installiert);
+    const gpu = Setup.besteGpu(hw);
+    const kiUnter = () => {
+      const m = inst.find(x => x.id === s.modell);
+      ki.unter(!inst.length ? "Keine KI installiert" : (m ? m.name + " · " + m.modell : inst.length + " installiert") +
+        (s.sparmodus ? " · Sparmodus an" : gpu && gpu.vramGB >= 4 ? (s.backend === "vulkan" ? " · mit Grafikkarte" : " · auf dem Prozessor") : ""));
+    };
+    if (!inst.length) ki.innen.append(el("p", { style: "margin-top:0" }, "Keine KI installiert.", el("br"), el("a", { href: "#inhalte" }, "Unter „Inhalte“ kannst du eine laden.")));
+    for (const m of inst) {
+      const aktiv = s.modell === m.id;
+      ki.innen.append(el("div", { class: "einst-zeile", style: "padding-top:0" },
+        el("div", {}, el("b", {}, m.name + " · " + m.modell), el("small", {}, groesse(m.bytes) + (aktiv ? " · aktiv" : ""))),
+        el("div", { class: "knopfreihe", style: "margin:0" },
+          aktiv ? el("span", { class: "ok-text" }, "✓ aktiv") : el("button", { class: "knopf knopf-klein", onclick: async () => { await api("einstellungen", { modell: m.id }); zeigen(); } }, "Benutzen"),
+          el("button", { class: "knopf knopf-klein knopf-rot", onclick: () => entfernen("modell", m.id, m.name) }, "Löschen"))));
+    }
+    if (gpu && gpu.vramGB >= 4) ki.innen.append(zeileMitSchalter("Grafikkarte nutzen",
+      [gpu.name + ", " + gpu.vramGB + " GB. Die KI antwortet damit viel schneller.", el("br"), "Ohne rechnet der Prozessor."],
+      el("input", { type: "checkbox", checked: s.backend === "vulkan", onchange: async (e) => {
+        const box = e.target;
+        box.disabled = true;
+        try { await rechenwegSetzen(box.checked ? "vulkan" : "cpu"); }
+        catch (err) { box.checked = !box.checked; alert("Der Rechenweg konnte nicht umgestellt werden.\n" + err.message); }
+        finally { box.disabled = false; }
+        zeigen();
+      } })));
+    if (inst.length) ki.innen.append(zeileMitSchalter("Sparmodus",
+      ["Schaltet die KI ab und gibt den Arbeitsspeicher frei, den sie belegt.", el("br"), "Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt."],
+      el("input", { type: "checkbox", checked: s.sparmodus, onchange: (e) => { s.sparmodus = e.target.checked; kiUnter(); schalteKi(!e.target.checked); } })));
+    if (s.ki.fehler) ki.innen.append(el("p", { class: "fehlerbox" }, s.ki.fehler));
+    kiUnter();
+
+    // ---------------- Inhalte
+    const pk = kat.pakete.filter(p => p.installiert).length, kk = kat.karten.filter(r => r.installiert).length;
+    const inh = kategorie("inhalte", "package", "Inhalte", pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : ""));
+    inh.innen.append(
+      el("div", { class: "einst-zeile", style: "padding-top:0" },
+        el("div", {}, el("b", {}, "Installiert"), el("small", {}, pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : ""))),
+        el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten")),
+      el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, "Einrichtung neu starten"), el("small", {}, "Alles noch einmal Schritt für Schritt auswählen, wie beim ersten Start.", el("br"), "Was schon installiert ist, bleibt.")),
+        el("a", { class: "knopf knopf-klein", href: "#setup?schritt=0&neu=1" }, sym("rotate-ccw"), "Neu starten")));
+
+    // ---------------- Rückmeldung und Datenschutz (nur wenn in fieldbook.json ein Dienst eingetragen ist)
+    // Reihenfolge fest, auch wenn die Antworten verschieden schnell kommen
+    const rm = kategorie("datenschutz", "messages-square", "Rückmeldung und Datenschutz", "Rückmeldung an den Entwickler");
+    rm.box.hidden = true;
+    const fbPlatz = el("div"), statPlatz = el("div");
+    rm.innen.append(fbPlatz, statPlatz);
+    api("feedback").then(fb => { if (fb && fb.eingerichtet) { fbPlatz.append(rueckmeldungTeil(fb)); rm.box.hidden = false; } }).catch(() => { });
+    api("statistik").then(st => { if (st && st.eingerichtet) { statPlatz.append(statistikTeil(st, rm.unter)); rm.box.hidden = false; } }).catch(() => { });
+
+    // ---------------- Erweitert: Verbindungstest und Proxy für Firmen- und Schulnetze
+    const erw = kategorie("erweitert", "settings", "Erweitert", "Internetverbindung prüfen · Proxy für Firmen- und Schulnetze");
+    erw.innen.append(el("div", { class: "einst-zeile", style: "padding-top:0" },
       el("div", {}, el("b", {}, "Verbindung prüfen"), el("small", {}, "Zeigt, ob ein Werbeblocker, eine Firewall oder ein Filter Downloads sperrt.")),
       el("button", { class: "knopf knopf-klein", onclick: (e) => verbindungPruefen(e.currentTarget) }, "Prüfen")));
     const proxyFeld = el("input", { type: "text", value: s.proxy || "", placeholder: "automatisch (wie Windows)", "aria-label": "Proxy", style: "width:260px" });
-    const proxyStatus = el("small", {}, "Nur nötig, wenn Downloads im Firmen- oder Schulnetz nicht gehen. Beispiel: proxy.schule.de:8080");
-    netz.append(el("div", { class: "einst-zeile" },
+    const proxyStatus = el("small", {}, "Nur nötig, wenn Downloads im Firmen- oder Schulnetz nicht gehen.", el("br"), "Beispiel: proxy.schule.de:8080");
+    erw.innen.append(el("div", { class: "einst-zeile", style: "border-bottom:0" },
       el("div", {}, el("b", {}, "Proxy"), proxyStatus),
       el("div", { class: "knopfreihe", style: "margin:0;flex-wrap:nowrap" }, proxyFeld,
         el("button", { class: "knopf knopf-klein", onclick: async () => {
           OW.status = await api("einstellungen", { proxy: proxyFeld.value.trim() });
           proxyStatus.textContent = proxyFeld.value.trim() ? "Gespeichert. Downloads laufen jetzt über diesen Proxy." : "Gespeichert. Fieldbook nimmt wieder den Proxy aus Windows (falls vorhanden).";
         } }, "Speichern"))));
-    c.append(netz);
-
-    // Darstellung
-    const d = el("div", { class: "karte-box", style: "margin-top:16px" }, el("h2", { style: "margin-top:0" }, "Darstellung"));
-    const sel = el("select", { onchange: (e) => setzeThema(e.target.value) },
-      el("option", { value: "dark" }, "Dunkel (Standard)"), el("option", { value: "light" }, "Hell (gut zum Lernen und Lesen)"), el("option", { value: "system" }, "Wie Windows"));
-    sel.value = aktuellesThema();
-    d.append(el("div", { class: "einst-zeile" }, el("b", {}, "Farbschema"), sel));
-    const land = Land.aktuell();
-    const landSel = landAuswahl(land, async (neu) => {
-      OW.status = await api("einstellungen", { land: neu.code, sprache: neu.sprache });
-    });
-    d.append(el("div", { class: "einst-zeile" }, el("div", {}, el("b", {}, "Land"), el("small", {}, "Bestimmt die Notrufnummern")), landSel));
-    d.append(el("div", { class: "einst-zeile" },
-      el("div", {}, el("b", {}, "Desktop-Symbol"), el("small", {}, "Fieldbook vom Desktop aus starten")),
-      el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: !!s.desktopSymbol, onchange: async (e) => {
-        const r = await api("desktopsymbol", { an: e.target.checked });
-        if (r.fehler) { alert("Das Desktop-Symbol konnte nicht geändert werden: " + r.fehler); e.target.checked = !!r.vorhanden; }
-      } }), "an")));
-    c.append(d);
 
     c.append(el("p", { class: "hinweis klein" }, "Fieldbook " + s.version + " · Protokolle im Ordner daten\\logs · Beenden über den Aus-Knopf oben rechts"));
+    if (behalten && location.hash.startsWith("#einstellungen")) window.scrollTo(0, y);
   }
 
   // „Rückmeldung geben“: eine Zeile mit Knopf, darunter klappt das Formular auf (Text, freiwillige
@@ -214,17 +233,19 @@ const Einstellungen = (() => {
   }
 
   // Zwei Schalter (Fehlerberichte, Nutzungsstatistik) und das nächste Paket zum Ansehen
-  function statistikTeil(st) {
+  // unterSetzen: schreibt die Zusammenfassung unter die zugeklappte Kategorie
+  function statistikTeil(st, unterSetzen) {
     const teil = el("div");
     const zeichnen = (st) => {
       teil.innerHTML = "";
+      if (unterSetzen) unterSetzen("Rückmeldung an den Entwickler · Fehlerberichte " + (st.fehler ? "an" : "aus") + " · Nutzungsstatistik " + (st.nutzung ? "an" : "aus"));
       const schalter = (feld, titel, text) => el("div", { class: "einst-zeile" },
         el("div", {}, el("b", {}, titel), el("small", {}, text)),
-        el("label", { class: "schalter" }, el("input", { type: "checkbox", checked: !!st[feld], onchange: async (e) => {
+        anAus(el("input", { type: "checkbox", checked: !!st[feld], onchange: async (e) => {
           const neu = await api("statistik/einstellen", { [feld]: e.target.checked });
           await aktualisiereStatus();
           zeichnen(neu);
-        } }), "an"));
+        } })));
       teil.append(
         schalter("fehler", "Fehlerberichte senden", "Fehler, die in Fieldbook auftreten, dein Gerät (Prozessor, Arbeitsspeicher, Grafik) und wie schnell die KI antwortet. Hilft mir, Probleme zu finden."),
         schalter("nutzung", "Nutzungsstatistik senden", "Wie oft du die einzelnen Bereiche öffnest, welche Pakete und Karten installiert sind und dein Land. Zeigt mir, was wirklich genutzt wird."));
@@ -254,8 +275,18 @@ const Einstellungen = (() => {
     zeigen();
   }
 
-  return { zeigen };
+  return { zeigen: () => zeigen(false) };
 })();
+
+// „Wie Windows“: Wechselt Windows zwischen hell und dunkel, zieht Fieldbook sofort mit
+try {
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (aktuellesThema() !== "system") return;
+    wendeThemaAn("system");
+    if (typeof Karten !== "undefined" && Karten.themaGeaendert) Karten.themaGeaendert();
+    if (typeof PdfLeser !== "undefined") PdfLeser.themaGeaendert();
+  });
+} catch { }
 
 // Farbschema: "dark" (Standard), "light" oder "system" (wie Windows)
 function aktuellesThema() {

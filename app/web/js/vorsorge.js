@@ -12,15 +12,26 @@ const Vorsorge = (() => {
 
   async function zeigen(params) {
     if (!konf) konf = await ladeKonfigSprache("vorsorge");
+    const ziel = $("#vs-inhalt");
     if (!stand) {
-      stand = await api("vorsorge").catch(() => ({}));
-      if (!stand.haken) stand.haken = {};
-      if (!stand.datum) stand.datum = {};
-      if (!stand.personen) stand.personen = { erwachsen: 1 };
+      // Nur ein erfolgreich geladener Stand wird übernommen und gespeichert;
+      // bei einem Fehler bleibt der gespeicherte Stand unberührt und das Laden wird beim nächsten Öffnen neu versucht
+      let geladen;
+      try {
+        geladen = await api("vorsorge");
+        if (!geladen || typeof geladen !== "object" || geladen.fehler) throw new Error((geladen && geladen.fehler) || "Ungültige Antwort");
+      } catch (e) {
+        ziel.innerHTML = "";
+        ziel.append(fehlerBox("Der Stand der Vorsorge konnte nicht geladen werden.", () => zeigen(params), "Erneut versuchen", e && e.message));
+        return;
+      }
+      if (!geladen.haken) geladen.haken = {};
+      if (!geladen.datum) geladen.datum = {};
+      if (!geladen.personen) geladen.personen = { erwachsen: 1 };
+      stand = geladen;
       if (stand.version !== 2) { uebernehmen(); speichern(); }
     }
 
-    const ziel = $("#vs-inhalt");
     ziel.innerHTML = "";
     const druck = params.get("druck");
     const thema = konf.themen.find(x => x.id === params.get("k"));
@@ -57,7 +68,18 @@ const Vorsorge = (() => {
   }
 
   function allePunkte(t) { return t.stufen.flatMap(s => s.punkte); }
-  function speichern() { return api("vorsorge/speichern", stand).catch(() => { }); }
+  // Speichert den Stand; scheitert es (auch mit Antwort {fehler}), erscheint ein kleiner Hinweis oben
+  async function speichern() {
+    let ok = true;
+    try {
+      const r = await api("vorsorge/speichern", stand);
+      if (r && r.fehler) ok = false;
+    } catch { ok = false; }
+    const ziel = $("#vs-inhalt");
+    const alt = document.getElementById("vs-speicherfehler");
+    if (ok) { if (alt) alt.remove(); return; }
+    if (!alt && ziel) ziel.prepend(el("p", { id: "vs-speicherfehler", class: "hinweis", role: "alert" }, "Konnte nicht gespeichert werden."));
+  }
   function hat(t, p) { return (stand.haken[t.id] || []).includes(p.id); }
 
   // ---------------------------------------------------------------- Übersicht
@@ -285,8 +307,11 @@ const Vorsorge = (() => {
   }
 
   function punkt(t, p, inPackliste) {
-    const box = el("input", { type: "checkbox", checked: hat(t, p) });
+    const box = el("input", { type: "checkbox", checked: hat(t, p), "data-thema": t.id, "data-punkt": p.id });
     box.addEventListener("change", () => {
+      // Derselbe Punkt kann auf der Seite mehrfach stehen (Stufe und Packliste): alle mitziehen
+      for (const b of document.querySelectorAll("#vs-inhalt input[data-thema]"))
+        if (b !== box && b.dataset.thema === t.id && b.dataset.punkt === p.id) b.checked = box.checked;
       const l = (stand.haken[t.id] || []).filter(x => x !== p.id);
       if (box.checked) l.push(p.id);
       stand.haken[t.id] = l;
@@ -439,12 +464,13 @@ const Vorsorge = (() => {
   async function mehrLesen(ziel, id, titelListe) {
     if (!(id in artikelCache)) {
       const liste = [];
-      const buecher = await Kiwix.buecher().catch(() => []);
+      let fehler = false;
+      const buecher = await Kiwix.buecher().catch(() => { fehler = true; return []; });
       for (const titel of titelListe) {
         let treffer = null;
         for (const name of konf.pakete) {
           for (const b of buecher.filter(x => x.name === name)) {
-            const v = await Kiwix.vorschlaege(b, titel, 3).catch(() => []);
+            const v = await Kiwix.vorschlaege(b, titel, 3).catch(() => { fehler = true; return []; });
             treffer = v.find(x => x.titel.toLowerCase() === titel.toLowerCase());
             if (treffer) break;
           }
@@ -452,12 +478,18 @@ const Vorsorge = (() => {
         }
         if (treffer && !liste.some(x => x.url === treffer.url)) liste.push(treffer);
       }
+      // Leere Ergebnisse und Fehler nicht merken (die Bibliothek startet vielleicht noch)
+      if (fehler || !liste.length) { zeigeArtikel(ziel, liste); return; }
       artikelCache[id] = liste;
     }
+    zeigeArtikel(ziel, artikelCache[id]);
+  }
+
+  function zeigeArtikel(ziel, liste) {
     ziel.innerHTML = "";
-    for (const a of artikelCache[id])
+    for (const a of liste)
       ziel.append(el("a", { class: "knopf knopf-klein", href: "#lesen?url=" + encodeURIComponent(a.url) + "&titel=" + encodeURIComponent(a.titel) }, sym("book-open"), a.titel));
-    if (!artikelCache[id].length) ziel.append(el("span", { class: "hinweis" }, zeilen("Keine passenden Artikel gefunden. Dafür wird die Wikipedia gebraucht.")));
+    if (!liste.length) ziel.append(el("span", { class: "hinweis" }, zeilen("Keine passenden Artikel gefunden. Dafür wird die Wikipedia gebraucht.")));
   }
 
   return { zeigen };

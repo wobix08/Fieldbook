@@ -1,6 +1,21 @@
 ﻿# Fieldbook Starter
 # Kompiliert den kleinen Server (Server.cs) und startet ihn. Keine Installation nötig.
 $ErrorActionPreference = 'Stop'
+
+# Eingeschränktes PowerShell (Constrained Language, oft auf Firmenrechnern): Server.cs lässt sich nicht
+# übersetzen. Gleich hier klar melden, nur mit einfachen Befehlen, die dort erlaubt sind.
+if ($ExecutionContext.SessionState.LanguageMode -ne 'FullLanguage') {
+    try {
+        $statusOrdner = Join-Path (Split-Path -Parent $PSScriptRoot) 'daten\cache'
+        New-Item -ItemType Directory -Force $statusOrdner | Out-Null
+        Set-Content -LiteralPath (Join-Path $statusOrdner 'startstatus.txt') -Value 'fehler:eingeschraenkt' -Encoding ASCII
+    } catch {}
+    Write-Host ''
+    Write-Host '  Fieldbook kann auf diesem Rechner nicht starten, weil PowerShell eingeschränkt ist' -ForegroundColor Red
+    Write-Host '  (z. B. auf Firmenrechnern). Bitte die IT fragen.' -ForegroundColor Yellow
+    exit 1
+}
+
 $Host.UI.RawUI.WindowTitle = 'Fieldbook'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
@@ -17,8 +32,19 @@ function Status-Schreiben($text) {
     } catch {}
 }
 
-# Reste vom letzten Update (laufende Startdatei wurde umbenannt) still löschen
-Remove-Item -Force (Join-Path $root 'Fieldbook.exe.alt') -ErrorAction SilentlyContinue
+# Reste vom letzten Update (laufende Startdatei wurde umbenannt) still löschen, aber nur wenn die
+# Startdatei da ist. Fehlt sie, wurde der Austausch unterbrochen: dann aus .neu bzw. .alt wiederherstellen.
+$startdatei = Join-Path $root 'Fieldbook.exe'
+if (Test-Path -LiteralPath $startdatei) {
+    Remove-Item -Force -LiteralPath "$startdatei.alt", "$startdatei.neu" -ErrorAction SilentlyContinue
+} else {
+    foreach ($rest in @("$startdatei.neu", "$startdatei.alt")) {
+        if (Test-Path -LiteralPath $rest) {
+            try { Move-Item -Force -LiteralPath $rest -Destination $startdatei } catch {}
+            break
+        }
+    }
+}
 
 # Das Fenster startet minimiert (Fieldbook.exe). Bei Fehlern wieder zeigen, damit man die Meldung sieht.
 function Fenster-Zeigen {
@@ -70,10 +96,12 @@ try { $sperreErhalten = $sperre.WaitOne(0) }
 catch [System.Threading.AbandonedMutexException] { $sperreErhalten = $true }   # Vorheriger Start ist abgestürzt: Sperre gehört jetzt uns
 if (-not $sperreErhalten) {
     # Ein anderer Start ist gerade dabei, oder ein altes Fieldbook beendet sich gerade (Neustart nach Update).
-    # Warten (höchstens eine Minute): Antwortet Fieldbook, nur den Browser öffnen.
+    # Warten (höchstens drei Minuten, so lange wie das Startfenster): Antwortet Fieldbook, nur den Browser öffnen.
     # Wird die Sperre frei, weil sich das alte beendet hat, normal weiterstarten.
     Write-Host '  Fieldbook wird gerade gestartet. Bitte einen Moment warten ...'
-    $bereitAb = (Get-Date).AddSeconds(60)
+    # Lebenszeichen für das Startfenster (sonst meldet es nach einer Minute, PowerShell laufe nicht)
+    Status-Schreiben 'Fieldbook wird gerade gestartet …'
+    $bereitAb = (Get-Date).AddSeconds(180)
     while (-not $sperreErhalten -and (Get-Date) -lt $bereitAb) {
         if (Fieldbook-Antwortet) {
             Write-Host '  Der Browser wird geöffnet.'
@@ -101,15 +129,27 @@ $sicherung = Join-Path $root 'daten\cache\update\sicherung'
 $sicherungFertig = Join-Path $sicherung 'fertig'
 $bereitGestartet = Join-Path $bereit 'gestartet'
 $aktualisiert = $false
+$bereitWeg = "$bereit.weg"
+# Zuerst atomar umbenennen, dann löschen: Fällt der Strom mitten im Löschen aus, bleibt nie ein halber
+# Ordner "bereit" liegen (der würde sonst beim nächsten Start über den Programmordner gespiegelt).
+function Bereit-Loeschen {
+    if (-not (Test-Path -LiteralPath $bereit)) { return }
+    Remove-Item -Recurse -Force -LiteralPath $bereitWeg -ErrorAction SilentlyContinue
+    Move-Item -LiteralPath $bereit -Destination $bereitWeg -ErrorAction Stop
+    Remove-Item -Recurse -Force -LiteralPath $bereitWeg -ErrorAction SilentlyContinue
+}
+# Reste eines unterbrochenen Löschens (bereit.weg) nur löschen, nie einspielen
+try { Remove-Item -Recurse -Force -LiteralPath $bereitWeg -ErrorAction SilentlyContinue } catch {}
 function Spiegeln($von, $nach) {
     # Start.bat läuft gerade selbst und wird nur ersetzt, wenn sie sich geändert hat
-    robocopy $von $nach /MIR /XF Start.bat /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    # /FFT: Zeitstempel mit 2 s Toleranz vergleichen (USB-Sticks mit FAT32/exFAT)
+    robocopy $von $nach /MIR /FFT /XF Start.bat /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "Kopieren fehlgeschlagen (robocopy $LASTEXITCODE)" }
     $batNeu = Join-Path $von 'Start.bat'; $batAlt = Join-Path $nach 'Start.bat'
-    if ((Test-Path $batNeu) -and (-not (Test-Path $batAlt) -or (Get-FileHash $batNeu).Hash -ne (Get-FileHash $batAlt).Hash)) { Copy-Item -Force $batNeu $batAlt }
+    if ((Test-Path -LiteralPath $batNeu) -and (-not (Test-Path -LiteralPath $batAlt) -or (Get-FileHash -LiteralPath $batNeu).Hash -ne (Get-FileHash -LiteralPath $batAlt).Hash)) { Copy-Item -Force -LiteralPath $batNeu -Destination $batAlt }
 }
-if ((Test-Path (Join-Path $bereit 'app\Server.cs')) -and -not (Test-Path (Join-Path $root '.git'))) {
-    $neu = Get-Content (Join-Path $bereit 'version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
+if ((Test-Path -LiteralPath (Join-Path $bereit 'app\Server.cs')) -and -not (Test-Path -LiteralPath (Join-Path $root '.git'))) {
+    $neu = Get-Content -LiteralPath (Join-Path $bereit 'version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
     Write-Host "  Fieldbook wird auf Version $neu aktualisiert ..." -ForegroundColor Cyan
     Status-Schreiben 'Fieldbook wird aktualisiert …'
     try {
@@ -118,50 +158,64 @@ if ((Test-Path (Join-Path $bereit 'app\Server.cs')) -and -not (Test-Path (Join-P
         #   bereit\gestartet  = das Einspielen hat begonnen, der Programmordner kann halb aktualisiert sein
         # Ist beides da, wurde ein Update unterbrochen. Dann nicht neu sichern (der Programmordner ist ja schon
         # halb neu), sondern das Einspielen einfach noch einmal durchführen.
-        if (-not ((Test-Path $sicherungFertig) -and (Test-Path $bereitGestartet))) {
-            if (Test-Path $sicherung) {
-                Remove-Item -Force $sicherungFertig -ErrorAction SilentlyContinue
-                Remove-Item -Recurse -Force $sicherung
+        if (-not ((Test-Path -LiteralPath $sicherungFertig) -and (Test-Path -LiteralPath $bereitGestartet))) {
+            if (Test-Path -LiteralPath $sicherung) {
+                Remove-Item -Force -LiteralPath $sicherungFertig -ErrorAction SilentlyContinue
+                Remove-Item -Recurse -Force -LiteralPath $sicherung
             }
             New-Item -ItemType Directory -Force $sicherung | Out-Null
-            Copy-Item -Recurse -Force $app (Join-Path $sicherung 'app')
+            Copy-Item -Recurse -Force -LiteralPath $app -Destination (Join-Path $sicherung 'app')
             [System.IO.File]::WriteAllText($sicherungFertig, 'fertig')
         }
         [System.IO.File]::WriteAllText($bereitGestartet, 'gestartet')
         Spiegeln (Join-Path $bereit 'app') $app
         # Dateien im Hauptordner (Startdatei, Anleitung, Lizenzen); der Ordner "daten" bleibt unangetastet
-        # Eine laufende Datei (Fieldbook.exe, das Startfenster) ist gesperrt: dann die alte in <Name>.alt umbenennen und neu kopieren
-        Get-ChildItem $bereit -File | Where-Object { $_.Name -ne 'version.txt' -and $_.Name -ne 'gestartet' } | ForEach-Object {
+        # Eine laufende Datei (Fieldbook.exe, das Startfenster) ist gesperrt und lässt sich nur umbenennen:
+        # dann erst als <Name>.neu daneben kopieren, die alte in <Name>.alt umbenennen und .neu an ihre Stelle.
+        # So fehlt die Datei nie ganz, auch wenn dazwischen abgebrochen wird.
+        Get-ChildItem -LiteralPath $bereit -File | Where-Object { $_.Name -ne 'version.txt' -and $_.Name -ne 'gestartet' } | ForEach-Object {
             $ziel = Join-Path $root $_.Name
-            try { Copy-Item -Force $_.FullName $ziel }
+            try { Copy-Item -Force -LiteralPath $_.FullName -Destination $ziel }
             catch {
+                $neuDatei = "$ziel.neu"
                 $alt = "$ziel.alt"
-                Remove-Item -Force $alt -ErrorAction SilentlyContinue
-                Move-Item -Force $ziel $alt
-                Copy-Item -Force $_.FullName $ziel
+                Copy-Item -Force -LiteralPath $_.FullName -Destination $neuDatei
+                Remove-Item -Force -LiteralPath $alt -ErrorAction SilentlyContinue
+                Move-Item -Force -LiteralPath $ziel -Destination $alt
+                Move-Item -Force -LiteralPath $neuDatei -Destination $ziel
             }
         }
         # Seit 0.5.1 heißen die Textdateien englisch; alte Namen aufräumen
-        if (Test-Path (Join-Path $root 'GUIDE.txt')) {
-            foreach ($alt in @('Anleitung.txt', 'Drittanbieter.txt')) { Remove-Item -Force (Join-Path $root $alt) -ErrorAction SilentlyContinue }
+        if (Test-Path -LiteralPath (Join-Path $root 'GUIDE.txt')) {
+            foreach ($alt in @('Anleitung.txt', 'Drittanbieter.txt')) { Remove-Item -Force -LiteralPath (Join-Path $root $alt) -ErrorAction SilentlyContinue }
         }
         $liesmich = Join-Path $root 'daten\liesmich.txt'
-        if (Test-Path $liesmich) {
+        if (Test-Path -LiteralPath $liesmich) {
             try {
-                Set-Content -Path (Join-Path $root 'daten\README.txt') -Encoding UTF8 -Value 'Hier speichert Fieldbook Bibliotheken, KI-Modelle und Karten. Bitte nicht von Hand ändern.'
-                Remove-Item -Force $liesmich
+                Set-Content -LiteralPath (Join-Path $root 'daten\README.txt') -Encoding UTF8 -Value 'Hier speichert Fieldbook Bibliotheken, KI-Modelle und Karten. Bitte nicht von Hand ändern.'
+                Remove-Item -Force -LiteralPath $liesmich
             } catch { }
         }
-        Remove-Item -Recurse -Force $bereit
         $aktualisiert = $true
+        # Aufräumen darf das fertige Update nicht mehr rückgängig machen
+        try { Bereit-Loeschen }
+        catch {
+            Write-Host "  Hinweis: Update-Reste konnten nicht gelöscht werden ($($_.Exception.Message))." -ForegroundColor DarkGray
+            # Wenigstens die Kennzeichen entfernen, damit das Update nicht bei jedem Start erneut eingespielt wird
+            Remove-Item -Force -LiteralPath (Join-Path $bereit 'app\Server.cs'), (Join-Path $bereit 'version.txt') -ErrorAction SilentlyContinue
+        }
         Write-Host "  Aktualisiert auf Version $neu." -ForegroundColor Green
     } catch {
         Fenster-Zeigen
         Write-Host "  Update fehlgeschlagen: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host '  Die bisherige Version wird wiederhergestellt.' -ForegroundColor Yellow
+        # Gescheiterte Version merken: Fieldbook bietet sie dann nicht jede Woche neu an (eine neuere schon)
+        if ($neu) { try { Set-Content -LiteralPath (Join-Path $root 'daten\cache\update\fehlgeschlagen.txt') -Value $neu -Encoding UTF8 } catch {} }
         # Nur aus einer vollständigen Sicherung zurückspielen
-        if ((Test-Path $sicherungFertig) -and (Test-Path (Join-Path $sicherung 'app\Server.cs'))) { Spiegeln (Join-Path $sicherung 'app') $app }
-        Remove-Item -Recurse -Force $bereit -ErrorAction SilentlyContinue
+        if ((Test-Path -LiteralPath $sicherungFertig) -and (Test-Path -LiteralPath (Join-Path $sicherung 'app\Server.cs'))) { Spiegeln (Join-Path $sicherung 'app') $app }
+        try { Bereit-Loeschen } catch {
+            Remove-Item -Force -LiteralPath (Join-Path $bereit 'app\Server.cs'), (Join-Path $bereit 'version.txt') -ErrorAction SilentlyContinue
+        }
     }
 }
 
@@ -174,6 +228,7 @@ $refs = @('System.Web.Extensions', 'System.Management', 'System.Windows.Forms',
 # nicht bei jedem Start neu übersetzt werden muss. Klappt der Zwischenspeicher nicht, wird wie früher direkt übersetzt.
 function Programm-Laden {
     $cs = Join-Path $app 'Server.cs'
+    $dll = $null
     try {
         $ordner = Join-Path $root 'daten\cache\programm'
         # Kennung aus Quelltext und Laufzeitumgebung: ändert sich eines davon, wird neu übersetzt
@@ -182,35 +237,43 @@ function Programm-Laden {
         $umgebung = "$csHash|$($PSVersionTable.PSVersion)|$($PSVersionTable.CLRVersion)|$([System.Environment]::Version)"
         $kennung = ([System.BitConverter]::ToString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($umgebung))) -replace '-', '').Substring(0, 16).ToLower()
         $dll = Join-Path $ordner "Server-$kennung.dll"
-        if (-not (Test-Path $dll)) {
+        if (-not (Test-Path -LiteralPath $dll)) {
             New-Item -ItemType Directory -Force $ordner | Out-Null
             # Erst in eine Temp-Datei übersetzen, damit ein Abbruch keine halbe DLL hinterlässt
-            $tmp = Join-Path $ordner ("Server-neu-" + [Guid]::NewGuid().ToString('N') + '.tmp')
+            # (-OutputAssembly kennt kein LiteralPath: bei [ ] im Ordnernamen im Temp-Ordner übersetzen)
+            $tmpOrdner = $ordner
+            if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($ordner)) { $tmpOrdner = [System.IO.Path]::GetTempPath() }
+            $tmp = Join-Path $tmpOrdner ("Server-neu-" + [Guid]::NewGuid().ToString('N') + '.tmp')
             try {
-                Add-Type -Path $cs -ReferencedAssemblies $refs -OutputAssembly $tmp -OutputType Library
-                Move-Item -Force $tmp $dll
-            } finally { Remove-Item -Force $tmp -ErrorAction SilentlyContinue }
+                Add-Type -LiteralPath $cs -ReferencedAssemblies $refs -OutputAssembly $tmp -OutputType Library
+                Move-Item -Force -LiteralPath $tmp -Destination $dll
+            } finally { Remove-Item -Force -LiteralPath $tmp -ErrorAction SilentlyContinue }
         }
         # Falls Add-Type die Typen nicht schon geladen hat: die DLL laden
-        if (-not ('OfflineWissen.App' -as [type])) { Add-Type -Path $dll }
+        if (-not ('OfflineWissen.App' -as [type])) { Add-Type -LiteralPath $dll }
         if ('OfflineWissen.App' -as [type]) {
             # Alte Zwischenspeicher-Dateien aufräumen (gesperrte bleiben einfach liegen)
-            Get-ChildItem $ordner -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "Server-$kennung.dll" } |
-                ForEach-Object { Remove-Item -Force $_.FullName -ErrorAction SilentlyContinue }
+            Get-ChildItem -LiteralPath $ordner -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "Server-$kennung.dll" } |
+                ForEach-Object { Remove-Item -Force -LiteralPath $_.FullName -ErrorAction SilentlyContinue }
             return
         }
-    } catch {}
+    } catch {
+        # Kaputte DLL im Zwischenspeicher löschen, damit sie beim nächsten Start neu geschrieben wird
+        # (ist sie geladen und damit gesperrt, bleibt sie einfach liegen)
+        if ($dll) { Remove-Item -Force -LiteralPath $dll -ErrorAction SilentlyContinue }
+    }
     # Zwischenspeicher nicht nutzbar: direkt übersetzen (Fehler gehen an den Aufrufer)
-    if (-not ('OfflineWissen.App' -as [type])) { Add-Type -Path $cs -ReferencedAssemblies $refs }
+    if (-not ('OfflineWissen.App' -as [type])) { Add-Type -LiteralPath $cs -ReferencedAssemblies $refs }
 }
 
 try {
     Programm-Laden
 } catch {
     $fehler = $_.Exception.Message
-    if ($aktualisiert -and (Test-Path $sicherungFertig) -and (Test-Path (Join-Path $sicherung 'app\Server.cs'))) {
+    if ($aktualisiert -and (Test-Path -LiteralPath $sicherungFertig) -and (Test-Path -LiteralPath (Join-Path $sicherung 'app\Server.cs'))) {
         # Neue Version lässt sich nicht laden: zurück zur alten
         Write-Host '  Die neue Version konnte nicht geladen werden. Die bisherige Version wird wiederhergestellt.' -ForegroundColor Yellow
+        if ($neu) { try { Set-Content -LiteralPath (Join-Path $root 'daten\cache\update\fehlgeschlagen.txt') -Value $neu -Encoding UTF8 } catch {} }
         try {
             Spiegeln (Join-Path $sicherung 'app') $app
             Programm-Laden

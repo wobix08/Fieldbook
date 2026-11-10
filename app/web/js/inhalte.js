@@ -8,7 +8,9 @@ const Inhalte = (() => {
   const aufgeklappt = new Set();
   const auswahl = { modelle: new Set(), pakete: new Set(), karten: new Map(), routen: false, routenGroesse: null, sprachen: new Set(), stimmen: new Set() };
 
+  let lauf = 0;
   async function zeigen(params) {
+    const nr = ++lauf; // zweites zeigen() während des Ladens: nur das letzte gilt
     clearInterval(timer);
     warAktiv = null; // Liste beim Öffnen immer neu zeichnen
     $("#inhalte-liste").innerHTML = '<p class="hinweis">Wird geladen …</p>';
@@ -19,13 +21,15 @@ const Inhalte = (() => {
       sprachen = sk.sprachen || [];
       stimmen = st.stimmen || [];
     }
-    catch (e) { $("#inhalte-liste").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
-    // Vom Übersetzer aus den Abschnitt „Übersetzer“ gleich aufgeklappt zeigen
+    catch (e) { if (nr === lauf) $("#inhalte-liste").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
+    if (nr !== lauf) return;
+    // Vom Übersetzer aus den Bereich „Sprachen“ gleich aufgeklappt zeigen
     const zuUe = params && params.get("zu");
     // (nur dieser, es ist immer höchstens ein Abschnitt offen)
-    if (zuUe === "sprachen" || zuUe === "sprechen" || zuUe === "vorlesen") { aufgeklappt.clear(); aufgeklappt.add("uebersetzer"); }
+    if (zuUe === "sprachen" || zuUe === "sprechen" || zuUe === "vorlesen") { aufgeklappt.clear(); aufgeklappt.add("sprachen"); }
     if (zuUe === "karten") { aufgeklappt.clear(); aufgeklappt.add("karten"); }
     await fortschritt();
+    if (nr !== lauf) return;
     // Vom Übersetzer aus („Sprachen hinzufügen“) direkt zu den Sprachen springen, von der Karte aus zu den Karten
     const zu = params && params.get("zu");
     const ziel = zu === "sprachen" ? $("#inh-sprachen") : zu === "sprechen" ? $("#inh-sprechen") : zu === "vorlesen" ? $("#inh-sprachen")
@@ -92,6 +96,8 @@ const Inhalte = (() => {
     if (!ok || !gewaehlt.size) return;
     const r = await api("import/uebernehmen", { dateien: [...gewaehlt] });
     if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
+    // Aus dem Assistenten heraus (ohne Internet): zur Seite Inhalte, dort läuft die Übernahme
+    if (!location.hash.startsWith("#inhalte")) { location.hash = "#inhalte"; return; }
     warAktiv = null;
     window.scrollTo(0, 0);
     fortschritt();
@@ -102,12 +108,26 @@ const Inhalte = (() => {
   let warAktiv = null;
   // Was gerade wartet oder lädt: Pakete (name|flavour) und übrige Downloads (Titel), damit sie nicht doppelt wählbar sind
   let offen = { pakete: new Set(), titel: new Set() }, offenSig = "";
+  let fortschrittLaeuft = false, abrufFehler = 0, updateLief = false;
   async function fortschritt() {
+    // Nie zwei Abrufe zugleich
+    if (fortschrittLaeuft) return;
+    fortschrittLaeuft = true;
+    try { await fortschrittHolen(); } finally { fortschrittLaeuft = false; }
+  }
+
+  async function fortschrittHolen() {
     let f;
-    try { f = await api("fortschritt"); }
-    catch { if (warAktiv) { clearInterval(timer); neustartAnzeigen(null); } return; }
+    try { f = await api("fortschritt"); abrufFehler = 0; }
+    catch {
+      // Ein einzelner Fehler zählt nicht: erst nach 3 in Folge oder wenn ein Programm-Update lief
+      abrufFehler++;
+      if (warAktiv && (abrufFehler >= 3 || updateLief)) { clearInterval(timer); neustartAnzeigen(null); }
+      return;
+    }
+    updateLief = f.jobs.some(j => j.art === "programm-update");
     const box = $("#inhalte-downloads");
-    if (!f.jobs.length) { box.hidden = true; } else { box.hidden = false; zeichneFortschritt(box, f); }
+    if (!f.jobs.length) { box.hidden = true; box.dataset.sig = ""; } else { box.hidden = false; zeichneFortschritt(box, f); }
     const laufend = f.aktiv ? f.jobs.filter(j => j.status === "wartet" || j.status === "laeuft") : [];
     const sig = laufend.map(j => j.titel).join("|");
     // Liste beim Start, nach dem Ende eines Downloads und wenn sich die Warteschlange ändert neu zeichnen
@@ -128,7 +148,6 @@ const Inhalte = (() => {
   const JOB_REIHENFOLGE = { laeuft: 0, wartet: 1, fehler: 2, abgebrochen: 2, fertig: 3 };
 
   function zeichneFortschritt(box, f) {
-    box.innerHTML = "";
     verlauf.push({ t: Date.now(), b: f.bytes });
     verlauf = verlauf.filter(v => Date.now() - v.t < 20000);
     let tempo = "", rest = "";
@@ -140,17 +159,49 @@ const Inhalte = (() => {
     }
     if (!f.aktiv) verlauf = [];
     const anteil = f.gesamt > 0 ? Math.min(100, f.bytes / f.gesamt * 100) : 0;
-    const fehler = f.jobs.filter(j => j.status === "fehler" || j.status === "abgebrochen");
+    // Laufende oben, dann wartende, dann Fehler, fertige unten (innerhalb der Gruppen in Warteschlangen-Reihenfolge)
+    const sortiert = [...f.jobs].sort((a, b) => JOB_REIHENFOLGE[a.status] - JOB_REIHENFOLGE[b.status]);
+    const jobAnzeige = (j) => {
+      const p = j.gesamt > 0 ? Math.min(100, j.bytes / j.gesamt * 100) : (j.status === "fertig" ? 100 : 0);
+      const st = { wartet: "wartet", laeuft: j.gesamt > 0 ? Math.floor(p) + " %" : groesse(j.bytes), fertig: "✓ fertig", fehler: "✗ Fehler", abgebrochen: "abgebrochen" }[j.status];
+      return { p, st };
+    };
+    // Ändert sich nur Prozent oder Tempo, werden nur Zahlen und Balken aktualisiert, damit Klicks nicht verloren gehen
+    const sig = [f.aktiv, programme, ...sortiert.map(j => [j.titel, j.status, j.art, j.fehler, j.gesamt > 0].join("~"))].join("|");
+    if (box.dataset.sig === sig && box.firstChild) {
+      box.querySelector(".dl-menge").textContent = groesse(f.bytes) + " von " + groesse(f.gesamt);
+      box.querySelector(".dl-tempo").textContent = tempo;
+      box.querySelector(".dl-rest").textContent = rest;
+      box.querySelector(".balken > div").style.width = anteil + "%";
+      box.querySelectorAll(".job").forEach((d, i) => {
+        const a = jobAnzeige(sortiert[i]);
+        d.querySelector(".dl-status").textContent = a.st;
+        d.querySelector(".balken > div").style.width = a.p + "%";
+      });
+      return;
+    }
+    box.dataset.sig = sig;
+    box.innerHTML = "";
+    const fehler =f.jobs.filter(j => j.status === "fehler" || j.status === "abgebrochen");
+    // Fertige Einträge aus der Liste nehmen (die Inhalte bleiben installiert), auch während noch geladen wird
+    const fertige = f.jobs.filter(j => j.status === "fertig" && j.art !== "programm-update").length;
+    const aufraeumen = fertige ? el("button", { class: "knopf knopf-klein", title: "Nimmt die fertigen Downloads aus dieser Liste. Die Inhalte bleiben installiert.", onclick: async (e) => {
+      e.currentTarget.disabled = true;
+      await api("downloads/aufraeumen", {}).catch(() => { });
+      verlauf = [];
+      fortschritt();
+    } }, "Liste aufräumen (" + fertige + " fertig)") : null;
     box.append(el("div", {},
       el("div", { class: "titel-zeile", style: "margin-bottom:8px" },
         el("h2", { style: "margin:0" }, f.aktiv ? "Wird heruntergeladen …" : fehler.length ? "Downloads unvollständig" : "✓ Downloads fertig"),
-        f.aktiv ? el("button", { class: "knopf knopf-klein knopf-rot", onclick: async () => {
-          if (await dialog("Downloads abbrechen?", "Bereits geladene Teile bleiben erhalten. Mit „Erneut versuchen“ oder wenn du das Paket wieder auswählst, geht es an derselben Stelle weiter. Karten beginnen dann von vorn.",
-            [{ text: "Weiterladen", wert: false }, { text: "Abbrechen", wert: true, haupt: true }])) await api("abbrechen", {});
-        } }, "Abbrechen")
-          : fehler.length ? el("div", { class: "knopfreihe", style: "margin:0" },
-            el("button", { class: "knopf knopf-klein", onclick: (e) => verbindungPruefen(e.currentTarget) }, sym("search"), "Verbindung prüfen"),
-            el("button", { class: "knopf knopf-klein knopf-haupt", onclick: async () => { const r = await api("wiederholen", {}); if (r.fehler) alert(r.fehler); } }, "⟳ Erneut versuchen")) : null),
+        el("div", { class: "knopfreihe", style: "margin:0" }, aufraeumen,
+          f.aktiv ? el("button", { class: "knopf knopf-klein knopf-rot", onclick: async () => {
+            if (await dialog("Downloads abbrechen?", "Bereits geladene Teile bleiben erhalten. Mit „Erneut versuchen“ oder wenn du das Paket wieder auswählst, geht es an derselben Stelle weiter. Karten beginnen dann von vorn.",
+              [{ text: "Weiterladen", wert: false }, { text: "Abbrechen", wert: true, haupt: true }])) await api("abbrechen", {});
+          } }, "Abbrechen")
+            : fehler.length ? [
+              el("button", { class: "knopf knopf-klein", onclick: (e) => verbindungPruefen(e.currentTarget) }, sym("search"), "Verbindung prüfen"),
+              el("button", { class: "knopf knopf-klein knopf-haupt", onclick: async () => { const r = await api("wiederholen", {}); if (r.fehler) alert(r.fehler); } }, "⟳ Erneut versuchen")] : null)),
       el("div", { class: "job-kopf" }, el("b", {}, "Gesamt"),
         el("span", { class: "dl-zahlen" },
           el("span", { class: "dl-menge" }, groesse(f.bytes) + " von " + groesse(f.gesamt)),
@@ -158,10 +209,8 @@ const Inhalte = (() => {
           el("span", { class: "dl-rest" }, rest))),
       el("div", { class: "balken" }, el("div", { style: "width:" + anteil + "%" })),
       programme ? el("p", { class: "hinweis klein", style: "margin:6px 0 0" }, "Zuerst lädt Fieldbook die Hilfsprogramme. Danach laden bis zu drei Inhalte gleichzeitig. Das geht meist deutlich schneller, und Fieldbook zeigt dann auch die Restzeit.") : null,
-      // Laufende oben, dann wartende, dann Fehler, fertige unten (innerhalb der Gruppen in Warteschlangen-Reihenfolge)
-      ...[...f.jobs].sort((a, b) => JOB_REIHENFOLGE[a.status] - JOB_REIHENFOLGE[b.status]).map(j => {
-        const p = j.gesamt > 0 ? Math.min(100, j.bytes / j.gesamt * 100) : (j.status === "fertig" ? 100 : 0);
-        const st = { wartet: "wartet", laeuft: j.gesamt > 0 ? Math.floor(p) + " %" : groesse(j.bytes), fertig: "✓ fertig", fehler: "✗ Fehler", abgebrochen: "abgebrochen" }[j.status];
+      ...sortiert.map(j => {
+        const { p, st } = jobAnzeige(j);
         return el("div", { class: "job" },
           el("div", { class: "job-kopf" }, el("span", {}, j.titel), el("span", { class: "dl-status" }, st)),
           el("div", { class: "balken" }, el("div", { style: "width:" + p + "%" })),
@@ -200,11 +249,13 @@ const Inhalte = (() => {
     // Alle Bereiche als aufklappbare Zeilen; zugeklappt steht darunter, was schon installiert ist
     const liste = el("div", { class: "klapp-liste-abschnitte" });
     c.append(liste);
-    const abschnitt = (schluessel, icon, titel, namen, ausgewaehlt, rechts) => {
-      const a = klappAbschnitt(aufgeklappt, schluessel, icon, titel, klappZusammenfassung(namen, ausgewaehlt), rechts, true);
+    // Vier Bereiche wie im Assistenten (KI, Wissen, Karten, Sprachen); die Wissens-Kategorien klappen im Bereich Wissen auf.
+    // fehlen: noch nicht installierte Namen (für „Alles installiert“ / „Es fehlt: …“); ziel: Liste, in die der Abschnitt kommt
+    const abschnitt = (schluessel, icon, titel, namen, ausgewaehlt, rechts, fehlen, ziel) => {
+      const a = klappAbschnitt(aufgeklappt, schluessel, icon, titel, klappZusammenfassung(namen, ausgewaehlt, fehlen), rechts, true);
       a.box.id = "inh-bereich-" + schluessel;
       a.box.style.scrollMarginTop = "110px";
-      liste.append(a.box);
+      (ziel || liste).append(a.box);
       return a.innen;
     };
     const vonInst = (n, gesamt) => n + " von " + gesamt + " installiert";
@@ -218,12 +269,18 @@ const Inhalte = (() => {
     if (gpu && gpu.vramGB >= 4) {
       ki.append(el("label", { class: "schalter", style: "margin-bottom:12px" },
         el("input", { type: "checkbox", checked: backend === "vulkan", onchange: async (e) => {
-          e.target.disabled = true;
-          await rechenwegSetzen(e.target.checked ? "vulkan" : "cpu");
-          kat = await api("katalog");
-          await aktualisiereStatus();
-          warAktiv = null;
-          fortschritt();
+          const box = e.target;
+          box.disabled = true;
+          try {
+            await rechenwegSetzen(box.checked ? "vulkan" : "cpu");
+            kat = await api("katalog");
+            await aktualisiereStatus();
+            warAktiv = null;
+            fortschritt();
+          } catch (err) {
+            box.checked = !box.checked;
+            await dialog("Hinweis", el("div", {}, "Der Rechenweg konnte nicht umgestellt werden.", el("br"), err.message), [{ text: "OK", wert: 1, haupt: true }]);
+          } finally { box.disabled = false; }
         } }),
         el("span", {}, "Grafikkarte für die KI nutzen (" + gpu.name + ", " + gpu.vramGB + " GB)",
           el("small", { class: "hinweis", style: "display:block" }, "Antwortet viel schneller.", el("br"), "Ohne Häkchen rechnet der Prozessor."))));
@@ -257,21 +314,37 @@ const Inhalte = (() => {
         "Findet passendere Artikel für die Antworten der KI.", groesse(sh.bytes)));
     }
 
-    // Wissenspakete
-    // Jedes Paket unter seiner Hauptkategorie (der ersten)
+    // Wissenspakete: ein Bereich, darin jede Kategorie zum Aufklappen
+    // Jedes Paket unter seiner Hauptkategorie (der ersten); Varianten einer Gruppe (z. B. Wikipedia) zählen als ein Eintrag
+    const kategorien = [];
     for (const gr of kat.kategorien) {
       const pakete = kat.pakete.filter(p => (p.kategorien || [])[0] === gr.id);
       if (!pakete.length) continue;
-      // Varianten einer Gruppe (z. B. Wikipedia) zählen als ein Eintrag
-      const eintraege = [], namen = [];
+      const eintraege = [], namen = [], fehlen = [];
       for (const p of pakete) {
-        if (!p.gruppeExklusiv) { eintraege.push(p.id); if (p.installiert) namen.push(p.titel); continue; }
+        if (!p.gruppeExklusiv) { eintraege.push(p.id); (p.installiert ? namen : fehlen).push(p.titel); continue; }
         if (eintraege.includes("g:" + p.gruppeExklusiv)) continue;
         eintraege.push("g:" + p.gruppeExklusiv);
+        const gTitel = (gruppen[p.gruppeExklusiv] || {}).titel || p.titel;
         const da = pakete.filter(x => x.gruppeExklusiv === p.gruppeExklusiv && x.installiert);
-        if (da.length) namen.push(((gruppen[p.gruppeExklusiv] || {}).titel || p.titel) + " (" + da.map(x => x.variante || x.titel).join(", ") + ")");
+        if (da.length) namen.push(gTitel + " (" + da.map(x => x.variante || x.titel).join(", ") + ")"); else fehlen.push(gTitel);
       }
-      const g = abschnitt("k:" + gr.id, gr.icon, gr.titel, namen, pakete.filter(p => auswahl.pakete.has(p.id)).length, vonInst(namen.length, eintraege.length));
+      kategorien.push({ gr, pakete, eintraege, namen, fehlen });
+    }
+    const wDa = kategorien.reduce((n, k) => n + k.namen.length, 0), wAlle = kategorien.reduce((n, k) => n + k.eintraege.length, 0);
+    const wGewaehlt = kat.pakete.filter(p => auswahl.pakete.has(p.id)).length;
+    const wLuecken = kategorien.filter(k => k.fehlen.length && k.namen.length);
+    const wUnter = !wDa ? "Noch nichts installiert" : wDa === wAlle ? "Alles installiert"
+      : wLuecken.length && wLuecken.length <= 2 && kategorien.every(k => k.namen.length) ? "Es fehlt etwas in: " + wLuecken.map(k => k.gr.titel).join(", ")
+      : wDa + " Pakete installiert";
+    const wissenBox = klappAbschnitt(aufgeklappt, "wissen", "library", "Wissen", wUnter + (wGewaehlt ? " · " + wGewaehlt + " zum Laden ausgewählt" : ""), vonInst(wDa, wAlle), true);
+    wissenBox.box.id = "inh-bereich-wissen";
+    wissenBox.box.style.scrollMarginTop = "110px";
+    liste.append(wissenBox.box);
+    const wissenListe = el("div", { class: "klapp-liste-abschnitte" });
+    wissenBox.innen.append(wissenListe);
+    for (const { gr, pakete, eintraege, namen, fehlen } of kategorien) {
+      const g = abschnitt("k:" + gr.id, gr.icon, gr.titel, namen, pakete.filter(p => auswahl.pakete.has(p.id)).length, vonInst(namen.length, eintraege.length), fehlen, wissenListe);
       const fertigeGruppen = new Set();
       for (const p of pakete) {
         if (!p.gruppeExklusiv) { g.append(paketZeile(p, p.titel)); continue; }
@@ -340,7 +413,7 @@ const Inhalte = (() => {
 
     // Karten
     const kDa = kat.karten.filter(r => r.installiert);
-    const k = abschnitt("karten", "map", "Karten und Routen", kDa.map(r => r.titel).concat(s.routen ? ["Wegedaten für Routen"] : []),
+    const k = abschnitt("karten", "map", "Karten", kDa.map(r => r.titel).concat(s.routen ? ["Wegedaten für Routen"] : []),
       auswahl.karten.size + (auswahl.routen ? 1 : 0), vonInst(kDa.length, kat.karten.length));
     // Routenplanung ganz oben: gilt für alle vorhandenen und ausgewählten Karten
     const regionen = kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id);
@@ -396,7 +469,7 @@ const Inhalte = (() => {
     if (spDa.length) ueNamen.push(spDa.length === 1 ? "Sprache " + spDa[0].name : spDa.length + " Sprachen (" + spDa.map(sp => sp.name).join(", ") + ")");
     if (s.spracheingabe) ueNamen.push("Spracheingabe");
     const ueGewaehlt = (auswahl.uebersetzer ? 1 : 0) + auswahl.sprachen.size + [...auswahl.stimmen].filter(x => !auswahl.sprachen.has(x)).length + (auswahl.spracheingabe ? 1 : 0);
-    const ue = abschnitt("uebersetzer", "languages", "Übersetzer", ueNamen, ueGewaehlt, spDa.length + " von " + sprachen.length + " Sprachen");
+    const ue = abschnitt("sprachen", "languages", "Sprachen", ueNamen, ueGewaehlt, spDa.length + " von " + sprachen.length + " Sprachen");
     const ueText = "Übersetzt englische Artikel in der Bibliothek beim Lesen ins Deutsche (Knopf „Auf Deutsch“), mit den Sprachen unten auch Artikel in diesen Sprachen. Für Gespräche brauchst du eine der Sprachen unten. Technik von Mozilla, wie in Firefox.";
     const ueLoeschen = () => knopf("Löschen", () => loeschen("uebersetzer", "", "Artikel übersetzen"), true);
     if (s.uebersetzer && !s.uebersetzerAlt) {
@@ -594,7 +667,18 @@ const Inhalte = (() => {
     return neu;
   }
 
-  async function herunterladen() {
+  let ladeLaeuft = false;
+  async function herunterladen(ev) {
+    // Doppelklick-Sperre
+    if (ladeLaeuft) return;
+    ladeLaeuft = true;
+    const k = ev && ev.currentTarget;
+    if (k) k.disabled = true;
+    try { await herunterladenStarten(); }
+    finally { ladeLaeuft = false; if (k && k.isConnected) k.disabled = false; }
+  }
+
+  async function herunterladenStarten() {
     const karten = [...auswahl.karten].map(([id, v]) => ({ id, maxzoom: String(maxzoom(kat.karten.find(x => x.id === id))), bytes: v.bytes > 0 ? v.bytes : 0 }));
     const routen = auswahl.routen ? kat.karten.filter(r => r.installiert || auswahl.karten.has(r.id)).map(r => r.id) : [];
     // Die aktive KI bleibt. Nur wenn noch keine installiert ist, wird die größte neue aktiv.
@@ -624,5 +708,5 @@ const Inhalte = (() => {
   }
 
   // Größen der Spracheingabe auch für den Assistenten
-  return { zeigen, SPRECHEN_BYTES, SPRECHEN_ZUSATZ };
+  return { zeigen, importDialog, SPRECHEN_BYTES, SPRECHEN_ZUSATZ };
 })();

@@ -45,7 +45,7 @@ const PdfLeser = (() => {
     }
     url = neuUrl;
     original = false;          // „Original“ gilt nur für das gerade offene Buch
-    suchText = null; suchbegriff = ""; trefferZu();
+    suchText = null; suchEinlesen = null; suchbegriff = ""; trefferZu();
     ansicht = neueAnsicht;
     aktuelleSeite = neueSeite;
     const meinBuch = ++buchLauf;
@@ -72,7 +72,7 @@ const PdfLeser = (() => {
       return;
     }
     titelSuchen(meinBuch);
-    aufbauen(neueSeite);
+    aufbauen(neueSeite).catch(e => console.warn("PDF aufbauen", e));
   }
 
   // Titel aus der Bücherliste des Pakets, wenn er nicht in der Adresse steht
@@ -93,7 +93,7 @@ const PdfLeser = (() => {
   // und merkt ihn sich, solange das Buch offen ist. Treffer erscheinen als Liste unter der Leiste; ein Klick
   // springt zur Seite, dort ist der Begriff markiert.
 
-  let suchText = null, suchbegriff = "", suchLauf = 0;
+  let suchText = null, suchbegriff = "", suchLauf = 0, suchEinlesen = null;
   const suchForm = (t) => t.toLowerCase().replace(/\s+/g, " ");
 
   function trefferliste() {
@@ -121,17 +121,33 @@ const PdfLeser = (() => {
     l.hidden = false;
     // Text aller Seiten (einmal je Buch)
     if (!suchText || suchText.doc !== doc) {
-      const texte = [];
-      for (let i = 1; i <= meinDoc.numPages; i++) {
-        if (mein !== suchLauf || meinDoc !== doc) return;
-        if (i % 20 === 1) l.replaceChildren(el("div", { class: "pdf-treffer-kopf" }, "Durchsuche das Buch … Seite " + i + " von " + meinDoc.numPages));
-        const p = await meinDoc.getPage(i);
-        const inh = await p.getTextContent();
-        texte.push(inh.items.map(it => it.str || "").join(" ").replace(/(\w)- (\w)/g, "$1$2"));
+      // Das Einlesen läuft nur einmal je Buch; eine zweite Suche wartet darauf
+      if (!suchEinlesen || suchEinlesen.doc !== meinDoc) {
+        const merk = { suche: mein };         // welche Suche gerade auf das Einlesen wartet (für die Fortschrittsanzeige)
+        const einlesen = (async () => {
+          const texte = [];
+          for (let i = 1; i <= meinDoc.numPages; i++) {
+            if (meinDoc !== doc) return null;
+            if (i % 20 === 1 && merk.suche === suchLauf) l.replaceChildren(el("div", { class: "pdf-treffer-kopf" }, "Durchsuche das Buch … Seite " + i + " von " + meinDoc.numPages));
+            const p = await meinDoc.getPage(i);
+            const inh = await p.getTextContent();
+            texte.push(inh.items.map(it => it.str || "").join(" ").replace(/(\w)- (\w)/g, "$1$2"));
+            p.cleanup();
+          }
+          return { doc: meinDoc, texte, klein: texte.map(suchForm) };
+        })();
+        suchEinlesen = { doc: meinDoc, promise: einlesen, merk };
+        einlesen.catch(() => { if (suchEinlesen && suchEinlesen.promise === einlesen) suchEinlesen = null; });
       }
-      suchText = { doc: meinDoc, texte, klein: texte.map(suchForm) };
+      suchEinlesen.merk.suche = mein;
+      let ergebnis = null;
+      try { ergebnis = await suchEinlesen.promise; } catch { ergebnis = null; }
+      if (mein !== suchLauf || meinDoc !== doc) return;
+      if (!ergebnis) { l.replaceChildren(el("div", { class: "pdf-treffer-kopf" }, "Die Suche im Buch hat nicht geklappt.")); return; }
+      suchText = ergebnis;
     }
     if (mein !== suchLauf) return;
+    l.hidden = false;                         // Klick ins Buch während des Einlesens hat die Liste versteckt
     const n = suchForm(q), treffer = [];
     suchText.klein.forEach((t, i) => {
       let pos = t.indexOf(n), anzahl = 0, erste = pos;
@@ -441,6 +457,17 @@ const PdfLeser = (() => {
   // ---------------------------------------------------------------- Aufbau der Seiten
 
   async function aufbauen(startSeite) {
+    const dieserLauf = lauf + 1;
+    try {
+      await aufbauenInnen(startSeite);
+    } catch (e) {
+      console.warn("PDF aufbauen", e);
+      imAufbau = false;
+      if (dieserLauf === lauf && doc) flaeche().replaceChildren(el("p", { class: "pdf-hinweis" }, "Das Buch konnte nicht angezeigt werden."));
+    }
+  }
+
+  async function aufbauenInnen(startSeite) {
     if (!doc) return;
     const meinLauf = ++lauf;
     if (beobachter) beobachter.disconnect();
@@ -566,10 +593,20 @@ const PdfLeser = (() => {
 
   function freigeben(n) {
     const s = seiten[n - 1];
-    if (!s || !s.canvas) return;
+    if (!s) return;
+    s.zug = null;                              // ein noch laufendes Zeichnen dieser Seite verwirft sein Ergebnis
+    if (!s.canvas) { if (s.stand === 1) s.stand = 0; return; }
     s.canvas.width = 0; s.canvas.height = 0;
     s.box.replaceChildren();
     s.canvas = null; s.stand = 0;
+  }
+
+  // Seite ließ sich nicht aufbauen: kleine Meldung mit „Nochmal“ statt einer für immer leeren Seite
+  function seiteFehler(s, nochmal) {
+    s.canvas = null; s.stand = 0; s.zug = null;
+    s.box.replaceChildren(el("div", { class: "pdf-ohne-text" },
+      "Seite konnte nicht angezeigt werden.", el("br"),
+      el("button", { class: "knopf knopf-klein", onclick: nochmal }, "Nochmal")));
   }
 
   // Eine Seite nachbauen: Zeichnungen, Linien und Bilder als Bild (ohne Schrift), der Text als echter Text
@@ -579,6 +616,20 @@ const PdfLeser = (() => {
   // unsichtbar darüber, damit man ihn trotzdem markieren kann.
   async function zeichnen(n, meinLauf) {
     const s = seiten[n - 1];
+    const zug = s.zug = {};                    // wird freigeben() aufgerufen, ist s.zug nicht mehr dieser
+    const leinwaende = [];                     // für den Fehlerfall: alle angelegten Bilder freigeben
+    try {
+      await zeichnenInnen(n, meinLauf, s, zug, leinwaende);
+    } catch (e) {
+      console.warn("PDF-Seite " + n, e);
+      for (const c of leinwaende) { c.width = 0; c.height = 0; }
+      if (meinLauf === lauf && s.zug === zug) {
+        seiteFehler(s, () => { s.box.replaceChildren(); warteschlange.add(n); naechsteZeichnen(); });
+      }
+    }
+  }
+
+  async function zeichnenInnen(n, meinLauf, s, zug, leinwaende) {
     s.stand = 1;
     const vorher = s.box.offsetHeight;
     const zeit = [performance.now()];          // Messpunkte (stehen zum Prüfen an der Seite)
@@ -591,17 +642,18 @@ const PdfLeser = (() => {
     const dpr = Math.min(2, window.devicePixelRatio || 1, 3600 / breite);
     const vp = page.getViewport({ scale: css * dpr });
     const vpCss = page.getViewport({ scale: css });
-    const neueLeinwand = () => el("canvas", { width: String(Math.floor(vp.width)), height: String(Math.floor(vp.height)) });
+    const neueLeinwand = () => { const c = el("canvas", { width: String(Math.floor(vp.width)), height: String(Math.floor(vp.height)) }); leinwaende.push(c); return c; };
+    const weg = () => meinLauf !== lauf || s.zug !== zug;
 
     // Die gedruckte Seite, wie sie ist
     const voll = neueLeinwand();
     const vollCtx = voll.getContext("2d", { willReadFrequently: true });
     await page.render({ canvasContext: vollCtx, viewport: vp }).promise;
-    if (meinLauf !== lauf || s.stand !== 1) { voll.width = 0; return; }
+    if (weg()) { voll.width = 0; return; }
     const rand = leererRand(vollCtx, voll.width, voll.height);
     const inhalt = await page.getTextContent();
     const bilder = await bildBereiche(page, vp, vollCtx, voll.width, voll.height);
-    if (meinLauf !== lauf || s.stand !== 1) { voll.width = 0; return; }
+    if (weg()) { voll.width = 0; return; }
 
     // Textkästen aufbauen und ausmessen (dafür muss die Schicht im Dokument stehen; sie liegt absolut,
     // die Höhe der Seite ändert sich dabei noch nicht)
@@ -625,7 +677,7 @@ const PdfLeser = (() => {
       leinwand = neueLeinwand();
       ctx = leinwand.getContext("2d", { willReadFrequently: true });
       await page.render({ canvasContext: ohneSchrift(ctx), viewport: vp }).promise;
-      if (meinLauf !== lauf || s.stand !== 1) { voll.width = 0; leinwand.width = 0; return; }
+      if (weg()) { voll.width = 0; leinwand.width = 0; return; }
       const f = voll.width / breite;
       // Manche PDFs malen Schrift als Linien statt als Schrift: dann steht sie auch ohne Schrift noch im Bild
       // und erschiene doppelt. Steht in den Textbereichen noch mehr als die Hälfte der Tinte, ganze Seite als Bild.
@@ -659,6 +711,7 @@ const PdfLeser = (() => {
     // Leeren Rand oben und unten abschneiden (eingescannte Bücher haben oft viel davon)
     if (rand) {
       const neu = el("canvas", { width: String(leinwand.width), height: String(rand.unten - rand.oben) });
+      leinwaende.push(neu);
       neu.getContext("2d").drawImage(leinwand, 0, rand.oben, leinwand.width, rand.unten - rand.oben, 0, 0, leinwand.width, rand.unten - rand.oben);
       leinwand.width = 0;
       leinwand = neu;
@@ -667,6 +720,8 @@ const PdfLeser = (() => {
     const hoehe = Math.round(leinwand.height * breite / leinwand.width);
     leinwand.style.width = breite + "px";
     leinwand.style.height = hoehe + "px";
+    // Seite inzwischen weg (freigegeben): Bild verwerfen, nichts anhängen
+    if (weg()) { leinwand.width = 0; leinwand.height = 0; s.stand = 0; s.box.replaceChildren(); return; }
     // Wird eine Seite oberhalb der Leseposition niedriger, rutscht alles darunter nach oben: ausgleichen
     const fl = flaeche();
     const ueber = s.box.offsetTop + vorher <= fl.scrollTop + 4;
@@ -952,6 +1007,15 @@ const PdfLeser = (() => {
     const s = seiten[n - 1];
     if (!s || s.stand) return;
     s.stand = 1;
+    try {
+      await textLadenInnen(n, meinLauf, s);
+    } catch (e) {
+      console.warn("PDF-Text Seite " + n, e);
+      if (meinLauf === lauf) seiteFehler(s, () => { s.box.replaceChildren(); textLaden(n, meinLauf); });
+    }
+  }
+
+  async function textLadenInnen(n, meinLauf, s) {
     const page = await doc.getPage(n);
     const inhalt = await page.getTextContent();
     await page.getOperatorList();             // lädt die Schriften, deren Namen fett/kursiv verraten
@@ -1315,7 +1379,9 @@ const PdfLeser = (() => {
 
   // Beim Verlassen Speicher freigeben (Seitenbilder können groß sein)
   function verlassen() {
-    if (!doc) return;
+    lauf++; buchLauf++;                        // laufende Arbeiten (Zeichnen, Öffnen) verwerfen
+    warteschlange = new Set();
+    if (!doc) { url = ""; return; }
     if (beobachter) beobachter.disconnect();
     if (textBeobachter) textBeobachter.disconnect();
     for (let i = 1; i <= seiten.length; i++) freigeben(i);

@@ -66,6 +66,9 @@ namespace OfflineWissen
     public class Ort
     {
         public string Name, Alt, Land, Code;
+        // Beim Laden einmal vereinfacht (klein, ohne Akzente), damit die Suche nicht bei jedem Tastendruck rechnet
+        public string NormName;
+        public string[] NormAlt;
         public double Lat, Lon;
         public long Pop;
         public char Klasse;
@@ -73,7 +76,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.7.4.1";
+        public const string Version = "0.8.0";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -164,7 +167,8 @@ namespace OfflineWissen
                 if (!Bool(einst, "sparmodus")) StarteKi();
                 try { FortsetzenBeimStart(); } catch (Exception e) { Log("Fortsetzen: " + e.Message); }
                 // Einmal beim Start kurz nach einer neuen Fieldbook-Version fragen (eine kleine Anfrage, abschaltbar)
-                try { if (UpdateBeimStart() && UpdateApi() != null && !IstEntwicklungsordner()) ProgrammUpdateSuchen(); } catch { }
+                try { if (UpdateBeimStart() && UpdateApi() != null && !IstEntwicklungsordner()) ProgrammUpdateSuchen(); }
+                catch (Exception e) { AktLog("Programm-Update-Suche beim Start fehlgeschlagen: " + e.Message); }
             }) { IsBackground = true }.Start();
             // Gemerkte Rückmeldungen verschicken, sobald Internet da ist
             new Thread(FeedbackHintergrund) { IsBackground = true }.Start();
@@ -295,32 +299,47 @@ namespace OfflineWissen
         static void Bearbeite(HttpListenerContext ctx)
         {
             string pfad = ctx.Request.Url.AbsolutePath;
+            string roh = ctx.Request.RawUrl ?? "";
             try
             {
+                // Nur Anfragen von diesem Rechner (nicht aus dem Netzwerk)
+                if (!ctx.Request.IsLocal) { SendeText(ctx, 403, "Zugriff nur von diesem Rechner aus."); return; }
+                // Fremde Webseiten dürfen weder die Schnittstelle noch die Dienste dahinter benutzen
+                bool geschuetzt = pfad.StartsWith("/api/") || pfad.StartsWith("/llm/") || pfad.StartsWith("/suchhilfe/") || pfad.StartsWith("/route/");
+                if (geschuetzt && FremdeHerkunft(ctx.Request)) { SendeText(ctx, 403, "Zugriff von einer fremden Webseite abgelehnt."); return; }
+
                 if (pfad == "/kiwix" || pfad.StartsWith("/kiwix/"))
                 {
+                    // RawUrl muss wirklich mit dem Präfix beginnen, sonst könnte das Ziel der Weiterleitung verfälscht werden
+                    if (!(roh == "/kiwix" || roh.StartsWith("/kiwix/", StringComparison.Ordinal) || roh.StartsWith("/kiwix?", StringComparison.Ordinal))) { SendeText(ctx, 400, "Ungültige Adresse."); return; }
                     // Abgestürzt (Prozess beendet, ohne dass Fieldbook ihn gestoppt hat): gleich neu starten
-                    if (kiwix != null && kiwix.HasExited) KiwixWiederbeleben();
-                    if (kiwix == null || kiwix.HasExited) { SendeText(ctx, 503, "Die Bibliothek ist nicht gestartet (keine Wissenspakete installiert?)."); return; }
+                    var k = kiwix;
+                    if (k != null && k.HasExited) { KiwixWiederbeleben(); k = kiwix; }
+                    if (k == null || k.HasExited) { SendeText(ctx, 503, "Die Bibliothek ist nicht gestartet (keine Wissenspakete installiert?)."); return; }
                     // RawUrl statt Url.PathAndQuery: Url entschlüsselt "%25" zu "%", dann findet Kiwix
                     // Dateien mit Sonderzeichen im Namen nicht mehr (z. B. "%252C" für ein Komma)
                     if (IfixitUmleiten(ctx)) return;
-                    Weiterleiten(ctx, KiwixPort, ctx.Request.RawUrl);
+                    Weiterleiten(ctx, KiwixPort, roh);
                 }
                 else if (pfad.StartsWith("/route/"))
                 {
-                    if (brouter == null || brouter.HasExited) { SendeText(ctx, 503, "Die Routenplanung ist nicht eingerichtet."); return; }
-                    Weiterleiten(ctx, RoutePort, ctx.Request.RawUrl.Substring(6));
+                    if (!roh.StartsWith("/route/", StringComparison.Ordinal)) { SendeText(ctx, 400, "Ungültige Adresse."); return; }
+                    var b = brouter;
+                    if (b == null || b.HasExited) { SendeText(ctx, 503, "Die Routenplanung ist nicht eingerichtet."); return; }
+                    Weiterleiten(ctx, RoutePort, roh.Substring(6));
                 }
                 else if (pfad.StartsWith("/llm/"))
                 {
+                    if (!roh.StartsWith("/llm/", StringComparison.Ordinal)) { SendeText(ctx, 400, "Ungültige Adresse."); return; }
                     if (llmStatus != "bereit") { SendeJson(ctx, new Dictionary<string, object> { { "error", "KI ist nicht bereit (" + llmStatus + ")" } }, 503); return; }
-                    Weiterleiten(ctx, LlmPort, ctx.Request.RawUrl.Substring(4));
+                    Weiterleiten(ctx, LlmPort, roh.Substring(4));
                 }
                 else if (pfad.StartsWith("/suchhilfe/"))
                 {
-                    if (suchhilfe == null || suchhilfe.HasExited) { SendeJson(ctx, new Dictionary<string, object> { { "error", "Suchhilfe läuft nicht" } }, 503); return; }
-                    Weiterleiten(ctx, SuchPort, ctx.Request.RawUrl.Substring(10));
+                    if (!roh.StartsWith("/suchhilfe/", StringComparison.Ordinal)) { SendeText(ctx, 400, "Ungültige Adresse."); return; }
+                    var s = suchhilfe;
+                    if (s == null || s.HasExited) { SendeJson(ctx, new Dictionary<string, object> { { "error", "Suchhilfe läuft nicht" } }, 503); return; }
+                    Weiterleiten(ctx, SuchPort, roh.Substring(10));
                 }
                 else if (pfad.StartsWith("/api/")) Api(ctx, pfad.Substring(5));
                 else if (pfad.StartsWith("/karten/")) SendeDatei(ctx, SichererPfad(Path.Combine(Daten, "karten"), pfad.Substring(8)));
@@ -341,6 +360,32 @@ namespace OfflineWissen
             {
                 try { ctx.Response.Close(); } catch { }
             }
+        }
+
+        // Schutz vor fremden Webseiten (CSRF): Browser schicken Origin und/oder Sec-Fetch-Site mit.
+        // Anfragen ohne diese Kopfzeilen (PowerShell-Skripte, Fieldbook.exe) werden angenommen.
+        static bool FremdeHerkunft(HttpListenerRequest rq)
+        {
+            int port = rq.Url.Port;
+            string origin = rq.Headers["Origin"];
+            if (origin != null)
+            {
+                string o = origin.Trim().TrimEnd('/');
+                bool gleich = false;
+                foreach (string host in new[] { "localhost", "127.0.0.1" })
+                {
+                    if (string.Equals(o, "http://" + host + ":" + port, StringComparison.OrdinalIgnoreCase)) gleich = true;
+                    if (port == 80 && string.Equals(o, "http://" + host, StringComparison.OrdinalIgnoreCase)) gleich = true;
+                }
+                if (!gleich) return true;
+            }
+            string site = rq.Headers["Sec-Fetch-Site"];
+            if (site != null)
+            {
+                site = site.Trim().ToLowerInvariant();
+                if (site != "same-origin" && site != "none") return true;
+            }
+            return false;
         }
 
         static string SichererPfad(string basis, string rel)
@@ -462,6 +507,8 @@ namespace OfflineWissen
                 foreach (string h in resp.Headers.AllKeys)
                 {
                     if (NichtKopieren.Contains(h)) continue;
+                    // CORS-Freigaben der Dienste (z. B. llama-server) nicht weitergeben: fremde Seiten sollen nichts mitlesen
+                    if (h.StartsWith("Access-Control-", StringComparison.OrdinalIgnoreCase)) continue;
                     try { res.AddHeader(h, resp.Headers[h]); } catch { }
                 }
                 string loc = resp.Headers["Location"];
@@ -618,7 +665,7 @@ namespace OfflineWissen
         {
             try
             {
-                if (kiwix == null || kiwix.HasExited) return;
+                if (!KiwixAktiv()) return;
                 foreach (var z in Directory.GetFiles(Path.Combine(Daten, "wissen"), "ifixit_*.zim"))
                 {
                     Ifixit(Path.GetFileNameWithoutExtension(z), "");
@@ -812,7 +859,8 @@ namespace OfflineWissen
                 while (ebene.Count > 0)
                 {
                     var naechste = new List<string>();
-                    var opt = new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 6 };
+                    // Mehr als 3 gleichzeitige Anfragen lassen kiwix-serve abstürzen
+                    var opt = new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 3 };
                     System.Threading.Tasks.Parallel.ForEach(ebene, opt, pfad =>
                     {
                         string html;
@@ -1462,6 +1510,20 @@ namespace OfflineWissen
                         SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
                         return;
                     }
+                // Alle früheren Chats löschen (Knopf unter der Liste auf der Seite Fragen)
+                case "chats/loeschen":
+                    {
+                        int weg = 0, fehler = 0;
+                        string ordner = Path.Combine(Daten, "chats");
+                        if (Directory.Exists(ordner))
+                            foreach (var f in Directory.GetFiles(ordner, "*.json"))
+                            {
+                                try { SicherLoeschen(f); weg++; } catch { fehler++; }
+                            }
+                        if (fehler > 0) SendeJson(ctx, new Dictionary<string, object> { { "fehler", fehler + " Chat(s) ließen sich nicht löschen." }, { "geloescht", weg } });
+                        else SendeJson(ctx, new Dictionary<string, object> { { "ok", true }, { "geloescht", weg } });
+                        return;
+                    }
                 // Lernstand im Erste-Hilfe-Kurs (wandert mit dem daten-Ordner mit)
                 case "erstehilfe":
                     SendeJson(ctx, (object)LadeJson(Path.Combine(Daten, "erstehilfe.json")) ?? new Dictionary<string, object>());
@@ -1490,6 +1552,12 @@ namespace OfflineWissen
                 case "installieren": SendeJson(ctx, Installieren(LeseBody(ctx))); return;
                 case "sprechen": Sprechen(ctx, Q("sprache"), Q("paar"), Q("erwartet")); return;
                 case "vorlesen": Vorlesen(ctx); return;
+                case "downloads/aufraeumen":
+                    // Fertige Downloads aus der Liste nehmen (die Inhalte bleiben installiert); geht auch während Downloads laufen.
+                    // Ein fertiges Programm-Update bleibt, daran erkennt die Seite den anstehenden Neustart.
+                    lock (Lk) jobs = jobs.Where(x => x.Status != "fertig" || x.Art == "programm-update").ToList();
+                    SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                    return;
                 case "abbrechen":
                     abbrechen = true;
                     AlleDownloadsStoppen();
@@ -1508,6 +1576,12 @@ namespace OfflineWissen
                 case "einstellungen":
                     {
                         var b = LeseBody(ctx);
+                        // Ungültige Proxy-Adresse gar nicht erst speichern
+                        if (b.ContainsKey("proxy") && !ProxyGueltig(Str(b, "proxy")))
+                        {
+                            SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Die Proxy-Adresse ist ungültig." } });
+                            return;
+                        }
                         lock (Lk)
                         {
                             foreach (var kv in b) einst[kv.Key] = kv.Value;
@@ -1530,6 +1604,62 @@ namespace OfflineWissen
             }
         }
 
+        // Zwischenspeicher für die teuren, selten wechselnden Teile von /api/status (jeder Tab fragt alle 5 s).
+        // Gilt 30 s; Installieren, Entfernen, fertige Jobs und Einstellungen leeren ihn (StatusCacheLeeren).
+        // Die Sperre schützt nur die drei Felder, darin wird nichts anderes aufgerufen (keine Verklemmung mit Lk).
+        static readonly object statusCacheLk = new object();
+        static Dictionary<string, object> statusCache;
+        static DateTime statusCacheZeit;
+        static int statusCacheGen;
+
+        static void StatusCacheLeeren()
+        {
+            lock (statusCacheLk) { statusCacheGen++; statusCache = null; }
+        }
+
+        static Dictionary<string, object> StatusTeuer()
+        {
+            int gen;
+            lock (statusCacheLk)
+            {
+                if (statusCache != null && (DateTime.UtcNow - statusCacheZeit).TotalSeconds < 30) return statusCache;
+                gen = statusCacheGen;
+            }
+            // Außerhalb der Sperre berechnen (liest Dateien, ProgrammPfad durchsucht Ordner)
+            var karten = new List<object>();
+            foreach (var r in Arr(LadeJson(Path.Combine(Config, "karten.json")), "regionen"))
+            {
+                var d = r as Dictionary<string, object>;
+                if (d != null && File.Exists(Path.Combine(Daten, "karten", Str(d, "id") + ".pmtiles"))) karten.Add(d);
+            }
+            var sprachen = InstallierteSprachen();
+            bool uebersetzer = UebersetzerBereit();
+            bool spracheingabe = SpracheingabeBereit();
+            var t = new Dictionary<string, object>
+            {
+                {"wissen", Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim").Length},
+                {"uebersetzer", uebersetzer},
+                {"uebersetzerAlt", uebersetzer && !UebersetzerNeu()},
+                {"sprachen", sprachen},
+                {"spracheingabe", spracheingabe},
+                {"spracheingabeKomplett", spracheingabe && SprachModelle().All(m => File.Exists(SprachModellPfad(m)))},
+                {"stimmen", Stimmen()},
+                {"stimmenFehlen", StimmenJobs(sprachen).Where(x => x.Art == "stimme").Select(x => x.Ziel).ToArray()},
+                {"kontext", AktuellesModellKontext()},
+                {"kontextFuer", Str(einst, "modell") ?? ""},
+                {"karten", karten},
+                {"kartenAssets", Directory.Exists(Path.Combine(Prog, "karten-assets", "fonts"))},
+                {"orte", Directory.GetFiles(Path.Combine(Daten, "orte"), "*.txt").Length > 0},
+                {"routenKacheln", Directory.GetFiles(Path.Combine(Daten, "routen"), "*.rd5").Select(f => Path.GetFileNameWithoutExtension(f)).ToArray()}
+            };
+            // Nur merken, wenn inzwischen nicht geleert wurde (sonst wäre der Stand evtl. schon veraltet)
+            lock (statusCacheLk)
+            {
+                if (gen == statusCacheGen) { statusCache = t; statusCacheZeit = DateTime.UtcNow; }
+            }
+            return t;
+        }
+
         static Dictionary<string, object> Status()
         {
             var akku = new Dictionary<string, object>();
@@ -1545,43 +1675,41 @@ namespace OfflineWissen
             }
             catch { akku["vorhanden"] = false; }
 
-            var karten = new List<object>();
-            var reg = LadeJson(Path.Combine(Config, "karten.json"));
-            foreach (var r in Arr(reg, "regionen"))
-            {
-                var d = (Dictionary<string, object>)r;
-                if (File.Exists(Path.Combine(Daten, "karten", Str(d, "id") + ".pmtiles"))) karten.Add(d);
-            }
+            var t = StatusTeuer();
+            // Kontext gehört zum gewählten Modell: wurde es ohne Leeren gewechselt, frisch lesen
+            int kontext = Str(t, "kontextFuer") == (Str(einst, "modell") ?? "") ? (int)Num(t, "kontext") : AktuellesModellKontext();
+            var sh = suchhilfe;
+            var br = brouter;
             bool aktiv = worker != null && worker.IsAlive;
             return new Dictionary<string, object>
             {
                 {"version", Version},
                 {"setupFertig", Bool(einst, "setupFertig")},
-                {"wissen", Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim").Length},
-                {"bibliothek", kiwix != null && !kiwix.HasExited},
+                {"wissen", t["wissen"]},
+                {"bibliothek", KiwixAktiv()},
                 {"bibliothekFehler", kiwixFehler},
                 {"desktopSymbol", File.Exists(DesktopLnk())},
                 {"proxy", Str(einst, "proxy") ?? ""},
                 {"unterbrochen", unterbrochen},
-                {"uebersetzer", UebersetzerBereit()},
-                {"uebersetzerAlt", UebersetzerBereit() && !UebersetzerNeu()},
-                {"sprachen", InstallierteSprachen()},
-                {"spracheingabe", SpracheingabeBereit()},
-                {"spracheingabeKomplett", SpracheingabeBereit() && SprachModelle().All(m => File.Exists(SprachModellPfad(m)))},
-                {"stimmen", Stimmen()},
-                {"stimmenFehlen", StimmenJobs(InstallierteSprachen()).Where(x => x.Art == "stimme").Select(x => x.Ziel).ToArray()},
+                {"uebersetzer", t["uebersetzer"]},
+                {"uebersetzerAlt", t["uebersetzerAlt"]},
+                {"sprachen", t["sprachen"]},
+                {"spracheingabe", t["spracheingabe"]},
+                {"spracheingabeKomplett", t["spracheingabeKomplett"]},
+                {"stimmen", t["stimmen"]},
+                {"stimmenFehlen", t["stimmenFehlen"]},
                 {"defektePakete", kiwixDefekt.ToArray()},
                 {"pdfTexte", PdfTexte()},
-                {"ki", new Dictionary<string, object> { {"status", llmStatus}, {"fehler", llmFehler}, {"modell", llmModell}, {"kontext", AktuellesModellKontext()}, {"suchhilfe", suchhilfe != null && !suchhilfe.HasExited} }},
+                {"ki", new Dictionary<string, object> { {"status", llmStatus}, {"fehler", llmFehler}, {"modell", llmModell}, {"kontext", kontext}, {"suchhilfe", sh != null && !sh.HasExited} }},
                 {"modell", Str(einst, "modell")},
                 {"backend", Str(einst, "backend") ?? "cpu"},
                 {"sparmodus", Bool(einst, "sparmodus")},
                 {"akku", akku},
-                {"karten", karten},
-                {"kartenAssets", Directory.Exists(Path.Combine(Prog, "karten-assets", "fonts"))},
-                {"orte", Directory.GetFiles(Path.Combine(Daten, "orte"), "*.txt").Length > 0},
-                {"routen", brouter != null && !brouter.HasExited},
-                {"routenKacheln", Directory.GetFiles(Path.Combine(Daten, "routen"), "*.rd5").Select(f => Path.GetFileNameWithoutExtension(f)).ToArray()},
+                {"karten", t["karten"]},
+                {"kartenAssets", t["kartenAssets"]},
+                {"orte", t["orte"]},
+                {"routen", br != null && !br.HasExited},
+                {"routenKacheln", t["routenKacheln"]},
                 {"downloadAktiv", aktiv},
                 {"land", Str(einst, "land")},
                 {"landErkannt", WindowsLand()},
@@ -1731,7 +1859,7 @@ namespace OfflineWissen
                     p["bytes"] = (long)(Num(p, "mb") * 1000000);
                     p["verfuegbar"] = false;
                 }
-                string datei = ZimDatei(name, fl);
+                string datei = ZimDatei(ZimName(p), fl);
                 p["installiert"] = datei != null;
                 if (datei != null)
                 {
@@ -1765,6 +1893,13 @@ namespace OfflineWissen
             };
         }
 
+        // Anfang des Dateinamens eines Pakets. Meist der Name aus dem Kiwix-Katalog; weicht die Datei davon ab
+        // (Gardenology: Katalog „gardenology_en_all“, Datei „gardenology.org_en_all_…“), steht er als "datei" in pakete.json.
+        static string ZimName(Dictionary<string, object> p)
+        {
+            return Str(p, "datei") ?? Str(p, "name");
+        }
+
         static string ZimDatei(string name, string flavour)
         {
             string muster = "^" + Regex.Escape(name) + (string.IsNullOrEmpty(flavour) ? "" : "_" + Regex.Escape(flavour)) + @"_\d{4}-\d{2}[a-z]?\.zim$";
@@ -1777,25 +1912,35 @@ namespace OfflineWissen
             return treffer;
         }
 
+        // Nur ein Abruf zugleich: sonst laden zwei Anfragen den großen Katalog doppelt und schreiben gleichzeitig in die Datei
+        static readonly object KatalogLk = new object();
+
         static void LadeKiwixKatalog(bool neu)
         {
             string cache = Path.Combine(Daten, "cache", "kiwix-katalog.xml");
             if (katalog != null && !neu) return;
-            string xml = null;
-            bool alt = !File.Exists(cache) || (DateTime.Now - File.GetLastWriteTime(cache)).TotalHours > 24;
-            if (neu || alt)
+            lock (KatalogLk)
             {
-                try
+                if (katalog != null && !neu) return;   // inzwischen von einer anderen Anfrage geladen
+                string xml = null;
+                bool alt = !File.Exists(cache) || (DateTime.Now - File.GetLastWriteTime(cache)).TotalHours > 24;
+                if (neu || alt)
                 {
-                    xml = HoleText("https://library.kiwix.org/catalog/v2/entries?count=20000", 90000);
-                    File.WriteAllText(cache, xml, Utf8);
-                    katalogOnline = true;
+                    try
+                    {
+                        xml = HoleText("https://library.kiwix.org/catalog/v2/entries?count=20000", 90000);
+                        // erst vollständig schreiben, dann ersetzen: ein Abbruch hinterlässt keinen halben Katalog
+                        string tmp = cache + ".tmp";
+                        File.WriteAllText(tmp, xml, Utf8);
+                        if (File.Exists(cache)) File.Replace(tmp, cache, null); else File.Move(tmp, cache);
+                        katalogOnline = true;
+                    }
+                    catch { }   // ohne Netz bleibt xml leer; scheitert nur das Schreiben, gilt der geladene Text trotzdem
                 }
-                catch { xml = null; }
+                else katalogOnline = true;
+                if (xml == null && File.Exists(cache)) { try { xml = File.ReadAllText(cache, Utf8); } catch { } }
+                katalog = ParseKatalog(xml);
             }
-            else katalogOnline = true;
-            if (xml == null && File.Exists(cache)) xml = File.ReadAllText(cache, Utf8);
-            katalog = ParseKatalog(xml);
         }
 
         static Dictionary<string, Dictionary<string, object>> ParseKatalog(string xml)
@@ -2290,9 +2435,28 @@ namespace OfflineWissen
 
         static string EigenerProxy()
         {
-            string p = (Str(einst, "proxy") ?? "").Trim();
+            return ProxyNormal(Str(einst, "proxy"));
+        }
+
+        // Proxy-Eingabe als vollständige Adresse ("proxy.schule.de:8080" → "http://proxy.schule.de:8080").
+        // Leer oder ungültig: null (dann gilt der Windows-Proxy).
+        static string ProxyNormal(string eingabe)
+        {
+            string p = (eingabe ?? "").Trim();
             if (p == "") return null;
-            return p.Contains("://") ? p : "http://" + p;
+            if (!p.Contains("://")) p = "http://" + p;
+            Uri u;
+            if (!Uri.TryCreate(p, UriKind.Absolute, out u) || string.IsNullOrEmpty(u.Host) || p.Any(char.IsWhiteSpace)) return null;
+            return p;
+        }
+
+        // true, wenn die Eingabe leer (Windows-Proxy) oder eine gültige Proxy-Adresse ist
+        static bool ProxyGueltig(string eingabe)
+        {
+            if ((eingabe ?? "").Trim() == "") return true;
+            string p = ProxyNormal(eingabe);
+            if (p == null) return false;
+            try { new WebProxy(p); return true; } catch { return false; }
         }
 
         // Proxy für eine Adresse oder null, wenn direkt verbunden wird
@@ -2312,10 +2476,24 @@ namespace OfflineWissen
 
         static void ProxySetzen()
         {
-            string eigen = EigenerProxy();
-            IWebProxy p = eigen != null ? new WebProxy(eigen) : WebRequest.GetSystemWebProxy();
-            p.Credentials = CredentialCache.DefaultCredentials;
-            WebRequest.DefaultWebProxy = p;
+            IWebProxy p;
+            try
+            {
+                string eigen = EigenerProxy();
+                p = eigen != null ? new WebProxy(eigen) : WebRequest.GetSystemWebProxy();
+            }
+            catch (Exception e)
+            {
+                // Ungültige Adresse darf den Start nicht verhindern: dann den Windows-Proxy nehmen
+                Log("Proxy-Adresse ungültig, Windows-Proxy wird benutzt: " + e.Message);
+                p = WebRequest.GetSystemWebProxy();
+            }
+            try
+            {
+                p.Credentials = CredentialCache.DefaultCredentials;
+                WebRequest.DefaultWebProxy = p;
+            }
+            catch (Exception e) { Log("Proxy setzen: " + e.Message); }
         }
 
         // Für Hilfsprogramme (Go-Programme wie pmtiles lesen diese Umgebungsvariablen)
@@ -2541,7 +2719,32 @@ namespace OfflineWissen
 
         static string BboxText(Dictionary<string, object> r)
         {
-            return string.Join(",", Arr(r, "bbox").Select(x => Convert.ToDouble(x).ToString(CultureInfo.InvariantCulture)));
+            return string.Join(",", Arr(r, "bbox").Select(x => Convert.ToDouble(x, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture)));
+        }
+
+        // Zoomstufe 0–15 als Text; ungültig (keine Zahl, außerhalb) ergibt den Standard
+        static bool ZoomGueltig(string s, out int z)
+        {
+            return int.TryParse((s ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out z) && z >= 0 && z <= 15;
+        }
+
+        static string ZoomOder(string s, string standard)
+        {
+            int z;
+            if (ZoomGueltig(s, out z)) return z.ToString(CultureInfo.InvariantCulture);
+            return ZoomGueltig(standard, out z) ? z.ToString(CultureInfo.InvariantCulture) : "15";
+        }
+
+        // Kartenausschnitt "West,Süd,Ost,Nord" als vier Zahlen prüfen; zurück kommt der saubere Text oder null
+        static string BboxGueltig(string s)
+        {
+            var teile = (s ?? "").Split(',');
+            if (teile.Length != 4) return null;
+            var z = new double[4];
+            for (int i = 0; i < 4; i++)
+                if (!double.TryParse(teile[i].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out z[i]) || double.IsNaN(z[i]) || double.IsInfinity(z[i])) return null;
+            if (Math.Abs(z[0]) > 180 || Math.Abs(z[2]) > 180 || Math.Abs(z[1]) > 90 || Math.Abs(z[3]) > 90) return null;
+            return string.Join(",", z.Select(x => x.ToString(CultureInfo.InvariantCulture)));
         }
 
         static readonly Dictionary<string, Dictionary<string, object>> groessenCache = new Dictionary<string, Dictionary<string, object>>();
@@ -2550,7 +2753,9 @@ namespace OfflineWissen
         {
             var r = Region(id);
             if (r == null) return new Dictionary<string, object> { { "fehler", "Unbekannte Region" } };
-            string mz = string.IsNullOrEmpty(maxzoom) ? (Str(r, "maxzoom") ?? "15") : maxzoom;
+            int zoom;
+            if (!string.IsNullOrEmpty(maxzoom) && !ZoomGueltig(maxzoom, out zoom)) return new Dictionary<string, object> { { "fehler", "Ungültige Zoomstufe (erlaubt 0 bis 15)." } };
+            string mz = string.IsNullOrEmpty(maxzoom) ? ZoomOder(Str(r, "maxzoom"), "15") : ZoomOder(maxzoom, "15");
             string key = id + "|" + mz;
             lock (groessenCache) { if (groessenCache.ContainsKey(key)) return groessenCache[key]; }
             var erg = new Dictionary<string, object>();
@@ -2612,7 +2817,10 @@ namespace OfflineWissen
 
         static Dictionary<string, object> ProgrammInfo(string id)
         {
-            return LadeJson(Path.Combine(Config, "programme.json"))[id] as Dictionary<string, object>;
+            // Unbekannte Kennung (z. B. aus einer alten Einstellung): null statt Absturz
+            object p;
+            if (id == null || !LadeJson(Path.Combine(Config, "programme.json")).TryGetValue(id, out p)) return null;
+            return p as Dictionary<string, object>;
         }
 
         static string FindeExe(string ordner, string exe)
@@ -2649,6 +2857,8 @@ namespace OfflineWissen
             Thread endet = null;
             lock (Lk) if (worker != null && worker.IsAlive && abschluss) endet = worker;
             if (endet != null) endet.Join(60000);
+            // Katalog vorher holen: ohne Zwischenspeicher dauert das bis zu 90 s, und unter Lk stünde solange alles still
+            try { LadeKiwixKatalog(false); } catch (Exception e) { Log("Katalog: " + e.Message); }
             lock (Lk)
             {
                 // Laufen schon Downloads, kommen die neuen in dieselbe Warteschlange
@@ -2726,7 +2936,7 @@ namespace OfflineWissen
                     string id = k != null ? Str(k, "id") : Convert.ToString(o);
                     var r = Region(id);
                     if (r == null) continue;
-                    string mz = (k != null ? Str(k, "maxzoom") : null) ?? Str(r, "maxzoom") ?? "15";
+                    string mz = ZoomOder(k != null ? Str(k, "maxzoom") : null, ZoomOder(Str(r, "maxzoom"), "15"));
                     long gesamt = k != null ? (long)Num(k, "bytes") : 0;
                     string ziel = Path.Combine(Daten, "karten", id + ".pmtiles");
                     if (!File.Exists(ziel))
@@ -2816,6 +3026,7 @@ namespace OfflineWissen
                     worker.Start();
                 }
                 WarteschlangeMerken();
+                StatusCacheLeeren();
                 return new Dictionary<string, object> { { "ok", true }, { "anzahl", neu.Count } };
             }
         }
@@ -2998,6 +3209,7 @@ namespace OfflineWissen
                 Log("Fehler bei " + j.Titel + ": " + e.Message);
                 if (!abbrechen) StatFehler("download", j.Art + " " + j.Titel + ": " + e.Message);
             }
+            StatusCacheLeeren();
         }
 
         static void AbschlussArbeiten()
@@ -3005,7 +3217,7 @@ namespace OfflineWissen
             // Läuft im Download-Thread: jeder Schritt einzeln abgesichert, damit ein Fehler Fieldbook nicht beendet
             if (neueOrte) lock (OrteLk) orte = null;
             try { if (brouter == null || brouter.HasExited) StarteRouting(); } catch (Exception e) { Log("Routenplanung: " + e.Message); }
-            try { if (kiwix == null || kiwix.HasExited) StarteKiwix(); } catch (Exception e) { Log("Bibliothek: " + e.Message); }
+            try { if (!KiwixAktiv()) StarteKiwix(); } catch (Exception e) { Log("Bibliothek: " + e.Message); }
             try
             {
                 lock (Lk)
@@ -3031,14 +3243,16 @@ namespace OfflineWissen
         {
             // Ältere Ausgaben desselben Pakets und andere Varianten derselben Gruppe (z. B. Wikipedia kompakt,
             // wenn jetzt die mit Bildern geladen wurde): je Gruppe bleibt nur eine Variante
+            // Verglichen wird mit dem Anfang des Dateinamens (ZimName), nicht mit dem Katalognamen
             var arten = new List<string> { j.Extra };
             try
             {
                 var liste = Arr(LadeJson(Path.Combine(Config, "pakete.json")), "pakete").Cast<Dictionary<string, object>>().ToList();
                 var selbst = liste.FirstOrDefault(p => Str(p, "name") + "|" + (Str(p, "flavour") ?? "") == j.Extra);
+                if (selbst != null) arten[0] = ZimName(selbst) + "|" + (Str(selbst, "flavour") ?? "");
                 string gruppe = selbst == null ? null : Str(selbst, "gruppeExklusiv");
                 if (!string.IsNullOrEmpty(gruppe))
-                    foreach (var p in liste) if (Str(p, "gruppeExklusiv") == gruppe) arten.Add(Str(p, "name") + "|" + (Str(p, "flavour") ?? ""));
+                    foreach (var p in liste) if (Str(p, "gruppeExklusiv") == gruppe) arten.Add(ZimName(p) + "|" + (Str(p, "flavour") ?? ""));
             }
             catch { }
             var muster = arten.Distinct().Select(a =>
@@ -3058,6 +3272,24 @@ namespace OfflineWissen
             }
         }
 
+        // Fertig geladene .part mit der Größe auf dem Server vergleichen. Passt sie nicht, ist die Datei
+        // unbrauchbar: löschen und Fehler (die alte Version bleibt erhalten). Ist der Server nicht erreichbar,
+        // grob mit der erwarteten Größe aus dem Katalog vergleichen; dann bleibt die .part zum Fortsetzen liegen.
+        static void ZimGroessePruefen(Job j, string url, string part)
+        {
+            long ist = new FileInfo(part).Length;
+            long soll = EntfernteGroesse(url);
+            if (soll > 0)
+            {
+                if (ist == soll) return;
+                try { File.Delete(part); } catch { }
+                j.Bytes = 0;
+                throw new Exception("Die geladene Datei ist unvollständig oder beschädigt (" + ist + " statt " + soll + " Byte). Bitte erneut versuchen.");
+            }
+            if (j.Gesamt > 0 && ist < j.Gesamt * 0.95)
+                throw new Exception("Die geladene Datei ist kleiner als erwartet. Bitte erneut versuchen.");
+        }
+
         // Höchstgeschwindigkeit für Downloads in Byte pro Sekunde (0 = unbegrenzt), gilt für Aktualisierungen
         static long ladeLimit = 0;
 
@@ -3072,6 +3304,7 @@ namespace OfflineWissen
                 if (remote > 0 && new FileInfo(part).Length > remote) { File.Delete(part); j.Bytes = 0; }
                 else if (remote > 0 && new FileInfo(part).Length == remote)
                 {
+                    if (File.Exists(ziel)) File.Delete(ziel);
                     File.Move(part, ziel);
                     j.Bytes = remote;
                     return;
@@ -3094,6 +3327,8 @@ namespace OfflineWissen
             // curl 33: Fortsetzen nicht möglich, der nächste Versuch beginnt von vorn
             if (code == 33) { try { File.Delete(part); } catch { } j.Bytes = 0; }
             if (code != 0) throw new Exception(CurlMeldung(code));
+            // Wissenspakete erst einsetzen, wenn die Größe stimmt (sonst würde danach die alte Version gelöscht)
+            if (ziel.EndsWith(".zim", StringComparison.OrdinalIgnoreCase)) ZimGroessePruefen(j, url, part);
             if (File.Exists(ziel)) File.Delete(ziel);
             File.Move(part, ziel);
             j.Bytes = new FileInfo(ziel).Length;
@@ -3143,7 +3378,7 @@ namespace OfflineWissen
         {
             switch (code)
             {
-                case 5: return "Der Proxy wurde nicht gefunden. Bitte unter Einstellungen → Internetverbindung prüfen.";
+                case 5: return "Der Proxy wurde nicht gefunden. Bitte unter Einstellungen → Erweitert prüfen.";
                 case 6: return "Server nicht gefunden. Kein Internet, oder ein Werbeblocker/DNS-Filter sperrt die Adresse. „Verbindung prüfen“ zeigt, welche.";
                 case 7: return "Verbindung abgelehnt. Eine Firewall könnte die Adresse sperren. „Verbindung prüfen“ zeigt, welche.";
                 case 22: return "Der Server hat die Datei verweigert oder nicht gefunden. Vielleicht gibt es inzwischen eine neuere Version; bitte später erneut versuchen.";
@@ -3234,6 +3469,7 @@ namespace OfflineWissen
         // Was ist diese Datei und wohin gehört sie? null, wenn Fieldbook sie nicht verwenden kann
         static Dictionary<string, object> ImportEinordnen(string datei, object[] pakete, object[] modelle)
         {
+            if (!LokalerPfad(datei)) return null;
             string name = Path.GetFileName(datei);
             string endung = Path.GetExtension(name).ToLowerInvariant();
             string art = null, titel = null, ziel = null;
@@ -3243,7 +3479,7 @@ namespace OfflineWissen
                 foreach (var o in pakete)
                 {
                     var p = (Dictionary<string, object>)o;
-                    if (Regex.IsMatch(name, "^" + Regex.Escape(Str(p, "name")) + (string.IsNullOrEmpty(Str(p, "flavour")) ? "" : "_" + Regex.Escape(Str(p, "flavour"))) + @"_\d{4}-\d{2}[a-z]?\.zim$"))
+                    if (Regex.IsMatch(name, "^" + Regex.Escape(ZimName(p)) + (string.IsNullOrEmpty(Str(p, "flavour")) ? "" : "_" + Regex.Escape(Str(p, "flavour"))) + @"_\d{4}-\d{2}[a-z]?\.zim$"))
                     { titel = Str(p, "titel"); break; }
                 }
             }
@@ -3282,8 +3518,27 @@ namespace OfflineWissen
             return new Dictionary<string, object> { { "datei", datei }, { "art", art }, { "titel", titel }, { "ziel", ziel }, { "bytes", bytes }, { "vorhanden", vorhanden } };
         }
 
+        // Nur Pfade auf lokalen Laufwerken oder USB-Sticks (keine Netzwerkpfade wie \\server\freigabe).
+        // Vor jedem Dateizugriff prüfen: schon File.Exists auf einen Netzwerkpfad baut eine Verbindung auf.
+        static bool LokalerPfad(string pfad)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(pfad)) return false;
+                string p = pfad.Trim();
+                if (p.StartsWith("\\\\") || p.StartsWith("//") || p.StartsWith("\\/") || p.StartsWith("/\\")) return false;
+                if (!Regex.IsMatch(p, @"^[A-Za-z]:[\\/]")) return false;
+                string wurzel = Path.GetPathRoot(Path.GetFullPath(p));
+                if (wurzel == null || !Regex.IsMatch(wurzel, @"^[A-Za-z]:\\$")) return false;
+                var typ = new DriveInfo(wurzel).DriveType;
+                return typ == DriveType.Fixed || typ == DriveType.Removable;
+            }
+            catch { return false; }
+        }
+
         static Dictionary<string, object> ImportPruefen(string ordner)
         {
+            if (!string.IsNullOrEmpty(ordner) && !LokalerPfad(ordner)) return new Dictionary<string, object> { { "fehler", "Bitte einen Ordner auf diesem Rechner oder einem USB-Stick wählen (keine Netzwerkpfade)." } };
             if (string.IsNullOrEmpty(ordner) || !Directory.Exists(ordner)) return new Dictionary<string, object> { { "fehler", "Ordner nicht gefunden." } };
             var pakete = Arr(LadeJson(Path.Combine(Config, "pakete.json")), "pakete");
             var modelle = Arr(LadeJson(Path.Combine(Config, "modelle.json")), "modelle");
@@ -3305,7 +3560,7 @@ namespace OfflineWissen
             foreach (var o in Arr(b, "dateien"))
             {
                 string datei = Convert.ToString(o);
-                if (!File.Exists(datei)) continue;
+                if (!LokalerPfad(datei) || !File.Exists(datei)) continue;
                 var e = ImportEinordnen(datei, pakete, modelle); // erneut prüfen, nicht dem Browser vertrauen
                 if (e == null || (bool)e["vorhanden"]) continue;
                 neu.Add(new Job { Art = "kopie", Titel = "Übernehmen: " + Str(e, "titel"), Url = datei, Ziel = Str(e, "ziel"), Gesamt = (long)e["bytes"], Extra = Str(e, "art") });
@@ -3665,7 +3920,11 @@ namespace OfflineWissen
         {
             string exe = ProgrammPfad("pmtiles");
             if (exe == null) throw new Exception("pmtiles fehlt");
-            var t = j.Extra.Split('|');
+            var t = (j.Extra ?? "").Split('|');
+            // Ausschnitt und Zoomstufe gehen als Argumente an pmtiles: nur saubere Zahlen durchlassen
+            string bbox = t.Length >= 2 ? BboxGueltig(t[0]) : null;
+            if (bbox == null) throw new Exception("Der Kartenausschnitt ist ungültig. Bitte die Karte neu auswählen.");
+            t = new[] { bbox, ZoomOder(t[1], "15") };
             string tmp = j.Ziel.Replace(".pmtiles", ".tmp.pmtiles");
             const int Versuche = 3;
             for (int versuch = 1; ; versuch++)
@@ -3808,7 +4067,7 @@ namespace OfflineWissen
                     {
                         var p = (Dictionary<string, object>)o;
                         if (Str(p, "id") != id) continue;
-                        string f = ZimDatei(Str(p, "name"), Str(p, "flavour") ?? "");
+                        string f = ZimDatei(ZimName(p), Str(p, "flavour") ?? "");
                         if (f != null) { StoppeKiwix(); File.Delete(Path.Combine(Daten, "wissen", f)); StarteKiwix(); }
                     }
                 }
@@ -3877,6 +4136,7 @@ namespace OfflineWissen
                 return new Dictionary<string, object> { { "ok", true } };
             }
             catch (Exception e) { return new Dictionary<string, object> { { "fehler", e.Message } }; }
+            finally { StatusCacheLeeren(); }
         }
 
         // ------------------------------------------------------------------ Kiwix
@@ -3986,24 +4246,30 @@ namespace OfflineWissen
             }
         }
 
+        // Läuft Kiwix gerade? Mit lokaler Kopie, weil ein anderer Thread kiwix auf null setzen kann.
+        static bool KiwixAktiv() { var k = kiwix; return k != null && !k.HasExited; }
+
         static bool KiwixLaeuft(string exe, string args, string log, int versuche)
         {
-            kiwix = StarteDienst(exe, args, log);
+            // Mit einer lokalen Kopie arbeiten: StoppeKiwix kann das Feld zwischendurch auf null setzen
+            var p = StarteDienst(exe, args, log);
+            kiwix = p;
             for (int i = 0; i < versuche; i++)
             {
-                if (kiwix.HasExited) { kiwix = null; return false; }
+                if (p.HasExited) { if (kiwix == p) kiwix = null; return false; }
                 if (HttpOk("http://127.0.0.1:" + KiwixPort + "/kiwix/")) return true;
                 Thread.Sleep(250);
             }
             // Große Pakete brauchen manchmal länger: läuft der Prozess noch, gilt der Start als gelungen
-            return kiwix != null && !kiwix.HasExited;
+            return kiwix == p && !p.HasExited;
         }
 
         static void StoppeKiwix()
         {
             lock (Lk)
             {
-                try { if (kiwix != null && !kiwix.HasExited) { kiwix.Kill(); kiwix.WaitForExit(5000); } } catch { }
+                var k = kiwix;
+                try { if (k != null && !k.HasExited) { k.Kill(); k.WaitForExit(5000); } } catch { }
                 kiwix = null;
             }
         }
@@ -4027,6 +4293,31 @@ namespace OfflineWissen
         static void AktLog(string s)
         {
             try { File.AppendAllText(Path.Combine(Logs, "aktualisierung.log"), DateTime.Now.ToString("yyyy-MM-dd HH:mm") + "  " + s + "\r\n", Utf8); } catch { }
+        }
+
+        // Nur ein Update-Lauf zur Zeit (Windows-Aufgaben und laufendes Fieldbook), sonst hängen zwei curl an dieselbe .part an.
+        // Gibt die Sperre zurück oder null, wenn ein anderer Lauf sie hat. Freigeben im selben Thread (UpdateSperreFrei).
+        static Mutex UpdateSperre()
+        {
+            Mutex m = null;
+            try
+            {
+                m = new Mutex(false, @"Local\FieldbookUpdate");
+                bool hab;
+                try { hab = m.WaitOne(0); }
+                catch (AbandonedMutexException) { hab = true; } // Vorheriger Lauf abgestürzt: Sperre gehört jetzt uns
+                if (hab) return m;
+            }
+            catch { }
+            if (m != null) m.Dispose();
+            return null;
+        }
+
+        static void UpdateSperreFrei(Mutex m)
+        {
+            if (m == null) return;
+            try { m.ReleaseMutex(); } catch { }
+            m.Dispose();
         }
 
         // Einstieg für app\aktualisieren.ps1 (eigener Prozess, ohne Server)
@@ -4087,7 +4378,20 @@ namespace OfflineWissen
             try
             {
                 var a = AktEinst();
-                if (a != null && Bool(a, "an") && Str(einst, "aufgabenPfad") != Root) AufgabenAnlegen();
+                if (a == null || !Bool(a, "an")) return;
+                if (Str(einst, "aufgabenPfad") != Root) { AufgabenAnlegen(); return; }
+                // Gleicher Pfad heißt nicht gleicher Rechner: Steckt derselbe Stick an einem anderen Laptop,
+                // fehlen dort die Aufgaben. Deshalb nachsehen, ob es sie hier gibt und sie auf diesen Ordner zeigen.
+                string xml = "";
+                try { xml = Ausfuehren("schtasks.exe", "/Query /TN \"" + AufgabePruefen + "\" /XML", 15000) ?? ""; }
+                catch { xml = ""; }   // Aufgabe gibt es hier nicht (schtasks meldet Fehler)
+                // Nur ASCII vergleichen: schtasks gibt je nach System eine andere Kodierung aus (Umlaute im Pfad)
+                Func<string, string> ascii = s => Regex.Replace(s ?? "", "[^\\x20-\\x7E]", "");
+                if (ascii(xml).IndexOf(ascii(System.Security.SecurityElement.Escape(Root)), StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    Log("Aufgabenplanung: Aufgaben fehlen auf diesem Rechner oder zeigen woandershin, werden neu angelegt.");
+                    AufgabenAnlegen();
+                }
             }
             catch (Exception e) { Log("Aufgabenplanung: " + e.Message); }
         }
@@ -4104,6 +4408,8 @@ namespace OfflineWissen
                 argP = ps + "pruefen"; argL = ps + "laden";
             }
             string start = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd") + "T19:00:00";
+            // Herunterladen eine halbe Stunde später, damit beide Aufgaben nicht gleichzeitig starten
+            string startLaden = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd") + "T19:30:00";
             string pruefen =
                 "<Triggers><CalendarTrigger><StartBoundary>" + start + "</StartBoundary><ScheduleByWeek><DaysOfWeek><Sunday /></DaysOfWeek><WeeksInterval>1</WeeksInterval></ScheduleByWeek></CalendarTrigger></Triggers>" +
                 "<Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries><StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>" +
@@ -4114,7 +4420,7 @@ namespace OfflineWissen
             // Sofort-Modus: lädt direkt nach dem Prüfen. Diese Aufgabe setzt nur abgebrochene Downloads fort
             // (5 Minuten nach der Anmeldung und täglich), mit niedrigster Priorität.
             string ladenSofort =
-                "<Triggers><LogonTrigger><Delay>PT5M</Delay><UserId>" + System.Security.SecurityElement.Escape(Environment.UserDomainName + "\\" + Environment.UserName) + "</UserId></LogonTrigger><CalendarTrigger><StartBoundary>" + start + "</StartBoundary><ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay></CalendarTrigger></Triggers>" +
+                "<Triggers><LogonTrigger><Delay>PT5M</Delay><UserId>" + System.Security.SecurityElement.Escape(Environment.UserDomainName + "\\" + Environment.UserName) + "</UserId></LogonTrigger><CalendarTrigger><StartBoundary>" + startLaden + "</StartBoundary><ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay></CalendarTrigger></Triggers>" +
                 "<Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries><StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>" +
                 "<StartWhenAvailable>true</StartWhenAvailable><RunOnlyIfNetworkAvailable>true</RunOnlyIfNetworkAvailable>" +
                 "<IdleSettings><StopOnIdleEnd>false</StopOnIdleEnd><RestartOnIdle>false</RestartOnIdle></IdleSettings>" +
@@ -4176,17 +4482,21 @@ namespace OfflineWissen
                     if (Bool(u, "verfuegbar"))
                         liste.Add(new Dictionary<string, object> { { "art", "programm-update" }, { "titel", "Fieldbook " + Str(u, "neu") + " (Programm)" }, { "url", Str(u, "zip") }, { "extra", (Str(u, "sha") ?? "") + "|" + Str(u, "neu") }, { "bytes", u["bytes"] } });
                 }
-                catch { }
+                catch (Exception ex) { AktLog("Programm-Update-Suche fehlgeschlagen: " + ex.Message); }
             }
             // Wissenspakete: neuere Ausgabe im Kiwix-Katalog?
             foreach (var o in Arr(LadeJson(Path.Combine(Config, "pakete.json")), "pakete"))
             {
                 var p = (Dictionary<string, object>)o;
                 string name = Str(p, "name"), fl = Str(p, "flavour") ?? "";
-                string datei = ZimDatei(name, fl);
+                string datei = ZimDatei(ZimName(p), fl);
                 if (datei == null) continue;
                 Dictionary<string, object> e;
-                if (!KatalogFuerName(name).TryGetValue(name + "|" + fl, out e)) continue;
+                // Eine fehlschlagende Katalog-Anfrage soll nicht die ganze Prüfung abbrechen
+                Dictionary<string, Dictionary<string, object>> kat;
+                try { kat = KatalogFuerName(name); }
+                catch (Exception ex) { AktLog("Katalog für " + name + " nicht erreichbar: " + ex.Message); continue; }
+                if (kat == null || !kat.TryGetValue(name + "|" + fl, out e)) continue;
                 string url = (string)e["url"];
                 string neu = url.Substring(url.LastIndexOf('/') + 1);
                 var dAlt = Regex.Match(datei, @"_(\d{4}-\d{2}[a-z]?)\.zim$");
@@ -4225,10 +4535,34 @@ namespace OfflineWissen
                 var r = Region(id);
                 if (r == null) continue;
                 var meta = LadeJson(Path.Combine(Daten, "karten", id + ".json"));
-                string mz = Str(meta, "maxzoom") ?? Str(r, "maxzoom") ?? "15";
+                string mz = ZoomOder(Str(meta, "maxzoom"), ZoomOder(Str(r, "maxzoom"), "15"));
                 liste.Add(new Dictionary<string, object> { { "art", "karte" }, { "titel", "Karte: " + Str(r, "titel") }, { "ziel", Path.Combine(Daten, "karten", id + ".neu.pmtiles") }, { "bytes", fi.Length }, { "extra", BboxText(r) + "|" + mz } });
             }
             return liste;
+        }
+
+        // Nutzer hat im Fenster trotz getakteter Verbindung „Herunterladen“ gewählt (nur dieser Prozess)
+        static bool getaktetErlaubt;
+
+        // Wie aktualisieren.ps1: im Zweifel getaktet. Ohne Internetverbindung nicht getaktet (es wird ohnehin nichts geladen).
+        static bool GetaktetJetzt()
+        {
+            try
+            {
+                string ps = "$null=[Windows.Networking.Connectivity.NetworkInformation,Windows.Networking.Connectivity,ContentType=WindowsRuntime];" +
+                    "$p=[Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile();" +
+                    "if(-not $p){'keine'}else{$k=$p.GetConnectionCost();$g=$false;try{$g=$k.ApproachingDataLimit -or $k.OverDataLimit}catch{};" +
+                    "if(($k.NetworkCostType.ToString() -in @('Unrestricted','Unknown')) -and -not $k.Roaming -and -not $g){'frei'}else{'getaktet'}}";
+                string aus = Ausfuehren("powershell.exe", "-NoProfile -NonInteractive -Command \"" + ps + "\"", 30000);
+                foreach (var z in aus.Split('\n'))
+                {
+                    string t = z.Trim();
+                    if (t == "frei" || t == "keine") return false;
+                    if (t == "getaktet") return true;
+                }
+                return true;
+            }
+            catch { return true; }
         }
 
         static void Pruefen(bool popup, bool mitProgramm = true)
@@ -4247,7 +4581,8 @@ namespace OfflineWissen
                 {
                     int wahl = FrageNutzer(updates, getaktet);
                     ok = wahl > 0;
-                    if (ok && getaktet) d["getaktetErlaubt"] = true;
+                    // Gilt nur für diesen Lauf, wird nicht gespeichert
+                    if (ok && getaktet) getaktetErlaubt = true;
                     if (wahl == 2) KuenftigAutomatisch();
                 }
             }
@@ -4387,34 +4722,45 @@ namespace OfflineWissen
             if (!File.Exists(AktFlag)) return;
             var d = LadeJson(AktDatei);
             if (!Bool(d, "freigegeben")) return;
-            if (Environment.GetEnvironmentVariable("OW_GETAKTET") == "1" && !Bool(d, "getaktetErlaubt")) { AktLog("Getaktete Verbindung, Download später."); return; }
-            bool nurLeerlauf = Str(AktEinst(), "wann") == "leerlauf";
-            try { Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.Idle; } catch { }
-            Aufraeumen();
-            bool fertig = false;
-            string grund = null;
-            var waechter = new Thread(delegate ()
+            // Erlaubnis aus älteren Versionen nicht weiter gelten lassen und nicht wieder speichern
+            d.Remove("getaktetErlaubt");
+            if (Environment.GetEnvironmentVariable("OW_GETAKTET") == "1" && !getaktetErlaubt) { AktLog("Getaktete Verbindung, Download später."); return; }
+            var sperre = UpdateSperre();
+            if (sperre == null) { AktLog("Ein anderer Update-Lauf ist aktiv."); return; }
+            try
             {
-                while (!fertig)
+                bool nurLeerlauf = Str(AktEinst(), "wann") == "leerlauf";
+                try { Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.Idle; } catch { }
+                Aufraeumen();
+                bool fertig = false;
+                string grund = null;
+                var waechter = new Thread(delegate ()
                 {
-                    if (nurLeerlauf && NutzerAktiv()) grund = "Computer wird benutzt";
-                    else if (nurLeerlauf && AufAkku()) grund = "Akkubetrieb";
-                    if (grund != null)
+                    int runden = 0;
+                    while (!fertig)
                     {
-                        abbrechen = true;
-                        AlleDownloadsStoppen();
-                        return;
+                        if (nurLeerlauf && NutzerAktiv()) grund = "Computer wird benutzt";
+                        else if (nurLeerlauf && AufAkku()) grund = "Akkubetrieb";
+                        // Alle 60 s (30 × 2 s): inzwischen auf eine getaktete Verbindung gewechselt (z. B. Handy-Hotspot)?
+                        else if (!getaktetErlaubt && ++runden >= 30) { runden = 0; if (GetaktetJetzt() && !fertig) grund = "Getaktete Verbindung"; }
+                        if (grund != null)
+                        {
+                            abbrechen = true;
+                            AlleDownloadsStoppen();
+                            return;
+                        }
+                        Thread.Sleep(2000);
                     }
-                    Thread.Sleep(2000);
-                }
-            }) { IsBackground = true };
-            waechter.Start();
-            AktLog("Herunterladen gestartet.");
-            int erledigt = UpdatesAusfuehren(d, null);
-            fertig = true;
-            if (grund != null) AktLog("Pausiert (" + grund + "). Geht beim nächsten Leerlauf weiter.");
-            else if (Arr(d, "updates").Length == 0) { try { File.Delete(AktFlag); } catch { } AktLog("Aktualisierung abgeschlossen."); }
-            else AktLog(erledigt + " erledigt, Rest beim nächsten Mal.");
+                }) { IsBackground = true };
+                waechter.Start();
+                AktLog("Herunterladen gestartet.");
+                int erledigt = UpdatesAusfuehren(d, null);
+                fertig = true;
+                if (grund != null) AktLog("Pausiert (" + grund + "). Geht beim nächsten Leerlauf weiter.");
+                else if (Arr(d, "updates").Length == 0) { try { File.Delete(AktFlag); } catch { } AktLog("Aktualisierung abgeschlossen."); }
+                else AktLog(erledigt + " erledigt, Rest beim nächsten Mal.");
+            }
+            finally { UpdateSperreFrei(sperre); }
         }
 
         // Im Programm: Knopf "Jetzt herunterladen" in den Einstellungen
@@ -4425,14 +4771,25 @@ namespace OfflineWissen
                 if (worker != null && worker.IsAlive) return new Dictionary<string, object> { { "fehler", "Es läuft bereits ein Download." } };
                 var d = LadeJson(AktDatei);
                 if (d == null || Arr(d, "updates").Length == 0) return new Dictionary<string, object> { { "fehler", "Keine Aktualisierungen gefunden." } };
+                // Läuft gerade eine Windows-Aufgabe? Dann nicht parallel laden.
+                var probe = UpdateSperre();
+                if (probe == null) return new Dictionary<string, object> { { "fehler", "Im Hintergrund läuft schon ein Update." } };
+                UpdateSperreFrei(probe);
                 abbrechen = false;
                 warteschlange = false;
                 jobs = new List<Job>();
                 worker = new Thread(delegate ()
                 {
-                    UpdatesAusfuehren(d, jobs);
-                    if (Arr(d, "updates").Length == 0) try { File.Delete(AktFlag); } catch { }
-                    Aufraeumen();
+                    // Die Sperre gehört dem Thread, der sie hält: hier erneut nehmen
+                    var sperre = UpdateSperre();
+                    if (sperre == null) { foreach (var jb in jobs) { jb.Status = "fehler"; jb.Fehler = "Im Hintergrund läuft schon ein Update."; } return; }
+                    try
+                    {
+                        UpdatesAusfuehren(d, jobs);
+                        if (Arr(d, "updates").Length == 0) try { File.Delete(AktFlag); } catch { }
+                        Aufraeumen();
+                    }
+                    finally { UpdateSperreFrei(sperre); }
                     // Neue Fieldbook-Version bereitgelegt? Dann gleich neu starten, das spielt sie ein.
                     if (BereitVersion() != null) { Neustart(); return; }
                     StarteKiwix();
@@ -4529,6 +4886,7 @@ namespace OfflineWissen
                     erledigt++;
                     d["updates"] = offen.ToArray();
                     SicherSchreiben(AktDatei, Json.Serialize(d));
+                    StatusCacheLeeren();
                     AktLog("Fertig: " + j.Titel);
                 }
                 catch (Exception e) { j.Status = abbrechen ? "abgebrochen" : "fehler"; j.Fehler = e.Message; if (!abbrechen) { AktLog("Fehler bei " + j.Titel + ": " + e.Message); StatFehler("aktualisierung", j.Art + " " + j.Titel + ": " + e.Message); } }
@@ -4540,6 +4898,41 @@ namespace OfflineWissen
 
         // Fertige neue Dateien einsetzen und alte Versionen löschen (beim Start und nach Updates)
         // beimStart: nur beim Start von Fieldbook, dann lädt sicher keine Karte (Aufraeumen läuft auch in der Windows-Aufgabe)
+        // Halbe Downloads (.part), die nie fertig werden: eine neuere Ausgabe des Pakets ist schon installiert,
+        // oder die Datei wurde seit 30 Tagen nicht mehr angefasst (die Adresse gibt es dann meist nicht mehr).
+        // Läuft nur beim Start, wenn noch kein Download aktiv ist.
+        static void PartResteAufraeumen()
+        {
+            try
+            {
+                var installiert = new Dictionary<string, string>();   // Paket ohne Datum → neuestes Datum
+                foreach (var z in Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim"))
+                {
+                    var m = Regex.Match(Path.GetFileName(z), @"^(.+)_(\d{4}-\d{2})[a-z]?\.zim$");
+                    if (!m.Success) continue;
+                    string alt;
+                    if (!installiert.TryGetValue(m.Groups[1].Value, out alt) || string.CompareOrdinal(m.Groups[2].Value, alt) > 0)
+                        installiert[m.Groups[1].Value] = m.Groups[2].Value;
+                }
+                var ordner = new[] { "wissen", "modelle", Path.Combine("cache", "update") };
+                foreach (var o in ordner)
+                {
+                    string pfad = Path.Combine(Daten, o);
+                    if (!Directory.Exists(pfad)) continue;
+                    foreach (var f in Directory.GetFiles(pfad, "*.part", SearchOption.AllDirectories))
+                    {
+                        bool weg = (DateTime.Now - File.GetLastWriteTime(f)).TotalDays > 30;
+                        var m = Regex.Match(Path.GetFileName(f), @"^(.+)_(\d{4}-\d{2})[a-z]?\.zim\.part$");
+                        string da;
+                        if (m.Success && installiert.TryGetValue(m.Groups[1].Value, out da) && string.CompareOrdinal(da, m.Groups[2].Value) >= 0) weg = true;
+                        if (!weg) continue;
+                        try { File.Delete(f); Log("Unfertiger Download gelöscht: " + Path.GetFileName(f)); } catch { }
+                    }
+                }
+            }
+            catch (Exception e) { Log("Aufräumen (Download-Reste): " + e.Message); }
+        }
+
         static void Aufraeumen(bool beimStart = false)
         {
             try
@@ -4564,6 +4957,7 @@ namespace OfflineWissen
                         try { File.Delete(f); Log("Unfertige Karte gelöscht: " + Path.GetFileName(f)); } catch { }
             }
             catch (Exception e) { Log("Aufräumen (Karten): " + e.Message); }
+            if (beimStart) PartResteAufraeumen();
             try
             {
                 // Von jedem Wissenspaket nur die neueste Ausgabe behalten
@@ -4582,6 +4976,7 @@ namespace OfflineWissen
                 }
             }
             catch (Exception e) { Log("Aufräumen (Pakete): " + e.Message); }
+            StatusCacheLeeren();
         }
 
         // ------------------------------------------------------------------ Desktop-Symbol
@@ -4666,23 +5061,39 @@ namespace OfflineWissen
             if (api == null) return erg;
             var rel = Json.DeserializeObject(HoleText(api, 20000)) as Dictionary<string, object>;
             string neu = (Str(rel, "tag_name") ?? "").TrimStart('v', 'V');
-            string zip = null, sha = null;
+            string zip = null, zipName = null, sha = null;
             long bytes = 0;
+            var shas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var o in Arr(rel, "assets"))
             {
                 var a = (Dictionary<string, object>)o;
                 string n = Str(a, "name") ?? "";
-                if (n.EndsWith(".zip.sha256", StringComparison.OrdinalIgnoreCase)) sha = Str(a, "browser_download_url");
+                if (n.EndsWith(".zip.sha256", StringComparison.OrdinalIgnoreCase)) shas[n] = Str(a, "browser_download_url");
                 // Fieldbook-<version>.zip bevorzugen, falls weitere ZIP-Dateien im Release liegen
                 else if (n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && n.StartsWith("Fieldbook", StringComparison.OrdinalIgnoreCase)
-                    && (zip == null || n.Equals("Fieldbook-" + neu + ".zip", StringComparison.OrdinalIgnoreCase))) { zip = Str(a, "browser_download_url"); bytes = (long)Num(a, "size"); }
+                    && (zip == null || n.Equals("Fieldbook-" + neu + ".zip", StringComparison.OrdinalIgnoreCase))) { zip = Str(a, "browser_download_url"); zipName = n; bytes = (long)Num(a, "size"); }
             }
+            // Nur die Prüfsumme genau dieser ZIP verwenden
+            if (zipName != null) shas.TryGetValue(zipName + ".sha256", out sha);
             erg["neu"] = neu;
             erg["titel"] = Str(rel, "name") ?? ("Fieldbook " + neu);
             erg["notizen"] = Str(rel, "body") ?? "";
             erg["datum"] = Str(rel, "published_at") ?? "";
             erg["zip"] = zip; erg["sha"] = sha; erg["bytes"] = bytes;
             erg["verfuegbar"] = zip != null && VersionNeuer(neu, Version) && BereitVersion() != neu;
+            // Ist genau diese Version beim Einspielen schon einmal gescheitert (start.ps1 merkt sie sich),
+            // nicht jede Woche neu laden; eine neuere Version wird wieder angeboten
+            try
+            {
+                string fehlDatei = Path.Combine(Daten, "cache", "update", "fehlgeschlagen.txt");
+                if (Bool(erg, "verfuegbar") && File.Exists(fehlDatei) && File.ReadAllText(fehlDatei).Trim() == neu)
+                {
+                    erg["verfuegbar"] = false;
+                    erg["fehlgeschlagen"] = neu;
+                    AktLog("Programm-Update " + neu + " übersprungen: Das Einspielen ist schon einmal gescheitert.");
+                }
+            }
+            catch { }
             progUpdate = erg;
             return erg;
         }
@@ -4693,6 +5104,10 @@ namespace OfflineWissen
             if (IstEntwicklungsordner()) throw new Exception("Im Entwicklungsordner wird Fieldbook nicht automatisch aktualisiert.");
             // Ohne Prüfsumme lässt sich nicht feststellen, ob das Paket vollständig und echt ist
             if (string.IsNullOrEmpty(shaUrl)) throw new Exception("Zu diesem Update fehlt die Prüfsumme, es wird deshalb nicht eingespielt.");
+            // bereit\gestartet: start.ps1 spielt gerade ein oder wurde dabei unterbrochen. Dann bereit nicht ersetzen.
+            string marke = Path.Combine(UpdateBereit, "gestartet");
+            const string einspielen = "Das vorige Update wird gerade eingespielt oder wurde unterbrochen. Bitte Fieldbook neu starten, dann erneut versuchen.";
+            if (File.Exists(marke)) { AktLog("Programm-Update übersprungen: bereit\\gestartet vorhanden."); throw new Exception(einspielen); }
             Directory.CreateDirectory(UpdateOrdner);
             string zip = Path.Combine(UpdateOrdner, "Fieldbook-" + neu + ".zip");
             Herunterladen(j, zipUrl, zip);
@@ -4712,9 +5127,10 @@ namespace OfflineWissen
                 : Directory.GetDirectories(tmp).FirstOrDefault(d => Directory.Exists(Path.Combine(d, "app")));
             if (quelle == null || !File.Exists(Path.Combine(quelle, "app", "Server.cs")) || !File.Exists(Path.Combine(quelle, "app", "start.ps1")))
                 throw new Exception("Das Update-Paket ist unvollständig.");
+            // Vor dem Verschieben schreiben: so liegt bereit nie ohne version.txt da
+            File.WriteAllText(Path.Combine(quelle, "version.txt"), neu);
             if (Directory.Exists(UpdateBereit)) Directory.Delete(UpdateBereit, true);
             Directory.Move(quelle, UpdateBereit);
-            File.WriteAllText(Path.Combine(UpdateBereit, "version.txt"), neu);
             try { if (Directory.Exists(tmp)) Directory.Delete(tmp, true); } catch { }
             try { File.Delete(zip); } catch { }
             AktLog("Fieldbook " + neu + " heruntergeladen und bereitgelegt.");
@@ -4730,20 +5146,28 @@ namespace OfflineWissen
                 var u = progUpdate;
                 if (BereitVersion() != null && (u == null || !Bool(u, "verfuegbar"))) { Neustart(); return new Dictionary<string, object> { { "ok", true }, { "neustart", true }, { "neu", BereitVersion() } }; }
                 if (u == null || !Bool(u, "verfuegbar")) return new Dictionary<string, object> { { "fehler", "Keine neue Version gefunden." } };
+                var probe = UpdateSperre();
+                if (probe == null) return new Dictionary<string, object> { { "fehler", "Im Hintergrund läuft schon ein Update." } };
+                UpdateSperreFrei(probe);
                 abbrechen = false;
                 var j = new Job { Art = "programm-update", Titel = "Fieldbook " + Str(u, "neu") + " (Programm)", Gesamt = (long)Num(u, "bytes") };
                 jobs = new List<Job> { j };
                 warteschlange = false;
                 worker = new Thread(delegate ()
                 {
+                    var sperre = UpdateSperre();
+                    if (sperre == null) { j.Status = "fehler"; j.Fehler = "Im Hintergrund läuft schon ein Update."; return; }
                     j.Status = "laeuft";
+                    bool ok = false;
                     try
                     {
                         ProgrammUpdateLaden(j, Str(u, "zip"), Str(u, "sha"), Str(u, "neu"));
                         j.Status = "fertig";
-                        Neustart();
+                        ok = true;
                     }
                     catch (Exception e) { j.Status = abbrechen ? "abgebrochen" : "fehler"; j.Fehler = e.Message; Log("Programm-Update: " + e.Message); StatFehler("programmupdate", e.Message); }
+                    finally { UpdateSperreFrei(sperre); }
+                    if (ok) Neustart();
                 }) { IsBackground = true };
                 worker.Start();
                 return new Dictionary<string, object> { { "ok", true }, { "neu", Str(u, "neu") } };
@@ -5233,15 +5657,22 @@ namespace OfflineWissen
             while (gen == llmGen)
             {
                 Thread.Sleep(500);
-                if (llama == null) return;
-                if (llama.HasExited)
+                // Feld einmal lesen: StoppeKi kann es zwischendurch auf null setzen
+                var l = llama;
+                if (l == null) return;
+                if (l.HasExited)
                 {
                     string log = "";
                     try { log = File.ReadAllText(Path.Combine(Logs, "ki.log")); } catch { }
                     if (!zweiterVersuch && Regex.IsMatch(log, "reasoning-budget|invalid argument|unknown argument", RegexOptions.IgnoreCase))
                     {
                         zweiterVersuch = true;
-                        lock (Lk) llama = StarteDienst(exe, args, Path.Combine(Logs, "ki.log"));
+                        lock (Lk)
+                        {
+                            // Inzwischen gestoppt oder neu gestartet: nicht noch einmal starten
+                            if (gen != llmGen) return;
+                            llama = StarteDienst(exe, args, Path.Combine(Logs, "ki.log"));
+                        }
                         continue;
                     }
                     llmStatus = "fehler";
@@ -5266,7 +5697,8 @@ namespace OfflineWissen
             lock (Lk)
             {
                 llmGen++;
-                try { if (llama != null && !llama.HasExited) { llama.Kill(); llama.WaitForExit(5000); } } catch { }
+                var l = llama;
+                try { if (l != null && !l.HasExited) { l.Kill(); l.WaitForExit(5000); } } catch { }
                 llama = null;
                 llmStatus = "aus";
                 llmFehler = "";
@@ -5416,12 +5848,22 @@ namespace OfflineWissen
                         // gleiche Orte stehen in mehreren Dateien (z. B. DE.txt und cities15000.txt): nur einmal laden
                         if (!gesehen.Add(c[0])) continue;
                         long pop; long.TryParse(c[14], out pop);
+                        double lat, lon;
+                        // kaputte Zeile überspringen statt die ganze Ortsliste scheitern zu lassen
+                        if (!double.TryParse(c[4], NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
+                            || !double.TryParse(c[5], NumberStyles.Float, CultureInfo.InvariantCulture, out lon)) continue;
+                        string alt = (kl == 'P' || kl == 'T' || kl == 'H') ? c[3] : "";
+                        string[] normAlt = null;
+                        if (alt.Length > 0)
+                        {
+                            var teile = alt.Split(',');
+                            normAlt = new string[teile.Length];
+                            for (int i = 0; i < teile.Length; i++) normAlt[i] = Norm(teile[i]);
+                        }
                         var o = new Ort
                         {
-                            Name = c[1],
-                            Alt = (kl == 'P' || kl == 'T' || kl == 'H') ? c[3] : "",
-                            Lat = double.Parse(c[4], CultureInfo.InvariantCulture),
-                            Lon = double.Parse(c[5], CultureInfo.InvariantCulture),
+                            Name = c[1], NormName = Norm(c[1]), Alt = alt, NormAlt = normAlt,
+                            Lat = lat, Lon = lon,
                             Klasse = kl, Code = c[7], Land = c[8], Pop = pop
                         };
                         liste.Add(o);
@@ -5440,21 +5882,24 @@ namespace OfflineWissen
             var treffer = new List<KeyValuePair<double, object>>();
             foreach (var o in orte)
             {
-                string nn = Norm(o.Name);
+                string nn = o.NormName;
                 double score = 0;
                 string anzeige = o.Name;
                 // Stufen: exakter Name vor Wortanfang vor Teiltreffer (Gross-/Kleinschreibung egal)
                 if (nn == nq) score = 3000;
-                else if (nn.StartsWith(nq)) score = 2000;
+                else if (nn.StartsWith(nq, StringComparison.Ordinal)) score = 2000;
                 else if (nn.Contains(" " + nq) || nn.Contains("-" + nq)) score = 1000;
-                if (score < 3000 && o.Alt.Length > 0)
+                if (score < 3000 && o.NormAlt != null)
                 {
-                    foreach (var a in o.Alt.Split(','))
+                    int beste = -1;
+                    for (int i = 0; i < o.NormAlt.Length; i++)
                     {
-                        string na = Norm(a);
-                        double s2 = na == nq ? 2900 : na.StartsWith(nq) ? 1900 : 0;
-                        if (s2 > score) { score = s2; anzeige = a; }
+                        string na = o.NormAlt[i];
+                        double s2 = na == nq ? 2900 : na.StartsWith(nq, StringComparison.Ordinal) ? 1900 : 0;
+                        if (s2 > score) { score = s2; beste = i; }
                     }
+                    // Originalschreibweise nur für den Treffer heraussuchen
+                    if (beste >= 0) anzeige = o.Alt.Split(',')[beste];
                 }
                 if (score <= 0) continue;
                 // innerhalb der Stufe: Orte vor Strassen/Gebaeuden, dann Ortsart, dann Einwohner
@@ -5573,6 +6018,7 @@ namespace OfflineWissen
         {
             try { SicherSchreiben(Path.Combine(Daten, "einstellungen.json"), Json.Serialize(einst)); }
             catch (Exception e) { Log("Einstellungen speichern: " + e.Message); }
+            StatusCacheLeeren();
         }
 
         static string Str(Dictionary<string, object> d, string k)

@@ -67,6 +67,13 @@ function symFeld(name, klasse) {
   return el("span", { class: "feld" + (klasse ? " " + klasse : ""), "aria-hidden": "true" }, sym(name));
 }
 
+// Kästchen mit „an“ bzw. „aus“ daneben (Einstellungen); der Text folgt dem Haken
+function anAus(input) {
+  const text = el("span", {}, input.checked ? "an" : "aus");
+  input.addEventListener("change", () => { text.textContent = input.checked ? "an" : "aus"; });
+  return el("label", { class: "schalter" }, input, text);
+}
+
 // Abschnitt, der beim Anklicken nach unten aufklappt (Inhalte und Einrichtung). „offen“ merkt sich die
 // aufgeklappten Schlüssel, damit sie beim Neuzeichnen offen bleiben. Gibt { box, innen } zurück.
 // einzeln: nur ein Abschnitt in der Liste offen, beim Aufklappen gehen die anderen zu (wie in der Bibliothek).
@@ -100,19 +107,64 @@ function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts, einzeln) 
   return { box, innen };
 }
 
-// Schiebt eine gerade aufgeklappte Zeile sanft nach oben unter die Kopfzeile, während andere zuklappen
-// (Bewegung dauert 0,25 s). top: Lage der Zeile vor dem Klick.
+// Scrollen beim Aufklappen, so wenig wie möglich (Nutzer, 10. Nov. 2026):
+// 1. Passt der aufgeklappte Abschnitt dorthin, wo er nach dem Zuklappen der anderen von selbst steht: nicht scrollen.
+// 2. Sonst nur so weit, dass auch der nächste Abschnitt (sein Kopf) noch zu sehen ist.
+// 3. Reicht der Platz dafür nicht, steht der Kopf direkt unter der Kopfzeile.
+// Entschieden wird nach dem Zustand, wenn Auf- und Zuklappen fertig sind (dazwischen passt es oft kurz nicht, das
+// gab ein Zucken). Die Bewegung folgt dem Zuklappen der Abschnitte darüber, so läuft sie nur in eine Richtung.
+// top: Lage der Zeile vor dem Klick.
 function nachOben(knopf, top) {
+  if (!knopf.isConnected) return;
   const kopf = document.querySelector(".kopf");
-  const ziel = (kopf ? kopf.getBoundingClientRect().bottom : 0) + 12;
-  const start = performance.now(), dauer = 450;
+  const oben = (kopf ? kopf.getBoundingClientRect().bottom : 0) + 12;
+  // Unten zählt die feste Leiste mit (z. B. „Auswahl herunterladen“ bzw. „Neu herunterzuladen“)
+  const leiste = [...document.querySelectorAll(".summe")].find(x => x.offsetParent && getComputedStyle(x).position === "sticky");
+  const unten = window.innerHeight - (leiste ? leiste.offsetHeight : 0) - 12;
+  const box = knopf.parentElement;
+  const huelle = box && box.querySelector(":scope > .klapp-huelle");
+  const innen = huelle && huelle.querySelector(".klapp-innen");
+  const hoehe = knopf.offsetHeight + (innen ? innen.scrollHeight : 0);
+  // Abschnitte darüber, die gerade zuklappen: um so viel rutscht die Zeile von selbst nach oben
+  const oberhalb = [];
+  for (let s = box && box.previousElementSibling; s; s = s.previousElementSibling) {
+    const h = s.querySelector(":scope > .klapp-huelle");
+    if (h && h.offsetHeight > 0) oberhalb.push(h);
+  }
+  const rest = () => oberhalb.reduce((a, h) => a + h.offsetHeight, 0);
+  const zu = rest();
+  // Seite am Ende: die Zeile steht ohne Scrollen bei top - zu; höher scrollen als bis ganz oben bzw. ganz unten geht nicht
+  const wachsen = (innen ? innen.scrollHeight : 0) - (huelle ? huelle.offsetHeight : 0);
+  const docEnde = document.documentElement.scrollHeight - zu + wachsen;
+  const zeileDoc = top + window.scrollY - zu;
+  // Der nächste Abschnitt: Nachbar darunter, beim letzten der Liste der Abschnitt nach der übergeordneten Liste
+  // (z. B. nach „Beschäftigung & Lesen“ der Bereich „Karten“). Platz bis zu seinem Kopf samt Abstand.
+  let naechster = box && box.nextElementSibling;
+  if (!naechster && box && box.parentElement) { const obenBox = box.parentElement.closest(".klapp"); naechster = obenBox && obenBox.nextElementSibling; }
+  const naechsterKopf = naechster && (naechster.querySelector(":scope > .klapp-kopf") || null);
+  const extra = naechsterKopf ? naechsterKopf.getBoundingClientRect().bottom - box.getBoundingClientRect().bottom : 0;
+  const vonSelbst = top - zu;   // Lage nach dem Zuklappen, ohne zu scrollen
+  let ziel = vonSelbst >= oben && vonSelbst + hoehe <= unten ? vonSelbst
+    : Math.max(oben, Math.min(vonSelbst, unten - hoehe - extra));
+  ziel = Math.min(ziel, zeileDoc);                                              // scrollY ≥ 0
+  ziel = Math.max(ziel, zeileDoc - Math.max(0, docEnde - window.innerHeight));  // scrollY ≤ Maximum
+  // Bewegung reduzieren: sofort springen
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const d = knopf.getBoundingClientRect().top - ziel;
+    if (Math.abs(d) >= 1) window.scrollBy(0, d);
+    return;
+  }
+  const start = performance.now(), dauer = 300;
   const schritt = () => {
+    if (!knopf.isConnected) return;
     const t = Math.min(1, (performance.now() - start) / dauer);
-    const weich = 1 - Math.pow(1 - t, 3);
-    const soll = top + (ziel - top) * weich;
+    // Fortschritt: wie weit die Abschnitte darüber schon zu sind, sonst nach der Zeit
+    let p = zu > 0 ? 1 - rest() / zu : 1 - Math.pow(1 - t, 3);
+    if (t >= 1) p = 1;
+    const soll = top + (ziel - top) * p;
     const diff = knopf.getBoundingClientRect().top - soll;
     if (Math.abs(diff) >= 1) window.scrollBy(0, diff);
-    if (t < 1) requestAnimationFrame(schritt);
+    if (t < 1 || p < 1) requestAnimationFrame(schritt);
   };
   requestAnimationFrame(schritt);
 }
@@ -125,13 +177,26 @@ function stufenSchalter(stellungen, aktiv, onWahl, label) {
   const box = el("div", { class: "stufen" + (i < 0 ? " leer" : ""), role: "radiogroup", "aria-label": label, style: "--n:" + stellungen.length + ";--i:" + Math.max(0, i) },
     el("span", { class: "stufen-knopf", "aria-hidden": "true" }));
   stellungen.forEach((s, j) => {
-    const b = el("button", { type: "button", class: "stufen-seite" + (j === i ? " an" : ""), role: "radio", "aria-checked": String(j === i), disabled: !!s.gesperrt },
+    const b = el("button", { type: "button", class: "stufen-seite" + (j === i ? " an" : ""), role: "radio", "aria-checked": String(j === i), tabindex: j === i || (i < 0 && j === 0) ? "0" : "-1", disabled: !!s.gesperrt },
       el("span", { class: "stufen-name" }, s.text), s.unter ? el("small", {}, s.unter) : null);
+    b.addEventListener("keydown", (e) => {   // Pfeil links/rechts wechselt die Stellung
+      const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      const alle = [...box.querySelectorAll(".stufen-seite")];
+      for (let k = j + d; k >= 0 && k < alle.length; k += d) {
+        if (alle[k].disabled) continue;
+        e.preventDefault(); alle[k].focus(); alle[k].click(); break;
+      }
+    });
     b.addEventListener("click", () => {
       if (j === i) return;
       box.style.setProperty("--i", j);
       box.classList.remove("leer");
-      box.querySelectorAll(".stufen-seite").forEach((x, k) => x.classList.toggle("an", k === j));
+      box.querySelectorAll(".stufen-seite").forEach((x, k) => {
+        x.classList.toggle("an", k === j);
+        x.setAttribute("aria-checked", String(k === j));
+        x.tabIndex = k === j ? 0 : -1;
+      });
       setTimeout(() => onWahl(s.id), 220);   // Gleiten erst zeigen
     });
     box.append(b);
@@ -160,10 +225,15 @@ function variantenZeile(o) {
     o.knoepfe && o.knoepfe.length ? el("div", { class: "knopfreihe", style: "margin:0;align-items:center;flex-wrap:nowrap" }, ...o.knoepfe) : null);
 }
 
-// Zusammenfassung für einen zugeklappten Abschnitt: was installiert ist und was gerade ausgewählt ist
-function klappZusammenfassung(namen, ausgewaehlt) {
+// Zusammenfassung für einen zugeklappten Abschnitt: was installiert ist und was gerade ausgewählt ist.
+// fehlen (optional): Namen, die noch nicht installiert sind. Ist alles da, steht nur „Alles installiert“,
+// fehlen höchstens drei, steht „Es fehlt: …“ statt der langen Liste.
+function klappZusammenfassung(namen, ausgewaehlt, fehlen) {
   const teile = [];
-  teile.push(namen.length ? namen.join(", ") : "Noch nichts installiert");
+  if (!namen.length) teile.push("Noch nichts installiert");
+  else if (fehlen && !fehlen.length) teile.push("Alles installiert");
+  else if (fehlen && fehlen.length <= 3) teile.push("Es fehlt: " + fehlen.join(", "));
+  else teile.push(namen.join(", "));
   if (ausgewaehlt) teile.push(ausgewaehlt + " zum Laden ausgewählt");
   return teile.join(" · ");
 }
@@ -281,11 +351,18 @@ function landAuswahl(aktuell, onWahl) {
     if (!treffer.length) liste.append(el("div", { class: "leer" }, sp === "de" ? "Kein Land gefunden" : "No country found"));
     liste.hidden = false;
   };
-  feld.addEventListener("focus", () => { feld.select(); zeigen(); });
-  feld.addEventListener("input", zeigen);
+  let getippt = false;
+  feld.addEventListener("focus", () => { getippt = false; feld.select(); zeigen(); });
+  feld.addEventListener("input", () => { getippt = true; zeigen(); });
   feld.addEventListener("blur", () => { liste.hidden = true; if (aktuell) feld.value = name(aktuell); });
   feld.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); const b = liste.querySelector("button"); if (b) b.click(); feld.blur(); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Nur wirksam, wenn getippt wurde und genau ein Treffer übrig ist
+      const bs = liste.querySelectorAll("button");
+      if (getippt && bs.length === 1) bs[0].click();
+      feld.blur();
+    }
     if (e.key === "Escape") feld.blur();
   });
   return wrap;
@@ -302,10 +379,11 @@ async function aktualisierungSpeichern(akt, neu, sofort) {
 // Einstellungen für die automatische Aktualisierung der Inhalte (Assistent und Einstellungen)
 // sofort=true: Windows-Aufgaben direkt anlegen/entfernen, sonst erst beim Herunterladen im Assistenten.
 // opt.eingebettet: ohne eigenen Kasten und Überschrift, ohne den Schalter für Fieldbook-Versionen
-// (der steht in den Einstellungen beim Programm); opt.geaendert: wird nach jeder Änderung aufgerufen.
+// (außer mit opt.programm); opt.kurz: nur der Haken mit kurzer Erklärung (erster Schritt im Assistenten,
+// genauer einstellen kann man es später in den Einstellungen); opt.geaendert: nach jeder Änderung.
 function aktualisierungBox(akt, sofort, opt) {
   opt = opt || {};
-  const box = opt.eingebettet ? el("div") : el("div", { class: "karte-box", style: "margin-top:16px" });
+  const box = opt.eingebettet || opt.kurz ? el("div") : el("div", { class: "karte-box", style: "margin-top:16px" });
   const zeichne = () => {
     box.innerHTML = "";
     const setze = async (neu) => {
@@ -313,6 +391,15 @@ function aktualisierungBox(akt, sofort, opt) {
       zeichne();
       if (opt.geaendert) opt.geaendert();
     };
+    if (opt.kurz) {
+      box.append(el("div", { class: "einst-zeile", style: "border:0;padding-bottom:0" },
+        el("div", {}, el("b", {}, "Inhalte automatisch aktuell halten"),
+          el("small", {}, "Empfohlen, denn Wikipedia, Medizin-Wissen und Karten werden laufend verbessert.", el("br"),
+            "Windows prüft einmal pro Woche kurz nach Neuem, über Handy-Hotspots wird nie ohne Nachfrage geladen.", el("br"),
+            "Genauer einstellen kannst du das später in den Einstellungen.")),
+        anAus(el("input", { type: "checkbox", checked: akt.an, onchange: (e) => setze({ an: e.target.checked }) }))));
+      return;
+    }
     if (!opt.eingebettet) box.append(el("h2", { style: "margin-top:0" }, "Automatische Aktualisierung"));
     box.append(
       el("label", { class: "schalter" },
@@ -329,7 +416,7 @@ function aktualisierungBox(akt, sofort, opt) {
         return el("label", { class: "wahl" + (akt[feld] === wert ? " gewaehlt" : "") }, i,
           el("div", { class: "w-text" }, el("div", { class: "w-titel" }, titel), el("small", {}, text)));
       };
-      if (!opt.eingebettet) box.append(
+      if (!opt.eingebettet || opt.programm) box.append(
         el("label", { class: "schalter", style: "margin:4px 0 6px" },
           el("input", { type: "checkbox", checked: akt.programm !== false, onchange: (e) => setze({ programm: e.target.checked }) }),
           el("span", {}, "Dabei auch neue Fieldbook-Versionen mitladen")));
@@ -363,12 +450,26 @@ function dialog(titel, inhalt, knoepfe) {
   return new Promise((fertig) => {
     const hinter = el("div", { class: "dialog-hinter" });
     const titelId = "dialog-titel-" + (++dialogZaehler);
-    const schliessen = (wert) => { document.removeEventListener("keydown", taste, true); hinter.remove(); fertig(wert); };
+    const vorherFokus = document.activeElement;
+    const schliessen = (wert) => {
+      document.removeEventListener("keydown", taste, true); hinter.remove(); fertig(wert);
+      if (vorherFokus && vorherFokus.isConnected && vorherFokus.focus) vorherFokus.focus();   // Fokus zurück
+    };
     // Escape wirkt wie ein Klick auf den Hintergrund; nur beim obersten Dialog
     const taste = (e) => {
-      if (e.key !== "Escape") return;
       const alle = document.querySelectorAll(".dialog-hinter");
       if (alle[alle.length - 1] !== hinter) return;
+      if (e.key === "Tab") {   // Fokusfalle: Tab bleibt im Dialog
+        const f = [...box.querySelectorAll("a[href],button,input,select,textarea,[tabindex]")]
+          .filter(x => !x.disabled && x.tabIndex >= 0 && !x.closest("[hidden]"));
+        if (!f.length) { e.preventDefault(); return; }
+        const erst = f[0], letzt = f[f.length - 1];
+        if (!box.contains(document.activeElement)) { e.preventDefault(); erst.focus(); }
+        else if (e.shiftKey && document.activeElement === erst) { e.preventDefault(); letzt.focus(); }
+        else if (!e.shiftKey && document.activeElement === letzt) { e.preventDefault(); erst.focus(); }
+        return;
+      }
+      if (e.key !== "Escape") return;
       e.preventDefault();
       schliessen(null);
     };
@@ -398,20 +499,28 @@ async function verbindungPruefen(knopf) {
       el("span", { class: r.ok ? "ok-text" : "fehler-text" }, r.ok ? "erreichbar" : "gesperrt"))));
   const kopf = t.fehler ? "Der Test konnte nicht laufen: " + t.fehler
     : t.ok ? "Alle Adressen sind erreichbar." + (t.proxy ? " Verbunden über den Proxy " + t.proxy + "." : "")
-    : "Nicht alles ist erreichbar. Bei einem Werbeblocker, einer Firewall oder einem Jugendschutzfilter die gesperrten Adressen freigeben. In Firmen- und Schulnetzen hilft oft ein Proxy (Einstellungen → Internetverbindung).";
+    : "Nicht alles ist erreichbar. Bei einem Werbeblocker, einer Firewall oder einem Jugendschutzfilter die gesperrten Adressen freigeben. In Firmen- und Schulnetzen hilft oft ein Proxy (Einstellungen → Erweitert).";
   await dialog("Verbindungstest", el("div", {}, el("p", {}, kopf), liste), [{ text: "OK", wert: 1, haupt: true }]);
   return t;
 }
 
-// "Inhalte aktualisieren": suchen, bei getakteter Verbindung warnen, dann herunterladen
-async function jetztAktualisieren(knopf) {
+// "Inhalte aktualisieren": suchen, bei getakteter Verbindung warnen, dann herunterladen.
+// opt.programmNeu: gerade gefundene neue Fieldbook-Version (Einstellungen suchen beides zugleich)
+async function jetztAktualisieren(knopf, opt) {
+  opt = opt || {};
   const text = knopf.textContent;
   knopf.disabled = true;
   knopf.textContent = "Suche nach neuen Inhalten …";
   try {
     const a = await api("aktualisierung/pruefen", {});
     if (a.fehler) { await dialog("Keine Verbindung", "Die Suche nach neuen Inhalten hat nicht geklappt. Bitte die Internetverbindung prüfen.", [{ text: "OK", wert: 1, haupt: true }]); return null; }
-    if (!a.anzahl) { await dialog("Alles aktuell", "Es gibt nichts Neues. Alles ist auf dem neuesten Stand.", [{ text: "OK", wert: 1, haupt: true }]); return a; }
+    if (!a.anzahl && opt.programmNeu) {
+      await dialog("Neue Fieldbook-Version", el("p", {}, "Fieldbook " + opt.programmNeu + " ist verfügbar.", el("br"),
+        "Einspielen kannst du sie mit dem Knopf „Auf Version " + opt.programmNeu + " aktualisieren“.", el("br"),
+        "Die Inhalte sind auf dem neuesten Stand."), [{ text: "OK", wert: 1, haupt: true }]);
+      return a;
+    }
+    if (!a.anzahl) { await dialog("Alles aktuell", el("p", {}, "Es gibt nichts Neues.", el("br"), "Alles ist auf dem neuesten Stand."), [{ text: "OK", wert: 1, haupt: true }]); return a; }
     knopf.textContent = "Prüfe Verbindung …";
     const v = await api("verbindung").catch(() => ({ getaktet: false }));
     const liste = el("div", {},
@@ -441,7 +550,7 @@ async function jetztAktualisieren(knopf) {
 function neustartAnzeigen(neu) {
   const info = el("p", { class: "hinweis" }, "Fieldbook wird beendet und gleich wieder gestartet. Das dauert etwa 10 bis 30 Sekunden.");
   const hinter = el("div", { class: "dialog-hinter" },
-    el("div", { class: "dialog" }, el("h2", {}, "Fieldbook wird aktualisiert …"), info,
+    el("div", { class: "dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "neustart-titel" }, el("h2", { id: "neustart-titel" }, "Fieldbook wird aktualisiert …"), info,
       el("div", { class: "balken" }, el("div", { style: "width:100%;animation:none;opacity:.6" }))));
   if (document.querySelector(".dialog-hinter[data-neustart]")) return; // Anzeige läuft schon
   hinter.dataset.neustart = "1";
@@ -477,9 +586,20 @@ async function ladeKonfigSprache(name) {
 const Kiwix = {
   // Liste aller installierten Bücher aus dem Kiwix-Katalog.
   // Nur eine leere Liste, wenn wirklich nichts installiert ist; ist Fieldbook nicht erreichbar, gibt es einen Fehler (Exception).
+  _laeuft: null,   // laufende Katalog-Anfrage, wird geteilt
   async buecher(neu) {
     if (OW.buecher && OW.buecher.length && !neu) return OW.buecher;
     if (!OW.status) throw new Error("Kein Status von Fieldbook");
+    if (!Kiwix._laeuft) {
+      const p = Kiwix._ladeBuecher();
+      Kiwix._laeuft = p;
+      const frei = () => { if (Kiwix._laeuft === p) Kiwix._laeuft = null; };
+      p.then(frei, frei);   // bei Fehler verwerfen, der Aufrufer bekommt ihn trotzdem
+    }
+    return Kiwix._laeuft;
+  },
+
+  async _ladeBuecher() {
     if (!OW.status.bibliothek) return [];
     if (!OW.pakete) {
       try { const pk = await ladeKonfig("pakete"); OW.pakete = pk.pakete || []; OW.kategorien = pk.kategorien || []; }
@@ -536,7 +656,7 @@ const Kiwix = {
     return daten.filter(d => d.path && d.kind !== "pattern").map(d => ({
       // Kiwix liefert Titel teils mit HTML-Zeichen („&apos;“), die hier zu echten Zeichen werden
       titel: new DOMParser().parseFromString((d.value || d.label || "").replace(/<[^>]+>/g, ""), "text/html").documentElement.textContent,
-      url: "/kiwix/content/" + encodeURIComponent(buch.id) + "/" + d.path.replace(/^\//, ""),
+      url: "/kiwix/content/" + encodeURIComponent(buch.id) + "/" + d.path.replace(/^\//, "").replace(/[?#]|%(?![0-9a-fA-F]{2})/g, c => encodeURIComponent(c)),
       buch,
     }));
   },
@@ -677,13 +797,14 @@ const KI = {
 
   // Streaming-Chat. onText bekommt den bisher erzeugten Text.
   async chat(nachrichten, optionen, onText) {
+    const { signal, ...rest } = optionen || {};   // signal gehört an fetch, nicht in den Body
     const body = Object.assign({
       messages: nachrichten, stream: !!onText, temperature: 0.3, top_p: 0.9,
       chat_template_kwargs: { enable_thinking: false },
-    }, optionen || {});
+    }, rest);
     const r = await fetch("/llm/v1/chat/completions", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      signal: optionen && optionen.signal,
+      signal,
     });
     if (!r.ok) {
       let msg = "KI-Fehler " + r.status;
@@ -697,26 +818,35 @@ const KI = {
     }
     const leser = r.body.getReader();
     const dec = new TextDecoder();
-    let puffer = "", text = "";
+    let puffer = "", text = "", beendet = false;
+    const zeileAuswerten = (roh) => {
+      const zeile = roh.trim();
+      if (!zeile.startsWith("data:")) return;
+      const d = zeile.slice(5).trim();
+      if (d === "[DONE]") { beendet = true; return; }
+      try {
+        const j = JSON.parse(d);
+        const c = j.choices && j.choices[0];
+        const delta = c && c.delta;
+        if (delta && delta.content) { text += delta.content; onText(KI.ohneDenken(text)); }
+        if (c && c.finish_reason) beendet = true;
+        if (j.timings) Statistik.ki(j.timings); // kommt mit dem letzten Stück
+      } catch { }
+    };
     for (;;) {
       const { done, value } = await leser.read();
       if (done) break;
       puffer += dec.decode(value, { stream: true });
       let i;
       while ((i = puffer.indexOf("\n")) >= 0) {
-        const zeile = puffer.slice(0, i).trim();
+        const zeile = puffer.slice(0, i);
         puffer = puffer.slice(i + 1);
-        if (!zeile.startsWith("data:")) continue;
-        const d = zeile.slice(5).trim();
-        if (d === "[DONE]") continue;
-        try {
-          const j = JSON.parse(d);
-          const delta = j.choices && j.choices[0] && j.choices[0].delta;
-          if (delta && delta.content) { text += delta.content; onText(KI.ohneDenken(text)); }
-          if (j.timings) Statistik.ki(j.timings); // kommt mit dem letzten Stück
-        } catch { }
+        zeileAuswerten(zeile);
       }
     }
+    puffer += dec.decode();
+    if (puffer) zeileAuswerten(puffer);   // letzte Zeile ohne Zeilenumbruch
+    if (!beendet) throw new Error("Die KI wurde unterbrochen.");
     return KI.ohneDenken(text);
   },
 

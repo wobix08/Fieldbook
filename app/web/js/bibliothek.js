@@ -9,7 +9,12 @@ const Bibliothek = (() => {
   const kategorien = () => (OW.kategorien || []).concat([WEITERE]);
   const anzahlText = (n) => n === 1 ? "1 Paket" : n + " Pakete";
 
+  let startTimer = null, suchLauf = 0;
+  // decodeURIComponent wirft bei kaputten %-Folgen: dann die Adresse unverändert nehmen
+  const sicherDecode = (u) => { try { return decodeURIComponent(u); } catch { return u; } };
+
   async function zeigen(params) {
+    clearTimeout(startTimer);
     const q = params.get("q") || "";
     $("#bib-suche-feld").value = q;
     const regal = $("#regal");
@@ -24,12 +29,17 @@ const Bibliothek = (() => {
           s.bibliothekFehler ? el("p", { class: "fehlerbox", style: "margin-top:0" }, s.bibliothekFehler)
                              : el("p", { style: "margin-top:0" }, s.wissen + " Wissenspakete sind installiert. Die Bibliothek wird gerade gestartet …"),
           el("button", { class: "knopf knopf-klein", onclick: async () => { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, "Erneut versuchen")));
-        if (!s.bibliothekFehler) setTimeout(async () => { if (location.hash.startsWith("#bibliothek")) { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, 3000);
+        clearTimeout(startTimer);
+        if (!s.bibliothekFehler) startTimer = setTimeout(async () => { if (location.hash.startsWith("#bibliothek")) { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, 3000);
       } else regal.append(el("div", { class: "karte-box" }, "Es ist noch keine Bibliothek installiert. ", el("a", { href: "#inhalte" }, "Wissen herunterladen")));
       $("#bib-treffer").innerHTML = "";
       return;
     }
-    if (q) suchen(q, params.get("buch")); else $("#bib-treffer").innerHTML = "";
+    if (q) {
+      suchen(q, params.get("buch")).catch(e => {
+        $("#bib-treffer").replaceChildren(fehlerBox("Die Suche ist fehlgeschlagen.", () => zeigen(params), "Nochmal", e && e.message));
+      });
+    } else { suchLauf++; $("#bib-treffer").innerHTML = ""; }
     zeichneRegal(params, buecher);
   }
 
@@ -152,8 +162,10 @@ const Bibliothek = (() => {
   // q: Suchbegriff; nurBuch: nur in diesem Paket suchen (Suchfeld eines PDF-Pakets), dann mit mehr Treffern
   async function suchen(q, nurBuch) {
     const ziel = $("#bib-treffer");
+    const mein = ++suchLauf;                   // überholte Suchen werfen ihr Ergebnis weg
     ziel.innerHTML = '<p class="hinweis">Suche …</p>';
     let buecher = (await Kiwix.buecher()).filter(b => b.durchsuchen);
+    if (mein !== suchLauf) return;
     if (nurBuch) buecher = buecher.filter(b => b.id === nurBuch);
     // Mehr holen als gezeigt wird: Der Filter unten wirft schwache Treffer weg
     const anzahl = nurBuch ? 20 : 8;
@@ -167,7 +179,7 @@ const Bibliothek = (() => {
       const liste = [];
       let imTitel = false;
       for (const t of titel.concat(voll)) {
-        const k = decodeURIComponent(t.url).toLowerCase();
+        const k = sicherDecode(t.url || "").toLowerCase();
         if (gesehen.has(k) || NUTZERSEITE.test(k)) continue;
         gesehen.add(k);
         const wertung = passt(woerter, t);

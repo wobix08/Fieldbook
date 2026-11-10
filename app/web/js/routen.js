@@ -204,8 +204,10 @@ const Routen = (() => {
       const r = await fetch(url);
       const text = await r.text();
       if (nr !== anfrageNr) return;
+      if (r.status === 503) throw new Error("Die Routenplanung ist noch nicht eingerichtet. Unter Inhalte kannst du sie laden.");
       if (!r.ok || text.trim()[0] !== "{") throw new Error(fehlerText(text));
       geojson = JSON.parse(text);
+      if (!geojson.features || !geojson.features.length) throw new Error("Keine Route gefunden. Start oder Ziel liegt vielleicht abseits von Wegen: Punkt näher an eine Straße oder einen Weg setzen.");
       zeichneLinie();
       const pr = (geojson.features[0] || {}).properties || {};
       const meter = +pr["track-length"] || 0;
@@ -223,10 +225,12 @@ const Routen = (() => {
       }
       const b = new maplibregl.LngLatBounds();
       for (const c of geojson.features[0].geometry.coordinates) b.extend([c[0], c[1]]);
-      karte().fitBounds(b, { padding: { top: 60, bottom: 60, left: 380, right: 60 }, maxZoom: 16 });
+      karte().fitBounds(b, { padding: { top: 60, bottom: 60, left: innerWidth > 800 ? 380 : 40, right: 60 }, maxZoom: 16 });
     } catch (e) {
       if (nr !== anfrageNr) return;
-      if (status) status.textContent = e.message;
+      if (!status) return;
+      if (e instanceof TypeError) status.replaceChildren("Die Routenplanung ist gerade nicht erreichbar.", el("br"), "Bitte versuche es gleich noch einmal.");
+      else status.textContent = e.message;
     }
   }
 
@@ -258,12 +262,16 @@ const Routen = (() => {
   function zeichneLinie() {
     const k = karte();
     if (!k || !geojson) return;
-    if (k.getSource("route")) k.getSource("route").setData(geojson);
-    else {
-      k.addSource("route", { type: "geojson", data: geojson });
-      k.addLayer({ id: "route-rand", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.9 } });
-      k.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#1f6f6b", "line-width": 5 } });
-    }
+    // Während eines Stilwechsels wirft addSource; style.load zeichnet danach neu.
+    // (isStyleLoaded wäre auch beim Laden von Kacheln false und würde die Route verschlucken.)
+    try {
+      if (k.getSource("route")) k.getSource("route").setData(geojson);
+      else {
+        k.addSource("route", { type: "geojson", data: geojson });
+        k.addLayer({ id: "route-rand", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.9 } });
+        k.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#1f6f6b", "line-width": 5 } });
+      }
+    } catch (e) { /* Stil lädt gerade neu: style.load zeichnet die Route gleich nach */ }
   }
 
   function loeschen() {

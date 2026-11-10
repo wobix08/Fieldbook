@@ -132,6 +132,13 @@ button.zahnrad { border: 0; background: none; cursor: pointer; line-height: 1; }
 .menue small { color: var(--text2); }
 .akku-menue { width: 300px; }
 .akku-text { padding: 4px 12px 6px; line-height: 1.45; }
+/* Hell/Dunkel steht in den Einstellungen; in der Kopfzeile nur während der ersten Einrichtung */
+#thema-knopf { display: none; }
+/* Erste Einrichtung: oben nur Logo, Hell/Dunkel und Ausschalten, bis der Assistent fertig ist */
+.einrichtung .hauptnav, .einrichtung #download-pill, .einrichtung #ki-pill, .einrichtung #akku-box, .einrichtung .kopf a.zahnrad { display: none !important; }
+.einrichtung #thema-knopf { display: inline-grid; }
+.einrichtung .kopf-status { grid-column: 3; }
+.einrichtung .marke { pointer-events: none; }
 /* Schmale Fenster: Das Menü zeigt nur noch Text (nie nur Symbole), alles rückt enger */
 @media (max-width: 1400px) {
   .kopf-status .pill .sym { display: none; }
@@ -160,6 +167,7 @@ button.zahnrad { border: 0; background: none; cursor: pointer; line-height: 1; }
   .marke .logo { width: 24px; height: 24px; }
   .hauptnav { grid-column: 1 / -1; grid-row: 2; justify-content: center; flex-wrap: wrap; gap: 0 2px; }
   .hauptnav a { padding: 5px 9px; font-size: .95rem; }
+  .einrichtung .kopf-status { grid-column: 2; }
 }
 
 .banner { padding: 10px 18px; background: var(--gelb-hell); color: var(--gelb); border-bottom: 1px solid var(--linie); }
@@ -375,7 +383,29 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .klapp-abschnitt .feld.gross { width: 38px; height: 38px; border-radius: 10px; }
 .klapp-abschnitt .feld.gross .sym { width: 21px; height: 21px; }
 .klapp-abschnitt small.klapp-unter { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.klapp-abschnitt.auf small.klapp-unter { display: none; }
+/* Die Zusammenfassung unter dem Titel bleibt auch aufgeklappt stehen, der Kopf ändert seine Höhe nicht (Nutzer) */
+/* Einstellungen: Zeilen unter dem Kopf so weit eingerückt wie der Kopf selbst */
+.einst-liste .klapp-abschnitt-innen { padding: 10px 16px 4px; }
+.einst-liste .klapp-abschnitt-innen h3 { margin: 14px 0 8px; }
+/* Inhalte: Kategorien im Bereich Wissen */
+.klapp-abschnitt-innen > .klapp-liste-abschnitte { margin-bottom: 0; padding-left: 28px; }
+/* Inhalte und Assistent: Nicht installiert und nicht ausgewählt = gestrichelter Rahmen (Nutzer, 10. Nov. 2026).
+   Etwas heller als die normale Linie, sonst ist die Strichelung im dunklen Design kaum zu sehen. Nicht bei Auswahlknöpfen (KI). */
+:is(#inhalte-liste, #setup-inhalt) .wahl:not(.installiert):not(.gewaehlt):not(:has(input[type="radio"])) {
+  border-style: dashed; border-color: color-mix(in srgb, var(--text2) 35%, transparent);
+}
+:is(#inhalte-liste, #setup-inhalt) .wahl:not(.installiert):not(.gewaehlt):not(:has(input[type="radio"])):hover { border-color: var(--akzent); }
+/* Wissens-Kategorien (Inhalte: im Bereich Wissen, Assistent: Schritt Wissen): Eine aufgeklappte Kategorie ist mit
+   ihren Paketen ein gemeinsamer Kasten (dezenter grauer Rahmen, dunklerer Grund, Pakete eingerückt); grün ist nur der
+   Kopf. So sieht man, wo sie endet und die nächste beginnt. Nicht bei den großen Bereichen, nicht in den Einstellungen (Nutzer). */
+:is(.klapp-abschnitt-innen, #setup-inhalt) > .klapp-liste-abschnitte > .klapp-abschnitt.auf {
+  border: 1px solid var(--linie); border-radius: var(--radius); background: var(--bg);
+}
+/* Der Kopf liegt mit seinem grünen Rahmen ringsum vollständig über dem grauen Rahmen (Nutzer) */
+:is(.klapp-abschnitt-innen, #setup-inhalt) > .klapp-liste-abschnitte > .klapp-abschnitt.auf > .klapp-kopf {
+  position: relative; z-index: 1; margin: -1px -1px 0; width: calc(100% + 2px); box-shadow: none;
+}
+:is(.klapp-abschnitt-innen, #setup-inhalt) > .klapp-liste-abschnitte > .klapp-abschnitt.auf > .klapp-huelle > .klapp-innen > .klapp-abschnitt-innen { padding: 12px 14px 14px 30px; }
 .klapp-abschnitt-innen { padding: 12px 2px 10px; }
 .klapp-abschnitt-innen > .wahl:last-child { margin-bottom: 0; }
 /* Suchtreffer je Paket in einem eigenen Kasten, Kopf mit Bild, Name und Anzahl */
