@@ -6,6 +6,15 @@
 <title>Fieldbook</title>
 <link rel="icon" href="icon.svg?v=fieldbook" type="image/svg+xml">
 <link rel="stylesheet" href="app.css">
+<script>
+// Gewähltes Farbschema vor dem ersten Zeichnen setzen (sonst blitzt bei „Hell“ kurz Dunkel auf).
+// Werte wie in wendeThemaAn (einstellungen.js): "dark", "light" oder "system" (dann kein data-theme).
+try {
+  var t = localStorage.getItem("thema");
+  if (t === "system") document.documentElement.removeAttribute("data-theme");
+  else if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+} catch (e) { }
+</script>
 </head>
 <body>
 <header class="kopf">

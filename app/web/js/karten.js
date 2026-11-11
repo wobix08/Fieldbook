@@ -71,14 +71,16 @@ const Karten = (() => {
     maxZoom = Math.max(...kartenListe.map(k => k.maxZoom));
   }
 
-  // Kacheln, die keine Datei enthält, sind leer (dort ist dann nur der Hintergrund zu sehen)
-  async function holeKachel(z, x, y) {
+  // Kacheln, die keine Datei enthält, sind leer (dort ist dann nur der Hintergrund zu sehen).
+  // Lesefehler werden nicht verschluckt: sie werfen, damit MapLibre die Kachel später neu lädt.
+  async function holeKachel(z, x, y, signal) {
     const n = 2 ** z, lon = (v) => v / n * 360 - 180;
     const lat = (v) => Math.atan(Math.sinh(Math.PI * (1 - 2 * v / n))) * 180 / Math.PI;
     const w = lon(x), o = lon(x + 1), nord = lat(y), sued = lat(y + 1);
     for (const k of kartenListe) {
       if (z > k.maxZoom || z < k.minZoom || o < k.bbox[0] || w > k.bbox[2] || nord < k.bbox[1] || sued > k.bbox[3]) continue;
-      const r = await kartenDatei(k.id).getZxy(z, x, y).catch(() => null);
+      if (signal && signal.aborted) throw new DOMException("Abgebrochen", "AbortError");
+      const r = await kartenDatei(k.id).getZxy(z, x, y, signal);
       if (r && r.data) return r.data;
     }
     return null;
@@ -181,9 +183,9 @@ const Karten = (() => {
   }
 
   function erstelle() {
-    maplibregl.addProtocol("fieldbook", async (params) => {
+    maplibregl.addProtocol("fieldbook", async (params, abbruch) => {
       const [z, x, y] = params.url.split("/").slice(-3).map(Number);
-      const data = await holeKachel(z, x, y);
+      const data = await holeKachel(z, x, y, abbruch && abbruch.signal);
       return { data: data ? new Uint8Array(data) : new Uint8Array(0) };
     });
 
@@ -303,8 +305,10 @@ const Karten = (() => {
   function markerWeg() { poiMarker.forEach(m => m.remove()); poiMarker = []; }
 
   // Live: nach dem Verschieben oder Zoomen neu suchen (nicht nach eigenen Kamerafahrten)
-  function nachBewegung() {
-    if (eigeneBewegung) { eigeneBewegung = false; return; }
+  function nachBewegung(e) {
+    // Vom Nutzer ausgelöste Bewegung (originalEvent) zählt immer; ein hängender Merker blockiert sie nicht
+    if (e && e.originalEvent) eigeneBewegung = false;
+    else if (eigeneBewegung) { eigeneBewegung = false; return; }
     if (!aktiveKat) return;
     clearTimeout(nachsuchen);
     nachsuchen = setTimeout(suchen, 350);
@@ -352,13 +356,17 @@ const Karten = (() => {
       || kartenListe.find(k => k.id === "welt") || kartenListe[0];
     try {
       z = quelle.maxZoom;
-      liste = passend(await poisImBereich(z, w, s, o, n)).filter(p => p.lon >= w && p.lon <= o && p.lat >= s && p.lat <= n);
+      const erste = await poisImBereich(z, w, s, o, n, lauf);
+      if (!erste) return; // inzwischen neu gesucht
+      liste = passend(erste).filter(p => p.lon >= w && p.lon <= o && p.lat >= s && p.lat <= n);
       // Im Ausschnitt nichts: in Ringen um die Mitte weitersuchen
       if (!liste.length) {
         for (radius of RINGE_KM) {
           if (lauf !== suchLauf) return;
           const rLat = radius / 111.32, rLon = radius / (111.32 * Math.cos(mitte.lat * Math.PI / 180));
-          liste = passend(await poisImBereich(z, mitte.lng - rLon, mitte.lat - rLat, mitte.lng + rLon, mitte.lat + rLat)).filter(p => p.dist <= radius);
+          const ring = await poisImBereich(z, mitte.lng - rLon, mitte.lat - rLat, mitte.lng + rLon, mitte.lat + rLat, lauf);
+          if (!ring) return;
+          liste = passend(ring).filter(p => p.dist <= radius);
           if (liste.length) break;
         }
       }
@@ -443,11 +451,12 @@ const Karten = (() => {
   }
 
   // Minimaler Leser für Vektorkacheln (Mapbox Vector Tile, Protobuf): nur Punkte der Ebene "pois"
+  const dekoder = new TextDecoder();
   function kachelPois(buf, z, tx, ty) {
     let pos = 0;
     const varint = () => { let v = 0, s = 1, b; do { b = buf[pos++]; v += (b & 127) * s; s *= 128; } while (b >= 128); return v; };
     const ueberspringe = (typ) => { if (typ === 0) varint(); else if (typ === 1) pos += 8; else if (typ === 2) pos += varint(); else if (typ === 5) pos += 4; };
-    const text = (ende) => new TextDecoder().decode(buf.subarray(pos, ende));
+    const text = (ende) => dekoder.decode(buf.subarray(pos, ende));
     const gepackt = (ende) => { const a = []; while (pos < ende) a.push(varint()); return a; };
     const ergebnis = [];
     while (pos < buf.length) {
@@ -459,7 +468,10 @@ const Karten = (() => {
       const keys = [], werte = [], features = [];
       while (pos < ende) {
         const k = varint(), f = k >> 3, t = k & 7;
-        if (f === 1 && t === 2) { const e = varint() + pos; name = text(e); pos = e; }
+        if (f === 1 && t === 2) {
+          const e = varint() + pos; name = text(e); pos = e;
+          if (name !== "pois") { pos = ende; break; } // andere Ebene: Rest nicht decodieren
+        }
         else if (f === 3 && t === 2) { const e = varint() + pos; keys.push(text(e)); pos = e; }
         else if (f === 5 && t === 0) extent = varint();
         else if (f === 2 && t === 2) { const l = varint(); features.push([pos, pos + l]); pos += l; }
@@ -511,7 +523,8 @@ const Karten = (() => {
   }
 
   // Hell/Dunkel gewechselt: Kartenstil anpassen
-  function themaGeaendert() { if (karte) karte.setStyle(stil()); }
+  // (ohne Diff, sonst gehen die Routen-Ebenen verloren; style.load zeichnet die Route neu)
+  function themaGeaendert() { if (karte) karte.setStyle(stil(), { diff: false }); }
 
   return { zeigen, sucheOrt, themaGeaendert, get karte() { return karte; } };
 })();

@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
 
-### **[Fieldbook 0.8.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.0/Fieldbook-0.8.0.zip)**
+### **[Fieldbook 0.8.1 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.1/Fieldbook-0.8.1.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -57,7 +57,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.0/Fieldbook-0.8.0.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.1 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.1/Fieldbook-0.8.1.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -101,8 +101,8 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
 
 - **Der komplette Quellcode liegt in diesem Repository**\
   Es gibt keine versteckten Teile.\
-  Auch die Startdatei `Fieldbook.exe` wird aus [`tools/Starter.cs`](tools/Starter.cs) gebaut (rund 90 Zeilen).\
-  Sie macht nur eines: `app\Start.bat` starten.
+  Auch die Startdatei `Fieldbook.exe` wird aus [`tools/Starter.cs`](tools/Starter.cs) gebaut (rund 300 Zeilen).\
+  Sie startet `app\Start.bat` und zeigt ein kleines Startfenster, bis Fieldbook im Browser offen ist.
 - **Ohne .exe starten**\
   Wer keine .exe starten möchte, kann stattdessen `app\Start.bat` doppelklicken.\
   Das ist eine lesbare Textdatei, genau wie der restliche Programmcode in `app\`.\
@@ -137,7 +137,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.8.0.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.8.1.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -311,7 +311,8 @@ Das kann nur die IT freigeben.
   Falls nötig, lässt sich unter *Einstellungen → Erweitert* ein eigener eintragen (z. B. `proxy.schule.de:8080`).
 - **Ohne Internet**\
   Pakete, Karten und KI-Modelle lassen sich auch von einem USB-Stick oder einem anderen Ordner übernehmen (*Inhalte → Von USB-Stick oder Ordner übernehmen*).\
-  So kann man zum Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.
+  So kann man zum Beispiel einen zweiten Laptop bestücken, ohne alles neu zu laden.\
+  Wissenspakete, die nicht aus dem Fieldbook-Katalog stammen, sind dabei nicht vorausgewählt und bekommen eine Warnung.
 
 Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbeblocker):
 

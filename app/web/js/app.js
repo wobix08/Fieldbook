@@ -69,12 +69,18 @@ async function ansichtFehler(ziel, e) {
   // Kommt Fieldbook wieder, baut aktualisiereStatus die Seite selbst neu auf; sonst hier
   const box = fehlerBox(text, async () => { const weg = OW.nichtErreichbar; await aktualisiereStatus(); if (!weg || OW.nichtErreichbar) navigiere(); }, null, e && e.message);
   box.classList.add("ansicht-fehler");
-  box.style.margin = "16px 0";
+  // Gleiche Breite wie der Seiteninhalt (.spalte)
+  box.style.maxWidth = "1100px";
+  box.style.margin = "16px auto";
   sek.prepend(box);
 }
 
 // Statusabfrage: nie zwei zugleich, mit Frist; eine ältere Antwort überschreibt keine neuere
-let statusLauf = null, statusZaehler = 0, statusBeendet = false, statusTimer = null, schnellTimer = null;
+let statusLauf = null, statusZaehler = 0, statusBeendet = false, statusTimer = null, schnellTimer = null, statusFehler = 0;
+
+// Macht laufende Statusabfragen ungültig (vor und nach einer Änderung per POST aufrufen), damit eine ältere Antwort
+// den frischen Stand nicht überschreibt
+function statusUngueltig() { statusZaehler++; }
 function aktualisiereStatus() {
   if (statusBeendet) return Promise.resolve(null);
   if (!statusLauf) statusLauf = holeStatus().finally(() => { statusLauf = null; });
@@ -84,9 +90,10 @@ function aktualisiereStatus() {
 async function holeStatus() {
   const nr = ++statusZaehler;
   try {
-    const r = await fetch("/api/status", { signal: AbortSignal.timeout(4000) });
+    const r = await fetch("/api/status", { signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error("Server antwortet mit " + r.status);
     const s = await r.json();
+    statusFehler = 0;
     if (nr !== statusZaehler) return OW.status || s;
     // Fieldbook antwortet wieder: eine Fehlerseite von eben neu aufbauen
     const warWeg = OW.nichtErreichbar;
@@ -96,6 +103,7 @@ async function holeStatus() {
     // Fieldbook wurde neu gestartet und nutzt diesen Tab weiter: einmal frisch laden
     if (vorher && vorher.start && s.start && vorher.start !== s.start && !document.querySelector(".dialog-hinter[data-neustart]")) { location.reload(); return s; }
     OW.status = s;
+    OW.statusZeit = Date.now();
     if (vorher && vorher.bibliothek !== s.bibliothek) OW.buecher = null;
     zeigeKopfStatus(s);
     statistikNachfragen(s);
@@ -103,6 +111,8 @@ async function holeStatus() {
     return s;
   } catch (e) {
     if (statusBeendet) return null;
+    // Ein einzelner Fehlschlag (z. B. weil die KI gerade rechnet) zählt nicht: kurz darauf noch einmal fragen
+    if (++statusFehler < 2) { setTimeout(aktualisiereStatus, 1500); return null; }
     OW.nichtErreichbar = true;
     const p = $("#ki-pill");
     if (p) pillSetzen(p, "weg", () => { p.textContent = "Fieldbook antwortet nicht"; p.className = "pill fehler"; });
@@ -115,6 +125,21 @@ function pillSetzen(p, sig, bau) {
   if (p.dataset.sig === sig) return;
   p.dataset.sig = sig;
   bau();
+}
+
+// Fehlerhinweis als Dialog (für Fehler in Klick-Handlern); jeder Satz in eigener Zeile, die Meldung des Servers klein darunter
+function zeigeFehler(text, e) {
+  return dialog("Hinweis", el("div", {}, zeilen(text), e && e.message ? [el("br"), el("small", {}, e.message)] : null),
+    [{ text: "OK", wert: 1, haupt: true }]);
+}
+
+// Hardware-Angaben (langsame Abfrage): einmal je Seitenladen merken. maxAlterMs: Seiten, die den freien Speicherplatz
+// (freiGB) zeigen, fragen nach spätestens dieser Zeit neu; ohne Angabe gilt der gemerkte Wert immer.
+function holeHardware(maxAlterMs) {
+  const alt = maxAlterMs == null ? Infinity : maxAlterMs;
+  if (OW.hw && Date.now() - OW.hwZeit <= alt) return Promise.resolve(OW.hw);
+  if (!OW.hwLauf) OW.hwLauf = api("hardware").then(h => { OW.hw = h; OW.hwZeit = Date.now(); return h; }).finally(() => { OW.hwLauf = null; });
+  return OW.hwLauf;
 }
 
 function zeigeKopfStatus(s) {
@@ -149,7 +174,8 @@ function zeigeKopfStatus(s) {
         !a.netz && a.restMinuten > 0 ? el("span", { class: "lang" }, " · " + akkuZeit(a.restMinuten)) : "");
       ap.className = "pill" + (akkuWarn ? (a.prozent <= 15 ? " fehler" : " warn") : "");
     });
-    if (!$("#akku-liste").hidden) fuelleAkkuMenue();
+    // Offenes Menü nur neu bauen, wenn sich sein Inhalt ändert (sonst gehen Klicks verloren)
+    if (!$("#akku-liste").hidden && $("#akku-liste").dataset.sig !== akkuMenueSig(s)) fuelleAkkuMenue();
   }
 
   // Hinweis bei schwachem Akku
@@ -186,7 +212,10 @@ function zeigeKopfStatus(s) {
 }
 
 async function schalteKi(an) {
-  try { OW.status = await api("ki", { an }); zeigeKopfStatus(OW.status); } catch (e) { alert(e.message); }
+  statusUngueltig();
+  try { OW.status = await api("ki", { an }); OW.statusZeit = Date.now(); zeigeKopfStatus(OW.status); return true; }
+  catch (e) { await zeigeFehler("Die KI konnte nicht umgeschaltet werden.", e); aktualisiereStatus(); return false; }
+  finally { statusUngueltig(); }
 }
 
 // Restzeit des Akkus: kurz für die Kopfzeile, lang für das Menü
@@ -198,8 +227,13 @@ function akkuZeit(min, lang) {
 }
 
 // Akku-Menü: Restzeit ausgeschrieben, Spartipps, Sparmodus
+function akkuMenueSig(s) {
+  const a = s.akku || {};
+  return [a.netz, a.prozent, a.restMinuten, s.sparmodus, !!s.modell].join("|");
+}
 function fuelleAkkuMenue() {
   const s = OW.status || {}, a = s.akku || {};
+  $("#akku-liste").dataset.sig = akkuMenueSig(s);
   const text = (...t) => el("div", { class: "akku-text" }, ...t);
   const teile = [el("div", { class: "menue-titel" }, a.netz ? "Am Stromnetz" : "Akku " + a.prozent + " %")];
   if (a.netz) teile.push(text("Der Akku ist zu " + a.prozent + " % geladen."));
@@ -258,7 +292,12 @@ function andereMenuesZu(liste) { MENUES.forEach(m => { if (m.liste !== liste) m.
       teile.push(aktiv || !m.installiert ? el("button", { disabled: true, class: aktiv ? "menue-aktiv" : null }, ...text)
         : eintrag(text, async () => {
           knopf.textContent = "KI wechselt …"; knopf.className = "pill warn"; knopf.dataset.sig = "";
-          OW.status = await api("einstellungen", { modell: m.id }); zeigeKopfStatus(OW.status);
+          statusUngueltig();
+          try { OW.status = await api("einstellungen", { modell: m.id }); }
+          catch (e) { await zeigeFehler("Die KI konnte nicht gewechselt werden.", e); }
+          finally { statusUngueltig(); }
+          if (OW.status) zeigeKopfStatus(OW.status);
+          aktualisiereStatus();
         }));
     }
     if (s.modell) teile.push(el("hr"), s.sparmodus
@@ -355,12 +394,12 @@ window.addEventListener("hashchange", navigiere);
 })();
 
 (async function init() {
-  const s = await aktualisiereStatus();
-  await Land.laden();
+  let [s] = await Promise.all([aktualisiereStatus(), Land.laden()]);
+  if (!s) s = await aktualisiereStatus(); // ein erster Fehlschlag zählt noch nicht als „nicht erreichbar“: einmal gleich nachfragen
   // Die Oberfläche ist Deutsch (Land.sprache() gilt nur für Inhalte)
   document.documentElement.lang = "de";
-  if (s && !s.setupFertig && s.wissen === 0 && !s.modell && !location.hash) location.hash = "#setup";
-  navigiere();
+  if (s && !s.setupFertig && s.wissen === 0 && !s.modell && !location.hash) location.hash = "#setup"; // löst hashchange und damit navigiere() aus
+  else navigiere();
   // Bei verstecktem Tab nur jede 4. Runde fragen
   let runde = 0;
   statusTimer = setInterval(() => { if (document.hidden && ++runde % 4) return; aktualisiereStatus(); }, 5000);

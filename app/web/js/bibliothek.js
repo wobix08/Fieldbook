@@ -189,6 +189,7 @@ const Bibliothek = (() => {
       }
       return { b, imTitel, liste: liste.slice(0, nurBuch ? 15 : 6) };
     }));
+    if (mein !== suchLauf) return; // inzwischen neu gesucht
     // Pakete, bei denen das Suchwort im Titel eines Treffers steht, zuerst (sonst Reihenfolge wie im Regal)
     gruppen.sort((x, y) => (y.imTitel ? 1 : 0) - (x.imTitel ? 1 : 0));
     ziel.innerHTML = "";
@@ -413,19 +414,20 @@ const Bibliothek = (() => {
     startTitel = params.get("titel") || "";
     const p = url.match(/^\/kiwix\/viewer#([^/]+)/) || url.match(/^\/kiwix\/content\/([^/]+)/);
     startPaket = p ? decodeURIComponent(p[1]) : null;
+    const paket = startPaket, lauf = ++leseLauf; // beides lokal merken: ein späterer Aufruf löst dieses Warten ab
     $("#lese-titel").textContent = startTitel;
     $("#lese-neu").href = url;
     // Von der Paket-Startseite: zufälligen Artikel zeigen oder suchen, sobald der Viewer bereit ist.
     // Die Startseite des Pakets wird dabei ersetzt (location.replace statt gotoRandomPage/performSearch des
     // Viewers, die einen Verlaufseintrag anlegen): Sonst führte der erste Klick auf „Zurück“ nur zu ihr.
     const suche = params.get("suche"), zufall = params.get("zufall");
-    if ((suche || zufall) && startPaket) wennViewerBereit((w) => {
+    if ((suche || zufall) && paket) wennViewerBereit((w) => {
       const innen = w.document.getElementById("content_iframe");
-      const buch = encodeURIComponent(startPaket);
+      const buch = encodeURIComponent(paket);
       if (suche) w.document.getElementById("kiwixsearchbox").value = suche;
       innen.contentWindow.location.replace(zufall ? "/kiwix/random?content=" + buch
         : "/kiwix/search?books.name=" + buch + "&pattern=" + encodeURIComponent(suche));
-    });
+    }, lauf);
   }
 
   // Bis der neue Artikel da ist, das Lesefenster ausblenden: Sonst blitzt erst die leere weiße Seite
@@ -453,14 +455,16 @@ const Bibliothek = (() => {
     if (innenAlt) innenAlt.addEventListener("load", geladen);
   }
 
-  function wennViewerBereit(fn, versuche) {
+  let leseLauf = 0;
+  function wennViewerBereit(fn, lauf, versuche) {
+    if (lauf !== leseLauf) return; // inzwischen anderes Paket geöffnet: nichts mehr tun
     const w = viewer();
     const innen = w && w.document.getElementById("content_iframe");
     // Erst wenn die Startseite des Pakets fertig geladen ist, sonst überschreibt sie Zufall und Suche wieder
     let geladen = false;
     try { geladen = innen.contentDocument.readyState === "complete" && innen.contentWindow.location.pathname.indexOf("/content/") >= 0; } catch { }
-    if (w && geladen) { setTimeout(() => fn(w), 300); return; }
-    if ((versuche || 0) < 50) setTimeout(() => wennViewerBereit(fn, (versuche || 0) + 1), 200);
+    if (w && geladen) { setTimeout(() => { if (lauf === leseLauf) fn(w); }, 300); return; }
+    if ((versuche || 0) < 50) setTimeout(() => wennViewerBereit(fn, lauf, (versuche || 0) + 1), 200);
   }
 
   // Videos und Töne im Lesefenster anhalten (auch in den Rahmen des Kiwix-Viewers), damit sie nach

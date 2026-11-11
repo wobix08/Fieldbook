@@ -76,7 +76,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.0";
+        public const string Version = "0.8.1";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -90,6 +90,8 @@ namespace OfflineWissen
         static List<Job> jobs = new List<Job>();
         static Thread worker;
         static volatile bool abbrechen;
+        // Fieldbook wird beendet oder neu gestartet: laufende Downloads gelten nicht als Fehler und bleiben gemerkt
+        static volatile bool beenden;
         static readonly HashSet<Process> jobProzesse = new HashSet<Process>();
 
         static void ProzessMerken(Process p, bool an) { lock (jobProzesse) { if (an) jobProzesse.Add(p); else jobProzesse.Remove(p); } }
@@ -97,6 +99,17 @@ namespace OfflineWissen
         static void AlleDownloadsStoppen()
         {
             lock (jobProzesse) foreach (var p in jobProzesse) try { if (!p.HasExited) p.Kill(); } catch { }
+        }
+
+        // Vor dem Beenden: Warteschlange ein letztes Mal merken (laufende als offen), danach bleibt die Datei unverändert
+        static void BeendenVorbereiten()
+        {
+            lock (Lk)
+            {
+                if (beenden) return;
+                WarteschlangeMerken();
+                beenden = true;
+            }
         }
 
         static Dictionary<string, object> einst;
@@ -174,6 +187,11 @@ namespace OfflineWissen
             new Thread(FeedbackHintergrund) { IsBackground = true }.Start();
             // Wochenpaket der Nutzungsstatistik (nur mit Zustimmung)
             new Thread(StatHintergrund) { IsBackground = true }.Start();
+            // Kiwix-Katalog vorladen, damit Inhalte, Einstellungen und Assistent nicht darauf warten
+            new Thread(delegate ()
+            {
+                try { LadeKiwixKatalog(false); } catch (Exception e) { Log("Katalog vorladen: " + e.Message); }
+            }) { IsBackground = true, Priority = ThreadPriority.BelowNormal }.Start();
 
             // Nach einem Neustart durch das Programm-Update ist der Browser schon offen
             string neustartMarke = Path.Combine(Daten, "cache", "neustart");
@@ -185,7 +203,8 @@ namespace OfflineWissen
             if (Environment.GetEnvironmentVariable("OW_KEIN_BROWSER") == null && !nachNeustart)
                 new Thread(delegate ()
                 {
-                    for (int i = 0; i < 5 && !TabOffen(10); i++) Thread.Sleep(500);
+                    // Nur warten, wenn sich vor Kurzem ein Tab gemeldet hat (daten/cache/tab.txt), sonst gleich öffnen
+                    if (TabKuerzlich()) for (int i = 0; i < 25 && !TabOffen(10); i++) Thread.Sleep(100);
                     if (TabOffen(10) && BrowserNachVorne()) Log("Der offene Fieldbook-Tab im Browser wird weiter benutzt.");
                     else BrowserOeffnen();
                     StartStatus("fertig");
@@ -247,6 +266,33 @@ namespace OfflineWissen
             return t > 0 && (DateTime.UtcNow - new DateTime(t, DateTimeKind.Utc)).TotalSeconds < sekunden;
         }
 
+        // Letzter Tab-Kontakt wird in daten/cache/tab.txt gemerkt (höchstens alle 30 s geschrieben), damit der
+        // nächste Start weiß, ob ein alter Tab noch offen sein kann
+        static string TabDatei { get { return Path.Combine(Daten, "cache", "tab.txt"); } }
+        static long tabGemerkt; // wann tab.txt zuletzt geschrieben wurde (UTC-Ticks)
+
+        static void TabMelden()
+        {
+            long jetzt = DateTime.UtcNow.Ticks;
+            Interlocked.Exchange(ref tabZuletzt, jetzt);
+            long alt = Interlocked.Read(ref tabGemerkt);
+            if (jetzt - alt < 30 * TimeSpan.TicksPerSecond || Interlocked.CompareExchange(ref tabGemerkt, jetzt, alt) != alt) return;
+            try { File.WriteAllText(TabDatei, jetzt.ToString(CultureInfo.InvariantCulture), Encoding.ASCII); } catch { }
+        }
+
+        // Hat sich in der letzten Minute ein Tab gemeldet? (Datei bis zu 30 s alt, dazu Spielraum für den Neustart)
+        static bool TabKuerzlich()
+        {
+            try
+            {
+                long t;
+                if (!File.Exists(TabDatei) || !long.TryParse(File.ReadAllText(TabDatei).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out t)) return false;
+                double alter = (DateTime.UtcNow - new DateTime(t, DateTimeKind.Utc)).TotalSeconds;
+                return alter >= -60 && alter < 60;
+            }
+            catch { return false; }
+        }
+
         static void BrowserOeffnen()
         {
             try { Process.Start(new ProcessStartInfo("http://localhost:" + Port + "/") { UseShellExecute = true }); } catch { }
@@ -298,10 +344,11 @@ namespace OfflineWissen
 
         static void Bearbeite(HttpListenerContext ctx)
         {
-            string pfad = ctx.Request.Url.AbsolutePath;
-            string roh = ctx.Request.RawUrl ?? "";
             try
             {
+                // Im try: ohne gültige Adresse (Url == null) sonst Absturz im ThreadPool
+                string pfad = ctx.Request.Url.AbsolutePath;
+                string roh = ctx.Request.RawUrl ?? "";
                 // Nur Anfragen von diesem Rechner (nicht aus dem Netzwerk)
                 if (!ctx.Request.IsLocal) { SendeText(ctx, 403, "Zugriff nur von diesem Rechner aus."); return; }
                 // Fremde Webseiten dürfen weder die Schnittstelle noch die Dienste dahinter benutzen
@@ -314,7 +361,12 @@ namespace OfflineWissen
                     if (!(roh == "/kiwix" || roh.StartsWith("/kiwix/", StringComparison.Ordinal) || roh.StartsWith("/kiwix?", StringComparison.Ordinal))) { SendeText(ctx, 400, "Ungültige Adresse."); return; }
                     // Abgestürzt (Prozess beendet, ohne dass Fieldbook ihn gestoppt hat): gleich neu starten
                     var k = kiwix;
-                    if (k != null && k.HasExited) { KiwixWiederbeleben(); k = kiwix; }
+                    if (k != null && k.HasExited)
+                    {
+                        // Neustart läuft im Hintergrund; die Anfrage wartet nicht darauf
+                        if (KiwixWiederbeleben()) { SendeText(ctx, 503, "Die Bibliothek startet neu, bitte gleich noch einmal versuchen."); return; }
+                        k = kiwix;
+                    }
                     if (k == null || k.HasExited) { SendeText(ctx, 503, "Die Bibliothek ist nicht gestartet (keine Wissenspakete installiert?)."); return; }
                     // RawUrl statt Url.PathAndQuery: Url entschlüsselt "%25" zu "%", dann findet Kiwix
                     // Dateien mit Sonderzeichen im Namen nicht mehr (z. B. "%252C" für ein Komma)
@@ -413,20 +465,42 @@ namespace OfflineWissen
             string typ;
             res.ContentType = Mime.TryGetValue(fi.Extension, out typ) ? typ : "application/octet-stream";
             res.AddHeader("Accept-Ranges", "bytes");
-            res.AddHeader("Cache-Control", fi.Extension == ".pmtiles" || fi.Extension == ".pbf" ? "max-age=86400" : "no-cache");
+            // Immer nachfragen (no-cache), aber mit ETag/Last-Modified: unverändert gibt es nur ein kurzes 304.
+            // Auch Karten (.pmtiles/.pbf): nach einem Karten-Update sonst alte Kacheln aus dem Browser-Cache.
+            DateTime geaendert = fi.LastWriteTimeUtc;
+            string etag = "\"" + geaendert.Ticks.ToString("x") + "-" + fi.Length.ToString("x") + "\"";
+            res.AddHeader("Cache-Control", "no-cache");
+            res.AddHeader("ETag", etag);
+            res.AddHeader("Last-Modified", geaendert.ToString("r", CultureInfo.InvariantCulture));
+            // Länge 0 setzen: sonst schickt HttpListener evtl. einen leeren Chunked-Rumpf, den der Browser bei 304 nicht liest
+            if (NichtGeaendert(ctx.Request, etag, geaendert)) { res.StatusCode = 304; res.ContentLength64 = 0; return; }
             long start = 0, ende = fi.Length - 1;
             string range = ctx.Request.Headers["Range"];
             if (range != null)
             {
                 var m = Regex.Match(range, @"bytes=(\d*)-(\d*)");
-                if (m.Success)
+                // Ungültige Angaben ("bytes=-", zu große Zahlen) werden ignoriert: dann die ganze Datei
+                long von = 0, bis = ende, zahl;
+                bool gueltig;
+                if (!m.Success) gueltig = false;
+                else if (m.Groups[1].Value == "")
                 {
-                    if (m.Groups[1].Value == "") { long n = long.Parse(m.Groups[2].Value); start = Math.Max(0, fi.Length - n); }
-                    else
+                    gueltig = long.TryParse(m.Groups[2].Value, out zahl);
+                    if (gueltig) von = Math.Max(0, fi.Length - zahl);
+                }
+                else
+                {
+                    gueltig = long.TryParse(m.Groups[1].Value, out zahl);
+                    von = zahl;
+                    if (gueltig && m.Groups[2].Value != "")
                     {
-                        start = long.Parse(m.Groups[1].Value);
-                        if (m.Groups[2].Value != "") ende = Math.Min(ende, long.Parse(m.Groups[2].Value));
+                        gueltig = long.TryParse(m.Groups[2].Value, out zahl);
+                        bis = Math.Min(ende, zahl);
                     }
+                }
+                if (gueltig)
+                {
+                    start = von; ende = bis;
                     if (start > ende || start >= fi.Length)
                     {
                         res.StatusCode = 416;
@@ -454,6 +528,28 @@ namespace OfflineWissen
             }
         }
 
+        // Bedingte Anfrage: hat der Browser diesen Stand schon? If-None-Match hat Vorrang vor If-Modified-Since.
+        static bool NichtGeaendert(HttpListenerRequest rq, string etag, DateTime geaendertUtc)
+        {
+            if (rq.HttpMethod != "GET" && rq.HttpMethod != "HEAD") return false;
+            string inm = rq.Headers["If-None-Match"];
+            if (inm != null)
+            {
+                foreach (var teil in inm.Split(','))
+                {
+                    string e = teil.Trim();
+                    if (e.StartsWith("W/")) e = e.Substring(2);
+                    if (e == "*" || e == etag) return true;
+                }
+                return false;
+            }
+            string ims = rq.Headers["If-Modified-Since"];
+            DateTime d;
+            if (ims == null || !DateTime.TryParse(ims, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out d)) return false;
+            // Last-Modified kennt nur ganze Sekunden
+            return geaendertUtc.AddTicks(-(geaendertUtc.Ticks % TimeSpan.TicksPerSecond)) <= d;
+        }
+
         static readonly HashSet<string> NichtKopieren = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "Content-Length", "Transfer-Encoding", "Connection", "Keep-Alive", "Server", "Date", "Content-Type", "Location" };
 
@@ -474,17 +570,37 @@ namespace OfflineWissen
             req.Method = rq.HttpMethod;
             req.AllowAutoRedirect = false;
             req.Proxy = null;
-            req.Timeout = 15 * 60 * 1000;
-            req.ReadWriteTimeout = 15 * 60 * 1000;
+            // Kiwix antwortet schnell, hängt es, nicht 15 Minuten warten. KI und Suchhilfe brauchen für lange Antworten mehr Zeit.
+            bool istKiwix = port == KiwixPort;
+            int frist = istKiwix ? 60 * 1000 : 15 * 60 * 1000;
+            req.Timeout = frist;
+            req.ReadWriteTimeout = frist;
             req.AutomaticDecompression = DecompressionMethods.None;
             if (rq.Headers["Accept"] != null) req.Accept = rq.Headers["Accept"];
             if (rq.Headers["Range"] != null)
             {
+                // Ungültige Angaben (zu große Zahlen, Ende vor Anfang) werden ignoriert
                 var m = Regex.Match(rq.Headers["Range"], @"bytes=(\d+)-(\d*)");
-                if (m.Success)
+                long von, bis;
+                if (m.Success && long.TryParse(m.Groups[1].Value, out von))
                 {
-                    if (m.Groups[2].Value == "") req.AddRange(long.Parse(m.Groups[1].Value));
-                    else req.AddRange(long.Parse(m.Groups[1].Value), long.Parse(m.Groups[2].Value));
+                    if (m.Groups[2].Value == "") req.AddRange(von);
+                    else if (long.TryParse(m.Groups[2].Value, out bis) && bis >= von) req.AddRange(von, bis);
+                }
+            }
+            // Bedingte Anfragen an Kiwix weitergeben (unverändert: kurzes 304). Nicht bei Seiten, die Fieldbook verändert
+            // (HTML mit Artikel-Design/iFixit-Filter, Zusätze): dort darf nie ein 304 auf einen alten Stand kommen.
+            if (istKiwix && rq.HttpMethod == "GET" && KiwixZusatz(rq.Url.AbsolutePath) == null)
+            {
+                string accept = rq.Headers["Accept"] ?? "", ziel = (rq.Headers["Sec-Fetch-Dest"] ?? "").ToLowerInvariant();
+                bool seite = accept.IndexOf("text/html", StringComparison.OrdinalIgnoreCase) >= 0 || ziel == "document" || ziel == "iframe" || ziel == "frame";
+                if (!seite)
+                {
+                    string inm = rq.Headers["If-None-Match"], ims = rq.Headers["If-Modified-Since"];
+                    DateTime d;
+                    if (inm != null) req.Headers["If-None-Match"] = inm;
+                    if (ims != null && DateTime.TryParse(ims, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out d))
+                        req.IfModifiedSince = d;
                 }
             }
             if (rq.HasEntityBody)
@@ -513,8 +629,10 @@ namespace OfflineWissen
                 }
                 string loc = resp.Headers["Location"];
                 if (loc != null) res.RedirectLocation = loc.Replace("http://127.0.0.1:" + port, "");
+                // 304 (nur auf weitergereichte bedingte Anfragen): ohne Inhalt, der Browser nimmt seinen Cache
+                if (resp.StatusCode == HttpStatusCode.NotModified) { res.ContentLength64 = 0; return; }
                 byte[] zusatz = resp.StatusCode == HttpStatusCode.OK ? KiwixZusatz(rq.Url.AbsolutePath) : null;
-                if (zusatz != null) { res.Headers.Remove("ETag"); res.Headers.Set("Cache-Control", "no-cache"); }
+                if (zusatz != null) { res.Headers.Remove("ETag"); res.Headers.Remove("Last-Modified"); res.Headers.Set("Cache-Control", "no-cache"); }
                 // Artikel aus Kiwix bekommen das Fieldbook-Design (Schriften, dunkle Farben), schon vor dem ersten Zeichnen
                 if (rq.HttpMethod != "HEAD" && rq.Url.AbsolutePath.StartsWith("/kiwix/")
                     && resp.ContentType != null && resp.ContentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
@@ -522,7 +640,9 @@ namespace OfflineWissen
                     byte[] html;
                     using (var s = resp.GetResponseStream())
                     using (var ms = new MemoryStream()) { s.CopyTo(ms); html = ArtikelDesign(IfixitSeiteFiltern(rq, ms.ToArray())); }
+                    // Keine Prüfmerkmale: der Browser soll für veränderte Seiten nie bedingt nachfragen
                     res.Headers.Remove("ETag");
+                    res.Headers.Remove("Last-Modified");
                     res.Headers.Set("Cache-Control", "no-cache");
                     res.ContentLength64 = html.Length;
                     res.OutputStream.Write(html, 0, html.Length);
@@ -612,6 +732,7 @@ namespace OfflineWissen
 
         static readonly object IfixitLk = new object();
         static string ifixitBuch, ifixitStatus = "", ifixitFehler = "";
+        static DateTime ifixitFehlerZeit; // nach einem Fehler 10 Minuten warten, nicht bei jeder iFixit-Seite neu einlesen
         static Dictionary<string, IfixitKnoten> ifixitBaum;
         static IfixitFilter ifixitFilter;
         static int ifixitGelesen;
@@ -655,8 +776,18 @@ namespace OfflineWissen
                 foreach (var d in Directory.GetFiles(cache, "ifixit-*.json"))
                 {
                     string buch = Path.GetFileNameWithoutExtension(d).Substring("ifixit-".Length);
-                    if (!File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"))) { File.Delete(d); Log("iFixit-Übersicht der alten Version gelöscht: " + buch); }
+                    if (!File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"))) { SicherLoeschen(d); Log("iFixit-Übersicht der alten Version gelöscht: " + buch); }
                 }
+                // Ebenso die Artikellisten (artikel-<paket>.json) nicht mehr vorhandener Pakete, auch im Speicher
+                foreach (var d in Directory.GetFiles(cache, "artikel-*.json"))
+                {
+                    string buch = Path.GetFileNameWithoutExtension(d).Substring("artikel-".Length);
+                    if (File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"))) continue;
+                    try { SicherLoeschen(d); Log("Artikelliste der alten Version gelöscht: " + buch); } catch (Exception e) { Log("Artikelliste löschen: " + e.Message); }
+                }
+                lock (ArtikelLk)
+                    foreach (var buch in artikelListen.Keys.ToList())
+                        if (!File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"))) { artikelListen.Remove(buch); artikelFehler.Remove(buch); }
             }
             catch (Exception e) { Log("iFixit-Übersicht aufräumen: " + e.Message); }
         }
@@ -786,7 +917,8 @@ namespace OfflineWissen
                         }
                         catch { ifixitBaum = null; }
                 }
-                if (ifixitBaum == null && ifixitStatus != "laeuft")
+                bool warten = ifixitStatus == "fehler" && (DateTime.UtcNow - ifixitFehlerZeit).TotalMinutes < 10;
+                if (ifixitBaum == null && ifixitStatus != "laeuft" && !warten)
                 {
                     ifixitStatus = "laeuft"; ifixitGelesen = 0;
                     new Thread(delegate () { IfixitEinlesen(buch); }) { IsBackground = true, Priority = ThreadPriority.BelowNormal }.Start();
@@ -908,17 +1040,20 @@ namespace OfflineWissen
                 var voll = baum.Values.Where(x => x.Anzahl > 0).ToDictionary(x => x.Pfad);
                 foreach (var k in voll.Values) k.Kinder = k.Kinder.Where(voll.ContainsKey).ToList();
                 // Nur (fast) vollständig gelesene Bäume dauerhaft merken (z. B. nicht, wenn Kiwix zwischendurch neu startete)
+                // Scheitert das Speichern, gilt das Ergebnis trotzdem (im Speicher bis zum nächsten Start)
                 if (fehlgeschlagen <= baum.Count / 100)
-                {
-                    Directory.CreateDirectory(Path.Combine(Daten, "cache"));
-                    File.WriteAllText(Path.Combine(Daten, "cache", "ifixit-" + buch + ".json"), Json.Serialize(voll), Utf8);
-                }
+                    try
+                    {
+                        Directory.CreateDirectory(Path.Combine(Daten, "cache"));
+                        SicherSchreiben(Path.Combine(Daten, "cache", "ifixit-" + buch + ".json"), Json.Serialize(voll));
+                    }
+                    catch (Exception e) { Log("iFixit-Übersicht nicht gespeichert: " + e.Message); }
                 lock (IfixitLk) if (ifixitBuch == buch) { ifixitBaum = voll; ifixitStatus = "fertig"; IfixitFilterBauen(buch, voll); }
                 Log("iFixit-Übersicht: " + baum.Count + " Geräteseiten (" + leer + " ohne Anleitung), " + wurzel.Anzahl + " Anleitungen, " + fehlgeschlagen + " Seiten nicht lesbar.");
             }
             catch (Exception e)
             {
-                lock (IfixitLk) if (ifixitBuch == buch) { ifixitStatus = "fehler"; ifixitFehler = e.Message; }
+                lock (IfixitLk) if (ifixitBuch == buch) { ifixitStatus = "fehler"; ifixitFehler = e.Message; ifixitFehlerZeit = DateTime.UtcNow; }
                 Log("iFixit-Übersicht: " + e.Message);
             }
         }
@@ -964,6 +1099,8 @@ namespace OfflineWissen
         static readonly object ArtikelLk = new object();
         static readonly Dictionary<string, List<ArtikelEintrag>> artikelListen = new Dictionary<string, List<ArtikelEintrag>>();
         static readonly Dictionary<string, int> artikelGelesen = new Dictionary<string, int>();
+        // Nach einem Fehler beim Einlesen 10 Minuten warten (Zeitpunkt, Meldung), statt bei jedem Aufruf neu zu beginnen
+        static readonly Dictionary<string, Tuple<DateTime, string>> artikelFehler = new Dictionary<string, Tuple<DateTime, string>>();
 
         static Dictionary<string, object> Artikelliste(string buch)
         {
@@ -978,6 +1115,9 @@ namespace OfflineWissen
                         try { liste = Json.Deserialize<List<ArtikelEintrag>>(File.ReadAllText(cache, Utf8)); artikelListen[buch] = liste; } catch { liste = null; }
                 }
                 if (liste != null) return new Dictionary<string, object> { { "status", "fertig" }, { "artikel", liste } };
+                Tuple<DateTime, string> fehler;
+                if (!artikelGelesen.ContainsKey(buch) && artikelFehler.TryGetValue(buch, out fehler) && (DateTime.UtcNow - fehler.Item1).TotalMinutes < 10)
+                    return new Dictionary<string, object> { { "status", "fehler" }, { "fehler", fehler.Item2 } };
                 if (!artikelGelesen.ContainsKey(buch))
                 {
                     artikelGelesen[buch] = 0;
@@ -1046,17 +1186,20 @@ namespace OfflineWissen
                 // Bilder, die in vielen Artikeln vorkommen, sind Symbole (z. B. das Klexikon-„K“): das erste andere nehmen
                 var haeufig = new HashSet<string>(bilder.Values.SelectMany(b => b.Distinct()).GroupBy(b => b).Where(g => g.Count() > 5).Select(g => g.Key));
                 foreach (var a in liste) a.B = bilder[a.P].FirstOrDefault(b => !haeufig.Contains(b));
+                // Scheitert das Speichern, gilt die Liste trotzdem (im Speicher bis zum nächsten Start)
                 if (fehlgeschlagen <= gefunden.Count / 100)
-                {
-                    Directory.CreateDirectory(Path.Combine(Daten, "cache"));
-                    File.WriteAllText(Path.Combine(Daten, "cache", "artikel-" + buch + ".json"), Json.Serialize(liste), Utf8);
-                }
-                lock (ArtikelLk) { artikelListen[buch] = liste; artikelGelesen.Remove(buch); }
+                    try
+                    {
+                        Directory.CreateDirectory(Path.Combine(Daten, "cache"));
+                        SicherSchreiben(Path.Combine(Daten, "cache", "artikel-" + buch + ".json"), Json.Serialize(liste));
+                    }
+                    catch (Exception e) { Log("Artikelliste " + buch + " nicht gespeichert: " + e.Message); }
+                lock (ArtikelLk) { artikelListen[buch] = liste; artikelGelesen.Remove(buch); artikelFehler.Remove(buch); }
                 Log("Artikelliste " + buch + ": " + liste.Count + " Artikel, " + fehlgeschlagen + " Seiten nicht lesbar.");
             }
             catch (Exception e)
             {
-                lock (ArtikelLk) artikelGelesen.Remove(buch);
+                lock (ArtikelLk) { artikelGelesen.Remove(buch); artikelFehler[buch] = Tuple.Create(DateTime.UtcNow, e.Message); }
                 Log("Artikelliste " + buch + ": " + e.Message);
             }
         }
@@ -1106,9 +1249,35 @@ namespace OfflineWissen
             {
                 string n = Path.GetFileName(f);
                 if (n.EndsWith(".teil.jsonl")) { string b = n.Substring(0, n.Length - 11); if (!d.ContainsKey(b)) d[b] = false; }
-                else if (n.EndsWith(".json")) d[n.Substring(0, n.Length - 5)] = true;
+                // Unvollständige fertige Datei: als „teilweise“ melden, dann liest die Seite das Paket neu aus
+                else if (n.EndsWith(".json")) d[n.Substring(0, n.Length - 5)] = PdfFertigLesbar(f);
             }
             return d;
+        }
+
+        // Ist die fertige Datei vollständig? Eine bei Stromausfall halb geschriebene (früher direkt geschrieben)
+        // endet nicht mit "}". Nur das Ende wird gelesen, das geht auch bei großen Dateien schnell.
+        static bool PdfFertigLesbar(string f)
+        {
+            try
+            {
+                if (!File.Exists(f)) return false;
+                using (var fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                {
+                    if (fs.Length < 2) return false;
+                    int n = (int)Math.Min(64, fs.Length), gelesen = 0;
+                    var buf = new byte[n];
+                    fs.Seek(-n, SeekOrigin.End);
+                    while (gelesen < n) { int r = fs.Read(buf, gelesen, n - gelesen); if (r <= 0) break; gelesen += r; }
+                    for (int i = gelesen - 1; i >= 0; i--)
+                    {
+                        if (buf[i] == ' ' || buf[i] == '\r' || buf[i] == '\n' || buf[i] == '\t') continue;
+                        return buf[i] == '}';
+                    }
+                    return false;
+                }
+            }
+            catch { return false; }
         }
 
         // Bücher aus der Teil-Datei (eine JSON-Zeile je Buch)
@@ -1130,7 +1299,7 @@ namespace OfflineWissen
         static PdfBuch PdfLaden(string buch)
         {
             string f = PdfFertigDatei(buch);
-            bool fertig = File.Exists(f);
+            bool fertig = PdfFertigLesbar(f); // halb geschriebene fertige Datei: lieber die Teil-Datei
             if (!fertig) f = PdfTeilDatei(buch);
             if (!File.Exists(f)) return null;
             DateTime stand = File.GetLastWriteTimeUtc(f);
@@ -1158,7 +1327,7 @@ namespace OfflineWissen
         static Dictionary<string, object> PdfStand(string buch)
         {
             if (!PdfPaketOk(buch)) return new Dictionary<string, object> { { "fehler", "Unbekanntes Paket." } };
-            if (File.Exists(PdfFertigDatei(buch))) return new Dictionary<string, object> { { "fertig", true }, { "dateien", new string[0] } };
+            if (PdfFertigLesbar(PdfFertigDatei(buch))) return new Dictionary<string, object> { { "fertig", true }, { "dateien", new string[0] } };
             lock (PdfLk)
                 return new Dictionary<string, object> { { "fertig", false }, { "dateien", PdfTeilLesen(buch).Select(d => Str(d, "datei")).ToArray() } };
         }
@@ -1177,15 +1346,19 @@ namespace OfflineWissen
                     var alle = File.Exists(PdfFertigDatei(buch)) ? Arr(LadeJson(PdfFertigDatei(buch)), "dateien").OfType<Dictionary<string, object>>().ToList() : new List<Dictionary<string, object>>();
                     var neu = PdfTeilLesen(buch);
                     alle = alle.Where(a => !neu.Any(n => Str(n, "datei") == Str(a, "datei"))).Concat(neu).ToList();
-                    File.WriteAllText(PdfFertigDatei(buch), Json.Serialize(new Dictionary<string, object> { { "buch", buch }, { "dateien", alle } }), Utf8);
+                    // Sicher schreiben: bei Stromausfall bleibt keine halbe Datei, die Teil-Datei erst danach löschen
+                    SicherSchreiben(PdfFertigDatei(buch), Json.Serialize(new Dictionary<string, object> { { "buch", buch }, { "dateien", alle } }));
                     try { File.Delete(PdfTeilDatei(buch)); } catch { }
+                    StatusCacheLeeren();
                     Log("PDF-Text für " + buch + ": " + alle.Count + " Bücher ausgelesen.");
                     return new Dictionary<string, object> { { "ok", true } };
                 }
                 string datei = Str(b, "datei");
                 if (string.IsNullOrEmpty(datei)) return new Dictionary<string, object> { { "fehler", "Datei fehlt." } };
                 var zeile = new Dictionary<string, object> { { "datei", datei }, { "titel", Str(b, "titel") ?? datei }, { "seiten", Arr(b, "seiten") } };
+                bool erstes = !File.Exists(PdfTeilDatei(buch));
                 File.AppendAllText(PdfTeilDatei(buch), Json.Serialize(zeile) + "\n", Utf8);
+                if (erstes) StatusCacheLeeren(); // pdfTexte im Status: Paket jetzt „teilweise“
                 return new Dictionary<string, object> { { "ok", true } };
             }
         }
@@ -1200,7 +1373,7 @@ namespace OfflineWissen
                     if (File.Exists(Path.Combine(Daten, "wissen", kv.Key + ".zim"))) continue;
                     lock (PdfLk)
                     {
-                        try { File.Delete(PdfFertigDatei(kv.Key)); } catch { }
+                        try { SicherLoeschen(PdfFertigDatei(kv.Key)); } catch { }
                         try { File.Delete(PdfTeilDatei(kv.Key)); } catch { }
                         pdfBuecher.Remove(kv.Key);
                     }
@@ -1411,7 +1584,7 @@ namespace OfflineWissen
                     }
                 case "status":
                     // Nur Anfragen aus einem Fieldbook-Tab zählen (der Browser schickt die Herkunftsseite mit)
-                    if (ctx.Request.UrlReferrer != null) Interlocked.Exchange(ref tabZuletzt, DateTime.UtcNow.Ticks);
+                    if (ctx.Request.UrlReferrer != null) TabMelden();
                     SendeJson(ctx, Status()); return;
                 case "zeigen":
                     // Fieldbook wurde nochmal gestartet: offenen Tab nach vorne holen, sonst einen neuen öffnen
@@ -1444,7 +1617,8 @@ namespace OfflineWissen
                     catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", e.Message } }); }
                     return;
                 case "programmupdate":
-                    try { SendeJson(ctx, ProgrammUpdateSuchen()); }
+                    // Aus den Einstellungen (Knopf „Nach Updates suchen“): frisch fragen; ?neu=0 nimmt den gemerkten Stand
+                    try { SendeJson(ctx, ProgrammUpdateSuchen(Q("neu") != "0")); }
                     catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "version", Version }, { "fehler", e.Message }, { "bereit", BereitVersion() }, { "eingerichtet", UpdateApi() != null } }); }
                     return;
                 case "programmupdate/installieren":
@@ -1598,7 +1772,7 @@ namespace OfflineWissen
                     }
                 case "beenden":
                     SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
-                    new Thread(delegate () { Thread.Sleep(400); StoppeKi(); StoppeKiwix(); StoppeRouting(); Environment.Exit(0); }).Start();
+                    new Thread(delegate () { Thread.Sleep(400); BeendenVorbereiten(); AlleDownloadsStoppen(); StoppeKi(); StoppeKiwix(); StoppeRouting(); Environment.Exit(0); }).Start();
                     return;
                 default: SendeText(ctx, 404, "Unbekannt"); return;
             }
@@ -1650,7 +1824,11 @@ namespace OfflineWissen
                 {"karten", karten},
                 {"kartenAssets", Directory.Exists(Path.Combine(Prog, "karten-assets", "fonts"))},
                 {"orte", Directory.GetFiles(Path.Combine(Daten, "orte"), "*.txt").Length > 0},
-                {"routenKacheln", Directory.GetFiles(Path.Combine(Daten, "routen"), "*.rd5").Select(f => Path.GetFileNameWithoutExtension(f)).ToArray()}
+                {"routenKacheln", Directory.GetFiles(Path.Combine(Daten, "routen"), "*.rd5").Select(f => Path.GetFileNameWithoutExtension(f)).ToArray()},
+                {"desktopSymbol", File.Exists(DesktopLnk())},
+                {"pdfTexte", PdfTexte()},
+                {"programmBereit", BereitVersion()},
+                {"statistikEingerichtet", FeedbackUrl() != null}
             };
             // Nur merken, wenn inzwischen nicht geleert wurde (sonst wäre der Stand evtl. schon veraltet)
             lock (statusCacheLk)
@@ -1688,7 +1866,7 @@ namespace OfflineWissen
                 {"wissen", t["wissen"]},
                 {"bibliothek", KiwixAktiv()},
                 {"bibliothekFehler", kiwixFehler},
-                {"desktopSymbol", File.Exists(DesktopLnk())},
+                {"desktopSymbol", t["desktopSymbol"]},
                 {"proxy", Str(einst, "proxy") ?? ""},
                 {"unterbrochen", unterbrochen},
                 {"uebersetzer", t["uebersetzer"]},
@@ -1699,7 +1877,7 @@ namespace OfflineWissen
                 {"stimmen", t["stimmen"]},
                 {"stimmenFehlen", t["stimmenFehlen"]},
                 {"defektePakete", kiwixDefekt.ToArray()},
-                {"pdfTexte", PdfTexte()},
+                {"pdfTexte", t["pdfTexte"]},
                 {"ki", new Dictionary<string, object> { {"status", llmStatus}, {"fehler", llmFehler}, {"modell", llmModell}, {"kontext", kontext}, {"suchhilfe", sh != null && !sh.HasExited} }},
                 {"modell", Str(einst, "modell")},
                 {"backend", Str(einst, "backend") ?? "cpu"},
@@ -1715,13 +1893,13 @@ namespace OfflineWissen
                 {"landErkannt", WindowsLand()},
                 {"sprache", Str(einst, "sprache") ?? "de"},
                 {"programmNeu", progUpdate != null && Bool(progUpdate, "verfuegbar") ? Str(progUpdate, "neu") : null},
-                {"programmBereit", BereitVersion()},
+                {"programmBereit", t["programmBereit"]},
                 {"start", StartKennung},
                 {"updateBeimStart", UpdateBeimStart()},
                 {"statistikFehler", StatFehlerAn()},
                 {"statistikNutzung", StatNutzungAn()},
                 {"statistikGefragt", Bool(einst, "statistikGefragt")},
-                {"statistikEingerichtet", FeedbackUrl() != null}
+                {"statistikEingerichtet", t["statistikEingerichtet"]}
             };
         }
 
@@ -1749,7 +1927,32 @@ namespace OfflineWissen
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX m);
 
+        // Prozessor und Grafikkarten ändern sich im Betrieb nicht: einmal ermitteln (WMI ist langsam)
+        static Dictionary<string, object> hardwareFest;
+
         static Dictionary<string, object> Hardware()
+        {
+            var fest = hardwareFest;
+            if (fest == null) hardwareFest = fest = HardwareFest();
+            var h = new Dictionary<string, object>(fest);
+            // Veränderliches immer frisch: Arbeitsspeicher und freier Platz
+            var ms = new MEMORYSTATUSEX();
+            double ram = 0, ramFrei = 0;
+            if (GlobalMemoryStatusEx(ms)) { ram = ms.ullTotalPhys / 1073741824.0; ramFrei = ms.ullAvailPhys / 1073741824.0; }
+            h["ramGB"] = Math.Round(ram, 1);
+            h["ramFreiGB"] = Math.Round(ramFrei, 1);
+            try
+            {
+                var di = new DriveInfo(Path.GetPathRoot(Root));
+                h["laufwerk"] = di.Name;
+                h["freiGB"] = Math.Round(di.AvailableFreeSpace / 1073741824.0, 1);
+                h["gesamtGB"] = Math.Round(di.TotalSize / 1073741824.0, 1);
+            }
+            catch { h["freiGB"] = 0; }
+            return h;
+        }
+
+        static Dictionary<string, object> HardwareFest()
         {
             var h = new Dictionary<string, object>();
             string cpu = "";
@@ -1764,12 +1967,6 @@ namespace OfflineWissen
             }
             catch { }
             h["kerne"] = kerne > 0 ? kerne : Environment.ProcessorCount;
-
-            var ms = new MEMORYSTATUSEX();
-            double ram = 0, ramFrei = 0;
-            if (GlobalMemoryStatusEx(ms)) { ram = ms.ullTotalPhys / 1073741824.0; ramFrei = ms.ullAvailPhys / 1073741824.0; }
-            h["ramGB"] = Math.Round(ram, 1);
-            h["ramFreiGB"] = Math.Round(ramFrei, 1);
 
             var gpus = new List<object>();
             try
@@ -1812,15 +2009,6 @@ namespace OfflineWissen
             }
             catch { }
             h["gpus"] = gpus;
-
-            try
-            {
-                var di = new DriveInfo(Path.GetPathRoot(Root));
-                h["laufwerk"] = di.Name;
-                h["freiGB"] = Math.Round(di.AvailableFreeSpace / 1073741824.0, 1);
-                h["gesamtGB"] = Math.Round(di.TotalSize / 1073741824.0, 1);
-            }
-            catch { h["freiGB"] = 0; }
             return h;
         }
 
@@ -1841,6 +2029,8 @@ namespace OfflineWissen
             modelle["modelle"] = Arr(modelle, "modelle").OfType<Dictionary<string, object>>()
                 .Where(m => !Bool(m, "ausgemustert") || (bool)m["installiert"]).Cast<object>().ToArray();
             var pakete = LadeJson(Path.Combine(Config, "pakete.json"));
+            // Ordner einmal auflisten statt für jedes Paket neu
+            string[] zimNamen = Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim").Select(Path.GetFileName).ToArray();
             foreach (var o in Arr(pakete, "pakete"))
             {
                 var p = (Dictionary<string, object>)o;
@@ -1859,7 +2049,7 @@ namespace OfflineWissen
                     p["bytes"] = (long)(Num(p, "mb") * 1000000);
                     p["verfuegbar"] = false;
                 }
-                string datei = ZimDatei(ZimName(p), fl);
+                string datei = ZimDatei(ZimName(p), fl, zimNamen);
                 p["installiert"] = datei != null;
                 if (datei != null)
                 {
@@ -1877,8 +2067,10 @@ namespace OfflineWissen
                 r["installiert"] = File.Exists(f);
                 if (File.Exists(f)) r["bytesInstalliert"] = new FileInfo(f).Length;
             }
-            var eigene = new List<object>();
-            foreach (var f in Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim")) eigene.Add(Path.GetFileName(f));
+            var eigene = zimNamen.Cast<object>().ToList();
+            // Kopie unter der Sperre: das lebende einst würde sonst außerhalb serialisiert, während es sich ändern kann
+            Dictionary<string, object> einstKopie;
+            lock (Lk) einstKopie = new Dictionary<string, object>(einst);
             return new Dictionary<string, object>
             {
                 {"modelle", Arr(modelle, "modelle")},
@@ -1889,7 +2081,7 @@ namespace OfflineWissen
                 {"karten", Arr(karten, "regionen")},
                 {"zimDateien", eigene},
                 {"katalogOnline", katalogOnline},
-                {"einstellungen", einst}
+                {"einstellungen", einstKopie}
             };
         }
 
@@ -1902,11 +2094,18 @@ namespace OfflineWissen
 
         static string ZimDatei(string name, string flavour)
         {
+            return ZimDatei(name, flavour, Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim").Select(Path.GetFileName).ToArray());
+        }
+
+        // Mit schon gelesener Dateiliste (Katalog() prüft alle Pakete gegen eine Liste)
+        static string ZimDatei(string name, string flavour, string[] dateinamen)
+        {
             string muster = "^" + Regex.Escape(name) + (string.IsNullOrEmpty(flavour) ? "" : "_" + Regex.Escape(flavour)) + @"_\d{4}-\d{2}[a-z]?\.zim$";
             string treffer = null;
-            foreach (var f in Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim"))
+            foreach (var n in dateinamen)
             {
-                string n = Path.GetFileName(f);
+                // Schneller Vorfilter, der Regex nur für passende Anfänge
+                if (!n.StartsWith(name, StringComparison.OrdinalIgnoreCase)) continue;
                 if (Regex.IsMatch(n, muster, RegexOptions.IgnoreCase) && (treffer == null || string.CompareOrdinal(n, treffer) > 0)) treffer = n;
             }
             return treffer;
@@ -1915,32 +2114,72 @@ namespace OfflineWissen
         // Nur ein Abruf zugleich: sonst laden zwei Anfragen den großen Katalog doppelt und schreiben gleichzeitig in die Datei
         static readonly object KatalogLk = new object();
 
+        const string KatalogUrl = "https://library.kiwix.org/catalog/v2/entries?count=20000";
+        static string KatalogCache { get { return Path.Combine(Daten, "cache", "kiwix-katalog.xml"); } }
+        static int katalogErneuern; // 1, solange der Katalog im Hintergrund erneuert wird
+
+        // neu = ausdrücklich (Knopf „Nach Updates suchen“): synchron aus dem Netz. Sonst gilt ein vorhandener
+        // Zwischenspeicher sofort, auch wenn er älter als 24 h ist; erneuert wird er dann im Hintergrund.
+        // Synchron geladen wird nur, wenn es noch gar keinen gibt.
         static void LadeKiwixKatalog(bool neu)
         {
-            string cache = Path.Combine(Daten, "cache", "kiwix-katalog.xml");
+            string cache = KatalogCache;
             if (katalog != null && !neu) return;
+            bool erneuern = false;
             lock (KatalogLk)
             {
                 if (katalog != null && !neu) return;   // inzwischen von einer anderen Anfrage geladen
                 string xml = null;
-                bool alt = !File.Exists(cache) || (DateTime.Now - File.GetLastWriteTime(cache)).TotalHours > 24;
-                if (neu || alt)
+                bool da = File.Exists(cache);
+                if (neu || !da)
                 {
-                    try
-                    {
-                        xml = HoleText("https://library.kiwix.org/catalog/v2/entries?count=20000", 90000);
-                        // erst vollständig schreiben, dann ersetzen: ein Abbruch hinterlässt keinen halben Katalog
-                        string tmp = cache + ".tmp";
-                        File.WriteAllText(tmp, xml, Utf8);
-                        if (File.Exists(cache)) File.Replace(tmp, cache, null); else File.Move(tmp, cache);
-                        katalogOnline = true;
-                    }
-                    catch { }   // ohne Netz bleibt xml leer; scheitert nur das Schreiben, gilt der geladene Text trotzdem
+                    try { xml = HoleText(KatalogUrl, 90000); katalogOnline = true; }
+                    catch { katalogOnline = false; }   // ohne Netz bleibt xml leer
+                    if (xml != null) KatalogSchreiben(xml);
                 }
-                else katalogOnline = true;
+                else
+                {
+                    katalogOnline = true;
+                    erneuern = (DateTime.Now - File.GetLastWriteTime(cache)).TotalHours > 24;
+                }
                 if (xml == null && File.Exists(cache)) { try { xml = File.ReadAllText(cache, Utf8); } catch { } }
                 katalog = ParseKatalog(xml);
             }
+            if (erneuern) KatalogImHintergrund();
+        }
+
+        // Erst vollständig schreiben, dann ersetzen: ein Abbruch hinterlässt keinen halben Katalog.
+        // Scheitert nur das Schreiben, gilt der geladene Text trotzdem.
+        static void KatalogSchreiben(string xml)
+        {
+            try
+            {
+                string cache = KatalogCache, tmp = cache + ".tmp";
+                File.WriteAllText(tmp, xml, Utf8);
+                if (File.Exists(cache)) File.Replace(tmp, cache, null); else File.Move(tmp, cache);
+            }
+            catch (Exception e) { Log("Katalog speichern: " + e.Message); }
+        }
+
+        // Alten Katalog im Hintergrund erneuern (nur einer zugleich); bis dahin gilt der alte Stand
+        static void KatalogImHintergrund()
+        {
+            if (Interlocked.Exchange(ref katalogErneuern, 1) == 1) return;
+            try
+            {
+                new Thread(delegate ()
+                {
+                    try
+                    {
+                        string xml = HoleText(KatalogUrl, 90000);
+                        var neuerKatalog = ParseKatalog(xml);
+                        lock (KatalogLk) { KatalogSchreiben(xml); katalog = neuerKatalog; katalogOnline = true; }
+                    }
+                    catch (Exception e) { katalogOnline = false; Log("Katalog im Hintergrund erneuern: " + e.Message); }
+                    finally { Interlocked.Exchange(ref katalogErneuern, 0); }
+                }) { IsBackground = true, Priority = ThreadPriority.BelowNormal }.Start();
+            }
+            catch { Interlocked.Exchange(ref katalogErneuern, 0); }
         }
 
         static Dictionary<string, Dictionary<string, object>> ParseKatalog(string xml)
@@ -2239,16 +2478,25 @@ namespace OfflineWissen
         }
 
         // KI-Tempo je Modell: "antwort" und "lesen" in Tokens pro Sekunde, "laden" in Sekunden
-        static void StatKi(string feld, double wert)
+        static void StatKi(string feld, double wert) { StatKi(new[] { feld }, new[] { wert }); }
+
+        // Mehrere Werte auf einmal, nur einmal speichern
+        static void StatKi(string[] felder, double[] werte)
         {
-            if (!StatFehlerAn() || double.IsNaN(wert) || wert <= 0 || wert > 100000) return;
+            if (!StatFehlerAn()) return;
             lock (StatLk)
             {
-                string m = (Str(einst, "modell") ?? "?") + "|" + (Str(einst, "backend") ?? "cpu");
-                var k = Unter(Unter(StatLaden(), "ki"), m);
-                k[feld + "Summe"] = Math.Round(Num(k, feld + "Summe") + wert, 2);
-                k[feld + "Anzahl"] = (int)Num(k, feld + "Anzahl") + 1;
-                StatSpeichern();
+                Dictionary<string, object> k = null;
+                for (int i = 0; i < felder.Length; i++)
+                {
+                    string feld = felder[i];
+                    double wert = werte[i];
+                    if (double.IsNaN(wert) || wert <= 0 || wert > 100000) continue;
+                    if (k == null) k = Unter(Unter(StatLaden(), "ki"), (Str(einst, "modell") ?? "?") + "|" + (Str(einst, "backend") ?? "cpu"));
+                    k[feld + "Summe"] = Math.Round(Num(k, feld + "Summe") + wert, 2);
+                    k[feld + "Anzahl"] = (int)Num(k, feld + "Anzahl") + 1;
+                }
+                if (k != null) StatSpeichern();
             }
         }
 
@@ -2372,8 +2620,7 @@ namespace OfflineWissen
                 case "bereich": StatBereich(Str(b, "name") ?? ""); break;
                 case "jsfehler": StatFehler("oberflaeche", Str(b, "text")); break;
                 case "ki":
-                    StatKi("antwort", Num(b, "antwort"));
-                    StatKi("lesen", Num(b, "lesen"));
+                    StatKi(new[] { "antwort", "lesen" }, new[] { Num(b, "antwort"), Num(b, "lesen") });
                     break;
             }
         }
@@ -2789,7 +3036,8 @@ namespace OfflineWissen
             return (long)(v * f);
         }
 
-        static string Ausfuehren(string exe, string args, int timeout)
+        // normalePrioritaet: nicht die niedrige Priorität des Update-Prozesses erben (sonst Zeitüberschreitung bei Last)
+        static string Ausfuehren(string exe, string args, int timeout, bool normalePrioritaet = false)
         {
             var psi = new ProcessStartInfo(exe, args)
             {
@@ -2803,6 +3051,7 @@ namespace OfflineWissen
                 p.OutputDataReceived += (s, e) => { if (e.Data != null) lock (sb) sb.AppendLine(e.Data); };
                 p.ErrorDataReceived += (s, e) => { if (e.Data != null) lock (sb) sb.AppendLine(e.Data); };
                 p.Start();
+                if (normalePrioritaet) try { p.PriorityClass = ProcessPriorityClass.Normal; } catch { }
                 ChildJob.Add(p);
                 p.BeginOutputReadLine();
                 p.BeginErrorReadLine();
@@ -2859,6 +3108,8 @@ namespace OfflineWissen
             if (endet != null) endet.Join(60000);
             // Katalog vorher holen: ohne Zwischenspeicher dauert das bis zu 90 s, und unter Lk stünde solange alles still
             try { LadeKiwixKatalog(false); } catch (Exception e) { Log("Katalog: " + e.Message); }
+            // Liste der Wegedaten ebenfalls vorher (Netzabruf bis 30 s)
+            var segmentListe = Arr(b, "routen").Length > 0 ? SegmentListe() : null;
             lock (Lk)
             {
                 // Laufen schon Downloads, kommen die neuen in dieselbe Warteschlange
@@ -2867,8 +3118,8 @@ namespace OfflineWissen
                 if (dazu && (abschluss || abbrechen)) return new Dictionary<string, object> { { "fehler", "Die laufenden Downloads werden gerade beendet. Bitte gleich noch einmal versuchen." } };
                 var bisher = jobs;
                 if (!dazu) abbrechen = false;
-                jobs = new List<Job>();
-                LadeKiwixKatalog(false);
+                // Erst lokal aufbauen, jobs wird erst am Ende ersetzt: eine Ausnahme dazwischen lässt keine halbe Liste stehen
+                var plan = new List<Job>();
 
                 // Einrichtungs-Assistent abgeschlossen: ab jetzt startet das Dashboard, auch wenn noch geladen wird
                 if (Bool(b, "abschliessen")) einst["setupFertig"] = true;
@@ -2877,21 +3128,21 @@ namespace OfflineWissen
                 var pakete = Arr(b, "pakete").Select(x => Convert.ToString(x)).ToList();
                 var karten = Arr(b, "karten");
 
-                if (pakete.Count > 0 && ProgrammPfad("kiwix") == null) jobs.Add(ProgrammJob("kiwix"));
+                if (pakete.Count > 0 && ProgrammPfad("kiwix") == null) plan.Add(ProgrammJob("kiwix"));
 
                 // "modell" wird die aktive KI, "modelle" (Seite Inhalte) werden nur geladen
                 var modellIds = Arr(b, "modelle").Select(x => Convert.ToString(x)).ToList();
                 if (!string.IsNullOrEmpty(modellId) && !modellIds.Contains(modellId)) modellIds.Add(modellId);
                 if (modellIds.Count > 0)
                 {
-                    if (ProgrammPfad("llama-" + backend) == null) jobs.Add(ProgrammJob("llama-" + backend));
+                    if (ProgrammPfad("llama-" + backend) == null) plan.Add(ProgrammJob("llama-" + backend));
                     foreach (var o in Arr(LadeJson(Path.Combine(Config, "modelle.json")), "modelle"))
                     {
                         var m = (Dictionary<string, object>)o;
                         if (!modellIds.Contains(Str(m, "id"))) continue;
                         string ziel = Path.Combine(Daten, "modelle", Str(m, "datei"));
                         if (!File.Exists(ziel))
-                            jobs.Add(new Job { Art = "datei", Titel = "KI: " + Str(m, "name") + " (" + Str(m, "modell") + ")", Url = Str(m, "url"), Ziel = ziel, Gesamt = (long)Num(m, "bytes") });
+                            plan.Add(new Job { Art = "datei", Titel = "KI: " + Str(m, "name") + " (" + Str(m, "modell") + ")", Url = Str(m, "url"), Ziel = ziel, Gesamt = (long)Num(m, "bytes") });
                     }
                     if (!string.IsNullOrEmpty(modellId)) einst["modell"] = modellId;
                     einst["backend"] = backend;
@@ -2902,8 +3153,8 @@ namespace OfflineWissen
                     var sj = SuchhilfeJob();
                     if (sj != null)
                     {
-                        if (ProgrammPfad("llama-" + backend) == null && ProgrammPfad("llama-cpu") == null && !jobs.Any(x => x.Art == "programm" && x.Ziel == "llama-" + backend)) jobs.Add(ProgrammJob("llama-" + backend));
-                        jobs.Add(sj);
+                        if (ProgrammPfad("llama-" + backend) == null && ProgrammPfad("llama-cpu") == null && !plan.Any(x => x.Art == "programm" && x.Ziel == "llama-" + backend)) plan.Add(ProgrammJob("llama-" + backend));
+                        plan.Add(sj);
                     }
                 }
 
@@ -2920,14 +3171,14 @@ namespace OfflineWissen
                         string datei = url.Substring(url.LastIndexOf('/') + 1);
                         string ziel = Path.Combine(Daten, "wissen", datei);
                         if (File.Exists(ziel)) continue;
-                        jobs.Add(new Job { Art = "zim", Titel = Str(p, "titel"), Url = url, Ziel = ziel, Gesamt = (long)e["bytes"], Extra = Str(p, "name") + "|" + (Str(p, "flavour") ?? "") });
+                        plan.Add(new Job { Art = "zim", Titel = Str(p, "titel"), Url = url, Ziel = ziel, Gesamt = (long)e["bytes"], Extra = Str(p, "name") + "|" + (Str(p, "flavour") ?? "") });
                     }
                 }
 
                 if (karten.Length > 0)
                 {
-                    if (ProgrammPfad("pmtiles") == null) jobs.Add(ProgrammJob("pmtiles"));
-                    if (ProgrammPfad("karten-assets") == null) jobs.Add(ProgrammJob("karten-assets"));
+                    if (ProgrammPfad("pmtiles") == null) plan.Add(ProgrammJob("pmtiles"));
+                    if (ProgrammPfad("karten-assets") == null) plan.Add(ProgrammJob("karten-assets"));
                 }
                 var orteNoetig = new List<string>();
                 foreach (var o in karten)
@@ -2940,16 +3191,16 @@ namespace OfflineWissen
                     long gesamt = k != null ? (long)Num(k, "bytes") : 0;
                     string ziel = Path.Combine(Daten, "karten", id + ".pmtiles");
                     if (!File.Exists(ziel))
-                        jobs.Add(new Job { Art = "karte", Titel = "Karte: " + Str(r, "titel"), Ziel = ziel, Gesamt = gesamt, Extra = BboxText(r) + "|" + mz });
+                        plan.Add(new Job { Art = "karte", Titel = "Karte: " + Str(r, "titel"), Ziel = ziel, Gesamt = gesamt, Extra = BboxText(r) + "|" + mz });
                     foreach (var cc in Arr(r, "orte")) if (!orteNoetig.Contains(Convert.ToString(cc))) orteNoetig.Add(Convert.ToString(cc));
                 }
                 // Routenplanung: Java, BRouter und Wegedaten für die gewählten Regionen
                 var routenRegionen = Arr(b, "routen").Select(x => Convert.ToString(x)).ToList();
                 if (routenRegionen.Count > 0)
                 {
-                    if (ProgrammPfad("java") == null) jobs.Add(ProgrammJob("java"));
-                    if (ProgrammPfad("brouter") == null) jobs.Add(ProgrammJob("brouter"));
-                    var liste = SegmentListe();
+                    if (ProgrammPfad("java") == null) plan.Add(ProgrammJob("java"));
+                    if (ProgrammPfad("brouter") == null) plan.Add(ProgrammJob("brouter"));
+                    var liste = segmentListe ?? new Dictionary<string, long>();
                     var geplant = new HashSet<string>();
                     foreach (var rid in routenRegionen)
                     {
@@ -2959,7 +3210,7 @@ namespace OfflineWissen
                         {
                             string ziel = Path.Combine(Daten, "routen", kachel + ".rd5");
                             if (!liste.ContainsKey(kachel) || File.Exists(ziel) || !geplant.Add(kachel)) continue;
-                            jobs.Add(new Job { Art = "route", Titel = "Wegedaten " + kachel, Url = SegmentBasis + kachel + ".rd5", Ziel = ziel, Gesamt = liste[kachel] });
+                            plan.Add(new Job { Art = "route", Titel = "Wegedaten " + kachel, Url = SegmentBasis + kachel + ".rd5", Ziel = ziel, Gesamt = liste[kachel] });
                         }
                     }
                     einst["routen"] = true;
@@ -2974,36 +3225,36 @@ namespace OfflineWissen
                 if ((Bool(b, "uebersetzer") && !UebersetzerBereit()) || ((Bool(b, "uebersetzer") || sprachen.Count > 0) && !UebersetzerNeu()))
                 {
                     var u = LadeJson(Path.Combine(Config, "uebersetzer.json"));
-                    jobs.Add(new Job { Art = "uebersetzer", Titel = Str(u, "titel") ?? "Übersetzer", Gesamt = (long)(Num(u, "mb") * 1048576) });
+                    plan.Add(new Job { Art = "uebersetzer", Titel = Str(u, "titel") ?? "Übersetzer", Gesamt = (long)(Num(u, "mb") * 1048576) });
                 }
                 foreach (var c in sprachen)
                 {
                     if (sprachenDa.Contains(c)) continue;
                     var si = SprachInfo(c);
-                    jobs.Add(new Job { Art = "sprache", Titel = "Sprache: " + Str(si, "name"), Ziel = c, Gesamt = (long)(Num(si, "mb") * 1048576) });
+                    plan.Add(new Job { Art = "sprache", Titel = "Sprache: " + Str(si, "name"), Ziel = c, Gesamt = (long)(Num(si, "mb") * 1048576) });
                 }
                 // Stimmen zum Vorlesen nur auf Wunsch („Text + Sprache“), für neue oder schon installierte Sprachen;
                 // Deutsch kommt mit der ersten Stimme mit
                 var mitStimme = Arr(b, "stimmen").Select(x => Convert.ToString(x))
                     .Where(c => sprachen.Contains(c) || sprachenDa.Contains(c)).ToList();
-                if (mitStimme.Count > 0) jobs.AddRange(StimmenJobs(mitStimme).Where(x => x.Art != "programm" || !jobs.Any(y => y.Art == "programm" && y.Ziel == x.Ziel)));
+                if (mitStimme.Count > 0) plan.AddRange(StimmenJobs(mitStimme).Where(x => x.Art != "programm" || !plan.Any(y => y.Art == "programm" && y.Ziel == x.Ziel)));
                 // Spracheingabe: Programm (whisper.cpp) und die beiden Modelle
                 if (Bool(b, "spracheingabe"))
                 {
-                    if (ProgrammPfad("whisper") == null) jobs.Add(ProgrammJob("whisper"));
+                    if (ProgrammPfad("whisper") == null) plan.Add(ProgrammJob("whisper"));
                     foreach (var m in SprachModelle())
                         if (!File.Exists(SprachModellPfad(m)))
-                            jobs.Add(new Job { Art = "sprachmodell", Titel = Str(m, "titel"), Url = Str(m, "url"), Ziel = SprachModellPfad(m), Gesamt = (long)Num(m, "bytes"), Extra = Str(m, "id") });
+                            plan.Add(new Job { Art = "sprachmodell", Titel = Str(m, "titel"), Url = Str(m, "url"), Ziel = SprachModellPfad(m), Gesamt = (long)Num(m, "bytes"), Extra = Str(m, "id") });
                 }
                 foreach (var cc in orteNoetig)
                 {
                     string ziel = Path.Combine(Daten, "orte", cc + ".txt");
                     if (!File.Exists(ziel))
-                        jobs.Add(new Job { Art = "orte", Titel = "Ortsnamen: " + cc, Url = "https://download.geonames.org/export/dump/" + cc + ".zip", Ziel = ziel });
+                        plan.Add(new Job { Art = "orte", Titel = "Ortsnamen: " + cc, Url = "https://download.geonames.org/export/dump/" + cc + ".zip", Ziel = ziel });
                 }
                 // Kleine Downloads zuerst (Hilfsprogramme ganz vorne, die brauchen andere Schritte;
                 // pmtiles als allererstes, ohne es kann keine Karte laden)
-                var neu = jobs.OrderBy(x => x.Art == "programm" ? 0 : 1).ThenBy(x => x.Art == "programm" && x.Ziel == "pmtiles" ? 0 : 1).ThenBy(x => x.Gesamt).ToList();
+                var neu = plan.OrderBy(x => x.Art == "programm" ? 0 : 1).ThenBy(x => x.Art == "programm" && x.Ziel == "pmtiles" ? 0 : 1).ThenBy(x => x.Gesamt).ToList();
                 if (dazu)
                 {
                     // Was schon wartet oder lädt, nicht doppelt aufnehmen
@@ -3012,7 +3263,7 @@ namespace OfflineWissen
                 }
                 // Vorab prüfen, ob es auf das Laufwerk passt (sonst scheitert es erst nach Stunden)
                 string problem = LaufwerkPruefen(neu, dazu ? bisher : null);
-                if (problem != null) { jobs = bisher; return new Dictionary<string, object> { { "fehler", problem } }; }
+                if (problem != null) return new Dictionary<string, object> { { "fehler", problem } };
                 jobs = dazu ? bisher.Concat(neu).ToList() : neu;
                 SpeichereEinst();
                 try { AufgabenAbgleichen(); } catch (Exception e) { Log("Aufgabenplanung: " + e.Message); }
@@ -3130,6 +3381,8 @@ namespace OfflineWissen
                 bool warten;
                 lock (Lk)
                 {
+                    // Beim Beenden nichts Neues mehr anfangen (die offenen Jobs sind schon gemerkt)
+                    if (beenden) { aktiveHelfer--; return; }
                     j = NaechsterJob(out warten);
                     if (j == null && !warten) { aktiveHelfer--; return; }
                     if (j != null)
@@ -3140,7 +3393,7 @@ namespace OfflineWissen
                 }
                 if (j == null) { Thread.Sleep(500); continue; }
                 JobAusfuehren(j);
-                lock (Lk) WarteschlangeMerken();
+                lock (Lk) WarteschlangeMerken(beenden && j.Status == "fertig");
             }
         }
 
@@ -3160,14 +3413,17 @@ namespace OfflineWissen
                     case "datei":
                         Herunterladen(j, j.Url, j.Ziel);
                         neueKi = true;
-                        // KI gleich starten, nicht erst wenn alle anderen Downloads fertig sind
-                        if (!Bool(einst, "sparmodus")) new Thread(delegate () { StoppeKi(); StarteKi(); }) { IsBackground = true }.Start();
+                        // Fehler hier machen den fertigen Download nicht zum Fehler
+                        if (!Bool(einst, "sparmodus")) try { NachKiDatei(j.Ziel); } catch (Exception e) { Log("KI: " + e.Message); }
                         break;
                     case "zim":
                         Herunterladen(j, j.Url, j.Ziel);
-                        AlteVersionenLoeschen(j);
-                        // Bibliothek sofort mit dem neuen Paket (neu) starten
-                        StarteKiwix();
+                        // Alte Variante löschen und Bibliothek mit dem neuen Paket starten, ohne dass ein anderer Thread dazwischen startet
+                        lock (KiwixLk)
+                        {
+                            AlteVersionenLoeschen(j);
+                            StarteKiwix();
+                        }
                         break;
                     case "karte":
                         KarteLaden(j);
@@ -3204,6 +3460,8 @@ namespace OfflineWissen
             }
             catch (Exception e)
             {
+                // Beim Beenden ist der Job kein Fehler: er bleibt gemerkt und geht nach dem Neustart weiter
+                if (beenden) { j.Status = "wartet"; Log("Download unterbrochen (Fieldbook wird beendet): " + j.Titel); StatusCacheLeeren(); return; }
                 j.Status = abbrechen ? "abgebrochen" : "fehler";
                 j.Fehler = e.Message;
                 Log("Fehler bei " + j.Titel + ": " + e.Message);
@@ -3212,12 +3470,41 @@ namespace OfflineWissen
             StatusCacheLeeren();
         }
 
+        // Eine KI-Datei ist fertig: nur neu starten, wenn es das gewählte Modell ist oder die KI nicht läuft
+        // (sonst bräche eine laufende Antwort ab). Die Suchhilfe allein nachstarten; sie läuft nur zusammen mit der KI.
+        static void NachKiDatei(string ziel)
+        {
+            bool kiLaeuft = llmStatus == "bereit" || llmStatus == "laedt";
+            var m = AktuellesModell();
+            bool istModell = m != null && GleicherPfad(ziel, Path.Combine(Daten, "modelle", Str(m, "datei")));
+            if (!istModell && GleicherPfad(ziel, SuchhilfeDatei()))
+            {
+                if (kiLaeuft) StarteSuchhilfe();
+                return;
+            }
+            if (!istModell && kiLaeuft) return;
+            // KI gleich starten, nicht erst wenn alle anderen Downloads fertig sind
+            new Thread(delegate () { StoppeKi(); StarteKi(); }) { IsBackground = true }.Start();
+        }
+
+        static bool GleicherPfad(string a, string b)
+        {
+            if (a == null || b == null) return false;
+            try { return string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase); }
+            catch { return false; }
+        }
+
         static void AbschlussArbeiten()
         {
             // Läuft im Download-Thread: jeder Schritt einzeln abgesichert, damit ein Fehler Fieldbook nicht beendet
+            // Beim Beenden nichts mehr starten und die gemerkte Warteschlange nicht anfassen
+            if (beenden) return;
             if (neueOrte) lock (OrteLk) orte = null;
             try { if (brouter == null || brouter.HasExited) StarteRouting(); } catch (Exception e) { Log("Routenplanung: " + e.Message); }
-            try { if (!KiwixAktiv()) StarteKiwix(); } catch (Exception e) { Log("Bibliothek: " + e.Message); }
+            // Bibliothek und KI können lange zum Starten brauchen: in eigenen Threads, damit der Download-Durchgang
+            // sofort endet (sonst meldet er sich als aktiv und neue Downloads müssen warten)
+            if (!KiwixAktiv())
+                new Thread(delegate () { try { if (!KiwixAktiv()) StarteKiwix(); } catch (Exception e) { Log("Bibliothek: " + e.Message); } }) { IsBackground = true }.Start();
             try
             {
                 lock (Lk)
@@ -3233,7 +3520,8 @@ namespace OfflineWissen
             {
                 if (llmStatus == "aus" || llmStatus == "fehler" || (neueKi && llmStatus != "bereit" && llmStatus != "laedt"))
                 {
-                    if (!Bool(einst, "sparmodus")) { StoppeKi(); StarteKi(); }
+                    // StarteKi fängt seine Fehler selbst ab
+                    if (!Bool(einst, "sparmodus")) new Thread(delegate () { StoppeKi(); StarteKi(); }) { IsBackground = true }.Start();
                 }
             }
             catch (Exception e) { Log("KI: " + e.Message); }
@@ -3261,15 +3549,18 @@ namespace OfflineWissen
                 return "^" + Regex.Escape(t[0]) + (t[1] == "" ? "" : "_" + Regex.Escape(t[1])) + @"_\d{4}-\d{2}[a-z]?\.zim$";
             }).ToList();
             string neu = Path.GetFileName(j.Ziel);
-            foreach (var f in Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim"))
-            {
-                string n = Path.GetFileName(f);
-                if (n != neu && muster.Any(m => Regex.IsMatch(n, m, RegexOptions.IgnoreCase)))
+            // Unter KiwixLk: sonst startet ein anderer Thread kiwix zwischen Stoppen und Löschen mit der alten Datei,
+            // das Löschen scheitert und die alte Variante bleibt liegen. Neu starten muss der Aufrufer (am besten im selben lock).
+            lock (KiwixLk)
+                foreach (var f in Directory.GetFiles(Path.Combine(Daten, "wissen"), "*.zim"))
                 {
-                    StoppeKiwix();
-                    try { File.Delete(f); } catch { }
+                    string n = Path.GetFileName(f);
+                    if (n != neu && muster.Any(m => Regex.IsMatch(n, m, RegexOptions.IgnoreCase)))
+                    {
+                        StoppeKiwix();
+                        try { File.Delete(f); } catch (Exception e) { Log("Alte Version nicht gelöscht (" + n + "): " + e.Message); }
+                    }
                 }
-            }
         }
 
         // Fertig geladene .part mit der Größe auf dem Server vergleichen. Passt sie nicht, ist die Datei
@@ -3313,17 +3604,18 @@ namespace OfflineWissen
             int code = CurlLaden(j, url, part);
             // Kiwix verteilt Downloads auf Spiegelserver. Scheitert einer, beim nächsten weitermachen
             // (curl setzt die .part-Datei fort, alle Spiegel haben dieselbe Datei).
-            if (code != 0 && Regex.IsMatch(url, @"^https?://download\.kiwix\.org/", RegexOptions.IgnoreCase))
+            if (code != 0 && !abbrechen && !beenden && Regex.IsMatch(url, @"^https?://download\.kiwix\.org/", RegexOptions.IgnoreCase))
             {
                 foreach (var spiegel in KiwixSpiegel(url).Take(4))
                 {
-                    if (abbrechen) break;
+                    if (abbrechen || beenden) break;
                     Log("Download " + j.Titel + ": versuche Spiegelserver " + new Uri(spiegel).Host);
                     code = CurlLaden(j, spiegel, part);
                     if (code == 0) break;
                 }
             }
-            if (abbrechen) throw new Exception("Abgebrochen");
+            // Beim Beenden ist curl absichtlich gestoppt worden: kein Fehler, die .part bleibt zum Fortsetzen
+            if (abbrechen || beenden) throw new Exception("Abgebrochen");
             // curl 33: Fortsetzen nicht möglich, der nächste Versuch beginnt von vorn
             if (code == 33) { try { File.Delete(part); } catch { } j.Bytes = 0; }
             if (code != 0) throw new Exception(CurlMeldung(code));
@@ -3353,16 +3645,20 @@ namespace OfflineWissen
                 p.Start();
                 ChildJob.Add(p);
                 ProzessMerken(p, true);
-                p.BeginErrorReadLine();
-                p.BeginOutputReadLine();
-                while (!p.WaitForExit(500))
+                try
                 {
-                    try { if (File.Exists(part)) j.Bytes = new FileInfo(part).Length; } catch { }
-                    if (abbrechen) { try { p.Kill(); } catch { } throw new Exception("Abgebrochen"); }
+                    p.BeginErrorReadLine();
+                    p.BeginOutputReadLine();
+                    while (!p.WaitForExit(500))
+                    {
+                        try { if (File.Exists(part)) j.Bytes = new FileInfo(part).Length; } catch { }
+                        if (abbrechen || beenden) { try { p.Kill(); } catch { } throw new Exception("Abgebrochen"); }
+                    }
+                    p.WaitForExit();
                 }
-                p.WaitForExit();
-                ProzessMerken(p, false);
-                if (p.ExitCode != 0)
+                finally { ProzessMerken(p, false); }
+                // Absichtlich gestoppt (Abbrechen, Beenden): nicht als Fehler protokollieren
+                if (p.ExitCode != 0 && !abbrechen && !beenden)
                 {
                     string text;
                     lock (fehler) text = fehler.ToString().Trim();
@@ -3473,14 +3769,17 @@ namespace OfflineWissen
             string name = Path.GetFileName(datei);
             string endung = Path.GetExtension(name).ToLowerInvariant();
             string art = null, titel = null, ziel = null;
+            // Wissenspaket, das nicht im Fieldbook-Katalog steht: Die Oberfläche warnt davor (Artikelseiten laufen
+            // unter derselben Adresse wie Fieldbook und könnten Fieldbook-Funktionen aufrufen)
+            bool fremd = false;
             if (endung == ".zim")
             {
-                art = "wissen"; ziel = Path.Combine(Daten, "wissen", name); titel = name;
+                art = "wissen"; ziel = Path.Combine(Daten, "wissen", name); titel = name; fremd = true;
                 foreach (var o in pakete)
                 {
                     var p = (Dictionary<string, object>)o;
                     if (Regex.IsMatch(name, "^" + Regex.Escape(ZimName(p)) + (string.IsNullOrEmpty(Str(p, "flavour")) ? "" : "_" + Regex.Escape(Str(p, "flavour"))) + @"_\d{4}-\d{2}[a-z]?\.zim$"))
-                    { titel = Str(p, "titel"); break; }
+                    { titel = Str(p, "titel"); fremd = false; break; }
                 }
             }
             else if (endung == ".gguf")
@@ -3515,7 +3814,7 @@ namespace OfflineWissen
             if (string.Equals(Path.GetFullPath(datei), Path.GetFullPath(ziel), StringComparison.OrdinalIgnoreCase)) return null;
             long bytes = new FileInfo(datei).Length;
             bool vorhanden = File.Exists(ziel) && new FileInfo(ziel).Length == bytes;
-            return new Dictionary<string, object> { { "datei", datei }, { "art", art }, { "titel", titel }, { "ziel", ziel }, { "bytes", bytes }, { "vorhanden", vorhanden } };
+            return new Dictionary<string, object> { { "datei", datei }, { "art", art }, { "titel", titel }, { "ziel", ziel }, { "bytes", bytes }, { "vorhanden", vorhanden }, { "fremd", fremd } };
         }
 
         // Nur Pfade auf lokalen Laufwerken oder USB-Sticks (keine Netzwerkpfade wie \\server\freigabe).
@@ -3579,9 +3878,11 @@ namespace OfflineWissen
         static string DownloadDatei() { return Path.Combine(Daten, "downloads.json"); }
 
         // Nur unter lock (Lk) und nur für die normale Warteschlange aufrufen
-        static void WarteschlangeMerken()
+        // Beim Beenden ist die Warteschlange schon gemerkt (BeendenVorbereiten), abgebrochene Jobs nicht streichen.
+        // auchBeimBeenden: ein Job ist gerade noch fertig geworden, ihn austragen (die gestoppten stehen auf "wartet").
+        static void WarteschlangeMerken(bool auchBeimBeenden = false)
         {
-            if (!warteschlange) return;
+            if (!warteschlange || (beenden && !auchBeimBeenden)) return;
             var laufend = jobs.Where(x => x.Status == "wartet" || x.Status == "laeuft").ToList();
             // Warten noch unterbrochene Downloads auf "Fortsetzen", diese nicht vergessen
             if (unterbrochen > 0) laufend.AddRange(GemerkteDownloads().Where(g => !laufend.Any(x => x.Ziel == g.Ziel)));
@@ -3628,15 +3929,26 @@ namespace OfflineWissen
                 return;
             }
             Log(liste.Count + " unterbrochene Downloads werden fortgesetzt.");
-            Einreihen(liste);
+            // Klappt das Einreihen nicht (z. B. zu wenig Platz), bleiben sie gemerkt und die Seite zeigt "Fortsetzen"
+            Dictionary<string, object> erg;
+            try { erg = Einreihen(liste); }
+            catch { unterbrochen = liste.Count; throw; }
+            if (!erg.ContainsKey("ok")) { unterbrochen = liste.Count; Log("Fortsetzen nicht möglich: " + Str(erg, "fehler")); }
         }
 
         static Dictionary<string, object> Fortsetzen()
         {
             var liste = GemerkteDownloads();
-            unterbrochen = 0;
-            if (liste.Count == 0) return new Dictionary<string, object> { { "fehler", "Es gibt keine unterbrochenen Downloads." } };
-            return Einreihen(liste);
+            if (liste.Count == 0) { unterbrochen = 0; return new Dictionary<string, object> { { "fehler", "Es gibt keine unterbrochenen Downloads." } }; }
+            // Erst nach erfolgreichem Einreihen vergessen; scheitert es, bleiben die gemerkten Downloads erhalten
+            var erg = Einreihen(liste);
+            if (erg.ContainsKey("ok"))
+                lock (Lk)
+                {
+                    unterbrochen = 0;
+                    WarteschlangeMerken();
+                }
+            return erg;
         }
 
         // Jobs in die Warteschlange stellen (wie Installieren, aber mit fertigen Jobs)
@@ -3701,12 +4013,22 @@ namespace OfflineWissen
                 throw new Exception(Regex.IsMatch(e.Message, "Speicherplatz|space", RegexOptions.IgnoreCase) ? "Nicht genug Platz auf dem Laufwerk." : "Kopieren fehlgeschlagen: " + e.Message);
             }
             catch { try { File.Delete(part); } catch { } throw; }
-            if (File.Exists(j.Ziel))
+            if (j.Extra == "wissen" && File.Exists(j.Ziel))
             {
-                if (j.Extra == "wissen") StoppeKiwix();
-                File.Delete(j.Ziel);
+                // Stoppen und Ersetzen unter KiwixLk: sonst startet ein anderer Thread kiwix dazwischen mit der alten Datei.
+                // Danach startet JobAusfuehren die Bibliothek neu; scheitert das Ersetzen, gleich hier (nicht aus lassen).
+                lock (KiwixLk)
+                {
+                    StoppeKiwix();
+                    try { File.Delete(j.Ziel); File.Move(part, j.Ziel); }
+                    catch { StarteKiwix(); throw; }
+                }
             }
-            File.Move(part, j.Ziel);
+            else
+            {
+                if (File.Exists(j.Ziel)) File.Delete(j.Ziel);
+                File.Move(part, j.Ziel);
+            }
             // Karten: Begleitdatei mit den Download-Einstellungen mitnehmen
             string meta = Path.ChangeExtension(j.Url, ".json");
             if (j.Extra == "karte" && File.Exists(meta)) try { File.Copy(meta, Path.ChangeExtension(j.Ziel, ".json"), true); } catch { }
@@ -4011,25 +4333,29 @@ namespace OfflineWissen
                 p.Start();
                 ChildJob.Add(p);
                 ProzessMerken(p, true);
-                p.BeginErrorReadLine();
-                p.BeginOutputReadLine();
-                // Kommt 5 Minuten lang nichts voran (z. B. nach Standby), abbrechen: dann greift der nächste Versuch
-                long letzteBytes = -1;
-                DateTime letzterFortschritt = DateTime.Now;
-                while (!p.WaitForExit(500))
+                try
                 {
-                    if (abbrechen) { try { p.Kill(); } catch { } throw new Exception("Abgebrochen"); }
-                    if (j.Bytes != letzteBytes) { letzteBytes = j.Bytes; letzterFortschritt = DateTime.Now; }
-                    else if ((DateTime.Now - letzterFortschritt).TotalMinutes >= 5)
+                    p.BeginErrorReadLine();
+                    p.BeginOutputReadLine();
+                    // Kommt 5 Minuten lang nichts voran (z. B. nach Standby), abbrechen: dann greift der nächste Versuch
+                    long letzteBytes = -1;
+                    DateTime letzterFortschritt = DateTime.Now;
+                    while (!p.WaitForExit(500))
                     {
-                        try { p.Kill(); } catch { }
-                        p.WaitForExit(10000);
-                        ProzessMerken(p, false);
-                        return "timeout: seit 5 Minuten kein Fortschritt";
+                        if (abbrechen || beenden) { try { p.Kill(); } catch { } throw new Exception("Abgebrochen"); }
+                        if (j.Bytes != letzteBytes) { letzteBytes = j.Bytes; letzterFortschritt = DateTime.Now; }
+                        else if ((DateTime.Now - letzterFortschritt).TotalMinutes >= 5)
+                        {
+                            try { p.Kill(); } catch { }
+                            p.WaitForExit(10000);
+                            return "timeout: seit 5 Minuten kein Fortschritt";
+                        }
                     }
+                    p.WaitForExit();
                 }
-                p.WaitForExit();
-                ProzessMerken(p, false);
+                finally { ProzessMerken(p, false); }
+                // Absichtlich gestoppt: KarteLaden soll es nicht erneut versuchen
+                if (p.ExitCode != 0 && (abbrechen || beenden)) throw new Exception("Abgebrochen");
                 if (p.ExitCode == 0) return null;
                 lock (aus) return "Code " + p.ExitCode + ": " + string.Join(" | ", aus);
             }
@@ -4068,7 +4394,14 @@ namespace OfflineWissen
                         var p = (Dictionary<string, object>)o;
                         if (Str(p, "id") != id) continue;
                         string f = ZimDatei(ZimName(p), Str(p, "flavour") ?? "");
-                        if (f != null) { StoppeKiwix(); File.Delete(Path.Combine(Daten, "wissen", f)); StarteKiwix(); }
+                        // Stoppen, Löschen, Neustarten zusammen unter KiwixLk; die Bibliothek auch starten, wenn das Löschen scheitert
+                        if (f != null)
+                            lock (KiwixLk)
+                            {
+                                StoppeKiwix();
+                                try { File.Delete(Path.Combine(Daten, "wissen", f)); }
+                                finally { StarteKiwix(); }
+                            }
                     }
                 }
                 else if (art == "modell")
@@ -4231,19 +4564,39 @@ namespace OfflineWissen
 
         // kiwix-serve kann unter vielen gleichzeitigen Suchanfragen abstürzen. Dann beim nächsten Zugriff neu
         // starten, höchstens einmal in 30 Sekunden (falls es sofort wieder abstürzt, nicht endlos).
+        // Der Neustart läuft in einem eigenen Thread, damit nicht jede Anfrage (z. B. 40 Bilder eines Artikels)
+        // einen Pool-Thread blockiert. Rückgabe true: Neustart läuft gerade, die Anfrage bekommt 503.
         static DateTime kiwixWiederbelebt = DateTime.MinValue;
-        static void KiwixWiederbeleben()
+        static int kiwixNeustartLaeuft; // 1, solange der Hintergrund-Neustart läuft
+        static bool KiwixWiederbeleben()
         {
-            lock (KiwixLk)
+            if (Interlocked.CompareExchange(ref kiwixNeustartLaeuft, 0, 0) == 1) return true;
+            if ((DateTime.Now - kiwixWiederbelebt).TotalSeconds < 30) return false;
+            // Belegt: die Bibliothek wird gerade gestartet oder gestoppt
+            if (!Monitor.TryEnter(KiwixLk)) return true;
+            try
             {
-                if (kiwix == null || !kiwix.HasExited) return;
-                if ((DateTime.Now - kiwixWiederbelebt).TotalSeconds < 30) return;
+                var k = kiwix;
+                if (k == null || !k.HasExited) return false;
+                if ((DateTime.Now - kiwixWiederbelebt).TotalSeconds < 30) return false;
                 kiwixWiederbelebt = DateTime.Now;
                 int code = -1;
-                try { code = kiwix.ExitCode; } catch { }
+                try { code = k.ExitCode; } catch { }
                 Log("Bibliothek war abgestürzt (Code " + code + "), wird neu gestartet.");
-                StarteKiwix();
+                Interlocked.Exchange(ref kiwixNeustartLaeuft, 1);
+                try
+                {
+                    new Thread(delegate ()
+                    {
+                        try { StarteKiwix(); }
+                        catch (Exception e) { Log("Neustart der Bibliothek: " + e.Message); }
+                        finally { Interlocked.Exchange(ref kiwixNeustartLaeuft, 0); }
+                    }) { IsBackground = true }.Start();
+                }
+                catch { Interlocked.Exchange(ref kiwixNeustartLaeuft, 0); throw; }
+                return true;
             }
+            finally { Monitor.Exit(KiwixLk); }
         }
 
         // Läuft Kiwix gerade? Mit lokaler Kopie, weil ein anderer Thread kiwix auf null setzen kann.
@@ -4544,7 +4897,13 @@ namespace OfflineWissen
         // Nutzer hat im Fenster trotz getakteter Verbindung „Herunterladen“ gewählt (nur dieser Prozess)
         static bool getaktetErlaubt;
 
-        // Wie aktualisieren.ps1: im Zweifel getaktet. Ohne Internetverbindung nicht getaktet (es wird ohnehin nichts geladen).
+        // Letztes sicheres Ergebnis. Anfangs das der Startprüfung in aktualisieren.ps1 (OW_GETAKTET, dort im Zweifel
+        // getaktet): Ohne Erlaubnis läuft der Download nur, wenn diese "frei" ergab. So gilt nie "frei" ohne echte Prüfung.
+        static bool getaktetZuletzt = Environment.GetEnvironmentVariable("OW_GETAKTET") == "1";
+
+        // Wie aktualisieren.ps1. Ohne Internetverbindung nicht getaktet (es wird ohnehin nichts geladen).
+        // Scheitert die Abfrage (Zeitüberschreitung, Fehler), gilt der letzte Wert: sonst pausierte ein kurz
+        // ausgelasteter Rechner den Download fälschlich wegen „Getaktete Verbindung“.
         static bool GetaktetJetzt()
         {
             try
@@ -4553,20 +4912,41 @@ namespace OfflineWissen
                     "$p=[Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile();" +
                     "if(-not $p){'keine'}else{$k=$p.GetConnectionCost();$g=$false;try{$g=$k.ApproachingDataLimit -or $k.OverDataLimit}catch{};" +
                     "if(($k.NetworkCostType.ToString() -in @('Unrestricted','Unknown')) -and -not $k.Roaming -and -not $g){'frei'}else{'getaktet'}}";
-                string aus = Ausfuehren("powershell.exe", "-NoProfile -NonInteractive -Command \"" + ps + "\"", 30000);
+                // Normale Priorität: der Update-Prozess läuft im Leerlauf-Modus, PowerShell würde das erben
+                string aus = Ausfuehren("powershell.exe", "-NoProfile -NonInteractive -Command \"" + ps + "\"", 30000, true);
                 foreach (var z in aus.Split('\n'))
                 {
                     string t = z.Trim();
-                    if (t == "frei" || t == "keine") return false;
-                    if (t == "getaktet") return true;
+                    if (t == "frei" || t == "keine") { getaktetZuletzt = false; return false; }
+                    if (t == "getaktet") { getaktetZuletzt = true; return true; }
                 }
-                return true;
+                AktLog("Verbindungsart nicht erkannt, letzter Wert gilt.");
             }
-            catch { return true; }
+            catch (Exception e) { AktLog("Verbindungsart nicht geprüft (" + e.Message + "), letzter Wert gilt."); }
+            return getaktetZuletzt;
         }
 
+        const string UpdateLaeuftText = "Gerade läuft eine Aktualisierung. Bitte danach noch einmal prüfen.";
+
+        // Läuft gerade ein Update (hier im Programm oder in einer Windows-Aufgabe)?
+        static bool UpdateLaeuft()
+        {
+            lock (Lk) if (worker != null && worker.IsAlive && !warteschlange) return true;
+            var probe = UpdateSperre();
+            if (probe == null) return true;
+            UpdateSperreFrei(probe);
+            return false;
+        }
+
+        // Während eines Updates nicht prüfen: das überschriebe aktualisierung.json, und das laufende Update schriebe
+        // danach seinen veralteten Stand zurück. Mit popup (Windows-Aufgabe) nur protokollieren, sonst Fehler melden.
         static void Pruefen(bool popup, bool mitProgramm = true)
         {
+            if (UpdateLaeuft())
+            {
+                if (popup) { AktLog("Prüfen übersprungen: ein Update läuft gerade."); return; }
+                throw new Exception(UpdateLaeuftText);
+            }
             var updates = SucheAktualisierungen(mitProgramm);
             var a = AktEinst();
             string modus = Str(a, "modus") ?? "fragen";
@@ -4587,8 +4967,23 @@ namespace OfflineWissen
                 }
             }
             d["freigegeben"] = ok;
-            SicherSchreiben(AktDatei, Json.Serialize(d));
-            if (ok) File.WriteAllText(AktFlag, DateTime.Now.ToString("s")); else try { File.Delete(AktFlag); } catch { }
+            // Inzwischen ein Update gestartet (die Suche dauert)? Dann nicht schreiben. Die Sperre hält beim Schreiben
+            // ein gleichzeitig startendes Update fern.
+            var sperre = UpdateSperre();
+            bool belegt = sperre == null;
+            if (!belegt) lock (Lk) belegt = worker != null && worker.IsAlive && !warteschlange;
+            if (belegt)
+            {
+                UpdateSperreFrei(sperre);
+                if (popup) { AktLog("Prüfergebnis verworfen: ein Update läuft gerade."); return; }
+                throw new Exception(UpdateLaeuftText);
+            }
+            try
+            {
+                SicherSchreiben(AktDatei, Json.Serialize(d));
+                if (ok) File.WriteAllText(AktFlag, DateTime.Now.ToString("s")); else try { File.Delete(AktFlag); } catch { }
+            }
+            finally { UpdateSperreFrei(sperre); }
             AktLog(updates.Count == 0 ? "Geprüft: keine neuen Daten." : "Geprüft: " + updates.Count + " Aktualisierung(en)" + (ok ? ", freigegeben." : getaktet ? ", getaktete Verbindung, später." : ", nicht freigegeben."));
             // Sofort-Modus: gleich im selben Hintergrundprozess herunterladen
             if (ok && popup && Str(a, "wann") != "leerlauf") LadenImLeerlauf();
@@ -4741,8 +5136,8 @@ namespace OfflineWissen
                     {
                         if (nurLeerlauf && NutzerAktiv()) grund = "Computer wird benutzt";
                         else if (nurLeerlauf && AufAkku()) grund = "Akkubetrieb";
-                        // Alle 60 s (30 × 2 s): inzwischen auf eine getaktete Verbindung gewechselt (z. B. Handy-Hotspot)?
-                        else if (!getaktetErlaubt && ++runden >= 30) { runden = 0; if (GetaktetJetzt() && !fertig) grund = "Getaktete Verbindung"; }
+                        // Alle 5 min (150 × 2 s): inzwischen auf eine getaktete Verbindung gewechselt (z. B. Handy-Hotspot)?
+                        else if (!getaktetErlaubt && ++runden >= 150) { runden = 0; if (GetaktetJetzt() && !fertig) grund = "Getaktete Verbindung"; }
                         if (grund != null)
                         {
                             abbrechen = true;
@@ -4792,6 +5187,7 @@ namespace OfflineWissen
                     finally { UpdateSperreFrei(sperre); }
                     // Neue Fieldbook-Version bereitgelegt? Dann gleich neu starten, das spielt sie ein.
                     if (BereitVersion() != null) { Neustart(); return; }
+                    if (beenden) return; // Fieldbook wird gerade beendet: nichts mehr starten
                     StarteKiwix();
                     StarteRouting();
                     if (llmStatus == "bereit") StarteSuchhilfe();
@@ -4870,13 +5266,23 @@ namespace OfflineWissen
             {
                 var j = anzeige != null && i < anzeige.Count ? anzeige[i] : new Job();
                 i++;
-                if (abbrechen) break;
+                if (abbrechen || beenden) break;
                 j.Art = Str(u, "art"); j.Url = Str(u, "url"); j.Ziel = Str(u, "ziel"); j.Extra = Str(u, "extra"); j.Gesamt = (long)Num(u, "bytes"); j.Titel = Str(u, "titel");
                 j.Status = "laeuft";
                 try
                 {
                     PlatzPruefen(j);
-                    if (j.Art == "zim") { Herunterladen(j, j.Url, j.Ziel); try { AlteVersionenLoeschen(j); } catch { } }
+                    if (j.Art == "zim")
+                    {
+                        Herunterladen(j, j.Url, j.Ziel);
+                        // Im Programm die Bibliothek gleich wieder starten (sonst bliebe sie bis zum Ende aller Updates aus);
+                        // in der Windows-Aufgabe gehört die Bibliothek dem laufenden Fieldbook
+                        lock (KiwixLk)
+                        {
+                            try { AlteVersionenLoeschen(j); } catch { }
+                            if (anzeige != null) StarteKiwix();
+                        }
+                    }
                     else if (j.Art == "route") Herunterladen(j, j.Url, j.Ziel + ".neu");
                     else if (j.Art == "karte") KarteLaden(j);
                     else if (j.Art == "datei") { Directory.CreateDirectory(Path.GetDirectoryName(j.Ziel)); Herunterladen(j, j.Url, j.Ziel); }
@@ -4889,9 +5295,14 @@ namespace OfflineWissen
                     StatusCacheLeeren();
                     AktLog("Fertig: " + j.Titel);
                 }
-                catch (Exception e) { j.Status = abbrechen ? "abgebrochen" : "fehler"; j.Fehler = e.Message; if (!abbrechen) { AktLog("Fehler bei " + j.Titel + ": " + e.Message); StatFehler("aktualisierung", j.Art + " " + j.Titel + ": " + e.Message); } }
+                catch (Exception e) { bool gestoppt = abbrechen || beenden; j.Status = gestoppt ? "abgebrochen" : "fehler"; j.Fehler = e.Message; if (!gestoppt) { AktLog("Fehler bei " + j.Titel + ": " + e.Message); StatFehler("aktualisierung", j.Art + " " + j.Titel + ": " + e.Message); } }
             }
             } finally { ladeLimit = 0; }
+            // Wegedaten lassen sich nur tauschen, wenn BRouter sie nicht offen hat. Im Programm startet der Aufrufer
+            // (UpdatesJetztLaden) die Routenplanung danach neu; in der Windows-Aufgabe tauscht der nächste Start.
+            if (anzeige != null && !beenden)
+                try { if (Directory.GetFiles(Path.Combine(Daten, "routen"), "*.rd5.neu").Length > 0) StoppeRouting(); }
+                catch (Exception e) { Log("Routenplanung stoppen: " + e.Message); }
             Aufraeumen();
             return erledigt;
         }
@@ -5050,7 +5461,28 @@ namespace OfflineWissen
             catch { return null; }
         }
 
-        static Dictionary<string, object> ProgrammUpdateSuchen()
+        // GitHub erlaubt ohne Anmeldung nur 60 Anfragen pro Stunde und IP: die Antwort 6 h merken.
+        // frisch (Einstellungen, Knopf „Nach Updates suchen“) fragt neu, höchstens einmal pro Minute.
+        static readonly object ProgUpdateLk = new object();
+        static Dictionary<string, object> progRelease;
+        static string progReleaseApi;
+        static DateTime progReleaseZeit;
+
+        static Dictionary<string, object> ProgrammUpdateSuchen() { return ProgrammUpdateSuchen(false); }
+
+        static Dictionary<string, object> ReleaseHolen(string api, bool frisch)
+        {
+            lock (ProgUpdateLk)
+            {
+                double alter = (DateTime.UtcNow - progReleaseZeit).TotalSeconds;
+                if (progRelease != null && progReleaseApi == api && alter >= 0 && alter < (frisch ? 60 : 6 * 3600)) return progRelease;
+                var rel = Json.DeserializeObject(HoleText(api, 20000)) as Dictionary<string, object>;
+                if (rel != null) { progRelease = rel; progReleaseApi = api; progReleaseZeit = DateTime.UtcNow; }
+                return rel;
+            }
+        }
+
+        static Dictionary<string, object> ProgrammUpdateSuchen(bool frisch)
         {
             var erg = new Dictionary<string, object>
             {
@@ -5059,7 +5491,7 @@ namespace OfflineWissen
             };
             string api = UpdateApi();
             if (api == null) return erg;
-            var rel = Json.DeserializeObject(HoleText(api, 20000)) as Dictionary<string, object>;
+            var rel = ReleaseHolen(api, frisch);
             string neu = (Str(rel, "tag_name") ?? "").TrimStart('v', 'V');
             string zip = null, zipName = null, sha = null;
             long bytes = 0;
@@ -5183,7 +5615,9 @@ namespace OfflineWissen
             {
                 Thread.Sleep(1500); // Antwort an den Browser noch rausgeben
                 Log("Fieldbook wird neu gestartet ...");
-                StoppeKi(); StoppeKiwix(); StoppeRouting(); AlleDownloadsStoppen();
+                // Erst die Warteschlange merken, dann stoppen: unterbrochene Downloads gehen nach dem Neustart weiter
+                BeendenVorbereiten();
+                AlleDownloadsStoppen(); StoppeKi(); StoppeKiwix(); StoppeRouting();
                 try { File.WriteAllText(Path.Combine(Daten, "cache", "neustart"), DateTime.Now.ToString("s")); } catch { }
                 string exe = Path.Combine(Root, "Fieldbook.exe");
                 string ziel = File.Exists(exe) ? exe : Path.Combine(AppDir, "Start.bat");
@@ -5314,13 +5748,23 @@ namespace OfflineWissen
             var konf = SpracheingabeKonfig();
 
             // Aufnahme (WAV, 16 kHz mono) in eine Datei, höchstens etwa eine Minute
-            byte[] daten;
-            using (var ms = new MemoryStream())
-            {
-                ctx.Request.InputStream.CopyTo(ms);
-                daten = ms.ToArray();
-            }
-            if (daten.Length < 1000 || daten.Length > 4000000) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Die Aufnahme ist zu kurz oder zu lang." } }, 400); return; }
+            // Zu große Aufnahmen gar nicht erst ganz lesen: angegebene Länge prüfen, sonst beim Lesen abbrechen
+            const int MaxAufnahme = 4000000;
+            byte[] daten = null;
+            if (ctx.Request.ContentLength64 <= MaxAufnahme)
+                using (var ms = new MemoryStream())
+                {
+                    var puffer = new byte[65536];
+                    int n;
+                    bool zuLang = false;
+                    while ((n = ctx.Request.InputStream.Read(puffer, 0, puffer.Length)) > 0)
+                    {
+                        if (ms.Length + n > MaxAufnahme) { zuLang = true; break; }
+                        ms.Write(puffer, 0, n);
+                    }
+                    if (!zuLang) daten = ms.ToArray();
+                }
+            if (daten == null || daten.Length < 1000) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Die Aufnahme ist zu kurz oder zu lang." } }, 400); return; }
             string wav = Path.Combine(Daten, "cache", "sprechen-" + Guid.NewGuid().ToString("N") + ".wav");
             File.WriteAllBytes(wav, daten);
             try
@@ -5644,7 +6088,12 @@ namespace OfflineWissen
                 parallel = Math.Max(1, Math.Min(8, parallel));
                 args = "-m \"" + datei + "\" --host 127.0.0.1 --port " + LlmPort + " -c " + ((int)Num(m, "kontext") * parallel) + " --parallel " + parallel + " --jinja";
                 if (backend != "cpu") args += " -ngl 999";
-                llmModell = Str(m, "name") + " (" + Str(m, "modell") + ")";
+                // Der Prompt-Zwischenspeicher von llama-server wächst sonst bis 8 GB (gemessen: +1 GB nach zwei Fragen)
+                // und spart nur etwa 7 s je Folgefrage. Unter 16 GB RAM ganz aus, sonst auf 2 GB begrenzt.
+                var speicher = new MEMORYSTATUSEX();
+                double ramGB = GlobalMemoryStatusEx(speicher) ? speicher.ullTotalPhys / 1073741824.0 : 0;
+                args += ramGB >= 15.5 ? " --cache-ram 2048" : " --cache-ram 0";
+                llmModell =Str(m, "name") + " (" + Str(m, "modell") + ")";
                 llmStatus = "laedt";
                 llmFehler = "";
                 gen = ++llmGen;
@@ -5687,6 +6136,24 @@ namespace OfflineWissen
                     llmStatus = "bereit";
                     Log("KI ist bereit.");
                     StatKi("laden", ladeUhr.Elapsed.TotalSeconds);
+                    return;
+                }
+                // Nicht endlos warten: nach 10 Minuten aufgeben, damit der Status nicht für immer "laedt" zeigt
+                if (ladeUhr.Elapsed.TotalMinutes >= 10)
+                {
+                    lock (Lk)
+                    {
+                        if (gen != llmGen) return;
+                        llmGen++;
+                        var h = llama;
+                        try { if (h != null && !h.HasExited) { h.Kill(); h.WaitForExit(5000); } } catch { }
+                        llama = null;
+                        StoppeSuchhilfe();
+                        llmStatus = "fehler";
+                        llmFehler = "Die KI hat nach 10 Minuten noch nicht geantwortet und wurde beendet. Vielleicht ist das Modell zu groß für diesen Computer.";
+                    }
+                    Log(llmFehler);
+                    StatFehler("ki", llmFehler);
                     return;
                 }
             }
@@ -5830,13 +6297,17 @@ namespace OfflineWissen
             return sb.ToString();
         }
 
-        static void LadeOrte()
+        // Gibt die Liste zurück: Der Aufrufer arbeitet damit, auch wenn ein Download das Feld gleich wieder leert
+        static List<Ort> LadeOrte()
         {
             lock (OrteLk)
             {
-                if (orte != null) return;
+                if (orte != null) return orte;
                 var liste = new List<Ort>();
                 var gesehen = new HashSet<string>();
+                // Ortsart und Land kommen hunderttausendfach vor: je Wert nur eine Zeichenkette im Speicher
+                var geteilt = new Dictionary<string, string>();
+                Func<string, string> teilen = s => { string vorhanden; if (geteilt.TryGetValue(s, out vorhanden)) return vorhanden; geteilt[s] = s; return s; };
                 foreach (var f in Directory.GetFiles(Path.Combine(Daten, "orte"), "*.txt"))
                 {
                     foreach (var zeile in File.ReadLines(f, Encoding.UTF8))
@@ -5864,12 +6335,13 @@ namespace OfflineWissen
                         {
                             Name = c[1], NormName = Norm(c[1]), Alt = alt, NormAlt = normAlt,
                             Lat = lat, Lon = lon,
-                            Klasse = kl, Code = c[7], Land = c[8], Pop = pop
+                            Klasse = kl, Code = teilen(c[7]), Land = teilen(c[8]), Pop = pop
                         };
                         liste.Add(o);
                     }
                 }
                 orte = liste;
+                return liste;
             }
         }
 
@@ -5878,9 +6350,12 @@ namespace OfflineWissen
             var erg = new List<object>();
             string nq = Norm(q.Trim());
             if (nq.Length < 2) return erg;
-            LadeOrte();
-            var treffer = new List<KeyValuePair<double, object>>();
-            foreach (var o in orte)
+            // Lokale Kopie: ein fertiger Orte-Download setzt das Feld auf null
+            var liste = LadeOrte();
+            string nqLeer = " " + nq, nqStrich = "-" + nq;
+            // Erst nur Punktzahl, Ort und Anzeigename sammeln; die Ergebnisse nur für die besten bauen
+            var treffer = new List<Tuple<double, Ort, string>>();
+            foreach (var o in liste)
             {
                 string nn = o.NormName;
                 double score = 0;
@@ -5888,7 +6363,7 @@ namespace OfflineWissen
                 // Stufen: exakter Name vor Wortanfang vor Teiltreffer (Gross-/Kleinschreibung egal)
                 if (nn == nq) score = 3000;
                 else if (nn.StartsWith(nq, StringComparison.Ordinal)) score = 2000;
-                else if (nn.Contains(" " + nq) || nn.Contains("-" + nq)) score = 1000;
+                else if (nn.Contains(nqLeer) || nn.Contains(nqStrich)) score = 1000;
                 if (score < 3000 && o.NormAlt != null)
                 {
                     int beste = -1;
@@ -5911,14 +6386,19 @@ namespace OfflineWissen
                 else if (o.Code == "PPLA4") score += 20;
                 else if (o.Code == "PPL") score += 10;
                 score += Math.Min(Math.Log10(o.Pop + 1) * 10, 79);
+                treffer.Add(Tuple.Create(score, o, anzeige));
+            }
+            // OrderByDescending sortiert stabil: gleiche Reihenfolge wie vorher
+            foreach (var t in treffer.OrderByDescending(x => x.Item1).Take(max))
+            {
+                var o = t.Item2;
                 string art;
                 if (!OrtArten.TryGetValue(o.Code, out art)) art = o.Klasse == 'P' ? "Ort" : o.Klasse == 'T' ? "Gelände" : o.Klasse == 'H' ? "Gewässer" : o.Klasse == 'S' ? "Gebäude/Einrichtung" : "Ort";
-                treffer.Add(new KeyValuePair<double, object>(score, new Dictionary<string, object>
+                erg.Add(new Dictionary<string, object>
                 {
-                    {"name", anzeige}, {"original", o.Name}, {"land", o.Land}, {"lat", o.Lat}, {"lon", o.Lon}, {"art", art}, {"einwohner", o.Pop}
-                }));
+                    {"name", t.Item3}, {"original", o.Name}, {"land", o.Land}, {"lat", o.Lat}, {"lon", o.Lon}, {"art", art}, {"einwohner", o.Pop}
+                });
             }
-            foreach (var t in treffer.OrderByDescending(x => x.Key).Take(max)) erg.Add(t.Value);
             return erg;
         }
 
@@ -5931,20 +6411,38 @@ namespace OfflineWissen
             return Path.Combine(Daten, "chats", id + ".json");
         }
 
+        // Titel und Zeit je Chat-Datei, gemerkt mit dem Änderungszeitpunkt: nur geänderte Dateien neu lesen
+        // (fragen.js holt die Liste nach jeder Antwort). Schlüssel: Dateiname; Wert: Änderungszeit, Titel, Zeit.
+        static readonly Dictionary<string, Tuple<DateTime, string, string>> chatKoepfe = new Dictionary<string, Tuple<DateTime, string, string>>(StringComparer.OrdinalIgnoreCase);
+
         static Dictionary<string, object> ChatListe()
         {
             var liste = new List<object>();
             string ordner = Path.Combine(Daten, "chats");
             if (Directory.Exists(ordner))
             {
-                foreach (var f in new DirectoryInfo(ordner).GetFiles("*.json").OrderByDescending(x => x.LastWriteTimeUtc).Take(300))
+                var dateien = new DirectoryInfo(ordner).GetFiles("*.json").OrderByDescending(x => x.LastWriteTimeUtc).Take(300).ToList();
+                lock (chatKoepfe)
                 {
-                    var c = LadeJson(f.FullName);
-                    if (c == null) continue;
-                    liste.Add(new Dictionary<string, object> {
-                        { "id", Path.GetFileNameWithoutExtension(f.Name) },
-                        { "titel", Str(c, "titel") ?? "Chat" },
-                        { "zeit", Str(c, "zeit") ?? f.LastWriteTime.ToString("s") } });
+                    foreach (var f in dateien)
+                    {
+                        Tuple<DateTime, string, string> kopf;
+                        if (!chatKoepfe.TryGetValue(f.Name, out kopf) || kopf.Item1 != f.LastWriteTimeUtc)
+                        {
+                            var c = LadeJson(f.FullName);
+                            // Unlesbar: nicht merken, beim nächsten Mal erneut versuchen
+                            if (c == null) { chatKoepfe.Remove(f.Name); continue; }
+                            kopf = Tuple.Create(f.LastWriteTimeUtc, Str(c, "titel") ?? "Chat", Str(c, "zeit") ?? f.LastWriteTime.ToString("s"));
+                            chatKoepfe[f.Name] = kopf;
+                        }
+                        liste.Add(new Dictionary<string, object> {
+                            { "id", Path.GetFileNameWithoutExtension(f.Name) },
+                            { "titel", kopf.Item2 },
+                            { "zeit", kopf.Item3 } });
+                    }
+                    // Gelöschte (und nicht mehr gelistete) Chats vergessen
+                    var da = new HashSet<string>(dateien.Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
+                    foreach (var weg in chatKoepfe.Keys.Where(k => !da.Contains(k)).ToList()) chatKoepfe.Remove(weg);
                 }
             }
             return new Dictionary<string, object> { { "chats", liste } };

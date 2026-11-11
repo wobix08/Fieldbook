@@ -155,7 +155,7 @@ const Setup = (() => {
       }
       try {
         let sk, st, pk;
-        [hw, kat, akt, sk, st, pk] = await Promise.all([api("hardware"), api("katalog"), api("aktualisierung"),
+        [hw, kat, akt, sk, st, pk] = await Promise.all([holeHardware(30000), api("katalog"), api("aktualisierung"),
           ladeKonfig("sprachen").catch(() => ({})), ladeKonfig("stimmen").catch(() => ({})), ladeKonfig("pakete").catch(() => ({}))]);
         gruppen = pk.variantenGruppen || {};
         sprachen = sk.sprachen || [];
@@ -259,7 +259,10 @@ const Setup = (() => {
     // Land, Desktop-Symbol und Aktualisierung in einem Kasten
     const land = Land.aktuell();
     const auswahl = landAuswahl(land, async (neu) => {
-      OW.status = await api("einstellungen", { land: neu.code, sprache: neu.sprache });
+      statusUngueltig();
+      try { OW.status = await api("einstellungen", { land: neu.code, sprache: neu.sprache }); }
+      catch (err) { await zeigeFehler("Das Land konnte nicht gespeichert werden.", err); return; }
+      finally { statusUngueltig(); }
       // Vorgeschlagene Karte anpassen, solange noch keine Karte installiert ist
       if (!kat.karten.some(r => r.installiert) && neu.karte) { wahl.karten.clear(); wahl.karten.set(neu.karte, { bytes: null }); }
     });
@@ -271,7 +274,7 @@ const Setup = (() => {
         el("div", {}, el("b", {}, "Symbol auf dem Desktop"), el("small", {}, "Damit startest du Fieldbook bequem vom Desktop aus.")),
         anAus(el("input", { type: "checkbox", checked: wahl.desktop, onchange: (e) => { wahl.desktop = e.target.checked; } }))),
       aktualisierungBox(akt, false, { kurz: true })));
-    if (land && !(OW.status && OW.status.land)) api("einstellungen", { land: land.code, sprache: land.sprache }).then(s => { OW.status = s; });
+    if (land && !(OW.status && OW.status.land)) api("einstellungen", { land: land.code, sprache: land.sprache }).then(s => { OW.status = s; statusUngueltig(); }).catch(() => { });
     knoepfe(null, () => geheZu(1));
   }
 
@@ -689,6 +692,7 @@ const Setup = (() => {
     const k = ev && ev.currentTarget;
     if (k) k.disabled = true;
     try { await abschliessenStarten(); }
+    catch (err) { await zeigeFehler("Die Einrichtung konnte nicht gestartet werden.", err); }
     finally { abschliesst = false; if (k && k.isConnected) k.disabled = false; }
   }
 

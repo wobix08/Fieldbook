@@ -45,16 +45,19 @@ const Paketstart = (() => {
     clearTimeout(listeTimer);
     const r = (await api("artikelliste?buch=" + encodeURIComponent(id)).catch(e => ({ fehler: e.message }))) || {};
     if (id !== buchId || !location.hash.startsWith("#paketstart")) return;
-    if (r.status === "fertig" && Array.isArray(r.artikel)) { artikel = r.artikel; zeichne(); return; }
+    if (r.status === "fertig" && Array.isArray(r.artikel)) { artikel = r.artikel; zeichne(true); return; }
     const z = $("#ps-laden");
     if (z) z.textContent = r.fehler ? "Die Liste aller Artikel ist gerade nicht verfügbar: " + r.fehler
       : "Die Liste aller Artikel wird einmalig erstellt … (" + (r.gelesen || 0) + " Artikel)";
     if (!r.fehler) listeTimer = setTimeout(laden, 2000);
   }
 
-  function zeichne() {
+  function zeichne(behalten) {
     const c = $("#paketstart-inhalt");
     const st = buch.startseite || {};
+    // Beim Neuzeichnen nach dem Laden: Suchfeld (Wert, Fokus, Cursor) merken
+    const f0 = behalten && c.querySelector("#ps-feld");
+    const alt = f0 ? { wert: f0.value, fokus: document.activeElement === f0, von: f0.selectionStart, bis: f0.selectionEnd } : null;
     c.innerHTML = "";
     c.append(el("div", { class: "ps-kopf" },
       el("img", { class: "ps-logo", src: buch.bild || "icon.svg", alt: "" }),
@@ -63,7 +66,14 @@ const Paketstart = (() => {
     // Suche: tippen filtert die Titel sofort, Enter sucht im ganzen Text
     const feld = el("input", { type: "search", id: "ps-feld", placeholder: "Was willst du wissen?", autocomplete: "off", "aria-label": "Artikel suchen" });
     const treffer = el("div", { class: "ps-treffer" });
-    feld.addEventListener("input", () => zeigeTreffer(feld.value, treffer));
+    let tippTimer = null; // Eingabe entprellen: nicht bei jedem Tastendruck filtern
+    feld.addEventListener("input", () => { clearTimeout(tippTimer); tippTimer = setTimeout(() => zeigeTreffer(feld.value, treffer), 120); });
+    if (alt) {
+      // Neu gezeichnet (Liste fertig geladen): Eingabe, Fokus und Cursor erhalten
+      feld.value = alt.wert;
+      if (alt.fokus) { feld.focus(); try { feld.setSelectionRange(alt.von, alt.bis); } catch { } }
+      if (alt.wert) zeigeTreffer(alt.wert, treffer);
+    }
     c.append(el("form", { class: "suche-gross", onsubmit: (e) => {
       e.preventDefault();
       const q = feld.value.trim();
@@ -153,7 +163,7 @@ const Paketstart = (() => {
     ziel.innerHTML = "";
     if (r.status === "laeuft") {
       ziel.append(el("p", { class: "hinweis" }, "Die Übersicht wird einmalig erstellt, das dauert ein paar Minuten (" + (r.gelesen || 0) + " Seiten gelesen).", el("br"), "Suche und Zufall gehen schon."));
-      ifixitTimer = setTimeout(() => { if (ziel.isConnected) zeichneIfixit(ziel, knoten); }, 3000);
+      ifixitTimer = setTimeout(() => { if (ziel.isConnected && location.hash.startsWith("#paketstart")) zeichneIfixit(ziel, knoten); }, 3000);
       return;
     }
     if (r.fehler || !Array.isArray(r.weg) || !Array.isArray(r.kinder) || !Array.isArray(r.anleitungen)) {
@@ -178,12 +188,15 @@ const Paketstart = (() => {
       el("span", {}, a.T));
   }
 
+  // Kleingeschriebene Titel einmal je Artikelliste merken (nicht bei jedem Tastendruck neu bilden)
+  let kleinFuer = null, klein = [];
   function zeigeTreffer(q, ziel) {
     q = q.trim().toLowerCase();
     ziel.innerHTML = "";
     if (q.length < 2 || !artikel) return;
+    if (kleinFuer !== artikel) { kleinFuer = artikel; klein = artikel.map(a => a.T.toLowerCase()); }
     const anfang = [], drin = [];
-    for (const a of artikel) { const t = a.T.toLowerCase(); if (t.startsWith(q)) anfang.push(a); else if (t.includes(q)) drin.push(a); }
+    for (let i = 0; i < artikel.length; i++) { const t = klein[i]; if (t.startsWith(q)) anfang.push(artikel[i]); else if (t.includes(q)) drin.push(artikel[i]); }
     const alle = anfang.concat(drin);
     ziel.append(alle.length
       ? el("div", { class: "ps-kacheln" }, alle.slice(0, 24).map(kachel))

@@ -279,7 +279,10 @@ async function api(pfad, daten) {
 async function rechenwegSetzen(backend) {
   const s = OW.status || {};
   if (backend === "vulkan" && s.modell) await api("installieren", { modell: s.modell, backend }).catch(() => { });
+  // Laufende Statusabfragen dürfen den neuen Stand nicht mit dem alten überschreiben
+  if (typeof statusUngueltig === "function") statusUngueltig();
   OW.status = await api("einstellungen", { backend });
+  if (typeof statusUngueltig === "function") statusUngueltig();
 }
 
 async function ladeKonfig(name) {
@@ -644,15 +647,43 @@ const Kiwix = {
     return (OW.buecher = liste);
   },
 
-  // Titelvorschläge (schnell, für exakte Artikelnamen)
-  async vorschlaege(buch, begriff, anzahl) {
+  // Frist für Kiwix-Abrufe: ohne eigenes signal 15 s; mit signal gilt, was zuerst kommt
+  _frist(signal) {
+    const MS = 15000;
+    let frist;
+    if (typeof AbortSignal.timeout === "function") frist = AbortSignal.timeout(MS);
+    else { const c = new AbortController(); setTimeout(() => c.abort(), MS); frist = c.signal; }
+    if (!signal) return frist;
+    if (typeof AbortSignal.any === "function") return AbortSignal.any([signal, frist]);
+    const c = new AbortController();
+    const ab = () => c.abort();
+    for (const s of [signal, frist]) { if (s.aborted) c.abort(); else s.addEventListener("abort", ab, { once: true }); }
+    return c.signal;
+  },
+  // Welche Parameter-Variante die laufende kiwix-serve-Version annimmt (nach dem ersten Erfolg gemerkt)
+  _variante: { suggest: 0, search: 0 },
+  async _mitVariante(art, urls, signal) {
+    const reihe = Kiwix._variante[art] ? [1, 0] : [0, 1];
+    let r = null;
+    for (const i of reihe) {
+      r = await fetch(urls[i], { signal });
+      if (r.ok) { Kiwix._variante[art] = i; return r; }
+    }
+    return r;
+  },
+
+  // Titelvorschläge (schnell, für exakte Artikelnamen); signal optional, sonst Frist 15 s
+  async vorschlaege(buch, begriff, anzahl, signal) {
     if (OW.status && OW.status.pdfTexte && buch.id in OW.status.pdfTexte) return [];   // PDF-Bücher: siehe suche()
     const q = "term=" + encodeURIComponent(begriff) + "&count=" + (anzahl || 5);
-    let r = await fetch("/kiwix/suggest?content=" + encodeURIComponent(buch.id) + "&" + q);
-    if (!r.ok) r = await fetch("/kiwix/suggest?books.name=" + encodeURIComponent(buch.id) + "&" + q);
+    signal = Kiwix._frist(signal);
+    // Variante 0 = content, 1 = books.name
+    const r = await Kiwix._mitVariante("suggest", [
+      "/kiwix/suggest?content=" + encodeURIComponent(buch.id) + "&" + q,
+      "/kiwix/suggest?books.name=" + encodeURIComponent(buch.id) + "&" + q], signal);
     if (!r.ok) return [];
     let daten;
-    try { daten = await r.json(); } catch { return []; }
+    try { daten = await r.json(); } catch (e) { if (signal.aborted) throw e; return []; }
     return daten.filter(d => d.path && d.kind !== "pattern").map(d => ({
       // Kiwix liefert Titel teils mit HTML-Zeichen („&apos;“), die hier zu echten Zeichen werden
       titel: new DOMParser().parseFromString((d.value || d.label || "").replace(/<[^>]+>/g, ""), "text/html").documentElement.textContent,
@@ -662,17 +693,20 @@ const Kiwix = {
   },
 
   // Volltextsuche. Pakete ohne Volltext-Index (z. B. iFixit) durchsucht Kiwix trotzdem über die Titel
-  async suche(buch, begriff, anzahl) {
+  async suche(buch, begriff, anzahl, signal) {
+    signal = Kiwix._frist(signal);
     // PDF-Bücher (z. B. Medizin-Handbücher): Kiwix findet darin nichts, gesucht wird im ausgelesenen Text
     const pdf = OW.status && OW.status.pdfTexte;
     if (pdf && buch.id in pdf) {
-      const r = await fetch("/api/pdftext/suche?buch=" + encodeURIComponent(buch.id) + "&q=" + encodeURIComponent(begriff) + "&n=" + (anzahl || 5));
+      const r = await fetch("/api/pdftext/suche?buch=" + encodeURIComponent(buch.id) + "&q=" + encodeURIComponent(begriff) + "&n=" + (anzahl || 5), { signal });
       if (!r.ok) return [];
       return (await r.json()).map(t => Object.assign(t, { buch }));
     }
     const q = "pattern=" + encodeURIComponent(begriff) + "&format=xml&pageLength=" + (anzahl || 5);
-    let r = await fetch("/kiwix/search?books.name=" + encodeURIComponent(buch.id) + "&" + q);
-    if (!r.ok) r = await fetch("/kiwix/search?content=" + encodeURIComponent(buch.id) + "&" + q);
+    // Variante 0 = books.name, 1 = content
+    const r = await Kiwix._mitVariante("search", [
+      "/kiwix/search?books.name=" + encodeURIComponent(buch.id) + "&" + q,
+      "/kiwix/search?content=" + encodeURIComponent(buch.id) + "&" + q], signal);
     if (!r.ok) return [];
     const xml = new DOMParser().parseFromString(await r.text(), "application/xml");
     return Array.from(xml.querySelectorAll("item")).map(i => ({
@@ -684,8 +718,9 @@ const Kiwix = {
   },
 
   // Artikel laden und als reinen Text in Abschnitten zurückgeben
-  async artikelText(url, tiefe) {
-    const r = await fetch(url);
+  async artikelText(url, tiefe, signal) {
+    signal = Kiwix._frist(signal);
+    const r = await fetch(url, { signal });
     if (!r.ok) throw new Error("Artikel nicht gefunden");
     const doc = new DOMParser().parseFromString(await r.text(), "text/html");
     // Weiterleitungsseiten (meta refresh) verfolgen, z. B. "Schnittwunde" -> "Wunde#Wundarten"
@@ -695,7 +730,7 @@ const Kiwix = {
       if (m) {
         const ziel = new URL(m[1], location.origin + url);
         const anker = decodeURIComponent(ziel.hash.slice(1)).replace(/_/g, " ");
-        const erg = await Kiwix.artikelText(ziel.pathname, (tiefe || 0) + 1);
+        const erg = await Kiwix.artikelText(ziel.pathname, (tiefe || 0) + 1, signal);
         if (anker) erg.anker = anker;
         return erg;
       }
@@ -851,6 +886,7 @@ const KI = {
   },
 
   ohneDenken(t) {
+    if (!t.includes("<think>")) return t.trim();   // Normalfall: kein Regex bei jedem Token
     return t.replace(/<think>[\s\S]*?<\/think>/g, "").replace(/<think>[\s\S]*$/, "").trim();
   },
 };

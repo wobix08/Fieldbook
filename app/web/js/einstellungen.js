@@ -11,7 +11,11 @@ const Einstellungen = (() => {
     const c = $("#einst-inhalt");
     const y = behalten ? window.scrollY : 0;
     c.innerHTML = '<p class="hinweis">Wird geladen …</p>';
-    const [kat, s, hw, akt] = await Promise.all([api("katalog"), api("status"), api("hardware").catch(() => ({})), api("aktualisierung")]);
+    // Status: der von app.js alle 5 s geholte genügt, wenn er frisch ist
+    const frisch = OW.status && Date.now() - (OW.statusZeit || 0) < 5000;
+    const [kat, hw, akt] = await Promise.all([api("katalog"), holeHardware().catch(() => ({})), api("aktualisierung")]);
+    const s = frisch ? OW.status : ((await aktualisiereStatus()) || OW.status);
+    if (!s) throw new Error("Status nicht verfügbar");
     c.innerHTML = "";
     // Gibt es eine neue Fieldbook-Version, ist „Fieldbook und Updates“ gleich offen (der Hinweis oben führt hierher)
     if ((s.programmNeu || s.programmBereit) && !aufgeklappt.size) aufgeklappt.add("programm");
@@ -51,7 +55,9 @@ const Einstellungen = (() => {
             "Fieldbook lädt Version " + ziel + " herunter, beendet sich kurz und startet neu. Deine Wissenspakete, KI-Modelle, Karten und Einstellungen bleiben erhalten. Vom bisherigen Programm wird vorher eine Sicherung angelegt.",
             [{ text: "Abbrechen", wert: false }, { text: "Jetzt aktualisieren", wert: true, haupt: true }]);
           if (!ok) return;
-          const r = await api("programmupdate/installieren", {});
+          let r;
+          try { r = await api("programmupdate/installieren", {}); }
+          catch (err) { await zeigeFehler("Das Update konnte nicht gestartet werden.", err); return; }
           if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
           if (r.neustart) neustartAnzeigen(r.neu);
           else location.hash = "#inhalte";
@@ -78,13 +84,19 @@ const Einstellungen = (() => {
       zeileMitSchalter("Beim Start nach neuer Fieldbook-Version fragen",
         ["Fieldbook fragt beim Start kurz bei GitHub, ob es eine neue Programmversion gibt.", el("br"), "Heruntergeladen wird dabei nichts."],
         el("input", { type: "checkbox", checked: s.updateBeimStart !== false, onchange: async (e) => {
-          s.updateBeimStart = e.target.checked;
-          OW.status = await api("einstellungen", { updateBeimStart: e.target.checked });
+          const box = e.target, vorher = s.updateBeimStart;
+          s.updateBeimStart = box.checked;
+          statusUngueltig();
+          try { OW.status = await api("einstellungen", { updateBeimStart: box.checked }); }
+          catch (err) { s.updateBeimStart = vorher; zurueckSetzen(box, vorher !== false); await zeigeFehler("Die Einstellung konnte nicht gespeichert werden.", err); }
+          finally { statusUngueltig(); }
         } })),
       el("h3", { style: "margin-top:14px" }, "Automatische Aktualisierung"),
       aktualisierungBox(akt, true, { eingebettet: true, programm: true, geaendert: zeichneProgramm }));
     zeichneProgramm();
-    if (s.updateBeimStart !== false) api("programmupdate").then(u => { programmInfo = u; zeichneProgramm(); }).catch(() => { });
+    // Keine GitHub-Abfrage beim Aufbau: programmNeu und programmBereit kommen aus dem Status (programmInfo oben).
+    // Nur wenn eine neue Version da ist, holt der Server Versionshinweise und Größe nach (der Status enthält sie nicht).
+    if (s.programmNeu) api("programmupdate?neu=0").then(u => { programmInfo = u; zeichneProgramm(); }).catch(() => { });
 
     // ---------------- Darstellung und Land
     const dar = kategorie("darstellung", "sun", "Darstellung und Land");
@@ -94,16 +106,22 @@ const Einstellungen = (() => {
       el("option", { value: "dark" }, "Dunkel (Standard)"), el("option", { value: "light" }, "Hell (gut zum Lernen und Lesen)"), el("option", { value: "system" }, "Wie Windows"));
     sel.value = aktuellesThema();
     const landSel = landAuswahl(Land.aktuell(), async (neu) => {
-      OW.status = await api("einstellungen", { land: neu.code, sprache: neu.sprache });
+      statusUngueltig();
+      try { OW.status = await api("einstellungen", { land: neu.code, sprache: neu.sprache }); }
+      catch (err) { await zeigeFehler("Das Land konnte nicht gespeichert werden.", err); }
+      finally { statusUngueltig(); }
       darUnter();
     });
     dar.innen.append(
       el("div", { class: "einst-zeile", style: "padding-top:0" }, el("b", {}, "Farbschema"), sel),
       el("div", { class: "einst-zeile" }, el("div", {}, el("b", {}, "Land"), el("small", {}, "Bestimmt die Notrufnummern")), landSel),
       zeileMitSchalter("Desktop-Symbol", "Fieldbook vom Desktop aus starten", el("input", { type: "checkbox", checked: !!s.desktopSymbol, onchange: async (e) => {
-        const r = await api("desktopsymbol", { an: e.target.checked });
-        if (r.fehler) { alert("Das Desktop-Symbol konnte nicht geändert werden: " + r.fehler); e.target.checked = !!r.vorhanden; e.target.nextElementSibling.textContent = e.target.checked ? "an" : "aus"; return; }
-        s.desktopSymbol = e.target.checked;
+        const box = e.target;
+        let r;
+        try { r = await api("desktopsymbol", { an: box.checked }); }
+        catch (err) { zurueckSetzen(box, !!s.desktopSymbol); await zeigeFehler("Das Desktop-Symbol konnte nicht geändert werden.", err); return; }
+        if (r.fehler) { zurueckSetzen(box, !!r.vorhanden); await zeigeFehler("Das Desktop-Symbol konnte nicht geändert werden.", { message: r.fehler }); return; }
+        s.desktopSymbol = box.checked;
         darUnter();
       } })));
     darUnter();
@@ -123,7 +141,13 @@ const Einstellungen = (() => {
       ki.innen.append(el("div", { class: "einst-zeile", style: "padding-top:0" },
         el("div", {}, el("b", {}, m.name + " · " + m.modell), el("small", {}, groesse(m.bytes) + (aktiv ? " · aktiv" : ""))),
         el("div", { class: "knopfreihe", style: "margin:0" },
-          aktiv ? el("span", { class: "ok-text" }, "✓ aktiv") : el("button", { class: "knopf knopf-klein", onclick: async () => { await api("einstellungen", { modell: m.id }); zeigen(); } }, "Benutzen"),
+          aktiv ? el("span", { class: "ok-text" }, "✓ aktiv") : el("button", { class: "knopf knopf-klein", onclick: async () => {
+            statusUngueltig();
+            try { OW.status = await api("einstellungen", { modell: m.id }); }
+            catch (err) { await zeigeFehler("Die KI konnte nicht gewechselt werden.", err); }
+            finally { statusUngueltig(); }
+            neuZeichnen();
+          } }, "Benutzen"),
           el("button", { class: "knopf knopf-klein knopf-rot", onclick: () => entfernen("modell", m.id, m.name) }, "Löschen"))));
     }
     if (gpu && gpu.vramGB >= 4) ki.innen.append(zeileMitSchalter("Grafikkarte nutzen",
@@ -132,13 +156,18 @@ const Einstellungen = (() => {
         const box = e.target;
         box.disabled = true;
         try { await rechenwegSetzen(box.checked ? "vulkan" : "cpu"); }
-        catch (err) { box.checked = !box.checked; alert("Der Rechenweg konnte nicht umgestellt werden.\n" + err.message); }
+        catch (err) { zurueckSetzen(box, !box.checked); await zeigeFehler("Der Rechenweg konnte nicht umgestellt werden.", err); }
         finally { box.disabled = false; }
-        zeigen();
+        statusUngueltig();
+        neuZeichnen();
       } })));
     if (inst.length) ki.innen.append(zeileMitSchalter("Sparmodus",
       ["Schaltet die KI ab und gibt den Arbeitsspeicher frei, den sie belegt.", el("br"), "Fragen an die KI gehen dann nicht, alles andere funktioniert wie gewohnt."],
-      el("input", { type: "checkbox", checked: s.sparmodus, onchange: (e) => { s.sparmodus = e.target.checked; kiUnter(); schalteKi(!e.target.checked); } })));
+      el("input", { type: "checkbox", checked: s.sparmodus, onchange: async (e) => {
+        const box = e.target;
+        s.sparmodus = box.checked; kiUnter();
+        if (!(await schalteKi(!box.checked))) { zurueckSetzen(box, !box.checked); s.sparmodus = box.checked; kiUnter(); }
+      } })));
     if (s.ki.fehler) ki.innen.append(el("p", { class: "fehlerbox" }, s.ki.fehler));
     kiUnter();
 
@@ -173,7 +202,10 @@ const Einstellungen = (() => {
       el("div", {}, el("b", {}, "Proxy"), proxyStatus),
       el("div", { class: "knopfreihe", style: "margin:0;flex-wrap:nowrap" }, proxyFeld,
         el("button", { class: "knopf knopf-klein", onclick: async () => {
-          OW.status = await api("einstellungen", { proxy: proxyFeld.value.trim() });
+          statusUngueltig();
+          try { OW.status = await api("einstellungen", { proxy: proxyFeld.value.trim() }); }
+          catch (err) { await zeigeFehler("Der Proxy konnte nicht gespeichert werden.", err); return; }
+          finally { statusUngueltig(); }
           proxyStatus.textContent = proxyFeld.value.trim() ? "Gespeichert. Downloads laufen jetzt über diesen Proxy." : "Gespeichert. Fieldbook nimmt wieder den Proxy aus Windows (falls vorhanden).";
         } }, "Speichern"))));
 
@@ -242,7 +274,9 @@ const Einstellungen = (() => {
       const schalter = (feld, titel, text) => el("div", { class: "einst-zeile" },
         el("div", {}, el("b", {}, titel), el("small", {}, text)),
         anAus(el("input", { type: "checkbox", checked: !!st[feld], onchange: async (e) => {
-          const neu = await api("statistik/einstellen", { [feld]: e.target.checked });
+          let neu;
+          try { neu = await api("statistik/einstellen", { [feld]: e.target.checked }); }
+          catch (err) { await zeigeFehler("Die Einstellung konnte nicht gespeichert werden.", err); zeichnen(st); return; }
           await aktualisiereStatus();
           zeichnen(neu);
         } })));
@@ -268,11 +302,27 @@ const Einstellungen = (() => {
 
   async function entfernen(art, id, titel) {
     if (!confirm("„" + titel + "“ wirklich löschen? Zum Wiederherstellen muss es neu heruntergeladen werden.")) return;
-    const r = await api("entfernen", { art, id });
-    if (r.fehler) alert(r.fehler);
+    try {
+      const r = await api("entfernen", { art, id });
+      if (r.fehler) await zeigeFehler("Das Löschen hat nicht geklappt.", { message: r.fehler });
+    } catch (err) { await zeigeFehler("Das Löschen hat nicht geklappt.", err); }
     OW.buecher = null;
     await aktualisiereStatus();
-    zeigen();
+    neuZeichnen();
+  }
+
+  // Neuaufbau aus einem Knopf heraus: Fehler zeigen statt unbehandelt zu bleiben
+  function neuZeichnen() {
+    return zeigen().catch(e => {
+      console.error(e);
+      $("#einst-inhalt").replaceChildren(fehlerBox("Die Einstellungen konnten nicht geladen werden.", () => neuZeichnen(), null, e.message));
+    });
+  }
+
+  // Schalter nach einem Fehler zurücksetzen (der „an“/„aus“-Text folgt sonst nur echten Klicks)
+  function zurueckSetzen(box, wert) {
+    box.checked = wert;
+    if (box.nextElementSibling) box.nextElementSibling.textContent = wert ? "an" : "aus";
   }
 
   return { zeigen: () => zeigen(false) };

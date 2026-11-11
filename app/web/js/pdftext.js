@@ -8,6 +8,9 @@ const PdfText = (() => {
   let laeuft = false;
   let pauseBis = 0;
   const ohnePdf = new Set();   // Pakete ohne PDF-Bücher (in dieser Sitzung nicht noch einmal nachsehen)
+  const fehlschlaege = new Map();   // Fehlversuche je Datei in dieser Sitzung
+  // Solange der PDF-Leser offen ist, ruht das Auslesen (Blättern bleibt flüssig)
+  const leserOffen = () => /^#pdf/.test(location.hash);
   let pdfjs = null;
 
   async function bibliothek() {
@@ -56,7 +59,7 @@ const PdfText = (() => {
         // Kleine Pause alle paar Seiten, damit die KI und die Oberfläche nicht ausgebremst werden
         if (i % 4 === 0) await new Promise(res => setTimeout(res, 30));
         // Solange die KI eine Frage beantwortet, nur warten (kein Abbruch); Fragen kann fehlen
-        while (typeof Fragen !== "undefined" && Fragen.beschaeftigt && Fragen.beschaeftigt()) await new Promise(res => setTimeout(res, 500));
+        while (leserOffen() || (typeof Fragen !== "undefined" && Fragen.beschaeftigt && Fragen.beschaeftigt())) await new Promise(res => setTimeout(res, 500));
         const seite = await doc.getPage(i);
         const inhalt = await seite.getTextContent();
         let s = "";
@@ -86,8 +89,12 @@ const PdfText = (() => {
     const schon = new Set(stand.dateien || []);
     const basis = "/kiwix/content/" + encodeURIComponent(buch.id) + "/files/";
     let nr = pdfs.filter(p => schon.has(p.datei)).length;
+    let uebersprungen = false, nochmal = false;
     for (const p of pdfs) {
       if (schon.has(p.datei)) continue;
+      const key = buch.id + "/" + p.datei;
+      // Nach 2 Fehlschlägen in dieser Sitzung überspringen (der nächste Start versucht es wieder)
+      if ((fehlschlaege.get(key) || 0) >= 2) { uebersprungen = true; continue; }
       nr++;
       hinweis("Bücher in „" + buch.titel + "“ werden für die KI vorbereitet (" + nr + " von " + pdfs.length + ") …");
       const url = basis + encodeURIComponent(p.datei);
@@ -95,19 +102,26 @@ const PdfText = (() => {
       try { seiten = await seitenText(url); }
       catch (e) {
         // Nicht leer speichern: Der nächste Start versucht dieses Buch noch einmal
-        throw e;
+        console.warn("PDF-Text:", p.datei, e);
+        const n = (fehlschlaege.get(key) || 0) + 1;
+        fehlschlaege.set(key, n);
+        if (n >= 2) uebersprungen = true; else nochmal = true;
+        continue;
       }
       const r = await api("pdftext/speichern", { buch: buch.id, datei: p.datei, titel: p.titel, seiten });
       if (r.fehler) throw new Error(r.fehler);
       seiten.length = 0;
     }
+    // Ein Buch hat nur einmal versagt: in einer Minute noch einmal (Pause setzt pruefen())
+    if (nochmal) throw new Error("PDF-Buch in „" + buch.titel + "“ ließ sich nicht auslesen");
+    if (uebersprungen) { ohnePdf.add(buch.id); return; }   // nicht als fertig melden, aber in dieser Sitzung nicht mehr anfassen
     await api("pdftext/speichern", { buch: buch.id, fertig: true });
   }
 
   // Nach jedem Status-Abruf: Gibt es installierte Pakete mit PDF-Büchern, deren Text noch fehlt?
   async function pruefen() {
     const s = OW.status;
-    if (laeuft || !s || !s.bibliothek || Date.now() < pauseBis) return;
+    if (laeuft || !s || !s.bibliothek || Date.now() < pauseBis || leserOffen()) return;
     laeuft = true;
     try {
       const fertig = s.pdfTexte || {};

@@ -514,7 +514,7 @@ const ErsteHilfe = (() => {
       + (fe ? "\nGefährliche Fehler:\n" + fe : "")
       + "\nAntwort des Lernenden: \"" + antwort.replace(/"/g, "'").slice(0, 1500) + "\"";
     const roh = await KI.chat([{ role: "system", content: sys }, { role: "user", content: user }],
-      { max_tokens: 150, temperature: 0, response_format: { type: "json_schema", json_schema: { name: "bewertung", schema } } });
+      { max_tokens: 150, temperature: 0, signal: AbortSignal.timeout(60000), response_format: { type: "json_schema", json_schema: { name: "bewertung", schema } } });
     let j;
     try { j = JSON.parse(roh); } catch { const m = roh.match(/\{[\s\S]*\}/); j = m ? JSON.parse(m[0]) : null; }
     if (!j) return null;
@@ -594,7 +594,7 @@ const ErsteHilfe = (() => {
     knopf.addEventListener("click", () => {
       if (laeuft) { stopp(false); return; }
       taktStopp();
-      if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { } }
+      if (!audio) audio = gemeinsamerAudio();
       if (audio && audio.state === "suspended") audio.resume();
       laeuft = true;
       zaehler = 0;
@@ -604,6 +604,15 @@ const ErsteHilfe = (() => {
       schritt();
     });
     return box;
+  }
+
+  // Ein AudioContext für das ganze Modul (Browser erlauben nur wenige gleichzeitig)
+  let tonKontext = null;
+  function gemeinsamerAudio() {
+    if (!tonKontext || tonKontext.state === "closed") {
+      try { tonKontext = new (window.AudioContext || window.webkitAudioContext)(); } catch { tonKontext = null; }
+    }
+    return tonKontext;
   }
 
   function taktStopp() { if (aktiverTakt) aktiverTakt.stopp(false); }
@@ -636,6 +645,7 @@ const ErsteHilfe = (() => {
   // Erster passender Artikel; ohne exakten Treffer der erste Vorschlag zum ersten Titel
   async function finde(id, titelListe) {
     if (id in artikelCache) return artikelCache[id];
+    if (!titelListe || !titelListe.length) return null; // nichts zu suchen
     for (const titel of titelListe) {
       const e = await exakt(titel);
       if (e) return (artikelCache[id] = e);

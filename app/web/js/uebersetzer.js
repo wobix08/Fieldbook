@@ -207,6 +207,8 @@ const Uebersetzer = (() => {
     clearTimeout(w.leerlauf);
     w.leerlauf = setTimeout(() => {
       if (w.zustand !== "frei") return;
+      // Solange die Übersetzer-Seite offen ist, bleibt der Worker (sonst wartet die nächste Nachricht auf den Neustart)
+      if (/^#uebersetzen/.test(location.hash)) { leerlaufPlanen(w); return; }
       wegwerfen(w, new Error("Übersetzer-Worker beendet (Leerlauf)"), true);
     }, LEERLAUF_MS);
   }

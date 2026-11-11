@@ -8,7 +8,7 @@ const Routen = (() => {
     { id: "auto", icon: "car", titel: "Auto", brouter: "car-fast", kmh: 60 },
   ];
   let offen = false, profil = PROFILE[0], start = null, ziel = null, wartetAuf = null;
-  let markerStart = null, markerZiel = null, geojson = null, anfrageNr = 0;
+  let markerStart = null, markerZiel = null, geojson = null, anfrageNr = 0, abbruch = null;
   const feldPruefer = {}; // pro Feld die Funktion "getippten Namen übernehmen"
 
   const karte = () => Karten.karte;
@@ -70,6 +70,8 @@ const Routen = (() => {
       const versprechen = (async () => {
         if (q.length < 2 || !OW.status.orte) return [];
         const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => null);
+        // Fehlgeschlagene Suche nicht merken: die nächste Eingabe fragt neu an
+        if (!liste && letzte && letzte.versprechen === versprechen) letzte = null;
         if (feld.isConnected && feld.value.trim() === q) {
           treffer.innerHTML = "";
           if (!liste) treffer.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar."));
@@ -137,9 +139,11 @@ const Routen = (() => {
 
   // Übernimmt getippte Namen in beiden Feldern (wartet auf laufende Suchen) und berechnet dann die Route
   async function alleUebernehmen() {
+    const vorher = anfrageNr;
     if (feldPruefer.start) await feldPruefer.start();
     if (feldPruefer.ziel) await feldPruefer.ziel();
-    if (start && ziel) berechnen();
+    // Hat das Übernehmen schon eine Berechnung gestartet (setze), nicht noch eine auslösen
+    if (start && ziel) { if (anfrageNr === vorher) berechnen(); }
     else {
       const st = $("#routen-status");
       if (st && !st.textContent) st.replaceChildren(!start ? "Der Start fehlt noch." : "Das Ziel fehlt noch.", el("br"), "Bitte einen Ort eingeben oder in die Karte klicken.");
@@ -197,11 +201,13 @@ const Routen = (() => {
       return;
     }
     const nr = ++anfrageNr;
+    if (abbruch) abbruch.abort(); // alte Anfrage vor der neuen abbrechen
+    const mein = abbruch = new AbortController();
     if (status) status.textContent = "Route wird berechnet …";
     const url = "/route/brouter?lonlats=" + start.lon.toFixed(6) + "," + start.lat.toFixed(6) + "|" + ziel.lon.toFixed(6) + "," + ziel.lat.toFixed(6) +
       "&profile=" + profil.brouter + "&alternativeidx=0&format=geojson";
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, { signal: mein.signal });
       const text = await r.text();
       if (nr !== anfrageNr) return;
       if (r.status === 503) throw new Error("Die Routenplanung ist noch nicht eingerichtet. Unter Inhalte kannst du sie laden.");
@@ -279,6 +285,7 @@ const Routen = (() => {
     geojson = null;
     wartetAuf = offen ? "start" : null;
     anfrageNr++;
+    if (abbruch) { abbruch.abort(); abbruch = null; }
     if (markerStart) { markerStart.remove(); markerStart = null; }
     if (markerZiel) { markerZiel.remove(); markerZiel = null; }
     const k = karte();

@@ -5,7 +5,9 @@
 const Kochen = (() => {
   let konf = null;
   let aufgebaut = false;
-  let nachgelesen = false, wiederholung = null;
+  let nachgelesen = false, nachlesenLaeuft = false, wiederholung = null;
+  // Gelesene Rezeptseiten merken (begrenzt), damit gleiche Rezepte bei der nächsten Suche nicht neu geladen werden
+  const seitenSpeicher = new Map(), SEITEN_MAX = 200;
   const leitfadenLinks = [];
   let beschaeftigt = false;
 
@@ -34,7 +36,11 @@ const Kochen = (() => {
       wiederholung = setTimeout(async () => { if (location.hash.startsWith("#kochen")) { await aktualisiereStatus(); zeigen(); } }, 3000);
       return;
     }
-    if (!nachgelesen && buecher.length) { nachgelesen = true; nachlesen(); }
+    // Erst nach Erfolg als erledigt merken; nicht doppelt gleichzeitig starten
+    if (!nachgelesen && !nachlesenLaeuft && buecher.length) {
+      nachlesenLaeuft = true;
+      nachlesen().then(() => { nachgelesen = true; }).catch((e) => console.error(e)).finally(() => { nachlesenLaeuft = false; });
+    }
     const buch = await rezeptBuch();
     $("#koch-fehlt").hidden = !!buch;
     $("#koch-form").hidden = !buch;
@@ -101,7 +107,8 @@ const Kochen = (() => {
     for (let i = 0; i < zutaten.length; i++)
       for (let j = i + 1; j < zutaten.length && anfragen.length < 16; j++) anfragen.push(zutaten[i] + " " + zutaten[j]);
     for (const z of zutaten) anfragen.push(z);
-    const listen = await Promise.all(anfragen.map(q => Kiwix.suche(buch, q, 25).catch(() => [])));
+    // Höchstens 4 Suchen gleichzeitig; scheiternde Suchen zählen als leer
+    const listen = (await nachEinander(anfragen, 4, q => Kiwix.suche(buch, q, 25))).map(l => l || []);
     const gesehen = new Set(), kandidaten = [];
     for (const liste of listen)
       for (const t of liste) {
@@ -125,9 +132,17 @@ const Kochen = (() => {
 
   // Rezeptseite lesen: Zeilen aus dem Abschnitt "Zutaten" und ob ein Backofen gebraucht wird
   async function lesen(t) {
-    const r = await fetch(t.url);
+    if (seitenSpeicher.has(t.url)) return seitenSpeicher.get(t.url);
+    const r = await fetch(t.url, { signal: AbortSignal.timeout(15000) }); // Frist: hängt der Abruf, bricht er ab
     if (!r.ok) return null;
     const doc = new DOMParser().parseFromString(await r.text(), "text/html");
+    const erg = seiteAuswerten(doc, t);
+    if (seitenSpeicher.size >= SEITEN_MAX) seitenSpeicher.delete(seitenSpeicher.keys().next().value);
+    seitenSpeicher.set(t.url, erg);
+    return erg;
+  }
+
+  function seiteAuswerten(doc, t) {
     const abschnitt = (id) => {
       const kopf = doc.getElementById(id);
       const h = kopf && kopf.closest("h2");
@@ -208,38 +223,50 @@ const Kochen = (() => {
 
   // ------------------------------------------------------------ Nachlesen und Leitfaden
 
+  // Wirft, wenn (fast) alle Abfragen scheitern; dann bleibt "nachgelesen" false und der nächste Besuch versucht es neu
   async function nachlesen() {
     const ziel = $("#koch-nachlesen");
     const buecher = await Kiwix.buecher();
-    for (const g of konf.nachlesen) {
-      const links = el("div", { class: "nachlesen-links" });
-      const gruppe = el("div", { class: "nachlesen" }, el("h3", {}, sym(g.icon), g.titel), links);
-      gruppe.hidden = true;
-      ziel.append(gruppe);
-      for (const eintrag of g.artikel) {
-        // "Artikel#Abschnitt" springt direkt zum Abschnitt und zeigt dessen Namen
-        const [titel, abschnitt] = eintrag.split("#");
-        const a = await finde(buecher, titel);
-        if (!a) continue;
-        const url = a.url + (abschnitt ? "#" + abschnitt.replace(/ /g, "_") : "");
-        // Bei doppelten Überschriften hängt Wikipedia "_2" an, angezeigt wird nur der Name
-        const name = abschnitt ? abschnitt.replace(/_\d+$/, "").replace(/_/g, " ") : a.titel;
-        links.append(el("a", { class: "knopf knopf-klein", href: "#lesen?url=" + encodeURIComponent(url) + "&titel=" + encodeURIComponent(name) }, name));
-        gruppe.hidden = false;
+    const stat = { anzahl: 0, fehler: 0 };
+    // Alle Titel parallel (höchstens 4 gleichzeitig) abfragen, danach der Reihe nach einsetzen
+    const eintraege = konf.nachlesen.flatMap(g => g.artikel.map(eintrag => ({ g, eintrag })));
+    const funde = await nachEinander(eintraege, 4, ({ eintrag }) => finde(buecher, eintrag.split("#")[0], stat));
+    const linkFunde = await nachEinander(leitfadenLinks, 4, ({ titel }) => finde(buecher, titel, stat));
+    if (stat.anzahl > 0 && stat.fehler === stat.anzahl) throw new Error("Nachschlagen nicht möglich");
+    ziel.innerHTML = "";
+    const gruppen = new Map();
+    eintraege.forEach(({ g, eintrag }, i) => {
+      let teil = gruppen.get(g);
+      if (!teil) {
+        const links = el("div", { class: "nachlesen-links" });
+        const gruppe = el("div", { class: "nachlesen" }, el("h3", {}, sym(g.icon), g.titel), links);
+        gruppe.hidden = true;
+        ziel.append(gruppe);
+        gruppen.set(g, teil = { links, gruppe });
       }
-    }
+      const a = funde[i];
+      if (!a) return;
+      // "Artikel#Abschnitt" springt direkt zum Abschnitt und zeigt dessen Namen
+      const abschnitt = eintrag.split("#")[1];
+      const url = a.url + (abschnitt ? "#" + abschnitt.replace(/ /g, "_") : "");
+      // Bei doppelten Überschriften hängt Wikipedia "_2" an, angezeigt wird nur der Name
+      const name = abschnitt ? abschnitt.replace(/_\d+$/, "").replace(/_/g, " ") : a.titel;
+      teil.links.append(el("a", { class: "knopf knopf-klein", href: "#lesen?url=" + encodeURIComponent(url) + "&titel=" + encodeURIComponent(name) }, name));
+      teil.gruppe.hidden = false;
+    });
     // Verlinkte Wörter in den Überschriften des Leitfadens; ohne passenden Artikel bleibt es Text
-    for (const { wort, titel } of leitfadenLinks) {
-      const a = await finde(buecher, titel);
-      if (a) wort.replaceWith(el("a", { href: "#lesen?url=" + encodeURIComponent(a.url) + "&titel=" + encodeURIComponent(a.titel) }, wort.textContent));
-    }
+    leitfadenLinks.forEach(({ wort }, i) => {
+      const a = linkFunde[i];
+      if (a && wort.isConnected) wort.replaceWith(el("a", { href: "#lesen?url=" + encodeURIComponent(a.url) + "&titel=" + encodeURIComponent(a.titel) }, wort.textContent));
+    });
   }
 
-  // Artikel mit genau diesem Titel im ersten Paket, das ihn hat
-  async function finde(buecher, titel) {
+  // Artikel mit genau diesem Titel im ersten Paket, das ihn hat (stat zählt Abfragen und Fehler)
+  async function finde(buecher, titel, stat) {
     for (const name of konf.pakete)
       for (const b of buecher.filter(x => x.name === name)) {
-        const v = await Kiwix.vorschlaege(b, titel, 3).catch(() => []);
+        stat.anzahl++;
+        const v = await Kiwix.vorschlaege(b, titel, 3).catch(() => { stat.fehler++; return []; });
         const exakt = v.find(x => x.titel.toLowerCase() === titel.toLowerCase());
         if (exakt) return exakt;
       }

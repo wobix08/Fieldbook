@@ -107,6 +107,7 @@ const Fragen = (() => {
     if (beschaeftigt) return;
     let c;
     try { c = await api("chat?id=" + encodeURIComponent(id)); } catch (e) { c = null; }
+    if (beschaeftigt) return;   // inzwischen läuft eine Frage: Chat nicht darunter austauschen
     if (!c || c.fehler) {
       dialog("Chat nicht geöffnet", "Dieser Chat ließ sich gerade nicht öffnen. Bitte versuche es noch einmal.", [{ text: "OK", wert: true, haupt: true }]);
       return;
@@ -127,6 +128,18 @@ const Fragen = (() => {
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), ms);
     try { return await f(c.signal); }
+    catch (e) { if (c.signal.aborted) throw new Error("Zeitüberschreitung: keine Antwort innerhalb von " + Math.round(ms / 1000) + " Sekunden."); throw e; }
+    finally { clearTimeout(t); }
+  }
+  // Inaktivitäts-Frist für gestreamte Antworten: bis zum ersten Token erstMs, danach bricht nur ab,
+  // wenn leerMs lang kein neues Token kommt. f bekommt (signal, aktiv); aktiv() bei jedem Token aufrufen.
+  async function mitLeerlauf(erstMs, leerMs, f) {
+    const c = new AbortController();
+    let ms = erstMs, t;
+    const starten = () => { clearTimeout(t); t = setTimeout(() => c.abort(), ms); };
+    const aktiv = () => { ms = leerMs; starten(); };
+    starten();
+    try { return await f(c.signal, aktiv); }
     catch (e) { if (c.signal.aborted) throw new Error("Zeitüberschreitung: keine Antwort innerhalb von " + Math.round(ms / 1000) + " Sekunden."); throw e; }
     finally { clearTimeout(t); }
   }
@@ -464,7 +477,7 @@ const Fragen = (() => {
       },
       required: englisch ? ["thema", "de", "en"] : ["thema", "de"],
     };
-    const roh = await mitFrist(30000, (signal) => KI.chat([
+    const roh = await mitFrist(60000, (signal) => KI.chat([
       { role: "system", content: sys },
       { role: "user", content: kontext + "Frage: " + frage },
     ], { max_tokens: 120, temperature: ohneErfolg ? 0.7 : 0.1, response_format: { type: "json_schema", json_schema: { name: "suche", schema } }, signal }));
@@ -527,8 +540,8 @@ const Fragen = (() => {
     for (const b of buecher) {
       // Modellnummern wörtlich in jedem Paket suchen; die Titelsuche findet auch "LFX25973ST" bei "LFX25973"
       for (const c of nummern) {
-        auftraege.push(Kiwix.vorschlaege(b, c, 5).then(r => r.map((t, i) => Object.assign(t, { punkte: 14 - i, begriff: c }))).catch(() => []));
-        auftraege.push(Kiwix.suche(b, c, 4).then(r => r.map((t, i) => Object.assign(t, { punkte: 10 - i, begriff: c }))).catch(() => []));
+        auftraege.push(() => Kiwix.vorschlaege(b, c, 5).then(r => r.map((t, i) => Object.assign(t, { punkte: 14 - i, begriff: c }))).catch(() => []));
+        auftraege.push(() => Kiwix.suche(b, c, 4).then(r => r.map((t, i) => Object.assign(t, { punkte: 10 - i, begriff: c }))).catch(() => []));
       }
       // iFixit Deutsch ist überwiegend englisch: dort mit beiden Sprachen suchen
       const gemischt = /ifixit/.test(b.name);
@@ -537,14 +550,17 @@ const Fragen = (() => {
         // Einzelne Wörter aus der Frage („Fisch“) nur als Ergänzung: Ihr Lexikonartikel (das Tier) soll
         // die Treffer zu den eigentlichen Begriffen („Fischfang“) nicht verdrängen
         const faktor = (begriffe.extra || []).includes(begriff) ? 0.5 : 1;
-        auftraege.push(Kiwix.vorschlaege(b, begriff, 3).then(r => r.map((t, i) => {
+        auftraege.push(() => Kiwix.vorschlaege(b, begriff, 3).then(r => r.map((t, i) => {
           const exakt = t.titel.toLowerCase() === begriff.toLowerCase();
           return Object.assign(t, { punkte: ((exakt ? 12 : 6 - i * 1.5) - bi) * faktor, begriff });
         })).catch(() => []));
-        auftraege.push(Kiwix.suche(b, begriff, 4).then(r => r.map((t, i) => Object.assign(t, { punkte: (5 - i - bi) * faktor, begriff }))).catch(() => []));
+        auftraege.push(() => Kiwix.suche(b, begriff, 4).then(r => r.map((t, i) => Object.assign(t, { punkte: (5 - i - bi) * faktor, begriff }))).catch(() => []));
       });
     }
-    const alle = (await Promise.all(auftraege)).flat();
+    // Höchstens 4 Anfragen gleichzeitig (kiwix-serve verträgt nicht viele); Reihenfolge der Ergebnisse bleibt
+    const ergebnisse = new Array(auftraege.length);
+    await parallel(auftraege.map((f, i) => i), 4, async (i) => { ergebnisse[i] = await auftraege[i](); });
+    const alle = ergebnisse.flat();
     // Gleiche Artikel zusammenfassen
     const nachUrl = new Map();
     for (const t of alle) {
@@ -687,7 +703,7 @@ const Fragen = (() => {
       "Allgemeine Artikel und Anleitungen, die das Thema im Ganzen erklären, kommen vor Einzelversuchen, Sonderfällen und Forenfragen. " +
       "Antworte nur mit JSON: die Nummern der hilfreichen Artikel, der hilfreichste zuerst.";
     const schema = { type: "object", properties: { passend: { type: "array", items: { type: "integer" }, maxItems: 7 } }, required: ["passend"] };
-    const roh = await mitFrist(30000, (signal) => KI.chat([{ role: "system", content: sys }, { role: "user", content: "FRAGE: " + frage + (thema ? "\nKERN DER FRAGE: " + thema : "") + "\n\nARTIKEL:\n" + liste }],
+    const roh = await mitFrist(60000, (signal) => KI.chat([{ role: "system", content: sys }, { role: "user", content: "FRAGE: " + frage + (thema ? "\nKERN DER FRAGE: " + thema : "") + "\n\nARTIKEL:\n" + liste }],
       { max_tokens: 60, temperature: 0, response_format: { type: "json_schema", json_schema: { name: "pruefung", schema } }, signal }));
     const j = JSON.parse(roh);
     return [...new Set((j.passend || []).map(n => n - 1).filter(i => i >= 0 && i < artikel.length))];
@@ -761,8 +777,8 @@ const Fragen = (() => {
     if (vorher) nachrichten.push({ role: "user", content: vorher.frage }, { role: "assistant", content: vorher.antwort.slice(0, 800) });
     nachrichten.push({ role: "user", content: "QUELLEN:\n" + block + "\n\nFRAGE: " + frage +
       (vorher ? "\n\n(Beantworte nur diese FRAGE mit diesen QUELLEN. Ist es ein neues Thema, erwähne das vorherige Gespräch nicht.)" : "") });
-    // Frist 180 s; bei Seitenwechsel wird nicht abgebrochen
-    return mitFrist(180000, (signal) => KI.chat(nachrichten, { max_tokens: 700, temperature: 0.3, signal }, onText));
+    // Frist: bis zum ersten Token 180 s, danach nur Abbruch, wenn 60 s lang nichts Neues kommt; bei Seitenwechsel wird nicht abgebrochen
+    return mitLeerlauf(180000, 60000, (signal, aktiv) => KI.chat(nachrichten, { max_tokens: 700, temperature: 0.3, signal }, (t) => { aktiv(); if (onText) onText(t); }));
   }
 
   function zeigeAntwort(ziel, text, quellen) {

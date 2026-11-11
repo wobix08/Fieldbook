@@ -543,7 +543,8 @@ const Gespraech = (() => {
       }
       balken.style.width = Math.min(100, Math.round(rms * 400)) + "%";
       // Grundrauschen langsam nachführen (sinkt schnell, steigt langsam)
-      rausch = !rausch ? rms : rms < rausch ? rausch * 0.9 + rms * 0.1 : rausch * 0.998 + rms * 0.002;
+      // Steigen nur, wenn gerade nicht gesprochen wird (sonst schneidet die Schwelle lange Sätze ab)
+      rausch = !rausch ? rms : rms < rausch ? rausch * 0.9 + rms * 0.1 : s.spricht ? rausch : rausch * 0.998 + rms * 0.002;
       const schwelle = Math.max(0.012, rausch * 3.5);
       if (!s.spricht) {
         vorlauf.push(d); if (vorlauf.length > VORLAUF) vorlauf.shift();
@@ -734,10 +735,19 @@ const Gespraech = (() => {
     wiedergabe = w;
     m.vorlesenFehler = null;
     danach();
+    // Frist 60 s zusätzlich zum Abbruch durch „Anhalten“: hängt Piper, bleibt der Sprechmodus nicht taub
+    let zuLang = false;
+    const uhr = setTimeout(() => { zuLang = true; w.abbruch.abort(); }, 60000);
     try {
-      const r = await fetch("/api/vorlesen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sprache: m.nach, text: m.uebers }), signal: w.abbruch.signal });
-      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.fehler || ("Fehler " + r.status)); }
-      const blob = await r.blob();
+      let blob;
+      try {
+        const r = await fetch("/api/vorlesen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sprache: m.nach, text: m.uebers }), signal: w.abbruch.signal });
+        if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.fehler || ("Fehler " + r.status)); }
+        blob = await r.blob();
+      } catch (e) {
+        if (zuLang) throw new Error("keine Antwort innerhalb von 60 Sekunden");
+        throw e;
+      } finally { clearTimeout(uhr); }
       if (wiedergabe !== w) return;
       w.audio = new Audio(URL.createObjectURL(blob));
       const vorbei = new Promise(res => { w.ende = res; });

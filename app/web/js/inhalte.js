@@ -16,7 +16,7 @@ const Inhalte = (() => {
     $("#inhalte-liste").innerHTML = '<p class="hinweis">Wird geladen …</p>';
     try {
       let konf, sk, st;
-      [kat, hw, konf, sk, st] = await Promise.all([api("katalog"), api("hardware"), ladeKonfig("pakete").catch(() => ({})), ladeKonfig("sprachen").catch(() => ({})), ladeKonfig("stimmen").catch(() => ({}))]);
+      [kat, hw, konf, sk, st] = await Promise.all([api("katalog"), holeHardware(30000), ladeKonfig("pakete").catch(() => ({})), ladeKonfig("sprachen").catch(() => ({})), ladeKonfig("stimmen").catch(() => ({}))]);
       gruppen = konf.variantenGruppen || {};
       sprachen = sk.sprachen || [];
       stimmen = st.stimmen || [];
@@ -30,6 +30,8 @@ const Inhalte = (() => {
     if (zuUe === "karten") { aufgeklappt.clear(); aufgeklappt.add("karten"); }
     await fortschritt();
     if (nr !== lauf) return;
+    // Lief schon ein Abruf von früher und hat die Liste nicht gezeichnet: noch einmal
+    if (warAktiv === null) { await fortschritt(); if (nr !== lauf) return; }
     // Vom Übersetzer aus („Sprachen hinzufügen“) direkt zu den Sprachen springen, von der Karte aus zu den Karten
     const zu = params && params.get("zu");
     const ziel = zu === "sprachen" ? $("#inh-sprachen") : zu === "sprechen" ? $("#inh-sprechen") : zu === "vorlesen" ? $("#inh-sprachen")
@@ -55,8 +57,14 @@ const Inhalte = (() => {
 
     const zeichne = () => {
       liste.innerHTML = "";
+      // Pakete, die nicht im Fieldbook-Katalog stehen, sind nicht vorausgewählt und bekommen eine Warnung
+      const fremde = gefunden.filter(d => d.fremd && !d.vorhanden);
+      if (fremde.length) liste.append(el("div", { class: "warnung", style: "margin-bottom:12px" },
+        el("strong", {}, fremde.length === 1 ? "Ein Wissenspaket stammt nicht aus dem Fieldbook-Katalog." : fremde.length + " Wissenspakete stammen nicht aus dem Fieldbook-Katalog."),
+        el("br"), "Ein Paket kann Programmcode enthalten, der in Fieldbook läuft und zum Beispiel deine Chats lesen oder Inhalte löschen könnte.",
+        el("br"), "Übernimm es nur, wenn du weißt, woher es kommt, und der Quelle vertraust."));
       for (const d of gefunden) {
-        const tags = d.vorhanden ? [tag("✓ schon vorhanden", "tag-ok")] : [];
+        const tags = d.vorhanden ? [tag("✓ schon vorhanden", "tag-ok")] : d.fremd ? [tag("nicht aus dem Katalog", "tag-warn")] : [];
         liste.append(auswahlZeile("checkbox", "imp", gewaehlt.has(d.datei), d.vorhanden, (e) => {
           if (e.target.checked) gewaehlt.add(d.datei); else gewaehlt.delete(d.datei);
           zeichne();
@@ -73,7 +81,7 @@ const Inhalte = (() => {
       gefunden = r.dateien;
       basis = r.ordner || ordner;
       gewaehlt.clear();
-      gefunden.filter(d => !d.vorhanden).forEach(d => gewaehlt.add(d.datei));
+      gefunden.filter(d => !d.vorhanden && !d.fremd).forEach(d => gewaehlt.add(d.datei));
       const neu = gefunden.filter(d => !d.vorhanden);
       status.textContent = !gefunden.length ? "Keine passenden Dateien gefunden."
         : neu.length + " neue von " + gefunden.length + " gefundenen Dateien, zusammen " + groesse(neu.reduce((s, d) => s + d.bytes, 0)) + ".";
@@ -108,21 +116,21 @@ const Inhalte = (() => {
   let warAktiv = null;
   // Was gerade wartet oder lädt: Pakete (name|flavour) und übrige Downloads (Titel), damit sie nicht doppelt wählbar sind
   let offen = { pakete: new Set(), titel: new Set() }, offenSig = "";
-  let fortschrittLaeuft = false, abrufFehler = 0, updateLief = false;
-  async function fortschritt() {
-    // Nie zwei Abrufe zugleich
-    if (fortschrittLaeuft) return;
-    fortschrittLaeuft = true;
-    try { await fortschrittHolen(); } finally { fortschrittLaeuft = false; }
+  let fortschrittLauf = null, updateLief = false;
+  // Nie zwei Abrufe zugleich: Wer währenddessen aufruft, wartet auf den laufenden Abruf (Seiteneintritt zeichnet so die Liste).
+  // Fehler bleiben leise, der nächste Tick versucht es neu; das Versprechen wird nie abgelehnt.
+  function fortschritt() {
+    if (!fortschrittLauf) fortschrittLauf = fortschrittHolen().catch(() => { }).finally(() => { fortschrittLauf = null; });
+    return fortschrittLauf;
   }
 
   async function fortschrittHolen() {
     let f;
-    try { f = await api("fortschritt"); abrufFehler = 0; }
+    try { f = await api("fortschritt"); }
     catch {
-      // Ein einzelner Fehler zählt nicht: erst nach 3 in Folge oder wenn ein Programm-Update lief
-      abrufFehler++;
-      if (warAktiv && (abrufFehler >= 3 || updateLief)) { clearInterval(timer); neustartAnzeigen(null); }
+      // Die Neustart-Anzeige nur, wenn ein Programm-Update lief. Ist Fieldbook einfach weg (Fenster geschlossen),
+      // zeigt app.js ohnehin „Fieldbook antwortet nicht“.
+      if (warAktiv && updateLief) { clearInterval(timer); neustartAnzeigen(null); }
       return;
     }
     updateLief = f.jobs.some(j => j.art === "programm-update");
