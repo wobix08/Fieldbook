@@ -69,7 +69,7 @@ const Gespraech = (() => {
         el("p", { style: "margin-top:0" }, "Mit dem Übersetzer kannst du dich mit jemandem unterhalten, der eine andere Sprache spricht. Ihr schreibt abwechselnd, Fieldbook übersetzt ohne Internet."),
         el("p", {}, "Dafür brauchst du mindestens eine Sprache. Unter Inhalte im Abschnitt „Übersetzer“ kannst du Sprachen laden, zum Beispiel Englisch, Französisch oder Türkisch."),
         OW.status && OW.status.uebersetzer ? el("p", { class: "hinweis" }, "„Artikel übersetzen“ hast du schon, das übersetzt nur von Englisch nach Deutsch. Für ein Gespräch braucht es beide Richtungen, die kommen mit jeder Sprache dazu.") : null,
-        el("a", { class: "knopf knopf-haupt", href: "#inhalte" }, sym("download"), "Sprachen laden")));
+        el("a", { class: "knopf knopf-haupt", href: "#inhalte?zu=sprachen" }, sym("download"), "Sprachen laden")));
       return;
     }
     const codes = liste.map(s => s.code);
@@ -148,7 +148,7 @@ const Gespraech = (() => {
     // Spracheingabe: einrichten, oder Hinweis bei Sprachen, die oft falsch erkannt werden
     if (!(OW.status && OW.status.spracheingabe)) {
       c.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 14px" }, "Sprechen statt tippen: ",
-        el("a", { href: "#inhalte?zu=sprechen" }, "Spracheingabe einrichten"), " (ca. 990 MB)"));
+        el("a", { href: "#inhalte?zu=sprechen" }, "Spracheingabe unter „Inhalte“ laden"), " (ca. 990 MB)"));
     } else {
       const schlecht = [ich, du].map(info).filter(x => x.sprechen === "schlecht");
       if (schlecht.length) c.append(el("div", { class: "warnung", style: "margin:-6px 0 14px" },
@@ -172,7 +172,7 @@ const Gespraech = (() => {
           : ansicht === "buehne"
             ? ["Schreibt abwechselnd: du links, dein Gegenüber rechts.", "Die neueste Übersetzung erscheint hier groß, darunter zur Kontrolle die Rückübersetzung."]
             : ["Schreibt abwechselnd: du links, dein Gegenüber rechts.", "Links steht dann alles auf " + info(ich).name + ", rechts alles auf " + info(du).name + "."];
-        oben.append(el("p", { class: "hinweis gs-leer" + (ansicht === "buehne" ? " gs-buehne gs-buehne-leer" : "") }, saetze[0], el("br"), saetze[1]));
+        oben.append(el("p", { class: "hinweis gs-leer" + (ansicht === "buehne" ? " gs-buehne gs-buehne-leer" : "") }, saetze[0], el("br"), el("span", { class: "gs-leer-zusatz" }, saetze[1])));
         return;
       }
       if (ansicht === "chat") {

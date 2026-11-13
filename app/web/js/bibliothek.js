@@ -31,7 +31,7 @@ const Bibliothek = (() => {
           el("button", { class: "knopf knopf-klein", onclick: async () => { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, "Erneut versuchen")));
         clearTimeout(startTimer);
         if (!s.bibliothekFehler) startTimer = setTimeout(async () => { if (location.hash.startsWith("#bibliothek")) { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, 3000);
-      } else regal.append(el("div", { class: "karte-box" }, "Es ist noch keine Bibliothek installiert. ", el("a", { href: "#inhalte" }, "Wissen herunterladen")));
+      } else regal.append(el("div", { class: "karte-box" }, "Es ist noch keine Bibliothek installiert. ", el("a", { href: "#inhalte?zu=wissen" }, "Wissen unter „Inhalte“ laden")));
       $("#bib-treffer").innerHTML = "";
       return;
     }

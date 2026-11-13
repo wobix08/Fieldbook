@@ -135,7 +135,7 @@ const Einstellungen = (() => {
       ki.unter(!inst.length ? "Keine KI installiert" : (m ? m.name + " · " + m.modell : inst.length + " installiert") +
         (s.sparmodus ? " · Sparmodus an" : gpu && gpu.vramGB >= 4 ? (s.backend === "vulkan" ? " · mit Grafikkarte" : " · auf dem Prozessor") : ""));
     };
-    if (!inst.length) ki.innen.append(el("p", { style: "margin-top:0" }, "Keine KI installiert.", el("br"), el("a", { href: "#inhalte" }, "Unter „Inhalte“ kannst du eine laden.")));
+    if (!inst.length) ki.innen.append(el("p", { style: "margin-top:0" }, "Keine KI installiert.", el("br"), el("a", { href: "#inhalte?zu=ki" }, "Unter „Inhalte“ kannst du eine laden.")));
     for (const m of inst) {
       const aktiv = s.modell === m.id;
       ki.innen.append(el("div", { class: "einst-zeile", style: "padding-top:0" },

@@ -195,6 +195,8 @@ input[type=search], input[type=text], textarea, select {
   border: 1px solid var(--linie); background: var(--flaeche); border-radius: 10px; padding: 10px 14px; width: 100%;
 }
 input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); outline-offset: 1px; }
+/* Bedienung mit der Tastatur (Tab): grüner Rahmen um Knöpfe und Links; mit der Maus erscheint er nicht */
+a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
 .schalter { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 .schalter input { width: 18px; height: 18px; accent-color: var(--akzent); }
 .hinweis { color: var(--text2); }
@@ -206,9 +208,30 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .fehler-text { color: var(--rot); font-weight: 600; }
 .verbindung-liste .einst-zeile:last-child { border-bottom: 0; }
 
-/* Start */
-.start-wrap { max-width: 1100px; margin: 3vh auto 0; }
-.suche-gross { display: flex; gap: 8px; margin-bottom: 22px; }
+/* Start: Banner und Kacheln passen sich der Fensterhöhe an. app.js (startGroesse) setzt --b fürs Banner und --i für
+   die Kachel-Symbole: erst wächst das Banner bis zur vollen Größe (--b 1), dann die Symbole (--i bis 1).
+   Passt nicht alles ins Fenster, schrumpft beides etwas unter die Grundgröße (Werte unter 0). */
+.start-wrap { --b: 0; --i: 0; max-width: 1100px; margin: 0 auto; }
+/* overflow-x: clip, damit der Schein des Banners breiter als die Kacheln sein kann, ohne seitlich zu scrollen */
+.ansicht[data-ansicht="start"] { padding-top: 18px; padding-bottom: 18px; overflow-x: clip; }
+/* Banner ohne Rahmen: ein grüner Schein hinter Logo und Name, der weich in den Seitenhintergrund ausläuft */
+.start-banner {
+  position: relative; isolation: isolate; display: flex; align-items: center; justify-content: center; gap: max(12px, calc(14px + 22px * var(--b)));
+  padding: max(6px, calc(16px + 48px * var(--b))) 24px max(6px, calc(14px + 36px * var(--b)));
+  margin-bottom: max(10px, calc(14px + 8px * var(--b)));
+}
+.start-banner::before {
+  /* Breite wächst und schrumpft mit dem Logo (--b), nicht nur die Höhe */
+  content: ""; position: absolute; top: -10%; bottom: -10%; left: 50%; transform: translateX(-50%);
+  width: max(360px, calc(640px + 820px * var(--b))); z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--akzent) 16%, transparent), color-mix(in srgb, var(--akzent) 6%, transparent) 55%, transparent);
+}
+.start-logo { display: flex; flex: none; }
+.start-logo svg { width: max(36px, calc(60px + 84px * var(--b))); height: auto; aspect-ratio: 1; fill: none; stroke: var(--akzent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.start-marke { min-width: 0; }
+.start-name { margin: 0; font-size: min(max(1.9rem, calc(2.6rem + 2.8rem * var(--b))), 10vw); font-weight: 700; line-height: 1; letter-spacing: .01em; }
+.start-unter { margin: max(2px, calc(4px + 4px * var(--b))) 0 0; color: var(--text2); font-size: max(.95rem, calc(1.02rem + .3rem * var(--b))); line-height: 1.3; }
+.suche-gross { display: flex; gap: 8px; margin-bottom: clamp(12px, calc(20px + 10px * var(--i, 0)), 22px); }
 .suche-gross input { font-size: 1.15rem; padding: 14px 18px; border-radius: 14px; }
 .suche-gross button { border: none; background: var(--akzent); color: var(--akzent-text); border-radius: 14px; padding: 0 24px; font-weight: 600; cursor: pointer; }
 .kacheln-start { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
@@ -216,13 +239,15 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .kacheln-start > .kachel:last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (max-width: 560px) { .kacheln-start { grid-template-columns: 1fr; } }
 /* Startseite: flache Kacheln, Symbol links neben Titel und Text */
-.kacheln-start .kachel { display: grid; grid-template-columns: auto 1fr; column-gap: 16px; row-gap: 2px; align-items: center; padding: 16px 20px; }
+.kacheln-start { gap: clamp(8px, calc(14px + 12px * var(--i)), 14px); }
+.kacheln-start .kachel { display: grid; grid-template-columns: auto 1fr; column-gap: calc(16px + 6px * var(--i)); row-gap: 2px; align-items: center; padding: max(7px, calc(12px + 6px * var(--i))) 18px; }
 .kacheln-start .kachel .feld { grid-row: 1 / 3; margin-bottom: 0; align-self: center; }
-.kacheln-start .k-titel { margin-top: 0; font-size: 1.3rem; line-height: 1.2; }
+.kacheln-start .feld.gross { width: max(34px, calc(44px + 20px * var(--i))); height: max(34px, calc(44px + 20px * var(--i))); border-radius: max(9px, calc(11px + 4px * var(--i))); }
+.kacheln-start .feld.gross .sym { width: max(24px, calc(31px + 14px * var(--i))); height: max(24px, calc(31px + 14px * var(--i))); }
+.kacheln-start .k-titel { margin-top: 0; font-size: calc(1.3rem + .25rem * var(--i)); line-height: 1.2; }
 .kachel {
   display: flex; flex-direction: column; gap: 4px; padding: 26px 24px; background: var(--flaeche);
   border: 1px solid var(--linie); border-radius: 18px; text-decoration: none; color: var(--text); box-shadow: var(--schatten);
-  transition: transform .08s ease;
 }
 .kachel:hover { transform: translateY(-2px); border-color: var(--akzent); }
 .kachel .feld { margin-bottom: 4px; }
@@ -248,16 +273,31 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .merkmal { background: var(--flaeche2); color: var(--text2); border-radius: 8px; padding: 3px 9px; font-size: .86rem; }
 .merkmal.alles { background: var(--akzent-hell); color: var(--akzent); font-weight: 600; }
 .merkmal.fehlt { background: var(--gelb-hell); color: var(--gelb); }
-.koch-nachlesen { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-.nachlesen { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 12px 16px; }
-.nachlesen h3 { margin: 0 0 8px; }
-.nachlesen-links { display: flex; flex-wrap: wrap; gap: 6px; }
-.leitfaden { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 10px; }
-.leitfaden summary { cursor: pointer; font-weight: 600; font-size: 1.05rem; }
-.leitfaden h4 { margin: 14px 0 6px; }
-.leitfaden ul { margin: 0; padding-left: 22px; }
+/* Vier Gruppen: zwei mal zwei statt drei und eine allein; bei halber Breite untereinander */
+.koch-nachlesen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .koch-nachlesen { grid-template-columns: 1fr; } }
+.nachlesen { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--schatten); }
+.nachlesen h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.nachlesen h3 .sym { color: var(--akzent); width: 20px; height: 20px; margin: 0; }
+.nachlesen-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.nachlesen-links .knopf-klein { font-size: .95rem; padding: 6px 13px; justify-content: center; }
+.nachlesen-links .knopf-klein.gestreckt { flex-grow: 1; }   /* setzt kochen.js (zeilenAusgleichen) */
+/* Leitfaden (Kochen): Kopf wie .klapp-abschnitt (Feld 38 px, Titelschrift, Pfeil rechts), darunter Lesetext */
+.leitfaden { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); margin-bottom: 10px; }
+.leitfaden:has(> summary:hover) { border-color: var(--akzent); }
+.leitfaden summary { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; list-style: none; }
+.leitfaden summary::-webkit-details-marker { display: none; }
+.leitfaden summary .feld.gross { width: 38px; height: 38px; border-radius: 10px; }
+.leitfaden summary .feld.gross .sym { width: 21px; height: 21px; margin: 0; }
+.leitfaden summary b { flex: 1; font-family: var(--titel); font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
+.leitfaden[open] > summary .klapp-pfeil { transform: rotate(-135deg); margin-top: 4px; }
+.leitfaden > :not(summary) { margin-left: 16px; margin-right: 16px; }
+.leitfaden > :last-child:not(summary) { margin-bottom: 14px; }
+.leitfaden h4 { margin-block: 4px 6px; }
+.leitfaden h4 ~ h4 { margin-top: 14px; }
+.leitfaden ul { margin-block: 0; padding-left: 22px; }
 .leitfaden li { margin-bottom: 5px; }
-.start-info { color: var(--text2); text-align: center; margin-top: 22px; font-size: .92rem; }
+.start-info { color: var(--text2); text-align: center; margin: clamp(10px, calc(20px + 10px * var(--i)), 22px) 0 0; font-size: .92rem; }
 
 /* Fragen */
 /* Fragen: Verlauf links, Chat rechts */
@@ -267,8 +307,27 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .chat-verlauf #neuer-chat { width: 100%; }
 .verlauf-titel { color: var(--text2); font-size: .85rem; font-weight: 600; margin-top: 6px; padding: 0 8px; }
 .chat-liste { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
-.chat-eintrag { display: flex; align-items: center; gap: 4px; border-radius: 8px; }
-.chat-eintrag:hover, .chat-eintrag.aktiv { background: var(--flaeche2); }
+.chat-eintrag { position: relative; overflow: hidden; border-radius: 8px; flex: none; }
+.chat-zeile { position: relative; display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 8px;
+  transition: transform .22s ease; touch-action: pan-y; }
+.chat-eintrag:hover .chat-zeile, .chat-eintrag.aktiv .chat-zeile { background: var(--flaeche2); }
+.chat-eintrag.gewischt .chat-zeile { transform: translateX(-88px); }
+.chat-eintrag.zieht .chat-zeile { transition: none; }
+/* Liegt hinter der Zeile und wird beim Wegschieben sichtbar */
+.chat-endgueltig { position: absolute; top: 0; right: 0; bottom: 0; width: 84px; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--rot); color: var(--akzent-text); font-weight: 600; visibility: hidden; transition: visibility 0s .22s; }
+.chat-eintrag.gewischt .chat-endgueltig, .chat-eintrag.zieht .chat-endgueltig { visibility: visible; transition: none; }
+.chat-endgueltig:hover { filter: brightness(1.08); }
+/* „Alle Chats löschen“: Knopf gleitet ganz nach links weg, der rote Knopf darunter löscht wirklich */
+.alle-weg { position: relative; overflow: hidden; border-radius: 8px; flex: none; display: flex; }
+.alle-weg[hidden] { display: none; }
+.alle-weg #chats-loeschen { position: relative; flex: 1; transition: transform .22s ease; }
+.alle-weg.gewischt #chats-loeschen { transform: translateX(-105%); }
+.alle-endgueltig { position: absolute; inset: 0; border: 0; border-radius: 8px; cursor: pointer; background: var(--rot); color: var(--akzent-text);
+  font-weight: 600; font-size: .88rem; visibility: hidden; transition: visibility 0s .22s; }
+.alle-weg.gewischt .alle-endgueltig { visibility: visible; transition: none; }
+.alle-endgueltig:hover { filter: brightness(1.08); }
+@media (prefers-reduced-motion: reduce) { .chat-zeile, .alle-weg #chats-loeschen { transition: none; } }
 .chat-eintrag button.oeffnen { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 7px 8px; cursor: pointer; }
 .chat-eintrag .t { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-eintrag small { color: var(--text2); font-size: .78rem; }
@@ -280,14 +339,28 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 @media (max-width: 860px) {
   .fragen-layout { grid-template-columns: 1fr; }
   .chat-verlauf { display: none; position: static; max-height: 50vh; background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 12px; }
+  .chat-verlauf .chat-zeile { background: var(--flaeche); }
   .chat-verlauf.offen { display: flex; }
   .verlauf-knopf { display: inline-flex; }
 }
 .chat { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+/* Beispielfragen unter der Begrüßung, verschwinden mit der ersten Frage */
+.beispielfragen { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: -6px; padding-left: 4px; }
+/* Kopfzeile: links „Zum Beispiel:“, rechts der Tipp (nur bei kleinen Modellen) */
+.beispiel-kopf { align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 28px; margin-bottom: 2px; }
+.beispielfrage {
+  font: inherit; font-size: .95rem; color: var(--text); background: var(--flaeche); border: 1px solid var(--linie);
+  border-radius: 999px; padding: 6px 14px; cursor: pointer;
+}
+.beispielfrage:hover { border-color: var(--akzent); }
 .frage-blase { align-self: flex-end; background: var(--akzent); color: var(--akzent-text); padding: 10px 16px; border-radius: 16px 16px 4px 16px; max-width: 85%; white-space: pre-wrap; }
 .antwort { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 16px 16px 16px 4px; padding: 14px 18px; box-shadow: var(--schatten); }
 .schritte-liste { list-style: none; padding: 0; margin: 0 0 8px; color: var(--text2); font-size: .92rem; }
-.schritte-liste li::before { content: "… "; }
+/* Laufender Schritt: Ladekreis, der sich dreht (zeigt, dass noch gearbeitet wird) */
+.schritte-liste li:not(.fertig):not(.fehler)::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: .45em;
+  vertical-align: -.08em; border: 2px solid var(--linie); border-top-color: var(--akzent); border-radius: 50%; animation: lade-kreis .8s linear infinite; }
+@keyframes lade-kreis { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .schritte-liste li::before { animation-duration: 2s; } }
 .schritte-liste li.fertig::before { content: "✓ "; color: var(--gruen); }
 .schritte-liste li.fehler::before { content: "✗ "; color: var(--rot); }
 .antwort-text { white-space: pre-wrap; }
@@ -295,6 +368,8 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .quellen { margin-top: 12px; border-top: 1px solid var(--linie); padding-top: 8px; font-size: .92rem; }
 .quellen ol { margin: 4px 0 0; padding-left: 22px; }
 .quellen .paket { color: var(--text2); }
+.quellen.vorlaeufig summary { cursor: pointer; }
+.quellen.vorlaeufig:not([open]) { opacity: .8; }
 .medizin-hinweis { margin-top: 10px; font-size: .9rem; }
 .weitersuchen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
 .frage-form { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 16px; padding: 10px; box-shadow: var(--schatten); }
@@ -356,7 +431,7 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .ps-kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .ps-kachel {
   display: flex; flex-direction: column; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 12px;
-  overflow: hidden; text-decoration: none; color: var(--text); transition: transform .08s ease;
+  overflow: hidden; text-decoration: none; color: var(--text);
 }
 .ps-kachel:hover { transform: translateY(-2px); border-color: var(--akzent); }
 .ps-kachel img, .ps-ohne-bild { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--flaeche2); display: block; }
@@ -389,6 +464,8 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--akzent); ou
 .einst-liste .klapp-abschnitt-innen h3 { margin: 14px 0 8px; }
 /* Inhalte: Kategorien im Bereich Wissen */
 .klapp-abschnitt-innen > .klapp-liste-abschnitte { margin-bottom: 0; padding-left: 28px; }
+/* Inhalte: KI, Karten und Sprachen genauso weit eingerückt wie die Kategorien in Wissen (Nutzer, 13. Nov. 2026) */
+#inhalte-liste > .klapp-liste-abschnitte > .klapp-abschnitt > .klapp-huelle > .klapp-innen > .klapp-abschnitt-innen:not(:has(> .klapp-liste-abschnitte)) { padding-left: 30px; }
 /* Inhalte und Assistent: Nicht installiert und nicht ausgewählt = gestrichelter Rahmen (Nutzer, 10. Nov. 2026).
    Etwas heller als die normale Linie, sonst ist die Strichelung im dunklen Design kaum zu sehen. Nicht bei Auswahlknöpfen (KI). */
 :is(#inhalte-liste, #setup-inhalt) .wahl:not(.installiert):not(.gewaehlt):not(:has(input[type="radio"])) {
@@ -792,6 +869,17 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 /* Einstellungen */
 .titel-zeile { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 46px; margin-bottom: 18px; }
 .titel-zeile h1 { margin: 0; }
+/* Fragen: Tipp rechts in der Zeile „Zum Beispiel“, aufgeklappt als schwebender Kasten (verschiebt nichts) */
+.frage-tipp { position: relative; margin-left: auto; font-size: .9rem; }
+.frage-tipp summary { list-style: none; cursor: pointer; color: var(--text2); padding: 4px 10px; border-radius: 8px; }
+.frage-tipp summary::-webkit-details-marker { display: none; }
+.frage-tipp summary::after { content: "▾"; margin-left: 6px; opacity: .7; }
+.frage-tipp summary:hover, .frage-tipp[open] summary { color: var(--text); background: var(--flaeche2); }
+.frage-tipp-text {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(440px, 90vw); padding: 12px 16px;
+  background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  color: var(--text); line-height: 1.5;
+}
 /* Einfache Überschrift so hoch wie eine Titelzeile mit Knöpfen, damit nichts springt */
 .spalte > h1:first-child { margin: 3.5px 0 21.5px; }
 .inhalte-leiste { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -823,13 +911,19 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .vs-stand-kopf span { font-size: .88rem; color: var(--text2); }
 .vs-stand-stufe.ok .vs-stand-kopf span { color: var(--gruen); font-weight: 600; }
 @media (max-width: 700px) { .vs-stand { grid-template-columns: 1fr; } }
-.vs-lagen { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 10px; }
+/* Lagen wie die Kacheln der Startseite: dunkle Fläche, Symbol im gelben Feld über dem Namen, alle gleich breit
+   (sechs in einer Reihe, bei halber Breite drei) */
+.vs-lagen { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+@media (max-width: 900px) { .vs-lagen { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .vs-lage {
-  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; line-height: 1.3;
-  background: var(--gelb-hell); color: var(--text); text-decoration: none; border: 1px solid transparent; font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; padding: 14px 10px 12px;
+  border-radius: var(--radius); line-height: 1.25; text-align: center; background: var(--flaeche); color: var(--text);
+  text-decoration: none; border: 1px solid var(--linie); box-shadow: var(--schatten);
+  font-family: var(--titel); font-size: 1.12rem; font-weight: 600;
 }
-.vs-lage:hover { border-color: var(--gelb); }
-.vs-lage > .sym { color: var(--gelb); width: 1.3em; height: 1.3em; flex: none; margin: 0; }
+.vs-lage:hover { border-color: var(--gelb); transform: translateY(-2px); }
+.vs-lage-feld { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: var(--gelb-hell); color: var(--gelb); }
+.vs-lage-feld > .sym { width: 26px; height: 26px; margin: 0; }
 .vs-raster { display: grid; gap: 6px; margin-top: 10px; }
 .vs-r-kopf, .vs-r-zeile { display: grid; grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
 .vs-r-kopf span { font-size: .85rem; color: var(--text2); font-weight: 600; padding: 0 4px; }
@@ -944,7 +1038,9 @@ a.vs-marke.kiste:hover { border-color: var(--gelb); }
 .gs-buehne-absender .gs-klein { margin-top: 0; font-size: 1rem; }
 .gs-buehne-absender.gs-rechts { grid-column: 2; }
 @media (max-width: 700px) { .gs-buehne-pruefen { grid-template-columns: 1fr; } .gs-buehne-absender.gs-rechts { grid-column: 1; } }
-.gs-buehne-leer { margin: 0; padding: 34px 26px; }
+/* Noch nichts übersetzt: nur ein schlanker Hinweis ohne Kasten, die Bühne erscheint mit der ersten Übersetzung */
+.gs-buehne.gs-buehne-leer { margin: 0 0 2px; padding: 0 16px; background: none; border: 0; }
+.gs-leer .gs-leer-zusatz { font-size: .88rem; }
 /* Verlauf unter der Eingabe, neueste zuerst; Klick holt die Nachricht auf die Bühne */
 .gs-bisher { display: flex; flex-direction: column; margin-top: 18px; }
 .gs-bisher:empty { display: none; }
@@ -1072,4 +1168,16 @@ a.vs-marke.kiste:hover { border-color: var(--gelb); }
   body.vs-drucken #vs-druck { display: block; }
   /* Strg+P ohne Knopf: wenigstens ohne Kopfleiste */
   .kopf, .banner { display: none !important; }
+}
+
+/* Weicher Wechsel beim Drüberfahren für alles Anklickbare (Nutzer, 13. Nov. 2026, nach Vergleich auf der Startseite).
+   Steht am Ende, damit es überall gilt; eigene Übergänge (Klappen, Wischen) haben ihre Elemente nicht in dieser Liste. */
+.hauptnav a, .zahnrad, .pill, .menue button, .knopf, .kachel, .ps-kachel, .beispielfrage, .frage-form textarea, .eintrag,
+.ps-abc button, .ifixit-weg a, .ifixit-zweige a, .wahl, .treffer, .pdf-treffer, .ort-treffer button, .e-knopf,
+.eh-lektionen a, .eh-antwort, a.schritt, .land-liste button, .vs-lage, .vs-r-thema, a.vs-r-feld, a.vs-marke, .vs-verweis,
+.gs-bisher-zeile, .leitfaden {
+  transition: transform .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hauptnav a, .zahnrad, .pill, .menue button, .knopf, .kachel, .ps-kachel, .beispielfrage, .eintrag, .wahl, .vs-lage { transition: none; }
 }

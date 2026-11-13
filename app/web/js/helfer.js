@@ -169,7 +169,7 @@ function nachOben(knopf, top) {
   requestAnimationFrame(schritt);
 }
 
-// Schiebeschalter mit mehreren Stellungen (Vorauswahl im Assistenten: Nichts · Empfohlen · Alles · Eigene).
+// Schiebeschalter mit mehreren Stellungen (Vorauswahl im Assistenten: Nichts · Das Wichtigste · Alles · Eigene).
 // stellungen: [{ id, text, unter, gesperrt }]; der grüne Knopf gleitet zur gewählten Stellung, danach onWahl(id).
 // aktiv null: keine Stellung gewählt (Knopf unsichtbar).
 function stufenSchalter(stellungen, aktiv, onWahl, label) {

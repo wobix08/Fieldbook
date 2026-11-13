@@ -42,7 +42,7 @@ const Routen = (() => {
     if (!s.routen) {
       p.append(el("div", { class: "routen-hinweis" },
         (s.routenKacheln && s.routenKacheln.length) ? "Die Routenplanung startet gerade oder konnte nicht starten. " :
-          "Die Routenplanung ist noch nicht eingerichtet. ", el("a", { href: "#inhalte?zu=karten" }, "Jetzt einrichten")));
+          "Die Routenplanung ist noch nicht eingerichtet. ", el("a", { href: "#inhalte?zu=karten" }, "Routenplanung unter „Inhalte“ laden")));
       return;
     }
     p.append(el("div", { class: "profile" }, ...PROFILE.map(pr =>
@@ -197,7 +197,7 @@ const Routen = (() => {
     const status = $("#routen-status");
     if (!abgedeckt(start) || !abgedeckt(ziel)) {
       if (status) status.replaceChildren("Für diesen Ort fehlen die Wegedaten.", el("br"),
-        el("a", { href: "#inhalte?zu=karten" }, "Unter Inhalte die Routenplanung für dieses Gebiet laden"));
+        el("a", { href: "#inhalte?zu=karten" }, "Routenplanung für dieses Gebiet unter „Inhalte“ laden"));
       return;
     }
     const nr = ++anfrageNr;

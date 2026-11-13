@@ -432,7 +432,7 @@ const Uebersetzer = (() => {
       if (meinLauf !== lauf) return;
     }
     if (!liste.length) {
-      anzeige(fehltText ? fehltText + " ist nicht installiert (Inhalte › Übersetzer)" : "Seite ist schon deutsch", "Original");
+      anzeige(fehltText ? fehltText + " ist nicht installiert (Inhalte › Sprachen)" : "Seite ist schon deutsch", "Original");
       return;
     }
     anzeige("Übersetzer wird geladen …", "Original");

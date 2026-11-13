@@ -254,11 +254,43 @@ const Kochen = (() => {
       teil.links.append(el("a", { class: "knopf knopf-klein", href: "#lesen?url=" + encodeURIComponent(url) + "&titel=" + encodeURIComponent(name) }, name));
       teil.gruppe.hidden = false;
     });
+    const ausgleichen = () => ziel.querySelectorAll(".nachlesen-links").forEach(zeilenAusgleichen);
+    ausgleichen();
+    new ResizeObserver(() => requestAnimationFrame(ausgleichen)).observe(ziel);
+    if (document.fonts) document.fonts.ready.then(ausgleichen);
     // Verlinkte Wörter in den Überschriften des Leitfadens; ohne passenden Artikel bleibt es Text
     leitfadenLinks.forEach(({ wort }, i) => {
       const a = linkFunde[i];
       if (a && wort.isConnected) wort.replaceWith(el("a", { href: "#lesen?url=" + encodeURIComponent(a.url) + "&titel=" + encodeURIComponent(a.titel) }, wort.textContent));
     });
+  }
+
+  // Stichwörter ordentlicher setzen: Eine volle Zeile wird auf ganze Breite gezogen, wenn die Kästchen dafür nur wenig
+  // wachsen müssen (höchstens gut ein Drittel des kleinsten). In der letzten Zeile bekommt ein Kästchen die Breite
+  // des Kästchens darüber, wenn beide gleich weit links beginnen und ähnlich lang sind; sehr verschiedene bleiben.
+  function zeilenAusgleichen(box) {
+    const knoepfe = [...box.children];
+    knoepfe.forEach(k => { k.classList.remove("gestreckt"); k.style.minWidth = ""; });
+    if (!box.clientWidth) return;
+    const zeilen = [];
+    for (const k of knoepfe) {
+      const z = zeilen[zeilen.length - 1];
+      if (z && Math.abs(z.oben - k.offsetTop) < 4) z.k.push(k); else zeilen.push({ oben: k.offsetTop, k: [k] });
+    }
+    if (zeilen.length < 2) return;
+    const abstand = parseFloat(getComputedStyle(box).columnGap) || 0;
+    const breite = k => k.getBoundingClientRect().width;
+    zeilen.slice(0, -1).forEach(z => {
+      const breiten = z.k.map(breite);
+      const frei = box.clientWidth - breiten.reduce((a, b) => a + b, 0) - abstand * (z.k.length - 1);
+      if (frei / z.k.length <= 0.35 * Math.min(...breiten)) z.k.forEach(k => k.classList.add("gestreckt"));
+    });
+    const oben = zeilen[zeilen.length - 2].k, letzte = zeilen[zeilen.length - 1].k;
+    for (let i = 0; i < letzte.length && i < oben.length; i++) {
+      const b = breite(oben[i]);
+      if (Math.abs(oben[i].offsetLeft - letzte[i].offsetLeft) > 2 || b / breite(letzte[i]) > 1.4) break;
+      letzte[i].style.minWidth = b + "px";
+    }
   }
 
   // Artikel mit genau diesem Titel im ersten Paket, das ihn hat (stat zählt Abfragen und Fehler)
@@ -276,7 +308,9 @@ const Kochen = (() => {
   function leitfaden() {
     const ziel = $("#koch-leitfaden");
     for (const t of konf.leitfaden) {
-      const box = el("details", { class: "leitfaden", id: "koch-l-" + t.id }, el("summary", {}, sym(t.icon), t.titel));
+      // Kopf wie die Klapp-Abschnitte (Bibliothek, Inhalte): Symbol im Feld, Titel, Pfeil rechts
+      const box = el("details", { class: "leitfaden", id: "koch-l-" + t.id },
+        el("summary", {}, symFeld(t.icon, "gross"), el("b", {}, t.titel), el("span", { class: "klapp-pfeil", "aria-hidden": "true" })));
       for (const a of t.abschnitte) {
         // Wörter aus "verweis" kommen in ein eigenes <span>, das nachlesen() durch einen Link ersetzt,
         // sobald die Bibliothek bereit ist

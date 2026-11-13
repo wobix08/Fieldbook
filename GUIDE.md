@@ -108,6 +108,9 @@ Schreib eine Frage, zum Beispiel „Wie versorge ich eine Schnittwunde?“.\
 Die KI sucht passende Artikel und antwortet mit Quellennummern wie [1].\
 Eine kleine Suchhilfe, die mit der KI kommt, sortiert die Treffer dabei nach ihrer Bedeutung.\
 Klick auf eine Nummer öffnet den Artikel.\
+Bei Erste-Hilfe-Fragen und zur Hausapotheke antwortet die KI aus dem eingebauten Erste-Hilfe-Kurs bzw. der Vorsorge-Liste.\
+Schon während die KI noch arbeitet, erscheinen die ersten Treffer und danach die geprüften Quellen.\
+Wer lieber selbst liest, kann sie sofort öffnen.\
 Unter der Antwort stehen Suchbegriffe, mit denen du in der Bibliothek selbst weiterlesen kannst.\
 Pakete aus PDF-Büchern (z. B. die Medizin-Handbücher) bereitet Fieldbook nach der Installation einmal für die KI vor.\
 Das dauert ein, zwei Minuten, solange Fieldbook offen ist; oben im Bereich steht dann ein Hinweis.
@@ -120,13 +123,16 @@ Das dauert ein, zwei Minuten, solange Fieldbook offen ist; oben im Bereich steht
   Für ein ganz anderes Thema lieber einen neuen Chat starten.
 - **Frühere Chats** stehen links in der Liste (auf dem Handy unter **Verlauf**).\
   Ein Klick öffnet den Chat wieder, dort kannst du weiterfragen.\
-  Mit ✕ löschst du einen Chat, mit **Alle Chats löschen** unter der Liste alle auf einmal.\
+  Ein Klick auf ✕ (oder den Chat nach links ziehen) schiebt ihn zur Seite, dann löscht **Löschen** ihn.\
+  Mit **Alle Chats löschen** unter der Liste löschst du alle auf einmal.\
   Die Chats liegen im Ordner `daten\chats` und wandern mit, wenn du Fieldbook auf einen USB-Stick kopierst.
 - Eine Modellnummer oder einen Namen kannst du auch als eigene Nachricht hinterherschicken, zum Beispiel erst „Wie repariere ich einen Kühlschrank von LG?“ und dann „LFX25973“.
 - **Lage** (unter dem Fragefeld) sagt der KI, was dir zur Verfügung steht: *Zuhause*, *Stromausfall* (keine Steckdose), *Draußen / unterwegs* (nur was du dabei hast oder findest) oder *Krise* (keine Läden, keine Hilfe).\
   Die KI erklärt immer, wie du es selbst machst, nicht wen du beauftragen sollst.
 - **Einfach erklären** macht die Antwort kindgerecht, gut für den Unterricht.
-- Auf schwachen Laptops dauert eine Antwort etwa 20 bis 60 Sekunden.
+- Mit Grafikkarte kommt die Antwort nach wenigen Sekunden.\
+  Auf Laptops ohne Grafikkarte dauert sie etwa ein bis zwei Minuten.\
+  Die ersten gefundenen Artikel erscheinen schon nach etwa 20 Sekunden, die geprüften Quellen nach etwa 40 Sekunden.
 
 ### Bibliothek
 Die Pakete sind nach Themen sortiert: Grundwissen, Gesundheit & Erste Hilfe, Reparieren & Technik, Draußen & Überleben, Selbstversorgung & Haushalt, Lernen & Kinder sowie Beschäftigung & Lesen.\
@@ -165,13 +171,13 @@ Solange die Übersetzung an ist, werden auch weitere Artikel automatisch überse
 Die Übersetzung macht ein Programm, keine Person: Bei Fachbegriffen und Zahlen im Zweifel das Original prüfen.\
 Dafür brauchst du **Artikel übersetzen** (42 MB), das wählst du im Assistenten oder unter **Inhalte** aus.\
 Damit geht Englisch.\
-Andere Sprachen gehen, wenn du sie unter **Inhalte** › **Übersetzer** lädst (z. B. Spanisch); fehlt eine, sagt Fieldbook das oben.
+Andere Sprachen gehen, wenn du sie unter **Inhalte** › **Sprachen** lädst (z. B. Spanisch); fehlt eine, sagt Fieldbook das oben.
 
 ### Übersetzer
 Hier führst du ein Gespräch in zwei Sprachen.\
 Oben wählst du deine Sprache und die deines Gegenübers.\
 Du schreibst links, dein Gegenüber rechts, jeweils mit **Übersetzen** oder der Eingabetaste.\
-Mit der **Spracheingabe** (990 MB, unter **Inhalte** im Abschnitt **Übersetzer**) könnt ihr auch sprechen:\
+Mit der **Spracheingabe** (990 MB, unter **Inhalte** im Bereich **Sprachen**) könnt ihr auch sprechen:\
 Auf **Sprechen** klicken, sprechen, auf **Fertig** klicken.\
 Der erkannte Text steht dann im Feld, du kannst ihn prüfen und mit **Übersetzen** abschicken.\
 Beim ersten Mal fragt der Browser, ob Fieldbook das Mikrofon benutzen darf.\
@@ -198,7 +204,7 @@ Zu jedem Satz gibt es eine **Rückübersetzung** in der Sprache dessen, der ihn 
 Dafür lädst du die Sprache unter **Inhalte** mit **Text + Sprache** statt **Nur Text** (die Stimme braucht etwa 60 bis 75 MB, Deutsch kommt einmal mit).\
 Bei einer schon geladenen Sprache holst du die Stimme mit **+ Sprache** dazu.\
 Für manche Sprachen gibt es keine freie Stimme, zum Beispiel Türkisch, Kroatisch und Arabisch; dort fehlt der Knopf.\
-Weitere Sprachen lädst du mit **Sprachen hinzufügen** oben rechts (oder unter **Inhalte** im Abschnitt **Übersetzer**).\
+Weitere Sprachen lädst du mit **Sprachen hinzufügen** oben rechts (oder unter **Inhalte** im Bereich **Sprachen**).\
 Oben stehen die häufig gebrauchten, mit **Von Nord nach Süd** sortierst du um (erst Europa, dann der Rest).\
 Eine Sprache braucht etwa 40 bis 75 MB, mit Stimme etwa 100 bis 150 MB (beides steht auf den Knöpfen).\
 Englisch und **Artikel übersetzen** laden immer mit, weil über Englisch übersetzt wird.\
@@ -296,13 +302,15 @@ Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Ein
 
 ## 8. Häufige Fragen
 
-**Die Bibliothek sagt „Paket beschädigt“**\
+**Die Bibliothek sagt „Diese Pakete sind beschädigt“**\
 Eine Datei ist unvollständig oder defekt, zum Beispiel nach einem Absturz beim Download.\
 Fieldbook lässt sie aus und startet die anderen Pakete trotzdem.\
 Unter **Inhalte** das betroffene Paket löschen und neu herunterladen.
 
 **Der Browser öffnet sich nicht**\
-Öffne ihn selbst und gib `http://localhost:8090` ein.
+Öffne ihn selbst und gib `http://localhost:8090` ein.\
+Ist dieser Anschluss von einem anderen Programm belegt, weicht Fieldbook auf 8091 bis 8099 aus.\
+Welche Adresse gilt, steht im Fieldbook-Fenster in der Taskleiste.
 
 **Im Firmennetz scheitern Downloads oder der Virenschutz blockiert Fieldbook**\
 Firmen-Firewalls und Virenschutz-Programme sperren unbekannte Programme und große Downloads oft vorsorglich.\

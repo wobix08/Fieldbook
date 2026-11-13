@@ -36,17 +36,45 @@ const Fragen = (() => {
   function begruessung() {
     const s = OW.status || {};
     const box = el("div", { class: "antwort" });
-    if (!s.wissen) box.append("Es ist noch keine Bibliothek installiert. ", el("a", { href: "#inhalte" }, "Wissen herunterladen"));
-    else if (!s.modell) box.append("Es ist keine KI eingerichtet. Du kannst trotzdem fragen: Dann zeige ich passende Artikel. ", el("a", { href: "#inhalte" }, "KI einrichten"));
+    if (!s.wissen) box.append("Es ist noch keine Bibliothek installiert. ", el("a", { href: "#inhalte?zu=wissen" }, "Wissen unter „Inhalte“ laden"));
+    else if (!s.modell) box.append("Es ist keine KI eingerichtet. Du kannst trotzdem fragen: Dann zeige ich passende Artikel. ", el("a", { href: "#inhalte?zu=ki" }, "KI unter „Inhalte“ laden"));
     else if (s.sparmodus) box.append("Der Sparmodus ist an, die KI ist aus. Ich zeige dir passende Artikel. ", el("button", { class: "knopf knopf-klein", onclick: () => schalteKi(true) }, "KI einschalten"));
-    else {
-      box.append("Stell eine Frage. Ich suche in der Offline-Bibliothek und antworte mit Quellen.");
-      // Kleine Modelle (bis 9B): Hinweis, dass genaue Fragen viel bessere Antworten bringen
-      if (/-(0\.\d+|\d)b$/i.test(s.modell || ""))
-        box.append(el("p", { class: "hinweis klein", style: "margin:8px 0 0" }, "Tipp: Die KI auf deinem Gerät ist viel kleiner als große Online-KIs (z. B. Claude oder ChatGPT). " +
-          "Je genauer du fragst, desto besser die Antwort. Also lieber „Radio lässt sich nicht einschalten, was kann ich prüfen?“ als „Radio reparieren“."));
-    }
+    else box.append("Stell eine Frage. Ich suche in der Offline-Bibliothek und antworte mit Quellen.");
     $("#chat").append(box);
+    // Kleine Modelle (bis 9B): Tipp, dass genaue Fragen viel bessere Antworten bringen. Zugeklappt rechts in der
+    // Zeile „Zum Beispiel“, aufgeklappt schwebend darunter (verschiebt nichts)
+    const tipp = s.modell && !s.sparmodus && /-(0\.\d+|\d)b$/i.test(s.modell)
+      ? el("details", { class: "frage-tipp", id: "frage-tipp" },
+        el("summary", {}, "Tipp: Je genauer die Frage, desto besser die Antwort"),
+        el("div", { class: "frage-tipp-text" },
+          "Die KI auf deinem Gerät ist viel kleiner als große Online-KIs (z. B. Claude oder ChatGPT).", el("br"),
+          "Je genauer du fragst, desto besser die Antwort.", el("br"),
+          // Beide Fragen je 10-mal getestet: die genaue ohne Fehler (Note 3,4), die ungenaue schwächer (2,9, ein Fehler)
+          "Also lieber „Wie repariere ich einen Schuh, dessen Sohle sich löst?“ als „Wie repariere ich einen Schuh?“."))
+      : null;
+    // Beispielfragen zum Anklicken: zeigen, wie man gut fragt. Jedes Mal drei zufällige aus BEISPIELE.
+    if (s.wissen) $("#chat").append(el("div", { class: "beispielfragen" },
+      el("div", { class: "beispiel-kopf" }, el("span", { class: "hinweis klein" }, "Zum Beispiel:"), tipp),
+      ...zufaellige(BEISPIELE, 3).map(f => el("button", { type: "button", class: "beispielfrage", onclick: () => {
+        if (beschaeftigt) return;
+        $("#frage-feld").value = f;
+        senden();
+      } }, f))));
+  }
+  // Nur Fragen, die in den KI-Tests (Qwen 3.5 4B, je 10 Durchläufe, .claude/ki-tests) zuverlässig gut beantwortet
+  // wurden; siehe ki.md. „Ohne Fehler“ reicht nicht, manche Antworten sagen nur „keine Angaben gefunden“.
+  // Stand 13. Nov. 2026: die einzigen 4 von 26 getesteten Fragen ohne Fehler in allen 10 Läufen.
+  const BEISPIELE = [
+    "Wie erkenne ich einen Knochenbruch?",
+    "Wie repariere ich einen Schuh, dessen Sohle sich löst?",
+    "Was hilft gegen Kopfschmerzen ohne Tabletten?",
+    "Wie lagere ich Trinkwasser für den Notfall?"
+  ];
+  // n zufällige, verschiedene Einträge (Reihenfolge ebenfalls zufällig)
+  function zufaellige(liste, n) {
+    const rest = liste.slice();
+    for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+    return rest.slice(0, n);
   }
 
   // Neues Thema: Anzeige und Gedächtnis leeren
@@ -62,6 +90,9 @@ const Fragen = (() => {
     $("#frage-feld").focus();
   }
   $("#neuer-chat").addEventListener("click", neuerChat);
+  // Aufgeklappter Tipp schließt bei Klick daneben und mit Esc
+  document.addEventListener("click", (e) => { const t = $("#frage-tipp"); if (t && t.open && !t.contains(e.target)) t.open = false; });
+  document.addEventListener("keydown", (e) => { const t = $("#frage-tipp"); if (t && e.key === "Escape" && t.open) { t.open = false; t.querySelector("summary").focus(); } });
 
   // ---------------------------------------------------------------- Verlauf (frühere Chats)
   function verlaufZu() { $("#chat-verlauf").classList.remove("offen"); $("#verlauf-knopf").setAttribute("aria-expanded", "false"); }
@@ -86,18 +117,88 @@ const Fragen = (() => {
     let chats = [];
     try { chats = (await api("chats")).chats || []; } catch { }
     ziel.innerHTML = "";
-    const alleKnopf = $("#chats-loeschen");
-    alleKnopf.hidden = !chats.length;
-    alleKnopf.dataset.anzahl = chats.length;
+    const alle = $("#alle-weg");
+    alleWischen(false);
+    alle.hidden = !chats.length;
+    alle.dataset.anzahl = chats.length;
     if (!chats.length) { ziel.append(el("div", { class: "leer" }, "Noch keine Chats. Deine Fragen werden hier gespeichert.")); return; }
     for (const c of chats) {
-      ziel.append(el("div", { class: "chat-eintrag", "data-id": c.id },
-        el("button", { class: "oeffnen", title: c.titel, onclick: () => oeffneChat(c.id) },
-          el("span", { class: "t" }, c.titel), el("small", {}, zeitText(c.zeit))),
-        el("button", { class: "weg", title: "Chat löschen", "aria-label": "Chat löschen", onclick: () => loescheChat(c.id, c.titel) }, sym("x"))));
+      // Löschen wie am Handy: X (oder nach links ziehen) schiebt den Eintrag zur Seite, dahinter liegt „Löschen“
+      const eintrag = el("div", { class: "chat-eintrag", "data-id": c.id },
+        el("button", { class: "chat-endgueltig", tabindex: "-1", onclick: () => loescheChat(c.id) }, "Löschen"),
+        el("div", { class: "chat-zeile" },
+          el("button", { class: "oeffnen", title: c.titel, onclick: (e) => { if (eintrag.dataset.gezogen) { e.preventDefault(); return; } oeffneChat(c.id); } },
+            el("span", { class: "t" }, c.titel), el("small", {}, zeitText(c.zeit))),
+          el("button", { class: "weg", title: "Chat löschen", "aria-label": "Chat löschen", onclick: () => wischen(eintrag, !eintrag.classList.contains("gewischt")) }, sym("x"))));
+      ziehbar(eintrag);
+      ziel.append(eintrag);
     }
     markiereAktiv();
   }
+
+  // Eintrag zur Seite schieben (zeigt „Löschen“) oder zurück; immer nur einer zugleich offen
+  function wischen(eintrag, auf) {
+    for (const e of document.querySelectorAll(".chat-eintrag.gewischt")) if (e !== eintrag) wischen(e, false);
+    eintrag.classList.toggle("gewischt", auf);
+    const knopf = eintrag.querySelector(".chat-endgueltig");
+    knopf.tabIndex = auf ? 0 : -1;
+    if (auf) knopf.focus({ preventScroll: true });
+  }
+
+  // Mit Maus oder Finger nach links ziehen öffnet, nach rechts schließt
+  function ziehbar(eintrag) {
+    const zeile = eintrag.querySelector(".chat-zeile");
+    let start = null, dx = 0;
+    zeile.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || e.target.closest(".weg")) return;
+      start = e.clientX; dx = 0; delete eintrag.dataset.gezogen;
+    });
+    zeile.addEventListener("pointermove", (e) => {
+      if (start === null) return;
+      dx = e.clientX - start;
+      if (Math.abs(dx) < 8 && !eintrag.dataset.gezogen) return;
+      if (!eintrag.dataset.gezogen) { eintrag.dataset.gezogen = "1"; zeile.setPointerCapture(e.pointerId); eintrag.classList.add("zieht"); }
+      const basis = eintrag.classList.contains("gewischt") ? -88 : 0;
+      zeile.style.transform = "translateX(" + Math.max(-120, Math.min(0, basis + dx)) + "px)";
+    });
+    const ende = () => {
+      if (start === null) return;
+      start = null;
+      eintrag.classList.remove("zieht");
+      zeile.style.transform = "";
+      if (eintrag.dataset.gezogen) {
+        if (dx < -40) wischen(eintrag, true); else if (dx > 40) wischen(eintrag, false);
+        // Der Klick nach dem Ziehen soll den Chat nicht öffnen
+        setTimeout(() => delete eintrag.dataset.gezogen, 0);
+      }
+    };
+    zeile.addEventListener("pointerup", ende);
+    zeile.addEventListener("pointercancel", ende);
+  }
+
+  // „Alle Chats löschen“ genauso: der Knopf gleitet weg, darunter liegt der rote Knopf, der wirklich löscht
+  function alleWischen(auf) {
+    const alle = $("#alle-weg"), knopf = $("#chats-endgueltig");
+    if (auf) {
+      const n = +alle.dataset.anzahl || 0;
+      knopf.textContent = n === 1 ? "Ja, den Chat löschen" : "Ja, alle " + n + " Chats löschen";
+    }
+    alle.classList.toggle("gewischt", auf);
+    knopf.tabIndex = auf ? 0 : -1;
+    $("#chats-loeschen").tabIndex = auf ? -1 : 0;
+    if (auf) knopf.focus({ preventScroll: true });
+  }
+
+  // Klick daneben oder Esc schiebt einen offenen Eintrag zurück
+  document.addEventListener("pointerdown", (e) => {
+    if (!e.target.closest(".chat-eintrag.gewischt")) for (const x of document.querySelectorAll(".chat-eintrag.gewischt")) wischen(x, false);
+    if (!e.target.closest("#alle-weg")) alleWischen(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    for (const x of document.querySelectorAll(".chat-eintrag.gewischt")) wischen(x, false);
+    alleWischen(false);
+  });
 
   function markiereAktiv() {
     for (const e of document.querySelectorAll(".chat-eintrag")) e.classList.toggle("aktiv", e.dataset.id === chatId);
@@ -150,14 +251,13 @@ const Fragen = (() => {
     await Promise.all(Array.from({ length: Math.min(max, liste.length) }, lauf));
   }
 
-  async function loescheChat(id, titel) {
+  // Die Rückfrage ist das Wegschieben selbst: „Löschen“ liegt erst nach dem X (oder Ziehen) frei
+  async function loescheChat(id) {
     // Während einer Antwort gesperrt: Der Chat würde beim Speichern der Antwort wieder auftauchen
     if (beschaeftigt) {
       dialog("Bitte warten", "Gerade wird eine Antwort geschrieben. Danach lässt sich der Chat löschen.", [{ text: "OK", wert: true, haupt: true }]);
       return;
     }
-    const ok = await dialog("Chat löschen?", "„" + titel + "“ wird endgültig gelöscht.", [{ text: "Abbrechen", wert: false }, { text: "Löschen", wert: true, haupt: true }]);
-    if (!ok || beschaeftigt) return;
     try { await api("chat/loeschen", { id }); }
     catch (e) {
       dialog("Chat nicht gelöscht", "Der Chat ließ sich gerade nicht löschen. Bitte versuche es noch einmal.", [{ text: "OK", wert: true, haupt: true }]);
@@ -168,12 +268,10 @@ const Fragen = (() => {
   }
 
   // Alle früheren Chats auf einmal löschen
-  $("#chats-loeschen").addEventListener("click", async () => {
+  $("#chats-loeschen").addEventListener("click", () => { if (!beschaeftigt) alleWischen(true); });
+  $("#chats-endgueltig").addEventListener("click", async () => {
     if (beschaeftigt) return;
-    const n = +$("#chats-loeschen").dataset.anzahl || 0;
-    const ok = await dialog("Alle Chats löschen?", el("p", {}, (n === 1 ? "Der frühere Chat wird" : "Alle " + n + " früheren Chats werden") + " endgültig gelöscht.", el("br"), "Das lässt sich nicht rückgängig machen."),
-      [{ text: "Abbrechen", wert: false }, { text: "Alle löschen", wert: true, haupt: true }]);
-    if (!ok) return;
+    alleWischen(false);
     let r;
     try { r = await api("chats/loeschen", {}); } catch (e) { r = { fehler: "Fieldbook antwortet gerade nicht." }; }
     if (r.fehler) dialog("Nicht alles gelöscht", el("p", {}, r.fehler, el("br"), "Bitte versuche es noch einmal."), [{ text: "OK", wert: true, haupt: true }]);
@@ -236,12 +334,14 @@ const Fragen = (() => {
   $("#frage-form").addEventListener("submit", (e) => { e.preventDefault(); senden(); });
   $("#frage-feld").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); senden(); } });
 
+  // Rechnet die KI auf dem Prozessor (keine Grafikkarte)?
+  const aufProzessor = () => ((OW.status || {}).backend || "cpu") === "cpu";
+
   // Budget für Artikeltext je nach Modell und Rechenweg
   function budget() {
     const s = OW.status || {};
     const ctx = (s.ki && s.ki.kontext) || 8192;
-    const cpu = (s.backend || "cpu") === "cpu";
-    return Math.min(cpu ? 4500 : 9000, Math.floor(ctx * 0.55 * 3));
+    return Math.min(aufProzessor() ? 4500 : 9000, Math.floor(ctx * 0.55 * 3));
   }
 
   async function senden() {
@@ -253,6 +353,8 @@ const Fragen = (() => {
     const einfach = $("#einfach").checked;
     const lage = LAGEN[$("#lage").value] ? $("#lage").value : "normal";
 
+    const beispiele = $("#chat .beispielfragen");
+    if (beispiele) beispiele.remove();
     $("#chat").append(el("div", { class: "frage-blase" }, frage));
     const box = el("div", { class: "antwort" });
     const schritte = el("ul", { class: "schritte-liste" });
@@ -318,15 +420,23 @@ const Fragen = (() => {
       const s2 = schritt("Suche in " + buecher.length + " Paketen …");
       const praxis = lage !== "normal" || ANLEITUNG.test(suchFrage);
       begriffe.frage = suchFrage;
-      let treffer = await suchen(buecher, begriffe, einfach, praxis);
-      if (!treffer.length) {
+      // Erste Hilfe und Hausapotheke: eigener Kurs bzw. Vorsorge als erste Quelle (siehe kursQuelle)
+      const kurs = mitKi ? await kursQuelle(suchFrage) : null;
+      const gesundheit = !!kurs || fragenArt(suchFrage).gesundheit;
+      // Bei Gesundheitsfragen nie Homöopathie-Ratgeber; mit Kurs-Lektion auch keine englischen Quellen
+      // (US-Militär- und Expeditionsratgeber, andere Regeln als in DE/AT/CH) und keine iFixit-Anleitungen
+      // (bei Verbrennungen kam sonst „LeapPad Screen Replacement“ in die Quellenliste, wegen Akku-Verbrennungen)
+      const serioes = (liste) => !gesundheit ? liste : liste.filter(t => !UNSERIOES.test(t.titel + " " + (t.auszug || "")) &&
+        !(kurs && ((t.buch.englisch && Land.sprache() !== "en") || /ifixit/.test(t.buch.name))));
+      let treffer = serioes(await suchen(buecher, begriffe, einfach, praxis));
+      if (!treffer.length && !kurs) {
         const kurz = kurzfassung(suchFrage);
         const woerter = kurz.split(" ").filter(w => w.length > 3 && !nummern.includes(w));
         const zweit = { de: [kurz].concat(woerter.slice(0, 2)), en: [kurz], codes: nummern, frage: suchFrage };
-        treffer = await suchen(buecher, zweit, einfach, praxis);
+        treffer = serioes(await suchen(buecher, zweit, einfach, praxis));
         if (treffer.length) begriffe = zweit;
       }
-      if (!treffer.length) {
+      if (!treffer.length && !kurs) {
         fertig(s2, "Nichts Passendes gefunden.", true);
         text.textContent = "Dazu habe ich in der Bibliothek nichts gefunden. Versuche andere Wörter, zum Beispiel den Namen der Sache statt einer ganzen Frage. " +
           "Eine Modellnummer oder einen Namen kannst du auch einfach als nächste Nachricht schicken.";
@@ -336,15 +446,20 @@ const Fragen = (() => {
         return;
       }
       const pakete = [...new Set(treffer.map(t => t.buch.titel))];
-      fertig(s2, "Gefunden: " + treffer.length + " Artikel in " + pakete.join(", "));
+      fertig(s2, treffer.length ? "Gefunden: " + treffer.length + " Artikel in " + pakete.join(", ") : "Gefunden: " + kurs.titel);
+      // Mit KI dauert die Prüfung noch etwas: so lange die ersten Treffer zum Selberlesen zeigen
+      let vorlaeufig = mitKi && treffer.length ? vorlaeufigeListe(treffer) : null;
+      if (vorlaeufig) box.append(vorlaeufig);
 
       // 3. Artikel lesen
       const s3 = schritt(mitKi ? "Artikel werden gelesen und geprüft …" : "Artikel werden gelesen …");
-      let quellen = await lesen(treffer, suchFrage, begriffe, budget(), mitKi);
+      let quellen = await lesen(treffer, suchFrage, begriffe, kurs ? Math.max(1500, budget() - kurs.text.length) : budget(), mitKi, kurs ? 2 : 4);
       fertig(s3, quellen.length + (quellen.length === 1 ? " passender Artikel" : " passende Artikel") + " gelesen");
       // Passt keiner: ein zweiter Versuch mit anderen Begriffen (Oberbegriffe, Namen von Verfahren)
-      if (!quellen.length && mitKi) {
+      if (!quellen.length && mitKi && !kurs) {
         fertig(s3, "Keiner der gefundenen Artikel passt.");
+        // Die KI hat alle ersten Treffer als unpassend aussortiert: nicht stehen lassen
+        if (vorlaeufig) { vorlaeufig.remove(); vorlaeufig = null; }
         const s3b = schritt("Zweite Suche mit anderen Begriffen …");
         try {
           const neu = await suchbegriffe(suchFrage, hatEnglisch, kontext, lage, begriffe.de.concat(begriffe.en));
@@ -362,7 +477,9 @@ const Fragen = (() => {
           fertig(s3b, "Zweite Suche: " + neu.de.concat(neu.en).join(" · ") + " · " + quellen.length + " passend");
         } catch { fertig(s3b, "Zweite Suche hat nicht geklappt.", true); }
       }
+      if (kurs) quellen = [kurs].concat(quellen).map((q, i) => Object.assign(q, { nr: i + 1 }));
       if (!quellen.length) {
+        if (vorlaeufig) vorlaeufig.remove();
         text.textContent = "Dazu habe ich in der Bibliothek nichts Passendes gefunden. Versuche es mit anderen Wörtern, zum Beispiel dem Namen der Sache oder des Verfahrens, oder such selbst in der Bibliothek:";
         const suche = weiterBegriffe(begriffe);
         box.append(weitersuchen(suche));
@@ -379,19 +496,25 @@ const Fragen = (() => {
         return;
       }
 
+      // Quellen sofort zeigen: Ohne Grafikkarte dauert es bis zum ersten Wort der Antwort noch etwa 30 s,
+      // wer selbst lesen will, kann schon einen Artikel öffnen. Die ersten Treffer bleiben zugeklappt darunter.
+      if (vorlaeufig) { box.insertBefore(quellenListe(quellen), vorlaeufig); vorlaeufig.open = false; }
+      else box.append(quellenListe(quellen));
+
       // 4. Antworten
       const s4 = schritt("Antwort wird geschrieben …");
       text.classList.add("cursor");
-      const antwort = await antworten(suchFrage, quellen, einfach, kontext, lage, (t) => zeigeGedrosselt(t, quellen));
+      // Mit Kurs-Lektion schreibt die KI nur aus dem Kurs; die Bibliotheksartikel stehen zum Selberlesen in der Liste.
+      // Test 13. Nov. 2026: Die restlichen Fehler kamen aus ihnen („bei Wirbelsäulenverdacht keine Seitenlage“, andere Handgriffe)
+      const antwort = await antworten(suchFrage, kurs ? [kurs] : quellen, einfach, kontext, lage, (t) => zeigeGedrosselt(t, quellen));
       text.classList.remove("cursor");
       stopGedrosselt();
       zeigeAntwort(text, antwort, quellen);   // letzter Stand immer direkt
       fertig(s4, "Antwort fertig");
-      box.append(quellenListe(quellen));
       const suche = weiterBegriffe(begriffe);
       box.append(weitersuchen(suche));
       // Wortanfänge statt Teilstrings: „Bruchrechnung“, „herzlich“ lösen nichts aus, „Herzinfarkt“, „Knochenbruch“ schon
-      const medizin = quellen.some(q => /medicine|mdwiki|medizin/i.test(q.buch.name)) ||
+      const medizin = quellen.some(q => q.intern || /medicine|mdwiki|medizin/i.test(q.buch.name)) ||
         /wunde(?!r)|\bblut|schmerz|vergift|fieber|\bverbrenn|(knochen|bein|arm|rippen|schädel|fuß|hand|wirbel)bruch|\bbruch(?!rechn|stück|teil|zahl)|gebrochen|medikament|\w*krank|\batem|\bherz(?!lich|og|los|ig|chen)/i.test(frage);
       if (medizin) box.append(medizinHinweis());
       verlauf.push({ frage: suchFrage, antwort });
@@ -565,7 +688,8 @@ const Fragen = (() => {
     const nachUrl = new Map();
     for (const t of alle) {
       // Dasselbe Buch steckt manchmal in zwei PDF-Paketen: gleiche Stelle nur einmal
-      const key = t.pdf ? "pdf:" + (t.auszug || "").slice(0, 120) : dekodiert(t.url).toLowerCase();
+      // Derselbe Artikel aus mehreren Ausgaben eines Werks (Wikipedia vollständig, „Das Beste“, Medizin) nur einmal
+      const key = t.pdf ? "pdf:" + (t.auszug || "").slice(0, 120) : ohneAusgabe(dekodiert(t.url).toLowerCase());
       const v = nachUrl.get(key);
       if (v) { v.punkte += t.punkte * 0.6; if (!v.auszug && t.auszug) v.auszug = t.auszug; } else nachUrl.set(key, Object.assign({}, t));
     }
@@ -621,11 +745,16 @@ const Fragen = (() => {
   const PRAXIS_ABSCHNITT = /behandlung|therapie|erste hilfe|versorgung|maßnahmen|massnahmen|reparatur|anleitung|vorgehen|durchführung|anwendung|reinigung|vorbeugung|prävention|treatment|repair|first aid|steps|procedure/i;
 
   // Wortstämme grob: erste 6 Zeichen, damit "versorge" auch "Wundversorgung" trifft
+  // Paketname ohne Ausgabe und Datum: „wikipedia_de_top_maxi_2026-10“ → „wikipedia_de“ (auch innerhalb einer Adresse)
+  function ohneAusgabe(s) {
+    return String(s).replace(/(_(all|top|medicine|maxi|mini|nopic))+_\d{4}-\d{2}[a-z]?/gi, "");
+  }
+
   function staemme(text) {
     return [...new Set(text.toLowerCase().split(/[^a-zäöüß0-9]+/).filter(w => w.length > 3).map(w => w.slice(0, 6)))];
   }
 
-  async function lesen(treffer, frage, begriffe, budgetZeichen, mitPruefung) {
+  async function lesen(treffer, frage, begriffe, budgetZeichen, mitPruefung, max) {
     const woerter = staemme(frage + " " + begriffe.de.join(" ") + " " + begriffe.en.join(" "));
     const anleitung = ANLEITUNG.test(frage);
     const texte = await Promise.all(treffer.map(t => artikel(t.url).then(a => ({ t, a })).catch(() => null)));
@@ -639,7 +768,7 @@ const Fragen = (() => {
       if (/California Energy Commission|Date Added: \d{4}/.test(voll) && !/\b(step|schritt|replace|austausch|remove|entfern)/i.test(voll)) return false;
       // Auch über verschiedene Adressen derselbe Artikel (z. B. Klexikon „Wolf“ zweimal) nur einmal
       const k = dekodiert(x.a.url).toLowerCase();
-      const k2 = x.t.buch.id + "|" + String(x.a.titel || x.t.titel).toLowerCase();
+      const k2 = ohneAusgabe(x.t.buch.id) + "|" + String(x.a.titel || x.t.titel).toLowerCase();
       if (gesehen.has(k) || gesehen.has(k2)) return false;
       gesehen.add(k);
       gesehen.add(k2);
@@ -653,7 +782,7 @@ const Fragen = (() => {
         auswahl = (await quellenPruefen(frage, gueltig, begriffe.thema)).map(i => gueltig[i]);
       } catch { /* Prüfung fehlgeschlagen: alle behalten */ }
     }
-    auswahl = auswahl.slice(0, 4);
+    auswahl = auswahl.slice(0, max || 4);
     const proArtikel = Math.floor(budgetZeichen / Math.max(1, auswahl.length));
     return auswahl.map(({ t, a }, i) => {
       // Einleitung immer, dann die Abschnitte mit den meisten Suchwörtern
@@ -726,10 +855,81 @@ const Fragen = (() => {
     };
   }
 
+  // Erste-Hilfe-Fragen: Die passende Lektion aus dem eigenen Kurs (erstehilfe.json, vom Nutzer fachlich geprüft)
+  // kommt als erste Quelle dazu, bei der Hausapotheke die Liste aus der Vorsorge. Test 13. Nov. 2026: Die meisten
+  // Fehler kamen aus den Quellen (US-Ratgeber mit Silvadene und Jod bei Verbrennungen, Homöopathie-Buch bei der
+  // Hausapotheke, englischer Artikel „bei Unfall keine Seitenlage“). Schlüssel = Lektion oder Spickzettel.
+  const KURS_THEMEN = [
+    ["verbrennung", /verbrenn|verbrüh|brandwunde|brandblase/],
+    ["temperatur", /unterkühl|erfrier|hypotherm|hitzschlag|sonnenstich|hitzeerschöpf|überhitz/],
+    ["ansprechbar", /seitenlage|bewusstlos|ohnmacht|ohnmächtig/],
+    ["wiederbelebung", /wiederbeleb|herzdruck|reanimat|herz-lungen|defibrillat|\baed\b|herzstillstand|kreislaufstillstand/],
+    ["ersticken", /verschluck|erstick|heimlich/],
+    ["herz", /herzinfarkt|schlaganfall/],
+    ["schock", /\bschock\b|schocklage/],
+    ["blutung", /blutung|blutet|druckverband|abbind|schnittwunde/],
+    ["bruch", /(knochen|bein|arm|rippen|schädel|fuß|hand|wirbel)bruch|\bbruch\b|gebrochen|verstauch|gehirnerschütter/],
+    ["vergiftung", /vergift|allergi|anaphyla|wespenstich|bienenstich/],
+    ["krampf", /krampfanfall|epilep/],
+    ["unterzucker", /unterzucker|hypoglyk/],
+    ["vorsorge:gesundheit", /hausapotheke|verbandkasten|verbandskasten/],
+  ];
+  // Homöopathie-Ratgeber und Ähnliches bei Gesundheitsfragen nie als Quelle
+  const UNSERIOES = /medicus|homöopath|homoeopath|homeopath|globuli|bachblüt/i;
+
+  async function kursQuelle(frage) {
+    const f = frage.toLowerCase();
+    const treffer = KURS_THEMEN.find(([, re]) => re.test(f));
+    if (!treffer) return null;
+    const z = (t) => Land.einsetzen(t);
+    try {
+      if (treffer[0].startsWith("vorsorge:")) {
+        const konf = await ladeKonfigSprache("vorsorge");
+        const t = (konf.themen || []).find(x => x.id === treffer[0].slice(9));
+        if (!t) return null;
+        const stufen = ["Das Wichtigste", "Gut vorbereitet", "Weiter vorsorgen"];
+        const text = [t.warum].concat((t.stufen || []).map((s, i) => "[" + (stufen[i] || "Stufe " + (i + 1)) + "] " +
+          (s.text || []).join(" ") + " " + s.punkte.map(p => "- " + p.text + (p.mehr ? ": " + p.mehr : "")).join(" "))).filter(Boolean).map(z).join("\n");
+        return { titel: "Vorsorge: " + t.titel, url: "#vorsorge?k=" + t.id, buch: { id: "fieldbook", name: "fieldbook", titel: "Fieldbook" }, text, intern: true };
+      }
+      const konf = await ladeKonfigSprache("erstehilfe");
+      const l = (konf.lektionen || []).find(x => x.id === treffer[0] && x.schritte);
+      const s = (konf.spickzettel || []).find(x => l ? x.lektion === l.id : x.id === treffer[0]);
+      if (!l && !s) return null;
+      // Lektion „Kälte und Hitze“: Geht die Frage nur um eins davon, bekommt die KI nur diesen Teil. Sonst übernimmt
+      // sie Hitze-Regeln bei Unterkühlung (Test 13. Nov. 2026: einmal Paracetamol aus dem Hitze-Teil).
+      let verstehen = l ? l.verstehen || [] : [], schritte = l ? l.schritte : [], sofort = (x) => x.sofort;
+      if (l && l.id === "temperatur") {
+        const kalt = /unterkühl|erfrier|hypotherm|kälte|friert|frieren/.test(f), heiss = /hitz|sonnenstich|überhitz/.test(f);
+        const h = schritte.findIndex(x => /^Hitze:/.test(x));
+        if (kalt !== heiss && h > 0) {
+          verstehen = verstehen.filter(x => /hitze|sonnenstich/i.test(x) === heiss);
+          schritte = kalt ? schritte.slice(0, h) : schritte.slice(h);
+          sofort = (x) => x.sofort.filter(z => /unterkühl/i.test(z) === kalt);
+        }
+      }
+      const teile = [];
+      if (l) {
+        teile.push("[Verstehen] " + verstehen.join(" "), "[So hilfst du] " + schritte.map((x, i) => (i + 1) + ". " + x).join(" "));
+        if (l.kinder) teile.push("[Kinder] " + l.kinder);
+      }
+      // Spickzettel nur, wenn er zur Frage passt (die Herz-Lektion hat zwei: Herzinfarkt und Schlaganfall)
+      const zettel = (konf.spickzettel || []).filter(x => (l ? x.lektion === l.id : x.id === treffer[0]) &&
+        (!l || x.titel.toLowerCase().split(/[^a-zäöüß]+/).some(w => w.length > 4 && f.includes(w.slice(0, 6)))));
+      zettel.forEach(x => teile.push("[Im Ernstfall: " + x.titel + "] " + sofort(x).join(" ")));
+      const titel = l ? l.titel : s.titel;
+      return { titel: "Erste-Hilfe-Kurs: " + titel, url: l ? "#erstehilfe?l=" + l.id : "#erstehilfe?k=" + s.id,
+        buch: { id: "fieldbook", name: "fieldbook", titel: "Fieldbook" }, text: teile.map(z).join("\n"), intern: true };
+    } catch { return null; }
+  }
+
   async function antworten(frage, quellen, einfach, vorher, lage, onText) {
     // Regeln für bestimmte Fragen nur dann mitgeben, wenn die Frage dazu passt. Das kleine Modell wendet
     // jede Regel sonst auch auf andere Fragen an (Abkochen beim Heizen, Fehlerbilder bei Eicheln).
     const art = fragenArt(frage);
+    // Ohne Grafikkarte schreibt die KI nur etwa 7 Token pro Sekunde. 150 statt 250 Wörter sparen etwa 12 s,
+    // im Test mit 120 Fragen (Nov. 2026) ohne messbaren Verlust an Qualität
+    const woerter = aufProzessor() ? 150 : 250;
     const sys =
       "Du bist ein hilfsbereiter Assistent in einer Offline-Bibliothek für Selbsthilfe. Antworte immer auf " + (Land.sprache() === "en" ? "Englisch" : "Deutsch") + ". " +
       "Der Nutzer lebt in " + landName() + ", Notrufnummer: " + Land.notruf() + ". " +
@@ -747,6 +947,11 @@ const Fragen = (() => {
       (art.gesundheit
         ? "Erkläre, was man selbst tun kann (Erste Hilfe), und sag kurz, wann man Hilfe holen muss. Ist ein Mensch in Lebensgefahr oder schwer verletzt, nennst du zuerst den Notruf. "
         : "Den Notruf nennst du nur, wenn ein Mensch in Gefahr ist, nie bei Geräten und Reparaturen. ") +
+      (quellen.some(q => q.intern)
+        ? "Quelle [1] stammt aus Fieldbook selbst und ist fachlich geprüft: Baue deine Antwort auf [1] auf. Weicht eine andere Quelle davon ab " +
+          "(z. B. bei Kühldauer, Salben, Lagerung oder Medikamenten), gilt [1], und die abweichende Angabe lässt du weg. Andere Quellen nimmst du nur für Ergänzungen, die [1] nicht widersprechen. " +
+          "Fragt der Nutzer, wie etwas geht, übernimmst du die nummerierten Schritte aus [1] in genau dieser Reihenfolge, ohne einen Schritt umzustellen oder wegzulassen. "
+        : "") +
       (art.trinkwasser
         ? "Filtern, Absetzen oder Pflanzenmittel machen Wasser nicht keimfrei. Nenne zuerst Abkochen (mindestens 1 Minute sprudelnd kochen) als sicheren Weg, " +
           "auch wenn die Quellen es nicht erwähnen, und Filtern nur als Vorstufe gegen Schmutz. "
@@ -770,7 +975,7 @@ const Fragen = (() => {
       "Ist die Frage so allgemein, dass eine genauere Angabe deutlich bessere Hilfe brächte, endest du mit einem kurzen Satz, was du dafür wissen müsstest (bei Geräten z. B. was genau passiert). " +
       "Passt keine Rückfrage, lässt du sie weg. Schreib keine Überschriften wie \"Rückfrage\" oder \"Grundprinzip\". " +
       "Kennzeichne Aussagen mit der Quellennummer in eckigen Klammern, z. B. [1]. Englische Quellen übersetzt du sinngemäß. " +
-      "Antworte klar und praktisch, bei Anleitungen in nummerierten Schritten. Halte dich kurz (höchstens etwa 250 Wörter). " +
+      "Antworte klar und praktisch, bei Anleitungen in nummerierten Schritten. Halte dich kurz (höchstens etwa " + woerter + " Wörter). " +
       (einfach ? "Erkläre es so einfach, dass ein Kind mit 8 bis 10 Jahren es versteht: kurze Sätze, keine Fachwörter, ein anschauliches Beispiel. " : "");
     const block = quellen.map(q => "[" + q.nr + "] " + q.titel + " (" + q.buch.titel + ")\n" + q.text).join("\n\n");
     const nachrichten = [{ role: "system", content: sys }];
@@ -792,17 +997,30 @@ const Fragen = (() => {
   }
 
   function leseLink(q) {
+    // Kurs-Lektion oder Vorsorge-Thema aus Fieldbook selbst
+    if (q.intern || /^#(erstehilfe|vorsorge)/.test(String(q.url))) return q.url;
     // Stellen aus PDF-Büchern öffnen im eigenen PDF-Leser auf der gefundenen Seite
     const pdf = String(q.url).match(/^(\/kiwix\/content\/[^#]+\.pdf)(?:#page=(\d+))?$/i);
     if (pdf) return "#pdf?url=" + encodeURIComponent(pdf[1]) + (pdf[2] ? "&seite=" + pdf[2] : "") + "&titel=" + encodeURIComponent(String(q.titel).replace(/, Seite \d+$/, ""));
     return "#lesen?url=" + encodeURIComponent(q.url) + "&titel=" + encodeURIComponent(q.titel);
   }
 
+  function quellenPunkte(quellen, mitAuszug) {
+    return el("ol", {}, ...quellen.map(q => el("li", {},
+      el("a", { href: leseLink(q) }, q.titel), " ", el("span", { class: "paket" }, "· " + q.buch.titel + (q.buch.englisch ? " (englisch)" : "")),
+      mitAuszug ? el("div", { class: "klein hinweis" }, q.text.slice(0, 280) + " …") : null)));
+  }
+
   function quellenListe(quellen, mitAuszug) {
-    return el("div", { class: "quellen" }, el("b", {}, "Quellen"),
-      el("ol", {}, ...quellen.map(q => el("li", {},
-        el("a", { href: leseLink(q) }, q.titel), " ", el("span", { class: "paket" }, "· " + q.buch.titel + (q.buch.englisch ? " (englisch)" : "")),
-        mitAuszug ? el("div", { class: "klein hinweis" }, q.text.slice(0, 280) + " …") : null))));
+    return el("div", { class: "quellen" }, el("b", {}, "Quellen"), quellenPunkte(quellen, mitAuszug));
+  }
+
+  // Erste Treffer der Suche, bevor die KI sie geprüft hat (ohne Grafikkarte etwa 20 s früher als die Quellen)
+  function vorlaeufigeListe(treffer) {
+    const qs = treffer.slice(0, 5).map(t => ({ titel: t.titel, url: t.pdf || t.url, buch: t.buch }));
+    return el("details", { class: "quellen vorlaeufig", open: true },
+      el("summary", {}, el("b", {}, "Erste Treffer"), " ", el("span", { class: "paket" }, "· noch nicht geprüft")),
+      quellenPunkte(qs, false));
   }
 
   return { zeigen, beschaeftigt: () => beschaeftigt };

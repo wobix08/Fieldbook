@@ -90,7 +90,7 @@ const Vorsorge = (() => {
       el("h2", {}, "Wenn es passiert"),
       el("p", { class: "hinweis" }, "Kurze Schritte, wenn die Lage schon da ist.", el("br"), "Für nichts davon musst du etwas kaufen."),
       el("div", { class: "vs-lagen" }, ...konf.lagen.map(l =>
-        el("a", { class: "vs-lage", href: "#vorsorge?lage=" + l.id }, sym(l.icon), el("span", {}, l.kurz || l.titel)))),
+        el("a", { class: "vs-lage", href: "#vorsorge?lage=" + l.id }, el("span", { class: "vs-lage-feld", "aria-hidden": "true" }, sym(l.icon)), el("span", {}, l.kurz || l.titel)))),
       el("h2", {}, "Vorbereiten"),
       stufenStand(),
       el("p", { class: "hinweis" }, "Klick ein Feld an, um es zu öffnen."),

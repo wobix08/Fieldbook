@@ -21,7 +21,14 @@ try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 $app  = $PSScriptRoot
 $root = Split-Path -Parent $app
+# Anschluss: 8090, bei Belegung durch ein anderes Programm der nächste freie bis 8099. Der Server schreibt den
+# benutzten in daten\cache\port.txt; so findet ein zweiter Start das laufende Fieldbook auch auf 8091 usw.
+$portDatei = Join-Path $root 'daten\cache\port.txt'
 $port = 8090
+try {
+    $gemerkt = 0
+    if ([int]::TryParse(([System.IO.File]::ReadAllText($portDatei)).Trim(), [ref]$gemerkt) -and $gemerkt -ge 8090 -and $gemerkt -le 8099) { $port = $gemerkt }
+} catch {}
 
 # Startfortschritt für das Startfenster (Fieldbook.exe): eine Zeile in daten\cache\startstatus.txt, Fehler egal
 function Status-Schreiben($text) {
@@ -72,7 +79,8 @@ function Fieldbook-Antwortet {
     } catch {}
     try {
         $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 "http://localhost:$port/api/status"
-        return ($r.StatusCode -eq 200)
+        # Nur Fieldbook antwortet mit "setupFertig" (ein fremdes Programm auf dem Anschluss sagt evtl. auch 200)
+        return ($r.StatusCode -eq 200 -and $r.Content -match '"setupFertig"')
     } catch { return $false }
 }
 
@@ -89,7 +97,7 @@ function Nur-Browser-Oeffnen {
 }
 
 # Nur ein Start gleichzeitig: Wer zuerst kommt, hält die Sperre bis Fieldbook beendet ist.
-# Der Anschluss 8090 ist fest, deshalb kann ohnehin nur ein Fieldbook laufen (egal in welchem Ordner).
+# Die Sperre gilt für alle Ordner: Es läuft immer nur ein Fieldbook.
 $sperre = New-Object System.Threading.Mutex($false, 'Local\Fieldbook')
 $sperreErhalten = $false
 try { $sperreErhalten = $sperre.WaitOne(0) }
@@ -148,6 +156,33 @@ function Spiegeln($von, $nach) {
     $batNeu = Join-Path $von 'Start.bat'; $batAlt = Join-Path $nach 'Start.bat'
     if ((Test-Path -LiteralPath $batNeu) -and (-not (Test-Path -LiteralPath $batAlt) -or (Get-FileHash -LiteralPath $batNeu).Hash -ne (Get-FileHash -LiteralPath $batAlt).Hash)) { Copy-Item -Force -LiteralPath $batNeu -Destination $batAlt }
 }
+# Eine Datei im Hauptordner ersetzen. Eine laufende Datei (Fieldbook.exe, das Startfenster) ist gesperrt und lässt
+# sich nur umbenennen: dann erst als <Name>.neu daneben kopieren, die alte in <Name>.alt umbenennen und .neu an ihre
+# Stelle. So fehlt die Datei nie ganz, auch wenn dazwischen abgebrochen wird.
+function Hauptdatei-Ersetzen($quelle, $ziel) {
+    try { Copy-Item -Force -LiteralPath $quelle -Destination $ziel -ErrorAction Stop }
+    catch {
+        $neuDatei = "$ziel.neu"
+        $alt = "$ziel.alt"
+        Copy-Item -Force -LiteralPath $quelle -Destination $neuDatei -ErrorAction Stop
+        Remove-Item -Force -LiteralPath $alt -ErrorAction SilentlyContinue
+        Move-Item -Force -LiteralPath $ziel -Destination $alt -ErrorAction Stop
+        Move-Item -Force -LiteralPath $neuDatei -Destination $ziel -ErrorAction Stop
+    }
+}
+# Die bisherige Version aus der Sicherung zurückholen: den Programmordner und die Dateien im Hauptordner, die das
+# Update ersetzt hat (sicherung\haupt). Sicherungen von älteren Versionen haben noch keinen Ordner "haupt".
+# Neue Dateien, die es vorher nicht gab, bleiben liegen; sie stören die alte Version nicht.
+function Sicherung-Zurueckspielen {
+    Spiegeln (Join-Path $sicherung 'app') $app
+    $haupt = Join-Path $sicherung 'haupt'
+    if (Test-Path -LiteralPath $haupt) {
+        Get-ChildItem -LiteralPath $haupt -File | ForEach-Object {
+            try { Hauptdatei-Ersetzen $_.FullName (Join-Path $root $_.Name) }
+            catch { Write-Host "  $($_.Exception.Message)" -ForegroundColor DarkGray }
+        }
+    }
+}
 if ((Test-Path -LiteralPath (Join-Path $bereit 'app\Server.cs')) -and -not (Test-Path -LiteralPath (Join-Path $root '.git'))) {
     $neu = Get-Content -LiteralPath (Join-Path $bereit 'version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
     Write-Host "  Fieldbook wird auf Version $neu aktualisiert ..." -ForegroundColor Cyan
@@ -165,25 +200,20 @@ if ((Test-Path -LiteralPath (Join-Path $bereit 'app\Server.cs')) -and -not (Test
             }
             New-Item -ItemType Directory -Force $sicherung | Out-Null
             Copy-Item -Recurse -Force -LiteralPath $app -Destination (Join-Path $sicherung 'app')
+            # Dazu die Dateien im Hauptordner, die das Update gleich ersetzt
+            $haupt = Join-Path $sicherung 'haupt'
+            New-Item -ItemType Directory -Force $haupt | Out-Null
+            Get-ChildItem -LiteralPath $bereit -File | Where-Object { $_.Name -ne 'version.txt' -and $_.Name -ne 'gestartet' } | ForEach-Object {
+                $vorher = Join-Path $root $_.Name
+                if (Test-Path -LiteralPath $vorher) { Copy-Item -Force -LiteralPath $vorher -Destination (Join-Path $haupt $_.Name) }
+            }
             [System.IO.File]::WriteAllText($sicherungFertig, 'fertig')
         }
         [System.IO.File]::WriteAllText($bereitGestartet, 'gestartet')
         Spiegeln (Join-Path $bereit 'app') $app
         # Dateien im Hauptordner (Startdatei, Anleitung, Lizenzen); der Ordner "daten" bleibt unangetastet
-        # Eine laufende Datei (Fieldbook.exe, das Startfenster) ist gesperrt und lässt sich nur umbenennen:
-        # dann erst als <Name>.neu daneben kopieren, die alte in <Name>.alt umbenennen und .neu an ihre Stelle.
-        # So fehlt die Datei nie ganz, auch wenn dazwischen abgebrochen wird.
         Get-ChildItem -LiteralPath $bereit -File | Where-Object { $_.Name -ne 'version.txt' -and $_.Name -ne 'gestartet' } | ForEach-Object {
-            $ziel = Join-Path $root $_.Name
-            try { Copy-Item -Force -LiteralPath $_.FullName -Destination $ziel }
-            catch {
-                $neuDatei = "$ziel.neu"
-                $alt = "$ziel.alt"
-                Copy-Item -Force -LiteralPath $_.FullName -Destination $neuDatei
-                Remove-Item -Force -LiteralPath $alt -ErrorAction SilentlyContinue
-                Move-Item -Force -LiteralPath $ziel -Destination $alt
-                Move-Item -Force -LiteralPath $neuDatei -Destination $ziel
-            }
+            Hauptdatei-Ersetzen $_.FullName (Join-Path $root $_.Name)
         }
         # Seit 0.5.1 heißen die Textdateien englisch; alte Namen aufräumen
         if (Test-Path -LiteralPath (Join-Path $root 'GUIDE.txt')) {
@@ -212,7 +242,7 @@ if ((Test-Path -LiteralPath (Join-Path $bereit 'app\Server.cs')) -and -not (Test
         # Gescheiterte Version merken: Fieldbook bietet sie dann nicht jede Woche neu an (eine neuere schon)
         if ($neu) { try { Set-Content -LiteralPath (Join-Path $root 'daten\cache\update\fehlgeschlagen.txt') -Value $neu -Encoding UTF8 } catch {} }
         # Nur aus einer vollständigen Sicherung zurückspielen
-        if ((Test-Path -LiteralPath $sicherungFertig) -and (Test-Path -LiteralPath (Join-Path $sicherung 'app\Server.cs'))) { Spiegeln (Join-Path $sicherung 'app') $app }
+        if ((Test-Path -LiteralPath $sicherungFertig) -and (Test-Path -LiteralPath (Join-Path $sicherung 'app\Server.cs'))) { Sicherung-Zurueckspielen }
         try { Bereit-Loeschen } catch {
             Remove-Item -Force -LiteralPath (Join-Path $bereit 'app\Server.cs'), (Join-Path $bereit 'version.txt') -ErrorAction SilentlyContinue
         }
@@ -275,7 +305,7 @@ try {
         Write-Host '  Die neue Version konnte nicht geladen werden. Die bisherige Version wird wiederhergestellt.' -ForegroundColor Yellow
         if ($neu) { try { Set-Content -LiteralPath (Join-Path $root 'daten\cache\update\fehlgeschlagen.txt') -Value $neu -Encoding UTF8 } catch {} }
         try {
-            Spiegeln (Join-Path $sicherung 'app') $app
+            Sicherung-Zurueckspielen
             Programm-Laden
             $fehler = $null
         } catch { $fehler = $_.Exception.Message }
@@ -288,6 +318,22 @@ try {
         exit 1
     }
 }
+
+# Freien Anschluss wählen: 8090, sonst 8091 bis 8099. Probe mit einem kurzen HttpListener erkennt alles, woran
+# auch der Server scheitern würde (anderes Programm, von Windows/Hyper-V reservierte Bereiche).
+function Port-Frei($p) {
+    $probe = New-Object System.Net.HttpListener
+    try { $probe.Prefixes.Add("http://localhost:$p/"); $probe.Start(); $probe.Stop(); return $true }
+    catch { return $false }
+    finally { try { $probe.Close() } catch {} }
+}
+# Der zuletzt benutzte zuerst: Browser-Einstellungen (Hell/Dunkel, Kartenausschnitt) gelten je Anschluss.
+$frei = $null
+foreach ($p in (@($port) + (8090..8099) | Select-Object -Unique)) { if (Port-Frei $p) { $frei = $p; break } }
+if ($frei) {
+    $port = $frei
+    if ($port -ne 8090) { Write-Host "  Fieldbook nutzt den Anschluss $port, weil 8090 belegt war." -ForegroundColor Yellow }
+} else { $port = 8090 }   # Alle belegt: Der Start scheitert dann mit der Meldung unten
 
 Write-Host '  Fieldbook läuft im Browser: ' -NoNewline
 Write-Host "http://localhost:$port" -ForegroundColor Green
@@ -310,8 +356,8 @@ try {
         $e = $e.InnerException
     }
     if ($portBelegt) {
-        Write-Host "  Fieldbook konnte nicht starten, weil ein anderes Programm den Anschluss $port belegt." -ForegroundColor Red
-        Write-Host '  Bitte das andere Programm beenden oder den Laptop neu starten.' -ForegroundColor Yellow
+        Write-Host '  Fieldbook konnte nicht starten, weil andere Programme die Anschlüsse 8090 bis 8099 belegen.' -ForegroundColor Red
+        Write-Host '  Bitte die anderen Programme beenden oder den Laptop neu starten.' -ForegroundColor Yellow
     } else {
         Write-Host '  Fehler beim Start:' -ForegroundColor Red
         Write-Host "  $($_.Exception.InnerException.Message) $($_.Exception.Message)" -ForegroundColor Red

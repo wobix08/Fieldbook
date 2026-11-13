@@ -303,7 +303,7 @@ function andereMenuesZu(liste) { MENUES.forEach(m => { if (m.liste !== liste) m.
     if (s.modell) teile.push(el("hr"), s.sparmodus
       ? eintrag([sym("zap"), "KI einschalten"], () => schalteKi(true))
       : eintrag([sym("zap"), "KI ausschalten (Sparmodus)"], () => schalteKi(false)));
-    teile.push(eintrag([sym("download"), modelle.length ? "Weitere KIs laden" : "KI einrichten"], () => { location.hash = modelle.length ? "#inhalte" : "#setup?schritt=1"; }));
+    teile.push(eintrag([sym("download"), modelle.length ? "Weitere KIs laden" : "KI laden"], () => { location.hash = "#inhalte?zu=ki"; }));
     liste.replaceChildren(...teile);
   }
   knopf.addEventListener("click", () => {
@@ -326,8 +326,47 @@ async function zeigeStart() {
   teile.push(s.karten.length + (s.karten.length === 1 ? " Karte" : " Karten"));
   if (s.modell) teile.push(s.ki.modell || "KI eingerichtet");
   info.textContent = teile.join(" · ");
+  startGroesse();
   $("#start-suche-feld").focus();
 }
+
+// Logo fürs Banner der Startseite aus der Kopfzeile übernehmen
+(function () {
+  const logo = $(".marke .logo").cloneNode(true);
+  logo.removeAttribute("class"); logo.removeAttribute("width"); logo.removeAttribute("height");
+  $("#start-logo").append(logo);
+})();
+
+// Startseite so groß wie möglich, ohne dass etwas unter den Fensterrand rutscht.
+// Eine Stufe s von -2 bis 2: bis 1 wächst das Banner (--b), darüber die Kachel-Symbole (--i);
+// unter 0 schrumpfen beide etwas (Untergrenzen stehen in app.css). Gesucht wird die größte Stufe, bei der die Infozeile unten noch sichtbar ist.
+function startGroesse() {
+  const wrap = $(".start-wrap");
+  const seite = wrap.closest(".ansicht");
+  if (!seite.classList.contains("sichtbar")) return;
+  const setze = (s) => {
+    wrap.style.setProperty("--b", (s >= 1 ? 1 : s >= 0 ? s : s * 0.6).toFixed(3));
+    wrap.style.setProperty("--i", (s >= 1 ? s - 1 : s >= 0 ? 0 : s * 0.5).toFixed(3));
+  };
+  const passt = () => seite.getBoundingClientRect().bottom + window.scrollY <= window.innerHeight;
+  let klein = -2, gross = 2;
+  setze(gross); if (passt()) return;
+  setze(klein); if (!passt()) return;
+  for (let n = 0; n < 10; n++) {
+    const mitte = (klein + gross) / 2;
+    setze(mitte);
+    if (passt()) klein = mitte; else gross = mitte;
+  }
+  setze(klein);
+}
+let startGroesseWartet = false;
+window.addEventListener("resize", () => {
+  if (startGroesseWartet) return;
+  startGroesseWartet = true;
+  requestAnimationFrame(() => { startGroesseWartet = false; startGroesse(); });
+});
+// Die Überschriften-Schrift lädt evtl. erst nach dem ersten Messen
+if (document.fonts) document.fonts.ready.then(startGroesse);
 
 $("#start-suche").addEventListener("submit", (e) => {
   e.preventDefault();

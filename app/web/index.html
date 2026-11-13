@@ -60,6 +60,14 @@ try {
   <!-- START -->
   <section class="ansicht" data-ansicht="start">
     <div class="start-wrap">
+      <!-- Banner: das Logo kopiert app.js aus der Kopfzeile (die Linien stehen sonst schon dreifach im Code) -->
+      <div class="start-banner">
+        <span class="start-logo" id="start-logo" aria-hidden="true"></span>
+        <div class="start-marke">
+          <h1 class="start-name">Fieldbook</h1>
+          <p class="start-unter">Wissen, wo kein Netz ist</p>
+        </div>
+      </div>
       <form class="suche-gross" id="start-suche">
         <input type="search" id="start-suche-feld" aria-label="Stichwort suchen oder Frage stellen" placeholder="Stichwort suchen oder Frage stellen, z. B. Wie mache ich Wasser ohne Strom trinkbar?" autocomplete="off">
         <button type="submit">Suchen</button>
@@ -84,7 +92,10 @@ try {
       <button type="button" id="neuer-chat" class="knopf knopf-haupt" title="Neues Thema: Die KI vergisst das bisherige Gespräch"><svg class="sym" aria-hidden="true"><use href="symbole.svg#plus"/></svg>Neuer Chat</button>
       <div class="verlauf-titel">Frühere Chats</div>
       <div id="chat-liste" class="chat-liste"></div>
-      <button type="button" id="chats-loeschen" class="knopf knopf-klein knopf-rot" hidden>Alle Chats löschen</button>
+      <div id="alle-weg" class="alle-weg" hidden>
+        <button type="button" id="chats-endgueltig" class="alle-endgueltig" tabindex="-1">Alle löschen</button>
+        <button type="button" id="chats-loeschen" class="knopf knopf-klein knopf-rot">Alle Chats löschen</button>
+      </div>
     </aside>
     <div class="spalte">
       <div class="titel-zeile">
@@ -110,7 +121,8 @@ try {
           <button type="submit" id="frage-senden" class="knopf knopf-haupt">Fragen</button>
         </div>
       </form>
-      <p class="hinweis klein">Die KI antwortet nur anhand der gefundenen Artikel. Sie kann sich trotzdem irren: Bei wichtigen Dingen bitte die Quelle lesen.</p>
+      <p class="hinweis klein">Die KI antwortet nur anhand der gefundenen Artikel.<br>
+        Sie kann sich trotzdem irren: Bei wichtigen Dingen bitte die Quelle lesen.</p>
     </div>
    </div>
   </section>
@@ -237,7 +249,7 @@ try {
     <div class="spalte">
       <h1>Kochen</h1>
       <p id="koch-start" class="hinweis" hidden>Die Bibliothek wird gerade gestartet …</p>
-      <p id="koch-fehlt" class="warnung" hidden>Für die Rezeptsuche wird das Paket „Koch-Wiki“ gebraucht. <a href="#inhalte">Unter Inhalte herunterladen</a></p>
+      <p id="koch-fehlt" class="warnung" hidden>Für die Rezeptsuche wird das Paket „Koch-Wiki“ gebraucht. <a href="#inhalte?zu=paket:kochwiki-de">Unter „Inhalte“ laden</a></p>
       <form id="koch-form" class="karte-box koch-form" hidden>
         <label for="koch-zutaten"><b>Was hast du da?</b></label>
         <textarea id="koch-zutaten" rows="2" placeholder="z. B. Kartoffeln, Eier, Zwiebeln, Mehl, Käse"></textarea>
@@ -288,6 +300,7 @@ try {
           <button class="knopf" id="inhalte-update"><svg class="sym" aria-hidden="true"><use href="symbole.svg#refresh-cw"/></svg>Nach Aktualisierungen suchen</button>
         </div>
       </div>
+      <p id="inhalte-ordner" class="warnung" hidden></p>
       <div id="inhalte-downloads" class="karte-box" style="margin-bottom:16px" hidden></div>
       <div id="inhalte-liste"></div>
     </div>

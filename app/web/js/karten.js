@@ -35,7 +35,7 @@ const Karten = (() => {
       $("#karte-wrap").hidden = true;
       leer.hidden = false;
       leer.innerHTML = "";
-      leer.append(el("h1", {}, "Karten"), el("div", { class: "karte-box" }, "Es sind noch keine Karten installiert.", el("br"), el("a", { href: "#inhalte?zu=karten" }, "Karten herunterladen")));
+      leer.append(el("h1", {}, "Karten"), el("div", { class: "karte-box" }, "Es sind noch keine Karten installiert.", el("br"), el("a", { href: "#inhalte?zu=karten" }, "Karten unter „Inhalte“ laden")));
       return;
     }
     leer.hidden = true;

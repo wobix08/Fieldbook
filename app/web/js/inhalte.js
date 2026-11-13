@@ -23,11 +23,26 @@ const Inhalte = (() => {
     }
     catch (e) { if (nr === lauf) $("#inhalte-liste").innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
     if (nr !== lauf) return;
+    // Ungünstiger Ort des Fieldbook-Ordners (OneDrive, sehr langer Pfad): vor allen Downloads warnen
+    const ow = OW.status && OW.status.ordnerWarnung, owBox = $("#inhalte-ordner");
+    owBox.hidden = !ow;
+    owBox.replaceChildren(...(ow ? zeilen(ow) : []));
     // Vom Übersetzer aus den Bereich „Sprachen“ gleich aufgeklappt zeigen
     const zuUe = params && params.get("zu");
     // (nur dieser, es ist immer höchstens ein Abschnitt offen)
     if (zuUe === "sprachen" || zuUe === "sprechen" || zuUe === "vorlesen") { aufgeklappt.clear(); aufgeklappt.add("sprachen"); }
-    if (zuUe === "karten") { aufgeklappt.clear(); aufgeklappt.add("karten"); }
+    if (zuUe === "karten" || zuUe === "ki" || zuUe === "wissen") { aufgeklappt.clear(); aufgeklappt.add(zuUe); }
+    // Ein bestimmtes Paket (z. B. Koch-Wiki von der Seite Kochen): Wissen und seine Kategorie aufklappen
+    // und das Paket gleich zum Laden auswählen (bei Varianten nur, wenn noch keine installiert ist)
+    const zuPaket = zuUe && zuUe.startsWith("paket:") ? kat.pakete.find(p => p.id === zuUe.slice(6)) : null;
+    if (zuPaket) {
+      aufgeklappt.clear(); aufgeklappt.add("wissen"); aufgeklappt.add("k:" + (zuPaket.kategorien || [])[0]);
+      const gruppe = zuPaket.gruppeExklusiv ? kat.pakete.filter(p => p.gruppeExklusiv === zuPaket.gruppeExklusiv) : [zuPaket];
+      if (!gruppe.some(p => p.installiert) && (zuPaket.verfuegbar || !kat.katalogOnline)) {
+        gruppe.forEach(p => auswahl.pakete.delete(p.id));
+        auswahl.pakete.add(zuPaket.id);
+      }
+    }
     await fortschritt();
     if (nr !== lauf) return;
     // Lief schon ein Abruf von früher und hat die Liste nicht gezeichnet: noch einmal
@@ -35,8 +50,10 @@ const Inhalte = (() => {
     // Vom Übersetzer aus („Sprachen hinzufügen“) direkt zu den Sprachen springen, von der Karte aus zu den Karten
     const zu = params && params.get("zu");
     const ziel = zu === "sprachen" ? $("#inh-sprachen") : zu === "sprechen" ? $("#inh-sprechen") : zu === "vorlesen" ? $("#inh-sprachen")
-      : zu === "karten" ? $("#inh-bereich-karten") : null;
+      : zu === "karten" || zu === "ki" || zu === "wissen" ? $("#inh-bereich-" + zu) : null;
     if (ziel) ziel.scrollIntoView({ block: "start" });
+    const paketZiel = zuPaket && [...document.querySelectorAll("#inhalte-liste [data-pakete]")].find(x => x.dataset.pakete.split(" ").includes(zuPaket.id));
+    if (paketZiel) paketZiel.scrollIntoView({ block: "center" });
     timer = setInterval(() => { if (!location.hash.startsWith("#inhalte")) { clearInterval(timer); return; } fortschritt(); }, 1000);
   }
 
@@ -355,11 +372,15 @@ const Inhalte = (() => {
       const g = abschnitt("k:" + gr.id, gr.icon, gr.titel, namen, pakete.filter(p => auswahl.pakete.has(p.id)).length, vonInst(namen.length, eintraege.length), fehlen, wissenListe);
       const fertigeGruppen = new Set();
       for (const p of pakete) {
-        if (!p.gruppeExklusiv) { g.append(paketZeile(p, p.titel)); continue; }
+        // data-pakete: Ziel für Sprünge wie #inhalte?zu=paket:kochwiki-de
+        if (!p.gruppeExklusiv) { const z = paketZeile(p, p.titel); z.dataset.pakete = p.id; g.append(z); continue; }
         // Varianten (z. B. Wikipedia kompakt, ohne und mit Bildern) stehen zusammen in einem Kasten
         if (fertigeGruppen.has(p.gruppeExklusiv)) continue;
         fertigeGruppen.add(p.gruppeExklusiv);
-        g.append(variantenKasten(p.gruppeExklusiv, pakete.filter(x => x.gruppeExklusiv === p.gruppeExklusiv)));
+        const varianten = pakete.filter(x => x.gruppeExklusiv === p.gruppeExklusiv);
+        const k = variantenKasten(p.gruppeExklusiv, varianten);
+        k.dataset.pakete = varianten.map(x => x.id).join(" ");
+        g.append(k);
       }
     }
 

@@ -76,7 +76,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.1";
+        public const string Version = "0.8.2";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -157,6 +157,8 @@ namespace OfflineWissen
             listener = new HttpListener();
             listener.Prefixes.Add("http://localhost:" + Port + "/");
             listener.Start();
+            // Benutzten Anschluss merken (start.ps1 und die Windows-Aufgabe finden Fieldbook so auch auf 8091 usw.)
+            try { Directory.CreateDirectory(Path.Combine(Daten, "cache")); File.WriteAllText(PortDatei, Port.ToString(CultureInfo.InvariantCulture)); } catch { }
 
             StartStatus("Browser wird geöffnet …");
             Log("Fieldbook " + Version + " läuft.");
@@ -269,6 +271,7 @@ namespace OfflineWissen
         // Letzter Tab-Kontakt wird in daten/cache/tab.txt gemerkt (höchstens alle 30 s geschrieben), damit der
         // nächste Start weiß, ob ein alter Tab noch offen sein kann
         static string TabDatei { get { return Path.Combine(Daten, "cache", "tab.txt"); } }
+        static string PortDatei { get { return Path.Combine(Daten, "cache", "port.txt"); } }
         static long tabGemerkt; // wann tab.txt zuletzt geschrieben wurde (UTC-Ticks)
 
         static void TabMelden()
@@ -1838,6 +1841,31 @@ namespace OfflineWissen
             return t;
         }
 
+        // Ungünstiger Ort für den Fieldbook-Ordner (einmal ermittelt, ändert sich zur Laufzeit nicht):
+        // OneDrive lädt Gigabytes hoch und lagert Dateien evtl. in die Cloud aus (dann fehlen sie offline);
+        // ein sehr langer Pfad stößt mit den tiefsten Dateien an die Windows-Grenze von 260 Zeichen.
+        static string ordnerWarnung;
+        static bool ordnerGeprueft;
+        static string OrdnerWarnung()
+        {
+            if (ordnerGeprueft) return ordnerWarnung;
+            ordnerGeprueft = true;
+            try
+            {
+                string wurzel = Path.GetFullPath(Root).TrimEnd('\\') + "\\";
+                bool oneDrive = wurzel.IndexOf("\\OneDrive", StringComparison.OrdinalIgnoreCase) >= 0;
+                foreach (var v in new[] { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
+                {
+                    string p = Environment.GetEnvironmentVariable(v);
+                    if (!string.IsNullOrEmpty(p) && wurzel.StartsWith(p.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)) oneDrive = true;
+                }
+                if (oneDrive) ordnerWarnung = "Fieldbook liegt in einem OneDrive-Ordner. OneDrive lädt dann alle Inhalte ins Internet hoch und kann Dateien in die Cloud auslagern, die offline dann fehlen. Bitte den Fieldbook-Ordner an einen anderen Ort verschieben, zum Beispiel nach C:\\Fieldbook.";
+                else if (wurzel.Length > 130) ordnerWarnung = "Der Pfad zum Fieldbook-Ordner ist sehr lang (" + wurzel.Length + " Zeichen). Windows kann dann manche Dateien nicht speichern. Bitte den Ordner weiter nach oben verschieben, zum Beispiel nach C:\\Fieldbook.";
+            }
+            catch { }
+            return ordnerWarnung;
+        }
+
         static Dictionary<string, object> Status()
         {
             var akku = new Dictionary<string, object>();
@@ -1866,6 +1894,7 @@ namespace OfflineWissen
                 {"wissen", t["wissen"]},
                 {"bibliothek", KiwixAktiv()},
                 {"bibliothekFehler", kiwixFehler},
+                {"ordnerWarnung", OrdnerWarnung()},
                 {"desktopSymbol", t["desktopSymbol"]},
                 {"proxy", Str(einst, "proxy") ?? ""},
                 {"unterbrochen", unterbrochen},
@@ -2912,7 +2941,7 @@ namespace OfflineWissen
                 else if (code == 403) d["meldung"] = "Zugriff verweigert (403). Eine Firewall oder ein Jugendschutzfilter könnte " + u.Host + " sperren.";
                 else if (e.Status == WebExceptionStatus.Timeout) d["meldung"] = "Keine Antwort. Eine Firewall könnte " + u.Host + " sperren.";
                 else if (e.Status == WebExceptionStatus.TrustFailure || e.Status == WebExceptionStatus.SecureChannelFailure)
-                    d["meldung"] = "Die sichere Verbindung wird gestört, oft durch eine Firewall oder einen Virenscanner, der verschlüsselte Verbindungen prüft.";
+                    d["meldung"] = SichereVerbindungMeldung();
                 else if (e.Status == WebExceptionStatus.NameResolutionFailure) d["meldung"] = "Adresse nicht gefunden. Kein Internet, oder ein DNS-Filter sperrt " + u.Host + ".";
                 else if (e.Status == WebExceptionStatus.ProxyNameResolutionFailure) d["meldung"] = "Der eingestellte Proxy wurde nicht gefunden.";
                 else if (e.Status == WebExceptionStatus.ConnectFailure) d["meldung"] = "Verbindung abgelehnt. Eine Firewall könnte " + u.Host + " sperren.";
@@ -3627,14 +3656,41 @@ namespace OfflineWissen
             if (j.Gesamt <= 0) j.Gesamt = j.Bytes;
         }
 
-        // Ein Durchlauf von curl; gibt den Rückgabewert zurück (0 = fertig). Fehlertexte kommen ins Protokoll.
+        // Lädt mit bis zu 5 Neuversuchen bei vorübergehenden Fehlern; gibt den Rückgabewert von curl zurück (0 = fertig).
+        // Die Neuversuche macht Fieldbook selbst statt curl mit --retry: curl springt dabei an die Stelle zurück, an der
+        // der Aufruf begann (hängt die Wikipedia nach 20 GB, ginge alles verloren). Ein neuer Aufruf setzt am Dateiende fort.
         static int CurlLaden(Job j, string url, string part)
         {
+            int code = 0;
+            for (int versuch = 0; versuch <= 5; versuch++)
+            {
+                if (versuch > 0)
+                {
+                    Log("Download " + j.Titel + ": Neuversuch " + versuch + " von 5");
+                    for (int w = 0; w < 6 && !abbrechen && !beenden; w++) Thread.Sleep(500);
+                    if (abbrechen || beenden) break;
+                }
+                string fehler;
+                code = CurlEinmal(j, url, part, out fehler);
+                if (code == 0 || abbrechen || beenden) break;
+                // Vorübergehend: zu langsam oder hängend (28), Verbindung abgerissen (18, 52, 56, 92),
+                // Server überlastet (22 mit 408, 429 oder 5xx). Wie bisher mit curl --retry, plus abgerissene Verbindungen.
+                bool voruebergehend = code == 28 || code == 18 || code == 52 || code == 56 || code == 92
+                    || (code == 22 && Regex.IsMatch(fehler, @"error: (408|429|5\d\d)"));
+                if (!voruebergehend) break;
+            }
+            return code;
+        }
+
+        // Ein Durchlauf von curl; gibt den Rückgabewert zurück (0 = fertig). Fehlertexte kommen ins Protokoll.
+        static int CurlEinmal(Job j, string url, string part, out string fehlertext)
+        {
+            fehlertext = "";
             string curl = Path.Combine(Environment.SystemDirectory, "curl.exe");
             string proxy = ProxyFuer(url);
             // -y/-Y: unter N Byte/s für 60 s gilt als hängend (z. B. nach Standby); bei Tempolimit liegt N darunter
             long mindest = ladeLimit > 0 ? Math.Max(1L, Math.Min(1000L, ladeLimit / 4)) : 1000L;
-            string args = "-L --fail -sS --retry 5 --retry-delay 3 --connect-timeout 30 -y 60 -Y " + mindest + " -A \"Fieldbook/" + Version + "\" -C - -o \"" + part + "\" \"" + url + "\"" + (ladeLimit > 0 ? " --limit-rate " + Math.Max(8, ladeLimit / 1000) + "k" : "")
+            string args = "-L --fail -sS --connect-timeout 30 -y 60 -Y " + mindest + " -A \"Fieldbook/" + Version + "\" -C - -o \"" + part + "\" \"" + url + "\"" + (ladeLimit > 0 ? " --limit-rate " + Math.Max(8, ladeLimit / 1000) + "k" : "")
                 + (proxy != null ? " --proxy \"" + proxy + "\" --proxy-anyauth --proxy-user :" : "");
             var psi = new ProcessStartInfo(curl, args) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true };
             var fehler = new StringBuilder();
@@ -3662,11 +3718,23 @@ namespace OfflineWissen
                 {
                     string text;
                     lock (fehler) text = fehler.ToString().Trim();
+                    fehlertext = text;
                     Log("Download " + j.Titel + " fehlgeschlagen (curl " + p.ExitCode + ", " + new Uri(url).Host + "): " + text);
                     try { File.AppendAllText(Path.Combine(Logs, "downloads.log"), DateTime.Now.ToString("yyyy-MM-dd HH:mm") + " " + j.Titel + " (curl " + p.ExitCode + ", " + url + "): " + text + Environment.NewLine, Utf8); } catch { }
                 }
                 return p.ExitCode;
             }
+        }
+
+        // Gestörte sichere Verbindung: Geht die Uhr des PCs nach (früher als die Programmdateien selbst),
+        // sind Zertifikate scheinbar noch nicht gültig. Das ist dann die Ursache, nicht ein Virenscanner.
+        static string SichereVerbindungMeldung()
+        {
+            bool uhrFalsch = false;
+            try { uhrFalsch = DateTime.UtcNow < File.GetLastWriteTimeUtc(Path.Combine(AppDir, "Server.cs")).AddDays(-1); }
+            catch { }
+            if (uhrFalsch) return "Datum oder Uhrzeit am PC sind falsch (" + DateTime.Now.ToString("d. M. yyyy") + "). Deshalb klappt keine sichere Verbindung. Bitte in Windows unter Einstellungen → Zeit und Sprache korrigieren.";
+            return "Die sichere Verbindung wird gestört, oft durch eine Firewall oder einen Virenscanner, der verschlüsselte Verbindungen prüft. Auch ein falsches Datum am PC kann die Ursache sein.";
         }
 
         // Verständliche Meldung zu curl-Rückgabewerten (Einzelheiten in daten\logs\downloads.log)
@@ -3681,7 +3749,7 @@ namespace OfflineWissen
                 case 23: return "Die Datei konnte nicht gespeichert werden. Ist genug Platz auf dem Laufwerk?";
                 case 33: return "Der Download konnte nicht fortgesetzt werden. Bitte erneut versuchen.";
                 case 28: return "Zeitüberschreitung: Der Server antwortet nicht. Bitte später erneut versuchen.";
-                case 35: case 60: return "Die sichere Verbindung wird gestört, oft durch eine Firewall oder einen Virenscanner, der verschlüsselte Verbindungen prüft.";
+                case 35: case 60: return SichereVerbindungMeldung();
                 case 18: case 52: case 56: case 92: return "Die Verbindung ist abgebrochen. Bitte „Erneut versuchen“, es geht an derselben Stelle weiter.";
                 default: return "Download fehlgeschlagen (Fehler " + code + "). Bitte „Erneut versuchen“, es geht an derselben Stelle weiter. Einzelheiten stehen in daten\\logs\\downloads.log.";
             }
@@ -5076,7 +5144,10 @@ namespace OfflineWissen
                 AktLog("Künftig automatisch (im Fenster gewählt).");
                 try
                 {
-                    var req = (HttpWebRequest)WebRequest.Create("http://localhost:8090/api/aktualisierung");
+                    int port = 8090;
+                    try { int.TryParse(File.ReadAllText(PortDatei).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out port); } catch { }
+                    if (port < 8090 || port > 8099) port = 8090;
+                    var req = (HttpWebRequest)WebRequest.Create("http://localhost:" + port + "/api/aktualisierung");
                     req.Method = "POST";
                     req.Proxy = null;
                     req.Timeout = 3000;

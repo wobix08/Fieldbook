@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
 
-### **[Fieldbook 0.8.1 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.1/Fieldbook-0.8.1.zip)**
+### **[Fieldbook 0.8.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.2/Fieldbook-0.8.2.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -57,7 +57,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.1 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.1/Fieldbook-0.8.1.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.2/Fieldbook-0.8.2.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -137,7 +137,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.8.1.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.8.2.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -168,6 +168,8 @@ Antwort mit Quellen [1] [2] ◄── KI liest die besten Abschnitte
 ```
 
 Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
+Bei Erste-Hilfe-Fragen und zur Hausapotheke antwortet sie aus dem eingebauten Erste-Hilfe-Kurs bzw. der Vorsorge-Liste, weil Artikel aus der Bibliothek dort oft anderen Regeln folgen (z. B. amerikanischen).\
+Die passenden Artikel stehen trotzdem zum Weiterlesen in der Quellenliste.\
 Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
 Auch Pakete aus PDF-Büchern durchsucht sie: Fieldbook liest deren Text nach der Installation einmal im Hintergrund aus.\
 Eingescannte Bücher ohne Text bleiben dabei außen vor.\

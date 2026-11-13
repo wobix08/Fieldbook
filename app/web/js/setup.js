@@ -244,6 +244,9 @@ const Setup = (() => {
     if (!kat.katalogOnline) c.append(el("div", { class: "warnung", style: "display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px" },
       el("span", {}, "Keine Internetverbindung erkannt.", el("br"), "Zum Herunterladen wird Internet gebraucht.", el("br"), "Hast du die Inhalte auf einem USB-Stick, kannst du sie von dort übernehmen."),
       el("button", { class: "knopf knopf-klein", onclick: () => Inhalte.importDialog() }, sym("usb"), "Von USB-Stick übernehmen")));
+    // Ungünstiger Ort des Fieldbook-Ordners (OneDrive, sehr langer Pfad): besser vor dem ersten Download verschieben
+    const ow = OW.status && OW.status.ordnerWarnung;
+    if (ow) c.append(el("p", { class: "warnung", style: "margin-bottom:16px" }, ...zeilen(ow)));
     // Gerät nur als eine Zeile, die Einzelwerte zum Aufklappen
     c.append(el("div", {},
       el("div", { class: "stufe", style: "margin:0" },

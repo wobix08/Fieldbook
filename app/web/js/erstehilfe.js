@@ -97,7 +97,7 @@ const ErsteHilfe = (() => {
         kiKnopf(t.titel + ": Was muss ich tun?")));
     finde(t.id, t.artikel || []).then(a => {
       if (a && a.url) artikelKnopf.replaceWith(artikelLink(a));
-      else artikelKnopf.textContent = "Kein Artikel gefunden. Dafür wird die Medizin-Wikipedia oder die Wikipedia gebraucht.";
+      else ohneWikipedia().then(fehlt => artikelKnopf.replaceChildren(...keinArtikel(fehlt)));
     }).catch(() => { artikelKnopf.textContent = "Artikel gerade nicht erreichbar"; });
     return d;
   }
@@ -228,7 +228,11 @@ const ErsteHilfe = (() => {
       mehr.innerHTML = "";
       for (const a of liste || []) mehr.append(artikelLink(a));
       if (!liste) mehr.append(el("span", { class: "hinweis" }, "Artikel gerade nicht erreichbar"));
-      else if (!liste.length) mehr.append(el("span", { class: "hinweis" }, "Keine Artikel gefunden. Dafür wird die Medizin-Wikipedia oder die Wikipedia gebraucht."));
+      else if (!liste.length) {
+        const span = el("span", { class: "hinweis" });
+        mehr.append(span);
+        ohneWikipedia().then(fehlt => span.replaceChildren(...keinArtikel(fehlt)));
+      }
       const ki = kiKnopf(t.titel + ": ");
       if (ki) mehr.append(ki);
     });
@@ -627,6 +631,17 @@ const ErsteHilfe = (() => {
   function kiKnopf(frage) {
     if (!OW.status || !OW.status.modell) return null;
     return el("a", { class: "knopf", href: "#fragen", onclick: () => setTimeout(() => { const f = $("#frage-feld"); f.value = frage; f.focus(); }, 60) }, sym("message-circle"), "Die KI fragen");
+  }
+
+  // Kein Artikel gefunden: Fehlen alle Pakete, in denen gesucht wird, führt ein Link zur Medizin-Wikipedia unter „Inhalte“
+  async function ohneWikipedia() {
+    try { const buecher = await Kiwix.buecher(); return !buecher.some(b => konf.pakete.includes(b.name)); }
+    catch { return false; }
+  }
+  function keinArtikel(fehlt) {
+    if (!fehlt) return ["Kein Artikel gefunden."];
+    return ["Kein Artikel gefunden.", el("br"), "Dafür wird die Medizin-Wikipedia oder die Wikipedia gebraucht.", el("br"),
+      el("a", { href: "#inhalte?zu=paket:wp-medizin" }, "Medizin-Wikipedia unter „Inhalte“ laden")];
   }
 
   // Exakter Treffer für einen Titel in der Reihenfolge der Pakete
