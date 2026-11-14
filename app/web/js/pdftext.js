@@ -146,5 +146,5 @@ const PdfText = (() => {
     }
   }
 
-  return { pruefen, bibliothek, pdfsIm };
+  return { pruefen, bibliothek, pdfsIm, seitenText };
 })();

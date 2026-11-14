@@ -263,6 +263,7 @@ const Karten = (() => {
     karte.on("load", ladeOrtsnamen);
     karte.on("moveend", () => { clearTimeout(ortsnamenTimer); ortsnamenTimer = setTimeout(ladeOrtsnamen, 250); });
     fuelleSprungliste();
+    meineOrteLaden();
 
     // Kategorien
     const chips = $("#poi-chips");
@@ -299,12 +300,20 @@ const Karten = (() => {
     $("#ort-feld").value = q;
     const ziel = $("#ort-treffer");
     if (q.length < 2) { ziel.innerHTML = ""; return; }
-    if (!OW.status.orte) { ziel.innerHTML = '<div class="leer">Ortsliste nicht installiert.</div>'; return; }
+    // Eigene Orte stehen ganz oben
+    const klein = q.toLocaleLowerCase("de");
+    const eigene = meineOrte.filter(o => (o.name + " " + (o.notiz || "") + " " + (o.kategorie || "")).toLocaleLowerCase("de").includes(klein)).slice(0, 5);
+    if (!OW.status.orte) {
+      ziel.replaceChildren(...eigene.map(meinTreffer));
+      if (!eigene.length) ziel.innerHTML = '<div class="leer">Ortsliste nicht installiert.</div>';
+      return;
+    }
     const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => null);
     if (nr !== ortLauf) return; // inzwischen neu gesucht
-    ziel.innerHTML = "";
+    ziel.replaceChildren(...eigene.map(meinTreffer));
+    if (!liste && eigene.length) return;
     if (!liste) { ziel.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar.")); return; }
-    if (!liste.length) { ziel.append(el("div", { class: "leer" }, "Nichts gefunden.")); return; }
+    if (!liste.length && !eigene.length) { ziel.append(el("div", { class: "leer" }, "Nichts gefunden.")); return; }
     for (const o of liste.slice(0, 12)) {
       ziel.append(el("button", { onclick: () => geheZu(o) },
         el("b", {}, o.name), " ", el("small", {}, o.art + " · " + o.land + (o.name !== o.original ? " · " + o.original : "") + (o.einwohner > 0 ? " · " + o.einwohner.toLocaleString("de-DE") + " Einw." : ""))));
@@ -313,17 +322,24 @@ const Karten = (() => {
 
   // Markierter Punkt: gesuchter Ort oder Klick in die Karte. Sonne und Mond rechnet mit ihm, solange er
   // im sichtbaren Ausschnitt liegt, sonst mit der Kartenmitte.
-  let punktGesetzt = null; // { lat, lon, text }
+  let punktGesetzt = null; // { lat, lon, text, name }
   function punkt() {
     if (!karte || !punktGesetzt) return null;
     return karte.getBounds().contains([punktGesetzt.lon, punktGesetzt.lat]) ? punktGesetzt : null;
   }
 
-  function markiere(lat, lon, text, popupInhalt, popupAuf) {
+  // „Route planen“ übernimmt den markierten Punkt als Ziel; die Markierung weicht dann dem Ziel-Marker
+  function punktFuerRoute() {
+    const p = punktGesetzt;
+    if (p) markierungWeg();
+    return p;
+  }
+
+  function markiere(lat, lon, text, popupInhalt, popupAuf, name) {
     if (markierung) markierung.remove();
-    punktGesetzt = { lat, lon, text };
+    punktGesetzt = { lat, lon, text, name: name || "Punkt auf der Karte" };
     markierung = new maplibregl.Marker({ color: "#b3261e" }).setLngLat([lon, lat])
-      .setPopup(new maplibregl.Popup({ offset: 24, maxWidth: "260px" }).setDOMContent(popupInhalt)).addTo(karte);
+      .setPopup(new maplibregl.Popup({ offset: 24, maxWidth: "340px" }).setDOMContent(popupInhalt)).addTo(karte);
     if (popupAuf) markierung.togglePopup();
     Sonne.neu();
   }
@@ -339,7 +355,7 @@ const Karten = (() => {
     $("#ort-treffer").innerHTML = "";
     const zoom = o.art === "Hauptstadt" || o.art === "Stadt" ? 11 : o.art === "Ort" ? 13 : 14;
     karte.flyTo({ center: [o.lon, o.lat], zoom, speed: 1.6 });
-    markiere(o.lat, o.lon, "bei " + o.name, popupText(o.name + " (" + o.art + ")", o.lat, o.lon), false);
+    markiere(o.lat, o.lon, "bei " + o.name, popupText(o.name + " (" + o.art + ")", o.lat, o.lon, null, o.name), false, o.name);
   }
 
   // Koordinaten zum Durchsagen (z. B. beim Notruf): 48,1374° N · 11,5755° O
@@ -348,9 +364,263 @@ const Karten = (() => {
     return f(lat) + (lat >= 0 ? " N" : " S") + " · " + f(lon) + (lon >= 0 ? " O" : " W");
   }
 
-  function popupText(titel, lat, lon) {
-    return el("div", { class: "punkt-popup" }, el("b", {}, titel), el("small", {}, koordinaten(lat, lon)),
-      el("button", { type: "button", class: "punkt-weg", onclick: markierungWeg }, "Markierung entfernen"));
+  // Mit Stadt: Stadt fett oben, darunter Stadtteil bzw. „2 km südlich von …“.
+  // vorschlag = Name, mit dem „Ort merken“ das Namensfeld füllt.
+  function popupText(titel, lat, lon, stadt, vorschlag) {
+    const box = el("div", { class: "punkt-popup" });
+    const ansicht = () => box.replaceChildren(el("b", {}, stadt || titel), stadt ? el("span", {}, titel) : "",
+      el("small", {}, koordinaten(lat, lon)),
+      el("div", { class: "punkt-knoepfe" },
+        el("button", { type: "button", class: "punkt-weg", onclick: () => Routen.vonHier({ lat, lon, name: titel }) }, sym("map-pin"), "Route von hier"),
+        el("button", { type: "button", class: "punkt-weg", onclick: () => Routen.zuZiel({ lat, lon, name: titel }) }, sym("compass"), "Route hierhin")),
+      el("div", { class: "punkt-knoepfe" },
+        el("button", { type: "button", class: "punkt-weg", onclick: () => box.replaceChildren(ortFormular(
+          { name: vorschlag || "", notiz: "" },
+          (w) => { markierungWeg(); ortNeu(w, lat, lon); },
+          ansicht)) }, sym("bookmark"), "Ort merken"),
+        el("button", { type: "button", class: "punkt-weg", onclick: markierungWeg }, "Markierung entfernen")));
+    ansicht();
+    return box;
+  }
+
+  // ------------------------------------------------ Meine Orte
+  // Selbst gemerkte Orte: grüne Stecknadeln, Liste im Kartenfeld, oben in der Ortssuche.
+  // Gespeichert in daten/orte/meine-orte.json (wandert beim Kopieren des Ordners mit).
+
+  // Kategorien: freier Text je Ort (o.kategorie). Ausblenden: einzelner Ort (o.aus) oder ganze Kategorie
+  // (Name in kategorienAus, "" = ohne Kategorie). Ausgeblendete Orte haben keine Stecknadel, stehen aber in der Liste.
+  let meineOrte = [], kategorienAus = [], meineMarker = [], listeAuf = false, losePopup = null;
+  const gruppenOffen = new Set(); // aufgeklappte Kategorien in der Liste ("" = ohne Kategorie)
+
+  async function meineOrteLaden() {
+    const d = await api("meineorte").catch(() => null);
+    meineOrte = d && Array.isArray(d.orte) ? d.orte : [];
+    kategorienAus = d && Array.isArray(d.kategorienAus) ? d.kategorienAus : [];
+    meineOrteZeichnen();
+  }
+
+  async function meineOrteSpeichern() {
+    meineOrteZeichnen();
+    const benutzt = new Set(meineOrte.map(o => o.kategorie || ""));
+    kategorienAus = kategorienAus.filter(k => benutzt.has(k));
+    const r = await api("meineorte", { orte: meineOrte, kategorienAus }).catch(() => null);
+    if (!r || !r.ok) zeigeMeldung("Die Orte ließen sich nicht speichern.");
+  }
+
+  function zeigeMeldung(text) {
+    const h = $("#karte-zoomhinweis");
+    h.textContent = text;
+    h.hidden = false;
+    setTimeout(() => { h.hidden = true; }, 4000);
+  }
+
+  function ortNeu(w, lat, lon) {
+    const o = { id: Date.now().toString(36), name: w.name, notiz: w.notiz, lat: +lat.toFixed(6), lon: +lon.toFixed(6) };
+    if (w.farbe) o.farbe = w.farbe;
+    if (w.kategorie) o.kategorie = w.kategorie;
+    // Neuer Ort in einer ausgeblendeten Kategorie: Kategorie wieder zeigen, sonst wäre er gleich unsichtbar
+    kategorienAus = kategorienAus.filter(k => k !== (o.kategorie || ""));
+    meineOrte.push(o);
+    meineOrteSpeichern();
+    const m = meineMarker.find(x => x.ort === o);
+    if (m) m.marker.togglePopup();
+  }
+
+  // Gedeckte Farben für die Stecknadeln (gespeichert wird nur der Name; ohne Farbe = Moosgrün des Designs)
+  const ORT_FARBEN = [
+    { name: "", titel: "Moosgrün" },
+    { name: "blau", titel: "Blau", wert: "#5f7f99" },
+    { name: "rot", titel: "Ziegelrot", wert: "#a8604d" },
+    { name: "ocker", titel: "Ocker", wert: "#b08d4f" },
+    { name: "violett", titel: "Violett", wert: "#82698c" },
+    { name: "grau", titel: "Grau", wert: "#7b817b" },
+  ];
+
+  function ortFarbe(o) {
+    const f = ORT_FARBEN.find(x => x.name && x.name === o.farbe);
+    return f ? f.wert : akzentFarbe();
+  }
+
+  function alleKategorien() {
+    return [...new Set(meineOrte.map(o => o.kategorie).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+  }
+
+  function istSichtbar(o) {
+    return !o.aus && !kategorienAus.includes(o.kategorie || "");
+  }
+
+  // Kategorie-Feld mit Dropdown: Pfeil zeigt alle vorhandenen Kategorien, beim Tippen nur die passenden
+  function katFeld(feld) {
+    const alle = alleKategorien();
+    const liste = el("div", { class: "ort-kat-liste", hidden: true });
+    const zu = () => { liste.hidden = true; };
+    const zeigen = (gefiltert) => {
+      const q = feld.value.trim().toLocaleLowerCase("de");
+      const treffer = gefiltert && q ? alle.filter(k => k.toLocaleLowerCase("de").includes(q) && k.toLocaleLowerCase("de") !== q) : alle;
+      liste.replaceChildren(...treffer.map(k => el("button", { type: "button",
+        onmousedown: (e) => e.preventDefault(), // Feld behält den Fokus
+        onclick: () => { feld.value = k; zu(); } }, k)));
+      liste.hidden = !treffer.length;
+    };
+    feld.addEventListener("input", () => zeigen(true));
+    feld.addEventListener("blur", zu);
+    feld.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !liste.hidden) { e.stopPropagation(); zu(); }
+      if (e.key === "ArrowDown" && liste.hidden) { e.preventDefault(); zeigen(false); }
+    });
+    const pfeil = alle.length ? el("button", { type: "button", class: "ort-kat-auf", title: "Vorhandene Kategorien", "aria-label": "Vorhandene Kategorien",
+      onmousedown: (e) => e.preventDefault(),
+      onclick: () => { if (liste.hidden) { zeigen(false); feld.focus(); } else zu(); } }, sym("chevron-down")) : null;
+    return el("div", { class: "ort-kat" }, feld, pfeil, liste);
+  }
+
+  // Formular für Name, Kategorie, Notiz und Farbe (neu oder bearbeiten); speichern bekommt { name, notiz, farbe, kategorie }
+  function ortFormular(wert, speichern, abbrechen) {
+    let farbe = ORT_FARBEN.some(x => x.name === wert.farbe) ? wert.farbe : "";
+    const name = el("input", { type: "text", value: wert.name, placeholder: "Name, z. B. Treffpunkt Familie", maxlength: "80" });
+    const kategorie = el("input", { type: "text", value: wert.kategorie || "", placeholder: "Kategorie (freiwillig), z. B. Familie", maxlength: "40", autocomplete: "off" });
+    const katBox = katFeld(kategorie);
+    const notiz = el("textarea", { rows: "2", placeholder: "Notiz (freiwillig)", maxlength: "500" });
+    notiz.value = wert.notiz || "";
+    const los = (e) => {
+      e.preventDefault();
+      const n = name.value.trim();
+      if (!n) { name.focus(); return; }
+      // gleiche Kategorie in anderer Schreibweise zusammenführen („familie“ → „Familie“)
+      let k = kategorie.value.trim();
+      const gleich = alleKategorien().find(x => x.toLocaleLowerCase("de") === k.toLocaleLowerCase("de"));
+      if (gleich) k = gleich;
+      speichern({ name: n, notiz: notiz.value.trim(), farbe, kategorie: k });
+    };
+    const punkte = ORT_FARBEN.map(x => el("button", { type: "button", class: "ort-farbe" + (x.name === farbe ? " an" : ""),
+      title: x.titel, "aria-label": x.titel, "aria-pressed": String(x.name === farbe),
+      style: "background:" + (x.wert || akzentFarbe()),
+      onclick: (e) => {
+        farbe = x.name;
+        for (const p of punkte) { const an = p === e.currentTarget; p.classList.toggle("an", an); p.setAttribute("aria-pressed", String(an)); }
+      } }));
+    const f = el("form", { class: "ort-formular", onsubmit: los }, name, katBox, notiz,
+      el("div", { class: "ort-farben", role: "group", "aria-label": "Farbe" }, ...punkte),
+      el("div", { class: "punkt-knoepfe" },
+        el("button", { type: "submit", class: "knopf knopf-klein" }, "Speichern"),
+        el("button", { type: "button", class: "punkt-weg", onclick: abbrechen }, "Abbrechen")));
+    setTimeout(() => { name.focus(); name.select(); }, 0);
+    return f;
+  }
+
+  function akzentFarbe() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--akzent").trim() || "#5f7f3a";
+  }
+
+  function meinPopup(o) {
+    const box = el("div", { class: "punkt-popup" });
+    const ansicht = () => box.replaceChildren(el("b", {}, o.name), o.kategorie ? el("small", {}, o.kategorie) : "", o.notiz ? el("span", { class: "ort-notiz" }, o.notiz) : "",
+      el("small", {}, koordinaten(o.lat, o.lon)),
+      el("div", { class: "punkt-knoepfe" },
+        el("button", { type: "button", class: "punkt-weg", onclick: () => Routen.vonHier({ lat: o.lat, lon: o.lon, name: o.name }) }, sym("map-pin"), "Route von hier"),
+        el("button", { type: "button", class: "punkt-weg", onclick: () => Routen.zuZiel({ lat: o.lat, lon: o.lon, name: o.name }) }, sym("compass"), "Route hierhin")),
+      el("div", { class: "punkt-knoepfe" },
+        el("button", { type: "button", class: "punkt-weg", onclick: () => box.replaceChildren(ortFormular(o,
+          (w) => {
+            o.name = w.name; o.notiz = w.notiz;
+            if (w.farbe) o.farbe = w.farbe; else delete o.farbe;
+            if (w.kategorie) o.kategorie = w.kategorie; else delete o.kategorie;
+            if (losePopup) { losePopup.remove(); losePopup = null; }
+            meineOrteSpeichern();
+            const m = meineMarker.find(x => x.ort === o);
+            if (m) m.marker.togglePopup();
+          }, ansicht)) }, sym("pencil"), "Bearbeiten"),
+        el("button", { type: "button", class: "punkt-weg", onclick: loeschFrage }, sym("trash-2"), "Löschen")));
+    const loeschFrage = () => box.replaceChildren(el("b", {}, o.name), el("span", {}, "Diesen Ort wirklich löschen?"),
+      el("div", { class: "punkt-knoepfe" },
+        el("button", { type: "button", class: "knopf knopf-klein", onclick: () => { meineOrte = meineOrte.filter(x => x !== o); if (losePopup) { losePopup.remove(); losePopup = null; } meineOrteSpeichern(); } }, "Löschen"),
+        el("button", { type: "button", class: "punkt-weg", onclick: ansicht }, "Abbrechen")));
+    ansicht();
+    return box;
+  }
+
+  function meineOrteZeichnen() {
+    for (const m of meineMarker) m.marker.remove();
+    meineMarker = [];
+    if (karte) {
+      for (const o of meineOrte) {
+        if (!istSichtbar(o)) continue;
+        const marker = new maplibregl.Marker({ color: ortFarbe(o) }).setLngLat([o.lon, o.lat])
+          .setPopup(new maplibregl.Popup({ offset: 24, maxWidth: "340px" }).setDOMContent(meinPopup(o))).addTo(karte);
+        marker.getElement().classList.add("mein-ort");
+        marker.getElement().title = o.name;
+        meineMarker.push({ ort: o, marker });
+      }
+    }
+    // Liste im Kartenfeld
+    const box = $("#meine-orte");
+    box.hidden = !meineOrte.length;
+    if (!meineOrte.length) { box.innerHTML = ""; return; }
+    const sortiert = meineOrte.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));
+    const kats = alleKategorien();
+    let inhalt = [];
+    if (listeAuf) {
+      if (!kats.length) inhalt = sortiert.map(o => meineZeile(o));
+      else {
+        // Gruppen nach Kategorie, Orte ohne Kategorie zuletzt
+        for (const k of kats.concat(sortiert.some(o => !o.kategorie) ? [""] : [])) {
+          const orte = sortiert.filter(o => (o.kategorie || "") === k);
+          const aus = kategorienAus.includes(k);
+          const offen = gruppenOffen.has(k);
+          inhalt.push(el("div", { class: "mein-gruppe" + (aus ? " aus" : "") + (offen ? " offen" : "") },
+            el("button", { type: "button", class: "mein-gruppe-auf", "aria-expanded": String(offen),
+              onclick: () => { if (offen) gruppenOffen.delete(k); else gruppenOffen.add(k); meineOrteZeichnen(); } },
+              sym("chevron-right"), el("span", {}, k || "Ohne Kategorie"), el("small", {}, String(orte.length))),
+            augeKnopf(aus, aus ? "Kategorie wieder zeigen" : "Ganze Kategorie ausblenden", () => {
+              kategorienAus = aus ? kategorienAus.filter(x => x !== k) : kategorienAus.concat([k]);
+              meineOrteSpeichern();
+            })));
+          if (offen) inhalt.push(...orte.map(o => meineZeile(o, aus)));
+        }
+      }
+    }
+    box.replaceChildren(
+      el("button", { type: "button", class: "meine-orte-kopf" + (listeAuf ? " auf" : ""), "aria-expanded": String(listeAuf),
+        onclick: () => { listeAuf = !listeAuf; gruppenOffen.clear(); meineOrteZeichnen(); } }, // beim Öffnen alle Kategorien zu
+        sym("bookmark"), el("span", {}, "Meine Orte"), el("small", {}, String(meineOrte.length)), sym("chevron-down")),
+      listeAuf ? el("div", { class: "ort-treffer meine-liste" }, ...inhalt) : "");
+  }
+
+  // Durchgestrichenes Auge: blassgrau, solange sichtbar; kräftig, wenn ausgeblendet
+  function augeKnopf(aus, titel, klick) {
+    return el("button", { type: "button", class: "auge" + (aus ? " an" : ""), title: titel, "aria-label": titel, "aria-pressed": String(aus),
+      onclick: (e) => { e.stopPropagation(); klick(); } }, sym("eye-off"));
+  }
+
+  // Zeile in der Liste „Meine Orte“: Ort (Klick fliegt hin) und Auge zum Ausblenden
+  function meineZeile(o, kategorieAus) {
+    return el("div", { class: "mein-zeile" + (o.aus || kategorieAus ? " aus" : "") }, meinTreffer(o),
+      augeKnopf(!!o.aus, o.aus ? "Ort wieder zeigen" : "Ort ausblenden", () => {
+        if (o.aus) delete o.aus; else o.aus = true;
+        meineOrteSpeichern();
+      }));
+  }
+
+  function meinTreffer(o) {
+    return el("button", { type: "button", onclick: () => zuMeinemOrt(o) }, farbSym(sym("bookmark"), o), " ", el("b", {}, o.name),
+      o.notiz ? [" ", el("small", {}, o.notiz.length > 60 ? o.notiz.slice(0, 60) + " …" : o.notiz)] : null);
+  }
+
+  function farbSym(s, o) {
+    if (o.farbe) s.style.color = ortFarbe(o);
+    return s;
+  }
+
+  function zuMeinemOrt(o) {
+    $("#ort-treffer").innerHTML = "";
+    karte.flyTo({ center: [o.lon, o.lat], zoom: Math.max(karte.getZoom(), 14), speed: 1.6 });
+    const m = meineMarker.find(x => x.ort === o);
+    if (m && !m.marker.getPopup().isOpen()) m.marker.togglePopup();
+    // Ausgeblendeter Ort: ohne Stecknadel, nur das Fenster an der Stelle zeigen
+    if (!m) {
+      if (losePopup) losePopup.remove();
+      losePopup = new maplibregl.Popup({ maxWidth: "340px" }).setLngLat([o.lon, o.lat]).setDOMContent(meinPopup(o)).addTo(karte);
+    }
   }
 
   // Klick in die Karte (außer beim Routenplanen): Punkt markieren, nächsten Ort nennen.
@@ -366,14 +636,15 @@ const Karten = (() => {
       const nr = ++klickNr;
       const nah = OW.status.orte ? await api("ortnah?lat=" + lat.toFixed(5) + "&lon=" + lon.toFixed(5)).catch(() => null) : null;
       if (nr !== klickNr) return;
-      let titel = "Punkt auf der Karte", text = "am markierten Punkt";
+      let titel = "Punkt auf der Karte", text = "am markierten Punkt", vorschlag = "";
       if (nah && nah.name) {
+        vorschlag = (nah.km < 1 ? "" : "Bei ") + nah.name;
         const km = nah.km.toLocaleString("de-DE", { maximumFractionDigits: nah.km < 10 ? 1 : 0 });
         if (nah.km < 1) { titel = nah.name; text = "bei " + nah.name; }
         else titel = text = km + " km " + nah.richtung + " von " + nah.name;
       }
       // Mit offenem „Sonne und Mond“ zeigt der Kasten den Ort, das Fenster an der Markierung bleibt zu
-      markiere(lat, lon, text, popupText(titel, lat, lon), !Sonne.offen);
+      markiere(lat, lon, text, popupText(titel, lat, lon, nah && nah.stadt, vorschlag), !Sonne.offen, titel);
     }, 250);
   }
 
@@ -670,7 +941,7 @@ const Karten = (() => {
 
   // Hell/Dunkel gewechselt: Kartenstil anpassen
   // (ohne Diff, sonst gehen die Routen-Ebenen verloren; style.load zeichnet die Route neu)
-  function themaGeaendert() { if (karte) karte.setStyle(stil(), { diff: false }); }
+  function themaGeaendert() { if (karte) { karte.setStyle(stil(), { diff: false }); meineOrteZeichnen(); } }
 
-  return { zeigen, sucheOrt, themaGeaendert, punkt, get karte() { return karte; } };
+  return { zeigen, sucheOrt, themaGeaendert, punkt, punktFuerRoute, get karte() { return karte; } };
 })();

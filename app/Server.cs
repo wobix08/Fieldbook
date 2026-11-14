@@ -66,6 +66,9 @@ namespace OfflineWissen
     public class Ort
     {
         public string Name, Alt, Land, Code;
+        // Gemeinde-Schlüssel aus der Ortsliste (DE: admin4, AT/CH: admin3), nur bei bewohnten Orten.
+        // Damit findet ein Stadtteil seine Stadt.
+        public string Gemeinde;
         // Beim Laden einmal vereinfacht (klein, ohne Akzente), damit die Suche nicht bei jedem Tastendruck rechnet
         public string NormName;
         public string[] NormAlt;
@@ -76,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.3.2";
+        public const string Version = "0.8.4";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -119,6 +122,7 @@ namespace OfflineWissen
 
         static List<Ort> orte;
         static readonly object OrteLk = new object();
+        static readonly object MeineOrteLk = new object();
 
         // ------------------------------------------------------------------ Start
 
@@ -457,7 +461,9 @@ namespace OfflineWissen
             {".html","text/html; charset=utf-8"},{".js","text/javascript; charset=utf-8"},{".css","text/css; charset=utf-8"},
             {".json","application/json; charset=utf-8"},{".png","image/png"},{".svg","image/svg+xml"},{".ico","image/x-icon"},
             {".pbf","application/x-protobuf"},{".pmtiles","application/octet-stream"},{".woff2","font/woff2"},{".txt","text/plain; charset=utf-8"},
-            {".md","text/plain; charset=utf-8"},{".jpg","image/jpeg"},{".webp","image/webp"},{".wasm","application/wasm"}
+            {".md","text/plain; charset=utf-8"},{".jpg","image/jpeg"},{".webp","image/webp"},{".wasm","application/wasm"},
+            {".jpeg","image/jpeg"},{".gif","image/gif"},{".pdf","application/pdf"},
+            {".docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document"},{".doc","application/msword"}
         };
 
         static void SendeDatei(HttpListenerContext ctx, string pfad)
@@ -1240,6 +1246,7 @@ namespace OfflineWissen
         // Nur Namen installierter Pakete (Dateiname ohne .zim, so heißen sie auch in Kiwix), keine Pfade
         static bool PdfPaketOk(string buch)
         {
+            if (buch == EigenePaket) return true;   // eigene Unterlagen (daten/eigene), siehe unten
             return !string.IsNullOrEmpty(buch) && Regex.IsMatch(buch, @"^[A-Za-z0-9._-]+$") && File.Exists(Path.Combine(Daten, "wissen", buch + ".zim"));
         }
 
@@ -1301,6 +1308,7 @@ namespace OfflineWissen
         // Lädt den Text eines Pakets (fertig oder teilweise) und hält ihn im Speicher, bis sich die Datei ändert
         static PdfBuch PdfLaden(string buch)
         {
+            if (buch == EigenePaket) return EigeneBuchLaden();
             string f = PdfFertigDatei(buch);
             bool fertig = PdfFertigLesbar(f); // halb geschriebene fertige Datei: lieber die Teil-Datei
             if (!fertig) f = PdfTeilDatei(buch);
@@ -1465,10 +1473,13 @@ namespace OfflineWissen
                 genommen.Add(z);
                 var d = b.Dateien[z[0]];
                 int seite = z[1] + 1;
+                // Eigene Word- und Textdateien haben keine echten Seiten (nur Stücke des Texts): ohne Seitenzahl
+                bool seiten = MitSeiten(buch, d.Datei);
                 erg.Add(new Dictionary<string, object> {
-                    { "titel", d.Titel + ", Seite " + seite },
+                    { "titel", d.Titel + (seiten ? ", Seite " + seite : "") },
                     { "url", "/api/pdftext/seite/" + buch + "/" + z[0] + "/" + seite },
-                    { "pdf", "/kiwix/content/" + buch + "/files/" + Uri.EscapeDataString(d.Datei) + "#page=" + seite },
+                    { "pdf", buch == EigenePaket ? "/api/eigene/datei/" + Uri.EscapeDataString(d.Datei) + (seiten ? "#page=" + seite : "")
+                                                 : "/kiwix/content/" + buch + "/files/" + Uri.EscapeDataString(d.Datei) + "#page=" + seite },
                     { "auszug", PdfAuszug(d.Seiten[z[1]], woerter) },
                     { "punkte", Math.Round(kv.Key, 2) } });
                 if (erg.Count >= max) break;
@@ -1518,7 +1529,7 @@ namespace OfflineWissen
             if (b == null || di < 0 || di >= b.Dateien.Count || seite < 1 || seite > b.Dateien[di].Seiten.Length) { SendeText(ctx, 404, "Nicht gefunden"); return; }
             var d = b.Dateien[di];
             var html = new StringBuilder("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>");
-            string titel = WebUtility.HtmlEncode(d.Titel + ", Seite " + seite);
+            string titel = WebUtility.HtmlEncode(d.Titel + (MitSeiten(t[0], d.Datei) ? ", Seite " + seite : ""));
             html.Append(titel).Append("</title></head><body><h1>").Append(titel).Append("</h1>");
             for (int s = seite; s <= Math.Min(seite + 1, d.Seiten.Length); s++)
                 foreach (var a in PdfAbsaetze(d.Seiten[s - 1])) html.Append("<p>").Append(WebUtility.HtmlEncode(a)).Append("</p>");
@@ -1528,6 +1539,225 @@ namespace OfflineWissen
             ctx.Response.AddHeader("Cache-Control", "no-store");
             ctx.Response.ContentLength64 = bytes.Length;
             ctx.Response.OutputStream.Write(bytes, 0, bytes.Length);
+        }
+
+        // ------------------------------------------------------------------ Eigene Unterlagen
+        // Eigene Dateien (Anleitungen, Pläne, Fotos) liegen in daten/eigene und wandern mit dem Ordner mit.
+        // Man legt sie über die Bibliothek ab (Hochladen) oder direkt mit dem Explorer. Den Text von PDF, Word und
+        // Textdateien liest die Seite einmal aus (wie bei den PDF-Büchern) und schickt ihn hierher; er steht in
+        // daten/cache/eigene-texte.json, je Datei mit einer Kennung aus Größe und Änderungszeit. Ändert sich die
+        // Datei, wird neu ausgelesen. Suche und KI laufen über PdfSuche/PdfSeite mit dem Namen "eigene".
+
+        const string EigenePaket = "eigene";
+        static string EigeneOrdner { get { return Path.Combine(Daten, "eigene"); } }
+        static string EigeneTexteDatei { get { return Path.Combine(Daten, "cache", "eigene-texte.json"); } }
+        static readonly string[] EigeneEndungen = { ".pdf", ".docx", ".doc", ".txt", ".md", ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        static readonly string[] EigeneMitText = { ".pdf", ".docx", ".txt", ".md" };
+        static readonly object EigeneLk = new object();
+
+        // Nur PDFs haben echte Seiten; bei Word und Text sind die "Seiten" Stücke des Texts
+        static bool MitSeiten(string buch, string datei)
+        {
+            return buch != EigenePaket || datei.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+        }
+
+        static string EigeneKennung(FileInfo f) { return f.Length + "-" + f.LastWriteTimeUtc.Ticks; }
+
+        // Pfad zu einer eigenen Datei: nur ein Dateiname (kein Ordner), nicht versteckt, bekannte Endung
+        static string EigenePfad(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name) || name != Path.GetFileName(name) || name.StartsWith(".") ||
+                name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return null;
+            if (!EigeneEndungen.Contains(Path.GetExtension(name).ToLowerInvariant())) return null;
+            return Path.Combine(EigeneOrdner, name);
+        }
+
+        static List<FileInfo> EigeneDateien()
+        {
+            if (!Directory.Exists(EigeneOrdner)) return new List<FileInfo>();
+            return new DirectoryInfo(EigeneOrdner).GetFiles()
+                .Where(f => EigenePfad(f.Name) != null && (f.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0)
+                .OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        }
+
+        // Ausgelesene Texte: Dateiname → { kennung, seiten }
+        static Dictionary<string, object> EigeneTexte()
+        {
+            var d = LadeJson(EigeneTexteDatei);
+            var t = d != null && d.ContainsKey("dateien") ? d["dateien"] as Dictionary<string, object> : null;
+            return t ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        static Dictionary<string, object> EigeneListe()
+        {
+            var liste = new List<object>();
+            lock (EigeneLk)
+            {
+                var texte = EigeneTexte();
+                foreach (var f in EigeneDateien())
+                {
+                    string ext = f.Extension.ToLowerInvariant();
+                    object o;
+                    var t = texte.TryGetValue(f.Name, out o) ? o as Dictionary<string, object> : null;
+                    bool fertig = t != null && Str(t, "kennung") == EigeneKennung(f);
+                    liste.Add(new Dictionary<string, object> {
+                        { "datei", f.Name }, { "groesse", f.Length }, { "geaendert", f.LastWriteTime.ToString("s") },
+                        { "kennung", EigeneKennung(f) },
+                        // Text fehlt noch (oder die Datei hat sich geändert): die Seite liest ihn aus
+                        { "auslesen", EigeneMitText.Contains(ext) && !fertig },
+                        { "text", fertig && Arr(t, "seiten").Any(s => !string.IsNullOrWhiteSpace(s as string)) } });
+                }
+            }
+            return new Dictionary<string, object> { { "dateien", liste } };
+        }
+
+        // Text einer Datei speichern ({datei, kennung, seiten}); Einträge gelöschter Dateien fallen dabei weg
+        static Dictionary<string, object> EigeneTextSpeichern(Dictionary<string, object> b)
+        {
+            string pfad = EigenePfad(Str(b, "datei"));
+            if (pfad == null || !File.Exists(pfad)) return new Dictionary<string, object> { { "fehler", "Datei nicht gefunden." } };
+            var fi = new FileInfo(pfad);
+            // Inzwischen geändert: nicht speichern, die Seite liest beim nächsten Mal neu aus
+            if (Str(b, "kennung") != EigeneKennung(fi)) return new Dictionary<string, object> { { "ok", false } };
+            lock (EigeneLk)
+            {
+                var texte = EigeneTexte();
+                var da = new HashSet<string>(EigeneDateien().Select(f => f.Name), StringComparer.OrdinalIgnoreCase);
+                var neu = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                foreach (var kv in texte) if (da.Contains(kv.Key) && !string.Equals(kv.Key, fi.Name, StringComparison.OrdinalIgnoreCase)) neu[kv.Key] = kv.Value;
+                neu[fi.Name] = new Dictionary<string, object> { { "kennung", EigeneKennung(fi) }, { "seiten", Arr(b, "seiten").Select(x => x as string ?? "").ToArray() } };
+                Directory.CreateDirectory(Path.GetDirectoryName(EigeneTexteDatei));
+                SicherSchreiben(EigeneTexteDatei, Json.Serialize(new Dictionary<string, object> { { "dateien", neu } }));
+            }
+            return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        // Alle aktuellen Texte als ein "Buch" für die Suche (Titel = Dateiname ohne Endung)
+        static PdfBuch EigeneBuchLaden()
+        {
+            if (!File.Exists(EigeneTexteDatei)) return null;
+            DateTime stand = File.GetLastWriteTimeUtc(EigeneTexteDatei);
+            if (Directory.Exists(EigeneOrdner)) { var s = Directory.GetLastWriteTimeUtc(EigeneOrdner); if (s > stand) stand = s; }
+            lock (PdfLk)
+            {
+                PdfBuch b;
+                if (pdfBuecher.TryGetValue(EigenePaket, out b) && b.Stand == stand) return b;
+                b = new PdfBuch { Stand = stand };
+                Dictionary<string, object> texte;
+                List<FileInfo> dateien;
+                lock (EigeneLk) { texte = EigeneTexte(); dateien = EigeneDateien(); }
+                long zeichen = 0, seiten = 0;
+                foreach (var f in dateien)
+                {
+                    object o;
+                    var t = texte.TryGetValue(f.Name, out o) ? o as Dictionary<string, object> : null;
+                    if (t == null || Str(t, "kennung") != EigeneKennung(f)) continue;
+                    var s = Arr(t, "seiten").Select(x => x as string ?? "").ToArray();
+                    b.Dateien.Add(new PdfDatei { Datei = f.Name, Titel = Path.GetFileNameWithoutExtension(f.Name), Seiten = s });
+                    foreach (var x in s) zeichen += x.Length;
+                    seiten += s.Length;
+                }
+                if (seiten > 0) b.Schnitt = Math.Max(1.0, (double)zeichen / seiten);
+                pdfBuecher[EigenePaket] = b;
+                return b;
+            }
+        }
+
+        // Dateinamen säubern: keine Ordner, keine verbotenen Zeichen, nicht mit Punkt beginnen
+        static string EigenerName(string name)
+        {
+            name = Path.GetFileName((name ?? "").Replace('/', '\\').Split('\\').Last()).Trim();
+            foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
+            return name.TrimStart('.', ' ').TrimEnd('.', ' ');
+        }
+
+        // Freier Name im Ordner: "Plan.pdf", sonst "Plan (2).pdf" usw.
+        static string EigenerFreierName(string name)
+        {
+            string ohne = Path.GetFileNameWithoutExtension(name), ext = Path.GetExtension(name);
+            string kandidat = name;
+            for (int i = 2; File.Exists(Path.Combine(EigeneOrdner, kandidat)); i++) kandidat = ohne + " (" + i + ")" + ext;
+            return kandidat;
+        }
+
+        // Datei hochladen: der Rumpf ist die Datei selbst, der Name steht in ?name=
+        static Dictionary<string, object> EigeneHochladen(HttpListenerContext ctx, string name)
+        {
+            name = EigenerName(name);
+            if (Path.GetFileNameWithoutExtension(name).Length == 0) return new Dictionary<string, object> { { "fehler", "Der Dateiname fehlt." } };
+            if (!EigeneEndungen.Contains(Path.GetExtension(name).ToLowerInvariant()))
+                return new Dictionary<string, object> { { "fehler", "Diese Dateiart kann Fieldbook nicht anzeigen." } };
+            Directory.CreateDirectory(EigeneOrdner);
+            string tmp = Path.Combine(EigeneOrdner, "." + Guid.NewGuid().ToString("N") + ".part");
+            try
+            {
+                using (var fs = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write))
+                    ctx.Request.InputStream.CopyTo(fs, 65536);
+                string ziel;
+                lock (EigeneLk)
+                {
+                    ziel = EigenerFreierName(name);
+                    File.Move(tmp, Path.Combine(EigeneOrdner, ziel));
+                }
+                // Ohne Dateinamen: Logs können mit einer Rückmeldung verschickt werden, die Namen sind privat
+                Log("Eigene Unterlage hinzugefügt (" + Path.GetExtension(ziel).ToLowerInvariant() + ").");
+                return new Dictionary<string, object> { { "ok", true }, { "datei", ziel } };
+            }
+            catch (Exception e)
+            {
+                try { File.Delete(tmp); } catch { }
+                Log("Eigene Unterlage hochladen: " + e.GetType().Name);
+                return new Dictionary<string, object> { { "fehler", "Die Datei ließ sich nicht speichern." }, { "technisch", e.Message } };
+            }
+        }
+
+        // Umbenennen ({datei, neu}): die Endung bleibt, der Text wandert mit
+        static Dictionary<string, object> EigeneUmbenennen(Dictionary<string, object> b)
+        {
+            string alt = EigenePfad(Str(b, "datei"));
+            if (alt == null || !File.Exists(alt)) return new Dictionary<string, object> { { "fehler", "Datei nicht gefunden." } };
+            string ext = Path.GetExtension(alt);
+            string neu = EigenerName(Str(b, "neu"));
+            if (neu.EndsWith(ext, StringComparison.OrdinalIgnoreCase)) neu = neu.Substring(0, neu.Length - ext.Length).TrimEnd('.', ' ');
+            if (neu.Length == 0) return new Dictionary<string, object> { { "fehler", "Bitte einen Namen eingeben." } };
+            neu += ext;
+            string altName = Path.GetFileName(alt);
+            if (neu == altName) return new Dictionary<string, object> { { "ok", true }, { "datei", neu } };
+            lock (EigeneLk)
+            {
+                // Nur Groß-/Kleinschreibung geändert: unter Windows dieselbe Datei, das ist erlaubt
+                if (File.Exists(Path.Combine(EigeneOrdner, neu)) && !string.Equals(neu, altName, StringComparison.OrdinalIgnoreCase))
+                    return new Dictionary<string, object> { { "fehler", "Es gibt schon eine Datei mit diesem Namen." } };
+                try { File.Move(alt, Path.Combine(EigeneOrdner, neu)); }
+                catch (Exception e) { return new Dictionary<string, object> { { "fehler", "Umbenennen ging nicht. Ist die Datei gerade in einem anderen Programm offen?" }, { "technisch", e.Message } }; }
+                try
+                {
+                    var texte = EigeneTexte();
+                    object t;
+                    if (texte.TryGetValue(altName, out t))
+                    {
+                        var kopie = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var kv in texte) if (!string.Equals(kv.Key, altName, StringComparison.OrdinalIgnoreCase)) kopie[kv.Key] = kv.Value;
+                        kopie[neu] = t;
+                        SicherSchreiben(EigeneTexteDatei, Json.Serialize(new Dictionary<string, object> { { "dateien", kopie } }));
+                    }
+                }
+                catch { }
+            }
+            return new Dictionary<string, object> { { "ok", true }, { "datei", neu } };
+        }
+
+        static Dictionary<string, object> EigeneLoeschen(Dictionary<string, object> b)
+        {
+            string pfad = EigenePfad(Str(b, "datei"));
+            if (pfad == null || !File.Exists(pfad)) return new Dictionary<string, object> { { "fehler", "Datei nicht gefunden." } };
+            lock (EigeneLk)
+            {
+                try { File.Delete(pfad); }
+                catch (Exception e) { return new Dictionary<string, object> { { "fehler", "Löschen ging nicht. Ist die Datei gerade in einem anderen Programm offen?" }, { "technisch", e.Message } }; }
+            }
+            Log("Eigene Unterlage gelöscht (" + Path.GetExtension(pfad).ToLowerInvariant() + ").");
+            return new Dictionary<string, object> { { "ok", true } };
         }
 
         static void SendeText(HttpListenerContext ctx, int code, string text)
@@ -1575,8 +1805,38 @@ namespace OfflineWissen
             }
             Func<string, string> Q = k => q.ContainsKey(k) ? q[k] : null;
             if (was.StartsWith("pdftext/seite/")) { PdfSeite(ctx, was.Substring(14)); return; }
+            if (was.StartsWith("eigene/datei/"))
+            {
+                // Name aus RawUrl selbst entschlüsseln (wie bei Kiwix: "%25" darf nicht vorher zu "%" werden)
+                string roh = ctx.Request.RawUrl ?? "";
+                int i = roh.IndexOf("/eigene/datei/", StringComparison.Ordinal);
+                string n = i < 0 ? "" : roh.Substring(i + 14);
+                int ende = n.IndexOfAny(new[] { '?', '#' });
+                if (ende >= 0) n = n.Substring(0, ende);
+                string name;
+                try { name = Uri.UnescapeDataString(n); } catch { name = null; }
+                SendeDatei(ctx, EigenePfad(name));
+                return;
+            }
             switch (was)
             {
+                // Eigene Unterlagen (Bibliothek): Liste, Hochladen, ausgelesener Text, Umbenennen, Löschen, Ordner zeigen
+                case "eigene": SendeJson(ctx, EigeneListe()); return;
+                case "eigene/hochladen":
+                    if (ctx.Request.HttpMethod != "POST") { SendeText(ctx, 405, "Nur POST"); return; }
+                    SendeJson(ctx, EigeneHochladen(ctx, Q("name"))); return;
+                case "eigene/text": SendeJson(ctx, EigeneTextSpeichern(LeseBody(ctx))); return;
+                case "eigene/umbenennen": SendeJson(ctx, EigeneUmbenennen(LeseBody(ctx))); return;
+                case "eigene/loeschen": SendeJson(ctx, EigeneLoeschen(LeseBody(ctx))); return;
+                case "eigene/ordner":
+                    try
+                    {
+                        Directory.CreateDirectory(EigeneOrdner);
+                        Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe"), "\"" + EigeneOrdner + "\"") { UseShellExecute = false });
+                        SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                    }
+                    catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Der Ordner ließ sich nicht öffnen." }, { "technisch", e.Message } }); }
+                    return;
                 case "pdftext/stand": SendeJson(ctx, PdfStand(Q("buch"))); return;
                 case "pdftext/speichern": SendeJson(ctx, PdfSpeichern(LeseBody(ctx))); return;
                 case "pdftext/suche":
@@ -1605,6 +1865,33 @@ namespace OfflineWissen
                 case "orte": SendeJson(ctx, OrteSuchen(Q("q") ?? "", 25)); return;
                 case "ortsnamen": SendeJson(ctx, OrteImAusschnitt(Q("bbox"), Q("stufe"))); return;
                 case "ortnah": SendeJson(ctx, OrtNah(Q("lat"), Q("lon"))); return;
+                // Eigene Orte auf der Karte: ganze Liste lesen bzw. ersetzen (daten/orte/meine-orte.json)
+                case "meineorte":
+                    {
+                        string datei = Path.Combine(Daten, "orte", "meine-orte.json");
+                        if (ctx.Request.HttpMethod == "POST")
+                        {
+                            var b = LeseBody(ctx);
+                            var liste = b.ContainsKey("orte") ? b["orte"] as System.Collections.IList : null;
+                            if (liste == null) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Ungültige Liste." } }); return; }
+                            try
+                            {
+                                // "kategorienAus": ausgeblendete Kategorien (Namen)
+                                var aus = b.ContainsKey("kategorienAus") ? b["kategorienAus"] as System.Collections.IList : null;
+                                lock (MeineOrteLk) SicherSchreiben(datei, Json.Serialize(new Dictionary<string, object> { { "orte", liste }, { "kategorienAus", aus ?? (System.Collections.IList)new object[0] } }));
+                                SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                            }
+                            catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Die Orte ließen sich nicht speichern." }, { "technisch", e.Message } }); }
+                            return;
+                        }
+                        object d;
+                        lock (MeineOrteLk) d = LadeJsonRoh(datei);
+                        var dd = d as Dictionary<string, object>;
+                        SendeJson(ctx, new Dictionary<string, object> {
+                            { "orte", dd != null && dd.ContainsKey("orte") && dd["orte"] != null ? dd["orte"] : new object[0] },
+                            { "kategorienAus", dd != null && dd.ContainsKey("kategorienAus") && dd["kategorienAus"] != null ? dd["kategorienAus"] : new object[0] } });
+                        return;
+                    }
                 case "ifixit": SendeJson(ctx, Ifixit(Q("buch"), Q("pfad") ?? "")); return;
                 case "artikelliste": SendeJson(ctx, Artikelliste(Q("buch"))); return;
                 case "internet": SendeJson(ctx, InternetDa(Q("url"))); return;
@@ -5772,7 +6059,11 @@ namespace OfflineWissen
                 string java = ProgrammPfad("java"), jar = ProgrammPfad("brouter");
                 if (rd5.Length == 0 || java == null || jar == null) return;
                 string profile = Path.Combine(Path.GetDirectoryName(jar), "profiles2");
-                string args = "-Xmx512m -Xms64m -Xss16m -cp \"" + jar + "\" btools.server.RouteServer \"" + routen + "\" \"" + profile + "\" \"" + Path.Combine(routen, "profile") + "\" " + RoutePort + " 4 127.0.0.1";
+                // maxRunningTime: BRouter bricht sonst nach 60 s ab; Wuppertal–Nordschweden mit dem Auto braucht gut 2 Minuten,
+                // auf schwachen Laptops mehr.
+                // Nur eine Berechnung gleichzeitig: Eine neue Anfrage bricht die laufende ab. So rechnet eine verworfene
+                // Route nicht minutenlang weiter (routen.js schickt beim Abbrechen eine Mini-Anfrage hinterher).
+                string args = "-DmaxRunningTime=600 -Xmx512m -Xms64m -Xss16m -cp \"" + jar + "\" btools.server.RouteServer \"" + routen + "\" \"" + profile + "\" \"" + Path.Combine(routen, "profile") + "\" " + RoutePort + " 1 127.0.0.1";
                 // Für die Routenplanung gibt es keine Fehleranzeige; sie bleibt dann aus ("nicht eingerichtet")
                 try { brouter = StarteDienst(java, args, Path.Combine(Logs, "routen.log")); }
                 catch (Exception e) { brouter = null; Log("Routenplanung konnte nicht starten (oft blockiert ein Virenscanner das Programm): " + e.Message); return; }
@@ -6407,6 +6698,15 @@ namespace OfflineWissen
                         if (!double.TryParse(c[4], NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
                             || !double.TryParse(c[5], NumberStyles.Float, CultureInfo.InvariantCulture, out lon)) continue;
                         string alt = (kl == 'P' || kl == 'T' || kl == 'H') ? c[3] : "";
+                        // Einige Großstädte stehen in der Ortsliste englisch: deutschen Namen zeigen,
+                        // der englische bleibt suchbar
+                        string name = c[1];
+                        if (kl == 'P')
+                        {
+                            string deutsch = name == "Munich" ? "München" : name == "Nuremberg" ? "Nürnberg"
+                                : name == "Vienna" ? "Wien" : name == "Geneva" ? "Genf" : null;
+                            if (deutsch != null && (c[8] == "DE" || c[8] == "AT" || c[8] == "CH")) { alt = name + "," + alt; name = deutsch; }
+                        }
                         string[] normAlt = null;
                         if (alt.Length > 0)
                         {
@@ -6416,10 +6716,17 @@ namespace OfflineWissen
                         }
                         var o = new Ort
                         {
-                            Name = c[1], NormName = Norm(c[1]), Alt = alt, NormAlt = normAlt,
+                            Name = name, NormName = Norm(name), Alt = alt, NormAlt = normAlt,
                             Lat = lat, Lon = lon,
                             Klasse = kl, Code = teilen(c[7]), Land = teilen(c[8]), Pop = pop
                         };
+                        if (kl == 'P')
+                        {
+                            string gem = c[13].Length > 0 ? c[13] : c[12];
+                            // Wien ist Land und Gemeinde zugleich, die Bezirke haben eigene Schlüssel
+                            if (c[8] == "AT" && c[10] == "09") gem = "Wien";
+                            if (gem.Length > 0) o.Gemeinde = teilen(c[8] + "|" + c[10] + "|" + c[11] + "|" + gem);
+                        }
                         liste.Add(o);
                     }
                 }
@@ -6565,6 +6872,23 @@ namespace OfflineWissen
             erg["name"] = treffer.Name;
             erg["km"] = Math.Round(km, 1);
             erg["richtung"] = richtungen[stufe];
+            // Stadt bzw. Gemeinde dazu: der größte Ort mit demselben Gemeinde-Schlüssel (Stadtteile ausgenommen).
+            // Nur wenn er anders heißt als der nächste Ort, sonst stünde derselbe Name zweimal da.
+            if (treffer.Gemeinde != null)
+            {
+                Ort haupt = null;
+                long besterWert = -1;
+                foreach (var ort in LadeOrte())
+                {
+                    if (ort.Gemeinde != treffer.Gemeinde) continue;
+                    string c = ort.Code;
+                    if (c == "PPLX" || c == "PPLQ" || c == "PPLW" || c == "PPLH" || c == "PPLCH" || c == "PPLR") continue;
+                    long rang = c == "PPLC" ? 5 : c == "PPLA" ? 4 : c == "PPLA2" ? 3 : c == "PPLA3" ? 2 : c == "PPLA4" ? 1 : 0;
+                    long wert = ort.Pop * 10 + rang;
+                    if (wert > besterWert) { besterWert = wert; haupt = ort; }
+                }
+                if (haupt != null && besterWert > 0 && haupt.Name != treffer.Name) erg["stadt"] = haupt.Name;
+            }
             return erg;
         }
 
@@ -6631,7 +6955,7 @@ namespace OfflineWissen
         static Dictionary<string, object> ZuletztMerken(Dictionary<string, object> b)
         {
             string url = Str(b, "url"), titel = Str(b, "titel");
-            if (string.IsNullOrEmpty(url) || !url.StartsWith("/kiwix/") || string.IsNullOrEmpty(titel))
+            if (string.IsNullOrEmpty(url) || !(url.StartsWith("/kiwix/") || url.StartsWith("/api/eigene/datei/")) || string.IsNullOrEmpty(titel))
                 return new Dictionary<string, object> { { "fehler", "Ungültiger Eintrag." } };
             var neu = new Dictionary<string, object> {
                 { "url", url.Length > 2000 ? url.Substring(0, 2000) : url },

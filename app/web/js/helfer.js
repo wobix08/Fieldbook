@@ -681,7 +681,7 @@ const Kiwix = {
 
   // Titelvorschläge (schnell, für exakte Artikelnamen); signal optional, sonst Frist 15 s
   async vorschlaege(buch, begriff, anzahl, signal) {
-    if (OW.status && OW.status.pdfTexte && buch.id in OW.status.pdfTexte) return [];   // PDF-Bücher: siehe suche()
+    if (buch.eigene || (OW.status && OW.status.pdfTexte && buch.id in OW.status.pdfTexte)) return [];   // PDF-Bücher: siehe suche()
     const q = "term=" + encodeURIComponent(begriff) + "&count=" + (anzahl || 5);
     signal = Kiwix._frist(signal);
     // Variante 0 = content, 1 = books.name
@@ -704,7 +704,8 @@ const Kiwix = {
     signal = Kiwix._frist(signal);
     // PDF-Bücher (z. B. Medizin-Handbücher): Kiwix findet darin nichts, gesucht wird im ausgelesenen Text
     const pdf = OW.status && OW.status.pdfTexte;
-    if (pdf && buch.id in pdf) {
+    // Eigene Unterlagen (js/eigene.js) genauso, ihr Text liegt unter dem Namen „eigene“
+    if (buch.eigene || (pdf && buch.id in pdf)) {
       const r = await fetch("/api/pdftext/suche?buch=" + encodeURIComponent(buch.id) + "&q=" + encodeURIComponent(begriff) + "&n=" + (anzahl || 5), { signal });
       if (!r.ok) return [];
       return (await r.json()).map(t => Object.assign(t, { buch }));

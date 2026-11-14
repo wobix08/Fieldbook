@@ -12,6 +12,7 @@ die ihre eigenen Lizenzen haben.
 | [SunCalc](https://github.com/mourner/suncalc) 1.9.0 (Sonnenauf- und -untergang, Dämmerung und Mondphase auf der Karte) | BSD-2-Clause (`LICENSE-suncalc.txt`) |
 | [Protomaps Basemaps](https://github.com/protomaps/basemaps) 5.7.2 | BSD-3-Clause (`LICENSE-basemaps.txt`) |
 | [pdf.js](https://github.com/mozilla/pdf.js) 4.10.38 (PDF-Leser und Text aus PDF-Büchern für die KI, in `vendor/pdfjs`) | Apache-2.0 (`LICENSE-pdfjs.txt`) |
+| [mammoth.js](https://github.com/mwilliamson/mammoth.js) 1.8.0 (zeigt eigene Word-Dateien an und liest ihren Text für Suche und KI aus, `vendor/mammoth.browser.min.js`) | BSD-2-Clause (`LICENSE-mammoth.txt`) |
 | [Lucide](https://lucide.dev) 0.460.0 (Symbole, als `app/web/symbole.svg`) | ISC (`LICENSE-lucide.txt`) |
 | [franc](https://github.com/wooorm/franc) 6.2.0 mit trigram-utils, n-gram und collapse-white-space (erkennt im Sprechmodus die Sprache eines Satzes, in `vendor/franc`) | MIT (`LICENSE-franc.txt`) |
 | [Barlow Semi Condensed](https://github.com/jpt/barlow) (Schrift für Überschriften, in `app/web/schrift`) | SIL Open Font License 1.1 (`schrift/LICENSE-barlow.txt`) |

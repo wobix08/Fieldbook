@@ -32,7 +32,10 @@ const Bibliothek = (() => {
         clearTimeout(startTimer);
         if (!s.bibliothekFehler) startTimer = setTimeout(async () => { if (location.hash.startsWith("#bibliothek")) { OW.buecher = null; await aktualisiereStatus(); zeigen(params); } }, 3000);
       } else regal.append(el("div", { class: "karte-box" }, "Es ist noch keine Bibliothek installiert. ", el("a", { href: "#inhalte?zu=wissen" }, "Wissen unter „Inhalte“ laden")));
-      $("#bib-treffer").innerHTML = "";
+      // Eigene Unterlagen gehen auch ohne Pakete
+      eigeneZeile(regal);
+      if (q) suchen(q).catch(() => { });
+      else $("#bib-treffer").innerHTML = "";
       return;
     }
     if (q) {
@@ -86,7 +89,7 @@ const Bibliothek = (() => {
     if (params.get("kat")) offen.add("k:" + params.get("kat"));
     if (p) offen.add("k:" + (p.kategorien[0] || "sonstiges"));
     if (params.get("q")) kopf.append(el("h2", {}, "Kategorien"));
-    else zuletztZeile(regal, buecher);
+    else { zuletztZeile(regal, buecher); eigeneZeile(regal); }
     for (const kat of kategorien()) {
       const pakete = buecher.filter(x => x.kategorien[0] === kat.id);
       if (!pakete.length) continue;
@@ -105,11 +108,12 @@ const Bibliothek = (() => {
     const platz = el("div", { class: "zuletzt-platz" });
     regal.append(platz);
     const lauf = ++zuletztLauf;
-    let liste;
-    try { liste = (await api("zuletzt")).liste || []; } catch { return; }
+    let liste, eigene;
+    try { [liste, eigene] = await Promise.all([api("zuletzt").then(r => r.liste || []), Eigene.liste().catch(() => [])]); } catch { return; }
     if (lauf !== zuletztLauf) return;
-    // Nur Einträge aus Paketen, die noch installiert sind
-    const eintraege = liste.map(e => ({ e, b: buecher.find(x => x.id === e.paket) })).filter(x => x.b);
+    // Nur Einträge aus Paketen, die noch installiert sind, und eigene Dateien, die es noch gibt
+    const eigeneDa = new Set(eigene.map(d => Eigene.url(d.datei)));
+    const eintraege = liste.map(e => ({ e, b: e.paket === "eigene" ? (eigeneDa.has(e.url) ? Eigene.BUCH : null) : buecher.find(x => x.id === e.paket) })).filter(x => x.b);
     if (!eintraege.length) { platz.remove(); offen.delete("zuletzt"); return; }
     const leeren = el("button", { type: "button", class: "knopf knopf-klein zuletzt-leeren", onclick: async () => {
       try { await api("zuletzt/leeren", {}); } catch { return; }
@@ -124,14 +128,59 @@ const Bibliothek = (() => {
     platz.replaceWith(box);
   }
   function zuletztEintrag(e, b) {
-    const href = e.pdf
+    const href = b.eigene ? Eigene.linkVon(e.url, e.seite) : e.pdf
       ? "#pdf?url=" + encodeURIComponent(e.url) + (e.seite ? "&seite=" + e.seite : "") + "&titel=" + encodeURIComponent(e.titel)
       : "#lesen?url=" + encodeURIComponent(e.url) + "&titel=" + encodeURIComponent(b.titel);
     return el("a", { class: "eintrag paket-zeile", href },
-      el("img", { class: "e-bild", src: b.bild || "icon.svg", alt: "", loading: "lazy" }),
+      paketBild(b),
       el("span", { class: "e-text" }, el("b", {}, e.titel), el("small", {}, b.titel + (e.pdf && e.seite ? " · Seite " + e.seite : ""))),
       el("span", { class: "paket-pfeil", "aria-hidden": "true" }));
   }
+  // Bild eines Pakets; die eigenen Unterlagen haben stattdessen ein Ordner-Symbol
+  const paketBild = (b) => b.eigene ? symFeld("folder-open")
+    : el("img", { class: "e-bild", src: b.bild || "icon.svg", alt: "", loading: "lazy" });
+
+  // „Eigene Unterlagen“: immer da (auch leer), damit man sieht, dass es das gibt. Inhalt in js/eigene.js
+  function eigeneZeile(regal) {
+    const zahl = el("span", { class: "e-zahl" });
+    const setzen = (n) => { zahl.textContent = n === 1 ? "1 Datei" : n ? n + " Dateien" : ""; };
+    const box = klappe("eigene", "klapp-kat eigene-box",
+      [symFeld("folder-open", "gross"),
+       el("span", { class: "e-text" }, el("b", {}, "Eigene Unterlagen"), el("small", {}, "Deine eigenen Dateien: Anleitungen, Pläne, Fotos")),
+       zahl],
+      () => Eigene.inhalt(setzen));
+    regal.append(box);
+    Eigene.liste().then(l => setzen(l.length)).catch(() => { });
+    return box;
+  }
+
+  // Dateien in die Bibliothek ziehen: landen in den eigenen Unterlagen (die Zeile klappt dafür auf)
+  (function ablegenErlauben() {
+    const sek = document.querySelector('.ansicht[data-ansicht="bibliothek"]');
+    let tiefe = 0;
+    const mitDateien = (e) => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
+    sek.addEventListener("dragenter", (e) => { if (!mitDateien(e)) return; e.preventDefault(); tiefe++; sek.classList.add("ablegen"); });
+    sek.addEventListener("dragover", (e) => { if (!mitDateien(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+    sek.addEventListener("dragleave", () => { if (--tiefe <= 0) { tiefe = 0; sek.classList.remove("ablegen"); } });
+    sek.addEventListener("drop", (e) => {
+      if (!mitDateien(e)) return;
+      e.preventDefault();
+      tiefe = 0; sek.classList.remove("ablegen");
+      const dateien = [...e.dataTransfer.files];
+      if (!dateien.length) return;
+      // Bei einer Suche ist die Zeile nicht da: zur Übersicht wechseln
+      let box = $("#regal .eigene-box");
+      if (!box) { offen.clear(); offen.add("eigene"); location.hash = "#bibliothek"; }
+      else if (!box.classList.contains("auf")) box.querySelector(".klapp-kopf").click();
+      setTimeout(() => {
+        const liste = $("#regal .eigene-liste");
+        Eigene.hochladen(dateien, liste && liste._meldung);
+      }, 50);
+    });
+    // Daneben fallen gelassene Dateien nicht im Browser öffnen (das würde Fieldbook verlassen)
+    window.addEventListener("dragover", (e) => { if (mitDateien(e)) e.preventDefault(); });
+    window.addEventListener("drop", (e) => { if (mitDateien(e)) e.preventDefault(); });
+  })();
 
   // Link ins Lesefenster; extra z. B. "&zufall=1" oder "&suche=…"
   const leseLink = (b, pfad, titel, extra) =>
@@ -153,6 +202,8 @@ const Bibliothek = (() => {
   const pdfSucheLink = (id, q) => "#bibliothek?q=" + encodeURIComponent(q) + "&buch=" + encodeURIComponent(id);
   // Treffer öffnen im Lesefenster, Stellen aus PDF-Büchern im PDF-Leser auf der gefundenen Seite
   function trefferLink(t) {
+    const eigene = Eigene.linkVon(t.pdf || t.url);
+    if (eigene) return eigene;
     const pdf = t.pdf && t.pdf.match(/^([^#]+)#page=(\d+)$/);
     if (pdf) return "#pdf?url=" + encodeURIComponent(pdf[1]) + "&seite=" + pdf[2] + "&titel=" + encodeURIComponent(t.titel.replace(/, Seite \d+$/, ""));
     return "#lesen?url=" + encodeURIComponent(t.url) + "&titel=" + encodeURIComponent(t.titel);
@@ -200,16 +251,22 @@ const Bibliothek = (() => {
     const ziel = $("#bib-treffer");
     const mein = ++suchLauf;                   // überholte Suchen werfen ihr Ergebnis weg
     ziel.innerHTML = '<p class="hinweis">Suche …</p>';
-    let buecher = (await Kiwix.buecher()).filter(b => b.durchsuchen);
+    let [buecher, eigene] = await Promise.all([Kiwix.buecher().catch(() => []), Eigene.liste().catch(() => [])]);
+    buecher = buecher.filter(b => b.durchsuchen);
     if (mein !== suchLauf) return;
+    // Eigene Unterlagen mit durchsuchen, nicht bei der Suche in einem Paket
     if (nurBuch) buecher = buecher.filter(b => b.id === nurBuch);
+    else if (eigene.length) buecher = [Eigene.BUCH].concat(buecher);
     // Mehr holen als gezeigt wird: Der Filter unten wirft schwache Treffer weg
     const anzahl = nurBuch ? 20 : 8;
     const woerter = suchWoerter(q);
+    // Eigene Dateien auch nach ihrem Namen finden (Bilder haben nur den Namen)
+    const nachName = (b) => b.eigene ? eigene.filter(d => passt(woerter, { titel: Eigene.ohneEndung(d.datei) }) === 2)
+      .map(d => ({ titel: Eigene.ohneEndung(d.datei), url: Eigene.url(d.datei), pdf: Eigene.url(d.datei), buch: b })) : null;
     // Zählen, wie viele Abfragen scheitern: scheitern alle, ist das kein „keine Treffer“
     let fehlgeschlagen = 0;
     const gruppen = await Promise.all(buecher.map(async b => {
-      const [titel, voll] = await Promise.all([Kiwix.vorschlaege(b, q, anzahl).catch(() => { fehlgeschlagen++; return []; }),
+      const [titel, voll] = await Promise.all([nachName(b) || Kiwix.vorschlaege(b, q, anzahl).catch(() => { fehlgeschlagen++; return []; }),
         Kiwix.suche(b, q, anzahl).catch(() => { fehlgeschlagen++; return []; })]);
       const gesehen = new Set();
       const liste = [];
@@ -227,7 +284,8 @@ const Bibliothek = (() => {
     }));
     if (mein !== suchLauf) return; // inzwischen neu gesucht
     // Pakete, bei denen das Suchwort im Titel eines Treffers steht, zuerst (sonst Reihenfolge wie im Regal)
-    gruppen.sort((x, y) => (y.imTitel ? 1 : 0) - (x.imTitel ? 1 : 0));
+    // Treffer in den eigenen Unterlagen immer ganz oben
+    gruppen.sort((x, y) => (y.b.eigene ? 1 : 0) - (x.b.eigene ? 1 : 0) || (y.imTitel ? 1 : 0) - (x.imTitel ? 1 : 0));
     ziel.innerHTML = "";
     const kopf = el("div", { class: "knopfreihe", style: "margin:0 0 16px" });
     // Suche in einem Paket: zurück zum Paket und Suche über alle Pakete
@@ -245,13 +303,14 @@ const Bibliothek = (() => {
       // Jedes Paket als eigener Kasten mit Bild und Namen, damit man sieht, wo das nächste anfängt
       ziel.append(el("section", { class: "treffer-gruppe" },
         el("div", { class: "treffer-kopf" },
-          el("img", { class: "e-bild", src: b.bild || "icon.svg", alt: "" }),
+          paketBild(b),
           el("h3", {}, b.titel, b.englisch ? el("small", {}, "Englisch") : null),
           el("span", { class: "treffer-zahl" }, liste.length === 1 ? "1 Treffer" : liste.length + " Treffer")),
         ...liste.map(t => el("a", { class: "treffer", href: trefferLink(t) },
           el("b", {}, t.titel), t.auszug ? el("small", {}, t.auszug.slice(0, 200)) : null))));
     }
-    if (!gefunden && buecher.length && fehlgeschlagen === buecher.length * 2) {
+    const ausKiwix = buecher.filter(x => !x.eigene).length;
+    if (!gefunden && ausKiwix && fehlgeschlagen >= ausKiwix * 2) {
       ziel.append(fehlerBox("Die Suche ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.", () => suchen(q, nurBuch)));
     } else if (!gefunden) {
       // PDF-Bücher sind erst durchsuchbar, wenn Fieldbook ihren Text einmal ausgelesen hat

@@ -142,6 +142,14 @@ Ein Klick auf ein Paket öffnet es.\
 Ganz oben steht **Zuletzt gelesen** mit den letzten zehn Artikeln und Büchern, die du geöffnet hast.\
 Ein Buch öffnet sich dort auf der Seite, auf der du aufgehört hast.\
 **Liste leeren** löscht diesen Verlauf.\
+Darunter liegen deine **Eigenen Unterlagen**, zum Beispiel Bedienungsanleitungen, ein Medikamentenplan oder Fotos wichtiger Papiere.\
+Mit **Datei hinzufügen** wählst du Dateien aus, oder du ziehst sie einfach in die Bibliothek.\
+Fieldbook zeigt PDF, Word (.docx), Bilder (JPG, PNG) und Textdateien.\
+Alte Word-Dateien (.doc) speicherst du vorher in Word als .docx oder PDF.\
+Die Dateien liegen im Fieldbook-Ordner unter `daten\eigene` und wandern mit, wenn du den Ordner kopierst.\
+**Ordner öffnen** zeigt diesen Ordner im Explorer, dort kannst du Dateien auch direkt hineinlegen.\
+Die Suche und die KI finden auch, was in deinen Unterlagen steht.\
+Fieldbook liest den Text dafür einmal im Hintergrund aus, bei eingescannten PDFs ohne Text geht das nicht.\
 Das Klexikon öffnet eine eigene Startseite mit Themen, zwölf zufälligen Artikeln und allen Artikeln von A bis Z.\
 Beim ersten Öffnen stellt Fieldbook die Liste einmal zusammen, das dauert etwa eine Minute.\
 iFixit öffnet ebenfalls eine eigene Startseite: Dort suchst du nach Gerät oder Fehler oder klickst dich durch die Geräte (z. B. Haushaltsgeräte › Waschmaschine).\
@@ -234,7 +242,18 @@ Am Rand der geladenen Karten hält die Karte an, und ein Hinweis sagt, wie es we
 Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.\
 Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.\
 Ein Klick in die Karte setzt eine Markierung.\
-Daneben stehen der nächste Ort und die Koordinaten (praktisch, um beim Notruf den Standort durchzugeben).\
+Daneben stehen die Stadt, der nächste Ort oder Stadtteil und die Koordinaten (praktisch, um beim Notruf den Standort durchzugeben).\
+Mit **Ort merken** speicherst du die Stelle mit Namen und auf Wunsch einer Notiz, zum Beispiel „Treffpunkt Familie“.\
+Eine Farbe für die Stecknadel und eine Kategorie (zum Beispiel „Familie“) kannst du dabei auch wählen.\
+In der Liste **Meine Orte** blendet das durchgestrichene Auge einen Ort oder eine ganze Kategorie auf der Karte aus und wieder ein.\
+Gemerkte Orte stehen als Stecknadeln auf der Karte und in der Liste **Meine Orte**, die Ortssuche findet sie ebenfalls.\
+Ein Klick auf die Stecknadel bietet **Route von hier**, **Route hierhin**, **Bearbeiten** und **Löschen**.\
+Gespeichert werden sie in `daten\orte\meine-orte.json` und wandern beim Kopieren des Ordners mit.\
+**Route von hier** und **Route hierhin** an der Markierung setzen sie als Start oder Ziel, dann fehlt nur noch der andere Punkt.\
+Auch **Route planen** oben links übernimmt eine gesetzte Markierung als Ziel.\
+Das hinterlegte Feld (Start oder Ziel) ändert der nächste Klick in die Karte.\
+Ein Klick ins andere Feld hinterlegt dieses.\
+Der Pfeil rechts neben Start und Ziel tauscht die beiden.\
 **Sonne und Mond** zeigt Sonnenaufgang, Sonnenuntergang, Dämmerung und Mondphase für die Markierung, ohne Markierung für die Mitte der Karte.\
 Such vorher deinen Ort oder klick ihn in der Karte an, dann stimmen die Zeiten auf die Minute.\
 Unter **Anderer Tag** tippst du ein Datum ein (zum Beispiel 24.12.) oder wählst es im Kalender, **Heute** springt zurück.\

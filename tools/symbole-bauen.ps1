@@ -14,7 +14,7 @@ $namen = @(
   'plus', 'history', 'x',
   # Karten und Routen
   'compass', 'hospital', 'pill', 'droplet', 'shield', 'shopping-cart', 'fuel', 'footprints', 'bike', 'car', 'sunrise', 'sunset',
-  'chevron-left', 'chevron-right',
+  'chevron-left', 'chevron-right', 'bookmark', 'map-pin', 'chevron-down', 'arrow-up-down', 'eye-off',
   # Erste Hilfe
   'phone', 'phone-off', 'siren', 'baby', 'triangle-alert', 'heart', 'wind', 'activity', 'brain', 'bug', 'circle-alert',
   'candy', 'bone', 'skull', 'thermometer', 'bed', 'grape', 'axe', 'speech', 'soup', 'zap-off', 'drama',
@@ -24,6 +24,8 @@ $namen = @(
   'shield-check', 'box', 'backpack', 'printer', 'calculator', 'warehouse',
   # Inhalte und Einstellungen
   'folder', 'usb', 'refresh-cw', 'rotate-ccw',
+  # Eigene Unterlagen
+  'folder-open', 'upload', 'pencil', 'trash-2', 'image',
   # Übersetzen
   'arrow-left-right', 'maximize-2', 'send', 'mic', 'square', 'volume-2', 'messages-square', 'expand', 'arrow-right'
 )

@@ -360,6 +360,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .schritte-liste li:not(.fertig):not(.fehler)::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: .45em;
   vertical-align: -.08em; border: 2px solid var(--linie); border-top-color: var(--akzent); border-radius: 50%; animation: lade-kreis .8s linear infinite; }
 @keyframes lade-kreis { to { transform: rotate(360deg); } }
+/* Derselbe Ladekreis als eigenes Element (z. B. „Route wird berechnet …“) */
+.ladekreis { display: inline-block; width: .8em; height: .8em; margin-right: .45em; vertical-align: -.08em;
+  border: 2px solid var(--linie); border-top-color: var(--akzent); border-radius: 50%; animation: lade-kreis .8s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .schritte-liste li::before { animation-duration: 2s; } }
 .schritte-liste li.fertig::before { content: "✓ "; color: var(--gruen); }
 .schritte-liste li.fehler::before { content: "✗ "; color: var(--rot); }
@@ -423,6 +426,31 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 /* „Zuletzt gelesen“: Platzhalter, bis die Liste da ist; Knopf zum Leeren unter den Einträgen */
 .zuletzt-platz:empty { display: none; }
 .zuletzt-leeren { align-self: flex-start; margin-top: 4px; }
+/* Eigene Unterlagen (js/eigene.js): Datei-Zeile mit Umbenennen und Löschen daneben, darunter Knöpfe und Hinweis */
+.eigene-zeile { display: flex; align-items: center; gap: 6px; }
+.eigene-zeile > .eintrag { flex: 1; min-width: 0; }
+.eigene-zeile .e-text b, .eigene-zeile .e-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eigene-leer { margin: 2px 0 4px; }
+.eigene-knoepfe { margin-top: 6px; }
+.eigene-info { margin: 0; }
+.eigene-meldung:empty { display: none; }
+.eigene-meldung p { margin: 4px 0 0; }
+/* Dateien in die Bibliothek ziehen: gestrichelter Rahmen um die ganze Spalte */
+.ansicht.ablegen > .spalte { outline: 2px dashed var(--akzent); outline-offset: 10px; border-radius: var(--radius); }
+/* Anzeige eigener Word-, Text- und Bilddateien (#dokument) */
+.dok-flaeche { flex: 1; min-height: 0; overflow-y: auto; background: var(--bg); outline: none; }
+.dok-text { max-width: 780px; margin: 0 auto; padding: 28px 24px 64px; line-height: 1.6; overflow-wrap: break-word; }
+.dok-text h1, .dok-text h2, .dok-text h3, .dok-text h4 { font-family: var(--titel); font-weight: 600; line-height: 1.25; margin: 1.3em 0 .5em; }
+.dok-text > :first-child { margin-top: 0; }
+.dok-text img { max-width: 100%; height: auto; }
+.dok-text table { border-collapse: collapse; margin: 1em 0; max-width: 100%; }
+.dok-text td, .dok-text th { border: 1px solid var(--linie); padding: 6px 10px; vertical-align: top; text-align: left; }
+.dok-text td > p, .dok-text th > p { margin: 0; }
+.dok-text a { color: var(--akzent); }
+.dok-schlicht { white-space: pre-wrap; }
+.dok-bild { box-sizing: border-box; height: 100%; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.dok-bild img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.dok-laden { text-align: center; margin-top: 48px; }
 .paket-themen { display: flex; flex-wrap: wrap; gap: 6px; }
 /* Eigene Startseite eines Pakets (Klexikon): Kopf, Themen, Kacheln mit Bild, ABC-Leiste */
 .ps-kopf { display: flex; align-items: center; gap: 16px; margin: 4px 0 18px; }
@@ -647,9 +675,58 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 #karte .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--flaeche); }
 /* Angeklickter oder gesuchter Punkt (karten.js) */
 #karte .punkt-popup { display: flex; flex-direction: column; gap: 3px; }
+#karte .punkt-popup span { font-weight: 400; }
 #karte .punkt-popup small { color: var(--text2); font-weight: 400; font-size: .85rem; }
 #karte .punkt-weg { align-self: flex-start; margin-top: 4px; background: none; border: 0; padding: 0; color: var(--akzent); font: inherit; font-size: .85rem; font-weight: 400; cursor: pointer; }
 #karte .punkt-weg:hover { text-decoration: underline; }
+#karte .punkt-weg .sym { width: 14px; height: 14px; margin-right: 4px; vertical-align: -2px; }
+#karte .punkt-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; }
+#karte .punkt-knoepfe .punkt-weg { margin-top: 0; }
+#karte .punkt-knoepfe + .punkt-knoepfe { margin-top: 0; }
+#karte .ort-notiz { white-space: pre-line; }
+#karte .ort-formular { display: flex; flex-direction: column; gap: 6px; font-weight: 400; min-width: 290px; }
+/* Kategorie: Eingabefeld mit eigenem Dropdown der vorhandenen Kategorien */
+#karte .ort-kat { position: relative; display: flex; }
+#karte .ort-kat input { flex: 1; min-width: 0; padding-right: 34px; }
+#karte .ort-kat-auf { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 30px; height: 28px; display: grid; place-items: center; border: 0; background: none; color: var(--text2); cursor: pointer; border-radius: 6px; padding: 0; }
+#karte .ort-kat-auf:hover { color: var(--text); background: var(--flaeche2); }
+#karte .ort-kat-auf .sym { width: 16px; height: 16px; vertical-align: 0; }
+#karte .ort-kat-liste { position: absolute; left: 0; right: 0; top: calc(100% + 3px); z-index: 5; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 8px; box-shadow: var(--schatten); max-height: 160px; overflow: auto; padding: 3px 0; }
+#karte .ort-kat-liste button { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--text); font: inherit; font-size: .9rem; padding: 6px 10px; cursor: pointer; }
+#karte .ort-kat-liste button:hover, #karte .ort-kat-liste button.aktiv { background: var(--flaeche2); }
+#karte .ort-formular input, #karte .ort-formular textarea { width: 100%; font: inherit; font-size: .9rem; resize: vertical; }
+/* Startpunkt der Route (routen.js): weißer Kreis, nur das Ziel ist rot */
+#karte .routen-start { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid #1c1e1b; box-shadow: 0 1px 4px rgba(0,0,0,.45); box-sizing: border-box; cursor: grab; }
+#karte .ort-farben { display: flex; gap: 8px; padding: 2px 0; }
+#karte .ort-farbe { width: 20px; height: 20px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+#karte .ort-farbe.an { box-shadow: 0 0 0 2px var(--flaeche), 0 0 0 4px var(--text); }
+#karte .ort-farbe:focus-visible { outline: 2px solid var(--akzent); outline-offset: 3px; }
+/* Meine Orte (karten.js): aufklappbare Liste im Kartenfeld */
+.meine-orte { display: flex; flex-direction: column; gap: 6px; box-shadow: none !important; }
+.meine-orte-kopf { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 12px; background: var(--flaeche); color: var(--text); padding: 8px 12px; cursor: pointer; font: inherit; box-shadow: var(--schatten); }
+.meine-orte-kopf:hover { background: var(--flaeche2); }
+.meine-orte-kopf span { flex: 1; text-align: left; font-weight: 600; }
+.meine-orte-kopf small { color: var(--text2); }
+.meine-orte-kopf .sym:first-child { color: var(--akzent); }
+.meine-orte-kopf.auf .sym:last-child { transform: rotate(180deg); }
+.meine-orte .ort-treffer { box-shadow: var(--schatten); }
+.ort-treffer button .sym { width: 14px; height: 14px; color: var(--akzent); vertical-align: -2px; }
+/* Meine Orte: Kategorien und Ausblenden (Auge blass = sichtbar, kräftig = ausgeblendet) */
+.meine-liste .mein-gruppe { display: flex; align-items: center; border-bottom: 1px solid var(--linie); }
+/* Orte in einer Kategorie eingerückt (bündig mit dem Kategorienamen hinter dem Pfeil) */
+.meine-liste .mein-gruppe ~ .mein-zeile > button:first-child { padding-left: 34px; }
+.meine-liste .mein-gruppe button.mein-gruppe-auf { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 9px 6px 9px 10px; border-bottom: 0; color: var(--text2); font-family: "Barlow Semi Condensed", sans-serif; font-weight: 600; font-size: .85rem; letter-spacing: .03em; text-transform: uppercase; }
+.meine-liste .mein-gruppe-auf span { flex: 1; }
+.meine-liste .mein-gruppe-auf .sym { color: var(--text2); transition: transform .15s ease; }
+.meine-liste .mein-gruppe.offen .mein-gruppe-auf .sym { transform: rotate(90deg); }
+.meine-liste .mein-zeile { display: flex; align-items: center; border-bottom: 1px solid var(--linie); }
+.meine-liste .mein-zeile > button:first-child { flex: 1; min-width: 0; border-bottom: 0; }
+.meine-liste .mein-gruppe.aus .mein-gruppe-auf span, .meine-liste .mein-zeile.aus > button:first-child { opacity: .45; }
+.meine-liste button.auge { display: inline-grid; place-items: center; flex: none; width: 34px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.meine-liste button.auge .sym { width: 16px; height: 16px; color: var(--text2); opacity: .35; vertical-align: 0; }
+.meine-liste button.auge:hover .sym { opacity: .75; }
+.meine-liste button.auge.an .sym { color: var(--text); opacity: 1; stroke-width: 2.5; }
+.meine-liste button.auge.an { background: var(--flaeche2); }
 .routen-kopf { box-shadow: none !important; display: flex; flex-wrap: wrap; gap: 8px; }
 .routen-kopf .knopf { box-shadow: var(--schatten); flex: 1 1 0; justify-content: center; padding: 9px 10px; white-space: nowrap; }
 .routen-kopf .knopf.aktiv { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
@@ -657,7 +734,16 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .profile { display: flex; gap: 6px; }
 .profile button { flex: 1; border: 1px solid var(--linie); background: var(--flaeche); border-radius: 10px; padding: 6px 4px; cursor: pointer; font-size: .9rem; }
 .profile button.aktiv { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
+/* Start und Ziel untereinander, rechts daneben über beide Felder der Tauschen-Knopf */
+.punkte { display: flex; align-items: center; gap: 6px; }
+.punkte-felder { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.punkte-tauschen { flex: none; width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 1px solid var(--linie); border-radius: 50%;
+  background: var(--flaeche); color: var(--text2); cursor: pointer; }
+.punkte-tauschen:hover { color: var(--akzent); border-color: var(--akzent); }
+.punkte-tauschen .sym { width: 18px; height: 18px; }
 .punkt { position: relative; }
+/* Feld, das der nächste Klick in die Karte ändert: hinterlegt wie die Kacheln Strecke/Dauer/bergauf (Nutzer, 14. Nov. 2026) */
+.punkt.aktiv input { background: var(--flaeche2); }
 .punkt input { padding-left: 34px; }
 .punkt .p-marke { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-weight: 700; }
 .punkt .ort-treffer { position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 6; box-shadow: var(--schatten); }

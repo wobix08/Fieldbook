@@ -207,6 +207,19 @@ try {
     <div id="pdf-flaeche" class="pdf-flaeche" tabindex="-1"></div>
   </section>
 
+  <!-- EIGENE UNTERLAGEN: Word, Text und Bilder (js/eigene.js); PDFs öffnen im PDF-Leser -->
+  <section class="ansicht ansicht-voll" data-ansicht="dokument">
+    <div class="lese-leiste">
+      <div class="lese-links">
+        <button class="knopf" id="dok-zurueck">← Zurück</button>
+        <span id="dok-titel" class="lese-titel"></span>
+      </div>
+      <div class="lese-mitte"></div>
+      <div class="lese-rechts"></div>
+    </div>
+    <div id="dok-flaeche" class="dok-flaeche" tabindex="-1"></div>
+  </section>
+
   <!-- KARTEN -->
   <section class="ansicht ansicht-voll" data-ansicht="karten">
     <div id="karte-leer" class="spalte" hidden></div>
@@ -226,6 +239,7 @@ try {
           <input type="search" id="ort-feld" aria-label="Ort suchen" placeholder="Ort suchen …" autocomplete="off">
         </form>
         <div id="ort-treffer" class="ort-treffer"></div>
+        <div id="meine-orte" class="meine-orte" hidden></div>
         <div class="chips" id="poi-chips"></div>
         <div id="poi-treffer" class="ort-treffer"></div>
       </div>
@@ -344,6 +358,7 @@ try {
 
 <script src="js/helfer.js"></script>
 <script src="js/pdftext.js"></script>
+<script src="js/eigene.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/fragen.js"></script>
 <script src="js/uebersetzer.js"></script>

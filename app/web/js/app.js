@@ -16,6 +16,7 @@ const Ansichten = {
   bibliothek: { zeigen: (p) => Bibliothek.zeigen(p) },
   lesen: { zeigen: (p) => Bibliothek.lesen(p) },
   pdf: { zeigen: (p) => PdfLeser.zeigen(p) },
+  dokument: { zeigen: (p) => Eigene.dokument(p) },
   paketstart: { zeigen: (p) => Paketstart.zeigen(p) },
   kochen: { zeigen: (p) => Kochen.zeigen(p) },
   karten: { zeigen: (p) => Karten.zeigen(p) },
@@ -39,8 +40,8 @@ function navigiere() {
   $$(".ansicht").forEach(a => a.classList.toggle("sichtbar", a.dataset.ansicht === ziel));
   // Erste Einrichtung: Menü oben ausblenden, bis der Assistent fertig ist (oder „Später einrichten“)
   document.documentElement.classList.toggle("einrichtung", ziel === "setup" && !!OW.status && !OW.status.setupFertig);
-  // Paket-Startseiten und PDF-Bücher gehören zur Bibliothek
-  const menue = ziel === "paketstart" || ziel === "pdf" ? "bibliothek" : ziel;
+  // Paket-Startseiten, PDF-Bücher und eigene Unterlagen gehören zur Bibliothek
+  const menue = ziel === "paketstart" || ziel === "pdf" || ziel === "dokument" ? "bibliothek" : ziel;
   $$("#hauptnav a").forEach(a => {
     const an = a.getAttribute("href") === "#" + menue;
     a.classList.toggle("aktiv", an);
@@ -108,6 +109,7 @@ async function holeStatus() {
     zeigeKopfStatus(s);
     statistikNachfragen(s);
     PdfText.pruefen();
+    Eigene.auslesen();
     return s;
   } catch (e) {
     if (statusBeendet) return null;

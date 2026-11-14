@@ -388,12 +388,15 @@ const Fragen = (() => {
 
     try {
       let buecher = (await holeBuecher()).filter(b => b.durchsuchen);
-      // Die Bibliothek startet gerade neu (z. B. nach einem Absturz von kiwix-serve): kurz warten, noch einmal versuchen
-      if (!buecher.length) {
+      // Die Bibliothek startet gerade neu (z. B. nach einem Absturz von kiwix-serve): kurz warten, noch einmal versuchen.
+      // Sind gar keine Pakete installiert, lohnt das Warten nicht (dann zählen nur die eigenen Unterlagen)
+      if (!buecher.length && (OW.status || {}).wissen > 0) {
         await new Promise(r => setTimeout(r, 4000));
         await aktualisiereStatus();
         buecher = (await holeBuecher(true)).filter(b => b.durchsuchen);
       }
+      // Eigene Unterlagen (js/eigene.js) werden mit durchsucht, sobald ihr Text ausgelesen ist
+      buecher = (await Eigene.alsBuch()).concat(buecher);
       if (!buecher.length) { bibFehler = true; throw new Error("Keine durchsuchbare Bibliothek installiert."); }
       const mitKi = KI.bereit();
       const hatEnglisch = buecher.some(b => b.englisch);
@@ -763,8 +766,9 @@ const Fragen = (() => {
     const gueltig = texte.filter(x => {
       if (!x || !x.a.abschnitte.length) return false;
       // Platzhalterseiten ohne brauchbaren Inhalt überspringen (z. B. iFixit-Geräteseiten, die nur Datenblätter sind)
+      // Eigene Unterlagen dürfen kurz sein (eine Notiz, ein Plan)
       const voll = x.a.abschnitte.map(s => s.text).join(" ");
-      if (voll.length < 300) return false;
+      if (voll.length < (x.t.buch.eigene ? 20 : 300)) return false;
       if (/California Energy Commission|Date Added: \d{4}/.test(voll) && !/\b(step|schritt|replace|austausch|remove|entfern)/i.test(voll)) return false;
       // Auch über verschiedene Adressen derselbe Artikel (z. B. Klexikon „Wolf“ zweimal) nur einmal
       const k = dekodiert(x.a.url).toLowerCase();
@@ -819,9 +823,12 @@ const Fragen = (() => {
   async function quellenPruefen(frage, eintraege, thema) {
     const artikel = eintraege.map(x => x.a);
     const liste = eintraege.map(({ t, a }, i) => {
-      const anfang = (a.abschnitte[0] ? a.abschnitte[0].text : "").replace(/\s+/g, " ").slice(0, 280);
+      // Eigene Unterlagen: Fundstelle statt Anfang (die erste Zeile ist dort oft nur der Name des Geräts)
+      const anfang = (t.buch.eigene ? (t.auszug || a.abschnitte.map(s => s.text).join(" ")).slice(0, 400)
+        : (a.abschnitte[0] ? a.abschnitte[0].text : "")).replace(/\s+/g, " ").slice(0, t.buch.eigene ? 400 : 280);
       const kapitel = a.abschnitte.map(s => s.ueberschrift).filter(Boolean).slice(0, 10).join(", ");
-      const herkunft = "\nAus: " + t.buch.titel.replace(/\s*\(.*$/, "") + (t.buch.englisch ? " (englisch)" : " (deutsch)");
+      const herkunft = t.buch.eigene ? "\nAus: eigene Unterlagen des Nutzers (seine Geräte, Pläne, Notizen)"
+        : "\nAus: " + t.buch.titel.replace(/\s*\(.*$/, "") + (t.buch.englisch ? " (englisch)" : " (deutsch)");
       return "[" + (i + 1) + "] " + (a.titel || "") + herkunft + "\nAnfang: " + anfang + (kapitel ? "\nAbschnitte: " + kapitel : "");
     }).join("\n\n");
     const sys = "Du prüfst Suchergebnisse. Für jeden Artikel entscheidest du: Enthält er Wissen, das hilft, diese Frage zu beantworten? " +
@@ -830,6 +837,7 @@ const Fragen = (() => {
       "Er hilft auch nicht, wenn er zu einer anderen Lage gehört: Schließt die Frage etwas aus (z. B. „ohne Strom“, „ohne Gerät X“), hilft ein Artikel nicht, der genau das voraussetzt. " +
       "Artikel für Feuerwehr, Industrie, Kraftwerke oder Fachbetriebe helfen bei Fragen aus dem Alltag nicht. " +
       "Allgemeine Artikel und Anleitungen, die das Thema im Ganzen erklären, kommen vor Einzelversuchen, Sonderfällen und Forenfragen. " +
+      (eintraege.some(x => x.t.buch.eigene) ? "Eigene Unterlagen des Nutzers gehören zu seinen eigenen Geräten und Plänen: Passen sie zum Thema der Frage, sind sie am hilfreichsten. " : "") +
       "Antworte nur mit JSON: die Nummern der hilfreichen Artikel, der hilfreichste zuerst.";
     const schema = { type: "object", properties: { passend: { type: "array", items: { type: "integer" }, maxItems: 7 } }, required: ["passend"] };
     const roh = await mitFrist(60000, (signal) => KI.chat([{ role: "system", content: sys }, { role: "user", content: "FRAGE: " + frage + (thema ? "\nKERN DER FRAGE: " + thema : "") + "\n\nARTIKEL:\n" + liste }],
@@ -999,6 +1007,9 @@ const Fragen = (() => {
   function leseLink(q) {
     // Kurs-Lektion oder Vorsorge-Thema aus Fieldbook selbst
     if (q.intern || /^#(erstehilfe|vorsorge)/.test(String(q.url))) return q.url;
+    // Eigene Unterlagen: PDF im PDF-Leser, Word, Text und Bilder in der eigenen Ansicht
+    const eigene = Eigene.linkVon(q.url);
+    if (eigene) return eigene;
     // Stellen aus PDF-Büchern öffnen im eigenen PDF-Leser auf der gefundenen Seite
     const pdf = String(q.url).match(/^(\/kiwix\/content\/[^#]+\.pdf)(?:#page=(\d+))?$/i);
     if (pdf) return "#pdf?url=" + encodeURIComponent(pdf[1]) + (pdf[2] ? "&seite=" + pdf[2] : "") + "&titel=" + encodeURIComponent(String(q.titel).replace(/, Seite \d+$/, ""));

@@ -30,7 +30,8 @@ const PdfLeser = (() => {
 
   async function zeigen(params) {
     const neuUrl = params.get("url") || "";
-    if (!/^\/kiwix\/content\/[^/]+\/.+\.pdf$/i.test(neuUrl)) { location.replace("#bibliothek"); return; }
+    // PDFs aus Paketen oder aus den eigenen Unterlagen (js/eigene.js)
+    if (!/^\/kiwix\/content\/[^/]+\/.+\.pdf$/i.test(neuUrl) && !/^\/api\/eigene\/datei\/[^/?#]+\.pdf$/i.test(neuUrl)) { location.replace("#bibliothek"); return; }
     const neueSeite = Math.max(1, parseInt(params.get("seite"), 10) || 1);
     const neueAnsicht = params.get("ansicht") === "text" ? "text" : "seite";
     if (neuUrl === url && doc) {
@@ -455,7 +456,9 @@ const PdfLeser = (() => {
       if (!location.hash.startsWith("#pdf") || !url) return;
       const titel = $("#pdf-titel").textContent.trim() || sicherDateiname(url);
       const p = url.match(/^\/kiwix\/content\/([^/]+)\//);
-      zuletztMerken({ url, titel, paket: p ? decodeURIComponent(p[1]) : "", pdf: true, seite: aktuelleSeite });
+      // Eigene Unterlagen (js/eigene.js) zählen als Paket „eigene“
+      const paket = p ? decodeURIComponent(p[1]) : url.startsWith("/api/eigene/") ? "eigene" : "";
+      zuletztMerken({ url, titel, paket, pdf: true, seite: aktuelleSeite });
     }, 2000);
   }
 
