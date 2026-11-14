@@ -139,6 +139,9 @@ Die Pakete sind nach Themen sortiert: Grundwissen, Gesundheit & Erste Hilfe, Rep
 Ein Klick auf eine Kategorie klappt ihre Pakete darunter auf, die zuvor offene Kategorie klappt dabei zu.\
 Ein Klick auf ein Paket öffnet es.\
 Über der Liste kannst du in allen Paketen gleichzeitig suchen.\
+Ganz oben steht **Zuletzt gelesen** mit den letzten zehn Artikeln und Büchern, die du geöffnet hast.\
+Ein Buch öffnet sich dort auf der Seite, auf der du aufgehört hast.\
+**Liste leeren** löscht diesen Verlauf.\
 Das Klexikon öffnet eine eigene Startseite mit Themen, zwölf zufälligen Artikeln und allen Artikeln von A bis Z.\
 Beim ersten Öffnen stellt Fieldbook die Liste einmal zusammen, das dauert etwa eine Minute.\
 iFixit öffnet ebenfalls eine eigene Startseite: Dort suchst du nach Gerät oder Fehler oder klickst dich durch die Geräte (z. B. Haushaltsgeräte › Waschmaschine).\
@@ -172,6 +175,18 @@ Die Übersetzung macht ein Programm, keine Person: Bei Fachbegriffen und Zahlen 
 Dafür brauchst du **Artikel übersetzen** (42 MB), das wählst du im Assistenten oder unter **Inhalte** aus.\
 Damit geht Englisch.\
 Andere Sprachen gehen, wenn du sie unter **Inhalte** › **Sprachen** lädst (z. B. Spanisch); fehlt eine, sagt Fieldbook das oben.
+
+**Die KI zu einem Artikel fragen**\
+Beim Lesen oben rechts auf **Fragen** klicken.\
+Rechts öffnet sich eine Leiste, der Artikel bleibt daneben lesbar.\
+Ihre Breite änderst du, indem du ihren linken Rand mit der Maus ziehst; Fieldbook merkt sie sich, ein Doppelklick auf den Rand stellt sie zurück.\
+**Zusammenfassen** nennt die wichtigsten Punkte, **Einfach erklären** erklärt den Artikel kindgerecht.\
+Darunter kannst du eine eigene Frage zum Artikel stellen.\
+Die KI liest dabei nur diesen einen Artikel und antwortet auf Deutsch, auch bei englischen Artikeln.\
+Weil sie nichts suchen muss, geht das schneller als unter **Fragen**: ohne Grafikkarte etwa eine halbe Minute bis zum ersten Wort.\
+Steht die Antwort nicht im Artikel, sagt die KI das, und ein Knopf stellt dieselbe Frage an die ganze Bibliothek.\
+Bei sehr langen Artikeln liest die KI nur den Anfang bzw. die passendsten Abschnitte; das steht dann unter der Antwort.\
+Den Knopf gibt es nur, wenn eine KI eingerichtet ist.
 
 ### Übersetzer
 Hier führst du ein Gespräch in zwei Sprachen.\
@@ -217,7 +232,11 @@ Oben links nach Orten suchen.\
 Alle installierten Länder sind zusammen zu sehen, mit **Springen zu …** kommst du schnell zu einem davon.\
 Am Rand der geladenen Karten hält die Karte an, und ein Hinweis sagt, wie es weitergeht.\
 Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.\
-Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.
+Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.\
+**Sonne und Mond** zeigt Sonnenaufgang, Sonnenuntergang, Dämmerung und Mondphase für die Mitte der Karte.\
+Such vorher deinen Ort, dann stimmen die Zeiten auf die Minute.\
+Unter **Anderer Tag** trägst du ein beliebiges Datum ein, **Heute** springt zurück.\
+Berechnet wird ohne Internet, die Uhrzeiten richten sich nach der Uhr deines Computers.
 
 ### Kochen
 Unter **Was hast du da?** gibst du ein, was im Haus ist.\
@@ -231,7 +250,8 @@ Er ersetzt keinen echten Erste-Hilfe-Kurs.
 
 ### Vorsorge
 Die Vorsorge hat drei Stufen: **Das Wichtigste**, **Gut vorbereitet** und **Weiter vorsorgen**.\
-**Wenn es passiert** zeigt kurze Schritte für Strom weg, Wasser weg, Unwetter, Krankheit, unterwegs und das schnelle Verlassen des Hauses.\
+**Wenn es passiert** zeigt kurze Schritte für Sirene oder Warnung, Strom weg, Wasser weg, Unwetter, Krankheit, unterwegs und das schnelle Verlassen des Hauses.\
+Was die Sirenensignale bedeuten und welcher Sender Warnungen bringt, steht passend zum gewählten Land (Deutschland, Österreich oder Schweiz).\
 **Vorbereiten** ordnet die Themen (Essen mit Vorratsrechner, Wasser, Gesundheit, Licht und Wärme, Information, Haus, Unterwegs, Dokumente, Notgepäck, Notfallkiste) nach den drei Stufen.\
 Darüber siehst du, wie viel du in jeder Stufe schon abgehakt hast.\
 Jedes Thema erklärt, warum es wichtig ist, und hat Punkte zum Abhaken.\
@@ -273,8 +293,12 @@ Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Ein
 
 ## 7. Später erweitern oder ändern
 
-- Die **Einstellungen** (Zahnrad oben rechts) sind in Kategorien gegliedert, die per Klick aufklappen: **Fieldbook und Updates**, **Darstellung und Land**, **KI-Assistent**, **Inhalte**, **Rückmeldung und Datenschutz** und **Erweitert**.\
+- Die **Einstellungen** (Zahnrad oben rechts) sind in Kategorien gegliedert, die per Klick aufklappen: **Bereit für offline?**, **Fieldbook und Updates**, **Darstellung und Land**, **KI-Assistent**, **Inhalte**, **Rückmeldung und Datenschutz** und **Erweitert**.\
   Zugeklappt steht unter jeder Kategorie, wie sie gerade eingestellt ist.
+- **Bereit für offline?** (ganz oben in den Einstellungen) zeigt auf einen Blick, ob du das Netz jetzt kappen könntest, zum Beispiel vor einer Reise oder einem angekündigten Stromausfall.\
+  Geprüft werden Downloads, KI, Wissenspakete (beschädigt oder älter als ein Jahr), die Karte für dein Land mit Routenplanung, der Übersetzer und der Akku.\
+  Ein gelbes Warnzeichen heißt: Das solltest du erledigen, solange noch Internet da ist.\
+  Ein Strich heißt: nicht nötig, nur zur Info.
 - Einstellungen → **Inhalte hinzufügen oder aktualisieren** öffnet die Seite **Inhalte**.\
   Sie hat dieselben vier Bereiche wie der Assistent: KI-Assistent, Wissen (darin die Kategorien), Karten und Sprachen.\
   Jeder Bereich klappt per Klick auf; zugeklappt steht darunter, was schon installiert ist oder was noch fehlt.\
@@ -284,7 +308,7 @@ Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Ein
 - **Einrichtung neu starten** (in den Einstellungen unter **Inhalte**) führt noch einmal durch den ganzen Assistenten, zum Beispiel um die KI oder grundlegende Einstellungen zu ändern.\
   Bereits Installiertes bleibt erhalten und ist vorausgewählt.
 - **Fieldbook selbst aktualisieren**\
-  In den Einstellungen ganz oben unter **Fieldbook und Updates** stehen die Version und ob es eine neue gibt.\
+  In den Einstellungen oben unter **Fieldbook und Updates** stehen die Version und ob es eine neue gibt.\
   **Nach Updates suchen** sucht nach einer neuen Programmversion und nach neuen Inhalten zugleich.\
   Ein Klick lädt die neue Version, Fieldbook startet kurz neu.\
   Deine Inhalte und Einstellungen bleiben erhalten.\

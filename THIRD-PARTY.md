@@ -9,6 +9,7 @@ die ihre eigenen Lizenzen haben.
 |---|---|
 | [MapLibre GL JS](https://github.com/maplibre/maplibre-gl-js) 5.24.0 | BSD-3-Clause (`LICENSE-maplibre.txt`) |
 | [PMTiles](https://github.com/protomaps/PMTiles) 4.5.0 | BSD-3-Clause (`LICENSE-pmtiles.txt`) |
+| [SunCalc](https://github.com/mourner/suncalc) 1.9.0 (Sonnenauf- und -untergang, Dämmerung und Mondphase auf der Karte) | BSD-2-Clause (`LICENSE-suncalc.txt`) |
 | [Protomaps Basemaps](https://github.com/protomaps/basemaps) 5.7.2 | BSD-3-Clause (`LICENSE-basemaps.txt`) |
 | [pdf.js](https://github.com/mozilla/pdf.js) 4.10.38 (PDF-Leser und Text aus PDF-Büchern für die KI, in `vendor/pdfjs`) | Apache-2.0 (`LICENSE-pdfjs.txt`) |
 | [Lucide](https://lucide.dev) 0.460.0 (Symbole, als `app/web/symbole.svg`) | ISC (`LICENSE-lucide.txt`) |

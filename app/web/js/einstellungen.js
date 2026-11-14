@@ -30,7 +30,10 @@ const Einstellungen = (() => {
     const zeileMitSchalter = (titel, text, input) => el("div", { class: "einst-zeile" },
       el("div", {}, el("b", {}, titel), text ? el("small", {}, ...[].concat(text)) : null), anAus(input));
 
-    // ---------------- Fieldbook und Updates (ganz oben, mit der Version)
+    // ---------------- Bereit für offline? (ganz oben: kann man das Netz jetzt kappen?)
+    const bereit = kategorie("bereit", "shield-check", "Bereit für offline?");
+
+    // ---------------- Fieldbook und Updates (mit der Version)
     const prog = kategorie("programm", "refresh-cw", "Fieldbook und Updates");
     let programmInfo = { eingerichtet: true, neu: s.programmNeu, verfuegbar: !!s.programmNeu, bereit: s.programmBereit };
     const progText = el("small"), progExtra = el("div");
@@ -209,8 +212,134 @@ const Einstellungen = (() => {
           proxyStatus.textContent = proxyFeld.value.trim() ? "Gespeichert. Downloads laufen jetzt über diesen Proxy." : "Gespeichert. Fieldbook nimmt wieder den Proxy aus Windows (falls vorhanden).";
         } }, "Speichern"))));
 
+    bereitZeichnen(bereit, s, kat, prog.box);
+    bereitBeobachten(bereit, kat, prog.box);
+
     c.append(el("p", { class: "hinweis klein" }, "Fieldbook " + s.version + " · Protokolle im Ordner daten\\logs · Beenden über den Aus-Knopf oben rechts"));
     if (behalten && location.hash.startsWith("#einstellungen")) window.scrollTo(0, y);
+  }
+
+  // „Bereit für offline?“: je Punkt eine Zeile mit ✓ (erledigt), Warnzeichen (solange Internet da ist noch
+  // erledigen) oder Strich (nicht nötig, nur Info). Reihenfolge KI, Wissen, Karten, Sprachen.
+  // Zugeklappt steht darunter das Ergebnis. Akku und Downloads ändern sich, deshalb zeichnet bereitBeobachten neu.
+  let offeneDownloads = null;   // { anzahl, rest } aus /api/fortschritt, nur geholt, während etwas lädt
+  function bereitZeichnen(kat, s, katalog, progBox) {
+    const liste = [];
+    let offen = 0;
+    const zeile = (art, titel, text, knopf) => {
+      if (art === "warn") offen++;
+      const zeichen = art === "ok" ? el("span", { class: "bereit-zeichen ok" }, "✓")
+        : art === "warn" ? el("span", { class: "bereit-zeichen warn" }, sym("triangle-alert"))
+        : el("span", { class: "bereit-zeichen info" }, "–");
+      liste.push(el("div", { class: "einst-zeile bereit-zeile" },
+        el("div", { class: "bereit-links" }, zeichen, el("div", {}, el("b", {}, titel), el("small", {}, ...[].concat(text)))),
+        knopf || null));
+    };
+    const link = (text, href) => el("a", { class: "knopf knopf-klein", href }, text);
+    const knopf = (text, onclick) => el("button", { class: "knopf knopf-klein", onclick }, text);
+    const zahl = (n, eins, viele) => n + " " + (n === 1 ? eins : viele);
+
+    // Downloads
+    const laeuft = s.downloadAktiv;
+    if (laeuft) {
+      const d = offeneDownloads;
+      zeile("warn", "Downloads", [d && d.anzahl ? "Noch " + zahl(d.anzahl, "Download", "Downloads") + " offen" + (d.rest > 0 ? ", etwa " + groesse(d.rest) : "") + "." : "Es wird gerade noch etwas heruntergeladen.",
+        el("br"), "Ohne Internet bleibt es unfertig."], link("Ansehen", "#inhalte"));
+    } else if (s.unterbrochen > 0) {
+      zeile("warn", "Downloads", [zahl(s.unterbrochen, "Download wurde", "Downloads wurden") + " unterbrochen.", el("br"), "Ohne Internet bleibt es unfertig."], link("Ansehen", "#inhalte"));
+    } else zeile("ok", "Downloads", "Alles ist fertig heruntergeladen.");
+
+    // KI
+    const modell = katalog.modelle.find(m => m.id === s.modell);
+    const kiName = modell ? modell.name + " · " + modell.modell : "Die KI";
+    if (!s.modell) zeile("warn", "KI-Assistent", ["Keine KI eingerichtet.", el("br"), "Laden geht nur mit Internet."], link("KI laden", "#inhalte?zu=ki"));
+    else if (modell && !modell.installiert) zeile("warn", "KI-Assistent", kiName + " wird noch heruntergeladen.", link("Ansehen", "#inhalte"));
+    else if (s.ki.status === "fehler") zeile("warn", "KI-Assistent", [kiName + " startet nicht.", el("br"), "Die Meldung steht unter „KI-Assistent“."]);
+    else if (s.sparmodus) zeile("ok", "KI-Assistent", [kiName + " ist eingerichtet und gerade aus (Sparmodus).", el("br"), "Einschalten geht auch ohne Internet."]);
+    else if (s.ki.status === "laedt") zeile("ok", "KI-Assistent", kiName + " ist eingerichtet und startet gerade.");
+    else zeile("ok", "KI-Assistent", kiName + " ist eingerichtet und läuft.");
+
+    // Wissen
+    const defekt = (s.defektePakete || []).length;
+    if (!s.wissen) zeile("warn", "Wissen", ["Keine Wissenspakete installiert.", el("br"), "Laden geht nur mit Internet."], link("Laden", "#inhalte?zu=wissen"));
+    else if (defekt) zeile("warn", "Wissen", [defekt === 1 ? "1 Paket ist beschädigt und lässt sich nicht öffnen." : defekt + " Pakete sind beschädigt und lassen sich nicht öffnen.", el("br"), "Am besten jetzt neu laden."], link("Ansehen", "#inhalte"));
+    else zeile("ok", "Wissen", zahl(s.wissen, "Wissenspaket", "Wissenspakete") + ", alle lesbar.");
+
+    // Alte Pakete: nur, wenn es wirklich ein neueres gibt (sonst lässt sich nichts tun)
+    const grenze = new Date(); grenze.setFullYear(grenze.getFullYear() - 1);
+    const grenzeText = grenze.toISOString().slice(0, 7);
+    const alt = katalog.pakete.filter(p => p.installiert && p.update && p.installiertDatum && p.installiertDatum < grenzeText).length;
+    if (alt) zeile("warn", "Alte Pakete", [zahl(alt, "Paket ist", "Pakete sind") + " älter als ein Jahr, es gibt neuere.", el("br"), "Am besten jetzt noch aktualisieren."],
+      knopf("Aktualisieren", (e) => jetztAktualisieren(e.currentTarget)));
+
+    // Karte für das eingestellte Land (den Standort kennt Fieldbook offline nicht)
+    const land = Land.aktuell() || {};
+    const landName = Land.text(land.name) || "dein Land";
+    const region = katalog.karten.find(r => r.id === land.karte);
+    const hatKarte = (s.karten || []).some(r => r.id === land.karte || r.id === "europa");
+    if (!hatKarte) zeile("warn", "Karte für " + landName, ["Keine Karte für " + landName + " installiert.", el("br"), "Laden geht nur mit Internet."], link("Karte laden", "#inhalte?zu=karten"));
+    else {
+      const kacheln = s.routenKacheln || [], noetig = [];
+      if (region && region.bbox) {
+        // Wie RoutenKacheln im Server: nur knapp angeschnittene Kacheln (unter 0,15 Grad) zählen nicht
+        const b = region.bbox, rand = 0.15;
+        for (let lon = Math.floor((b[0] + rand) / 5) * 5; lon < b[2] - rand; lon += 5)
+          for (let lat = Math.floor((b[1] + rand) / 5) * 5; lat < b[3] - rand; lat += 5)
+            noetig.push((lon < 0 ? "W" + (-lon) : "E" + lon) + "_" + (lat < 0 ? "S" + (-lat) : "N" + lat));
+      }
+      const routen = noetig.length && noetig.every(k => kacheln.includes(k));
+      if (routen) zeile("ok", "Karte für " + landName, "Karte und Routenplanung sind da.");
+      else zeile("info", "Karte für " + landName, ["Die Karte ist da, die Routenplanung für " + landName + " fehlt.", el("br"), "Nur nötig, wenn du dir Wege berechnen lassen willst."], link("Laden", "#inhalte?zu=karten"));
+    }
+
+    // Sprachen
+    if (s.uebersetzer && (s.sprachen || []).length) zeile("ok", "Sprachen", "Der Übersetzer ist da.");
+    else zeile("info", "Sprachen", ["Kein Übersetzer eingerichtet.", el("br"), "Nur nötig, wenn du ihn unterwegs brauchst."], link("Einrichten", "#inhalte?zu=sprachen"));
+
+    // Akku (nur bei Geräten mit Akku)
+    const a = s.akku || {};
+    if (a.vorhanden) {
+      if (a.netz) zeile("ok", "Akku", "Am Stromnetz, " + a.prozent + " % geladen.");
+      else if (a.prozent < 50) zeile("warn", "Akku", ["Nur noch " + a.prozent + " % geladen.", el("br"), "Am besten jetzt noch aufladen."]);
+      else zeile("ok", "Akku", a.prozent + " % geladen.");
+    }
+
+    // Seltenes nur, wenn es zutrifft
+    if (s.ordnerWarnung) zeile("warn", "Fieldbook-Ordner", zeilen(s.ordnerWarnung));
+    if (s.programmNeu) zeile("info", "Neue Fieldbook-Version", ["Version " + s.programmNeu + " ist verfügbar.", el("br"), "Einspielen geht nur mit Internet."],
+      knopf("Ansehen", () => { const k = progBox.querySelector(".klapp-kopf"); if (!progBox.classList.contains("auf")) k.click(); }));
+
+    liste.push(el("div", { class: "einst-zeile bereit-zeile bereit-fuss" },
+      el("div", { class: "bereit-links" }, el("span", { class: "bereit-zeichen info" }, sym("heart-pulse")),
+        el("small", {}, "Erste Hilfe, Vorsorge und Kochen gehen immer, auch ganz ohne Downloads."))));
+    kat.innen.replaceChildren(...liste);
+    kat.unter(offen ? "Noch " + zahl(offen, "Punkt", "Punkte") + " erledigen, solange Internet da ist" : "Alles bereit, du kannst das Netz kappen");
+  }
+  // Neu zeichnen, solange die Einstellungen offen sind und sich etwas Wichtiges ändert
+  let bereitTimer = null;
+  function bereitBeobachten(kat, katalog, progBox) {
+    clearInterval(bereitTimer);
+    let sig = "";
+    const runde = async () => {
+      if (!kat.box.isConnected || !location.hash.startsWith("#einstellungen")) { clearInterval(bereitTimer); return; }
+      const s = OW.status;
+      if (!s) return;
+      if (s.downloadAktiv) {
+        try {
+          const f = await api("fortschritt");
+          const offen = f.jobs.filter(j => j.status !== "fertig" && !j.fehler);
+          offeneDownloads = { anzahl: offen.length, rest: Math.max(0, f.gesamt - f.bytes) };
+        } catch { offeneDownloads = null; }
+      } else offeneDownloads = null;
+      const a = s.akku || {};
+      const neu = [s.downloadAktiv, s.unterbrochen, s.modell, s.sparmodus, s.ki && s.ki.status, s.wissen, (s.defektePakete || []).length,
+        (s.karten || []).length, (s.routenKacheln || []).length, s.uebersetzer, a.netz, a.prozent < 50, a.netz ? a.prozent : 0, a.prozent,
+        offeneDownloads ? offeneDownloads.anzahl + "/" + Math.round(offeneDownloads.rest / 1e8) : ""].join("|");
+      if (neu !== sig) bereitZeichnen(kat, s, katalog, progBox);
+      sig = neu;
+    };
+    runde();
+    bereitTimer = setInterval(runde, 5000);
   }
 
   // „Rückmeldung geben“: eine Zeile mit Knopf, darunter klappt das Formular auf (Text, freiwillige

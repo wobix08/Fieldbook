@@ -420,6 +420,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .regal.liste .paket-zeile .e-bild { width: 32px; height: 32px; }
 .paket-pfeil { flex: none; width: 8px; height: 8px; margin: 0 8px 0 4px; border-right: 2px solid var(--text2); border-bottom: 2px solid var(--text2); transform: rotate(-45deg); }
 .paket-zeile:hover .paket-pfeil { border-color: var(--akzent); }
+/* „Zuletzt gelesen“: Platzhalter, bis die Liste da ist; Knopf zum Leeren unter den Einträgen */
+.zuletzt-platz:empty { display: none; }
+.zuletzt-leeren { align-self: flex-start; margin-top: 4px; }
 .paket-themen { display: flex; flex-wrap: wrap; gap: 6px; }
 /* Eigene Startseite eines Pakets (Klexikon): Kopf, Themen, Kacheln mit Bild, ABC-Leiste */
 .ps-kopf { display: flex; align-items: center; gap: 16px; margin: 4px 0 18px; }
@@ -515,10 +518,39 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   .lese-mitte { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
   .lese-suche { flex: 1; width: auto; max-width: 560px; }
 }
-@media (max-width: 700px) { .uebersetzen-status { display: none; } #lese-neu { display: none; } }
+@media (max-width: 700px) { .uebersetzen-status { display: none; } }
+/* Artikel und Seitenleiste „Zu diesem Artikel“ nebeneinander */
+.lese-koerper { flex: 1; min-height: 0; display: flex; position: relative; }
 /* color-scheme light am Rahmen: Ein noch leerer Rahmen (about:blank, Seitenwechsel) ist dann durchsichtig und
    zeigt den dunklen Grund. Mit „dark“ malt Chrome für eine noch helle neue Seite eine weiße Fläche. */
-#lese-rahmen { flex: 1; border: 0; width: 100%; background: var(--bg); color-scheme: light; }
+#lese-rahmen { flex: 1; min-width: 0; border: 0; width: 100%; background: var(--bg); color-scheme: light; }
+#lese-fragen-knopf[aria-expanded="true"] { border-color: var(--akzent); color: var(--akzent); }
+.lese-fragen { width: 380px; max-width: 100%; flex: none; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
+  background: var(--flaeche); border-left: 1px solid var(--linie); min-height: 0; position: relative; }
+.lese-fragen[hidden] { display: none; }
+/* Griff am linken Rand: Ziehen ändert die Breite (js/lesefragen.js), die Linie färbt sich beim Darüberfahren */
+.lf-griff { position: absolute; top: 0; bottom: 0; left: -5px; width: 10px; cursor: col-resize; z-index: 2; touch-action: none; }
+.lf-griff::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; transition: background .15s; }
+.lf-griff:hover::after, .lf-griff:focus-visible::after, .lf-griff.zieht::after { background: var(--akzent); }
+.lf-griff:focus-visible { outline: none; }
+/* Beim Ziehen sollen die Rahmen die Maus nicht abfangen und kein Text markiert werden */
+.lese-koerper.zieht iframe { pointer-events: none; }
+.lese-koerper.zieht { user-select: none; cursor: col-resize; }
+/* Bei halber Laptop-Breite legt sich die Leiste über den Artikel */
+@media (max-width: 1050px) { .lese-fragen { position: absolute; top: 0; right: 0; bottom: 0; width: min(420px, 100%); box-shadow: var(--schatten); } }
+.lf-kopf { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lf-kopf b { font-family: var(--titel); font-size: 1.15rem; }
+.lf-kopf .knopf { padding: 4px 8px; }
+.lf-schnell { display: flex; flex-wrap: wrap; gap: 6px; }
+.lf-verlauf { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 2px; }
+.lf-verlauf .frage-blase { max-width: 90%; padding: 8px 13px; font-size: .95rem; }
+.lf-verlauf .antwort { padding: 10px 13px; box-shadow: none; font-size: .95rem; }
+.lf-verlauf .antwort .knopf-klein { margin-top: 8px; }
+.lf-leer { color: var(--text2); font-size: .92rem; }
+.lf-form { display: flex; gap: 8px; align-items: flex-end; }
+.lf-form textarea { flex: 1; border: 1px solid var(--linie); background: var(--bg); border-radius: 10px; resize: none; min-height: 52px; }
+.lf-form textarea:focus { outline: none; border-color: var(--akzent); box-shadow: 0 0 0 1px var(--akzent); }
+.lf-form .knopf { padding: 10px 12px; }
 
 /* PDF-Leser (js/pdfleser.js) */
 /* overflow-anchor: Höhenänderungen gleicht pdfleser.js selbst aus, der Browser soll nicht zusätzlich verschieben */
@@ -613,8 +645,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 #karte .maplibregl-popup-anchor-top .maplibregl-popup-tip, #karte .maplibregl-popup-anchor-top-left .maplibregl-popup-tip, #karte .maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: var(--flaeche); }
 #karte .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--flaeche); }
 #karte .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--flaeche); }
-.routen-kopf { box-shadow: none !important; }
-.routen-kopf .knopf { box-shadow: var(--schatten); }
+.routen-kopf { box-shadow: none !important; display: flex; flex-wrap: wrap; gap: 8px; }
+.routen-kopf .knopf { box-shadow: var(--schatten); flex: 1 1 0; justify-content: center; padding: 9px 10px; white-space: nowrap; }
 .routen-kopf .knopf.aktiv { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
 .routen-panel { background: var(--flaeche); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .profile { display: flex; gap: 6px; }
@@ -624,6 +656,28 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .punkt input { padding-left: 34px; }
 .punkt .p-marke { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-weight: 700; }
 .punkt .ort-treffer { position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 6; box-shadow: var(--schatten); }
+/* Sonne und Mond (sonne.js) */
+.sonne-panel { background: var(--flaeche); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.sonne-kopfbereich, .sonne-inhalt { display: flex; flex-direction: column; gap: 8px; }
+.sonne-datum { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sonne-datum small { color: var(--text2); }
+.sonne-datum input { width: auto; flex: 1 1 130px; padding: 4px 8px; border-radius: 8px; }
+.sonne-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sonne-kopf small, .sonne-zeile, .sonne-hinweis, .sonne-mond small, .sonne-status small { color: var(--text2); }
+.sonne-status { display: flex; flex-direction: column; gap: 2px; }
+.sonne-status b { font-family: var(--titel); font-weight: 600; font-size: 1.3rem; color: var(--akzent); }
+.sonne-werte { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+.sonne-werte div { background: var(--flaeche2); border-radius: 10px; padding: 6px 4px; display: flex; flex-direction: column; gap: 2px; }
+.sonne-werte small { color: var(--text2); font-size: .8rem; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.sonne-werte .sym { width: 14px; height: 14px; }
+.sonne-zeile { font-size: .9rem; }
+.sonne-hinweis { font-size: .85rem; }
+.sonne-mond { display: flex; gap: 12px; align-items: center; border-top: 1px solid var(--linie); padding-top: 10px; }
+.sonne-mond > div { display: flex; flex-direction: column; gap: 1px; }
+.sonne-mond small { font-size: .85rem; }
+.mond-bild { width: 40px; height: 40px; flex: none; }
+.mond-dunkel { fill: #34362f; }  /* immer Nachthimmel-grau, auch im hellen Design */
+.mond-hell { fill: #e9e4cf; }
 .routen-ergebnis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
 .routen-ergebnis div { background: var(--flaeche2); border-radius: 10px; padding: 6px; }
 .routen-ergebnis b { display: block; font-size: 1.1rem; white-space: nowrap; }
@@ -889,6 +943,15 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .einst-zeile > :first-child { flex: 1; min-width: 0; overflow-wrap: break-word; }
 .einst-zeile > :not(:first-child) { flex: none; max-width: 60%; }
 .einst-zeile > select { width: auto; }
+/* Bereit für offline? (Einstellungen): Zeichen links, Text daneben */
+.bereit-links { display: flex; align-items: flex-start; gap: 12px; }
+.bereit-zeichen { flex: none; width: 22px; text-align: center; font-size: 1.1rem; line-height: 1.35; font-weight: 600; }
+.bereit-zeichen .sym { width: 18px; height: 18px; vertical-align: -3px; }
+.bereit-zeichen.ok { color: var(--gruen); }
+.bereit-zeichen.warn { color: var(--gelb); }
+.bereit-zeichen.info { color: var(--text2); font-weight: 400; }
+.bereit-zeile:first-child { padding-top: 0; }
+.bereit-fuss { border-bottom: 0; }
 .fb-formular { padding: 12px 0 4px; }
 .stat-paket { max-height: 320px; overflow: auto; background: var(--flaeche2); border-radius: 8px; padding: 10px 12px; font-size: .8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .stat-bitte p { margin: 0 0 10px; }
@@ -913,8 +976,8 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 @media (max-width: 700px) { .vs-stand { grid-template-columns: 1fr; } }
 /* Lagen wie die Kacheln der Startseite: dunkle Fläche, Symbol im gelben Feld über dem Namen, alle gleich breit
    (sechs in einer Reihe, bei halber Breite drei) */
-.vs-lagen { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
-@media (max-width: 900px) { .vs-lagen { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.vs-lagen { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+@media (max-width: 900px) { .vs-lagen { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .vs-lage {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; padding: 14px 10px 12px;
   border-radius: var(--radius); line-height: 1.25; text-align: center; background: var(--flaeche); color: var(--text);

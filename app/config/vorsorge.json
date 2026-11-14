@@ -1,5 +1,5 @@
 {
-  "_info": "Seite Vorsorge. 'stufen': die drei Stufen des Schalters oben (1 = Standard). 'lagen': Was tun, wenn es passiert ist (kurze Schritte ohne Häkchen, 'warnung' steht rot ganz oben, 'vorbereiten' = Themen-ids für den Link „Dafür vorbereiten“). 'themen': Vorbereiten, je Thema 'warum' und drei 'stufen' (Index 0 = Stufe 1) mit 'text' (Erklärung) und 'punkte'. Ein Punkt hat eine feste 'id' (eindeutig im Thema, daran hängen die Häkchen in daten/vorsorge.json), 'text', optional 'mehr' (Zusatz), 'frei' (kostet nichts), 'kiste' (kommt in die Notfallkiste, die Packliste entsteht daraus), 'verweis' {text, link} oder eine Liste davon (auch bei Schritten der Lagen; Sprungziele: #vorsorge?k=thema&s=2 für eine Stufe, &z=rechner oder &z=packliste, #vorsorge?lage=id, #kochen?l=id, #erstehilfe?l=id) und 'alt' (frühere Orte als 'kapitel/id', damit alte Häkchen übernommen werden; ohne 'alt' gilt 'thema/id'). Texte dürfen {notruf} enthalten. Jeder Satz erscheint auf der Seite in eigener Zeile.",
+  "_info": "Seite Vorsorge. 'stufen': die drei Stufen des Schalters oben (1 = Standard). 'lagen': Was tun, wenn es passiert ist (kurze Schritte ohne Häkchen, 'warnung' steht rot ganz oben, 'vorbereiten' = Themen-ids für den Link „Dafür vorbereiten“). 'themen': Vorbereiten, je Thema 'warum' und drei 'stufen' (Index 0 = Stufe 1) mit 'text' (Erklärung) und 'punkte'. Ein Punkt hat eine feste 'id' (eindeutig im Thema, daran hängen die Häkchen in daten/vorsorge.json), 'text', optional 'mehr' (Zusatz), 'frei' (kostet nichts), 'kiste' (kommt in die Notfallkiste, die Packliste entsteht daraus), 'verweis' {text, link} oder eine Liste davon (auch bei Schritten der Lagen; Sprungziele: #vorsorge?k=thema&s=2 für eine Stufe, &z=rechner oder &z=packliste, #vorsorge?lage=id, #kochen?l=id, #erstehilfe?l=id) und 'alt' (frühere Orte als 'kapitel/id', damit alte Häkchen übernommen werden; ohne 'alt' gilt 'thema/id'). Texte dürfen {notruf} enthalten. Was je Land verschieden ist, steht in 'land' {DE: {...}, AT: {...}, CH: {...}}: Diese Felder ersetzen die allgemeinen, {\"weg\": true} lässt einen Eintrag in dem Land weg. Jeder Satz erscheint auf der Seite in eigener Zeile.",
   "pakete": ["wikipedia_de_all", "wikipedia_de_top", "klexikon_de_all"],
   "einleitung": "Was du vorbereiten kannst, bevor etwas passiert, und was du tust, wenn es so weit ist. Die meisten Ernstfälle sind klein: Jemand wird krank, das Wasser ist abgestellt, der Strom fällt ein paar Stunden aus. Hak ab, was du schon hast. Vieles kostet nichts.",
   "stufen": [
@@ -39,6 +39,50 @@
 
   "lagen": [
     {
+      "id": "warnung", "titel": "Sirene oder Warnung", "kurz": "Sirene, Warnung", "icon": "siren",
+      "warnung": [
+        "Nicht den Notruf wählen, nur um zu fragen, was los ist. Die Leitungen werden für echte Notfälle gebraucht."
+      ],
+      "schritte": [
+        { "titel": "Was die Sirene bedeutet", "punkte": [], "land": {
+          "DE": { "punkte": [
+            { "text": "Heulton, 1 Minute lang auf und ab: Warnung.", "mehr": "Eine Gefahr droht oder ist schon da. Radio einschalten und auf Durchsagen achten. Kam eine Warnung aufs Handy, sie lesen." },
+            { "text": "Dauerton, 1 Minute lang: Entwarnung.", "mehr": "Die Gefahr ist vorbei. Im Radio oder in der Warn-App steht, ob noch etwas zu beachten ist." },
+            { "text": "Dauerton mit kurzen Unterbrechungen: Die Feuerwehr wird gerufen.", "mehr": "Das gilt nur den Einsatzkräften, du musst nichts tun. Nicht jeder Ort nutzt dieses Signal." }
+          ] },
+          "AT": { "punkte": [
+            { "text": "Dauerton, 3 Minuten lang: Warnung.", "mehr": "Eine Gefahr kommt näher. Radio oder Fernsehen (ORF) einschalten und die Hinweise befolgen." },
+            { "text": "Heulton, 1 Minute lang auf und ab: Alarm.", "mehr": "Die Gefahr ist da. Schützende Räume aufsuchen, meist drinnen, und die Durchsagen im ORF befolgen." },
+            { "text": "Dauerton, 1 Minute lang: Entwarnung.", "mehr": "Die Gefahr ist vorbei. Auf weitere Hinweise im ORF achten." },
+            { "text": "Dauerton, 15 Sekunden, samstags gegen Mittag: Sirenenprobe.", "mehr": "Dreimal 15 Sekunden mit Pausen ruft die Feuerwehr. Bei beiden musst du nichts tun." }
+          ] },
+          "CH": { "punkte": [
+            { "text": "Heulton, 1 Minute lang auf und ab, nach 2 Minuten wiederholt: Allgemeiner Alarm.", "mehr": "Eine Gefahr droht oder ist schon da. Radio hören, die Anweisungen der Behörden befolgen und Nachbarn informieren. In der App Alertswiss steht mehr." },
+            { "text": "Tiefe Dauertöne, je 20 Sekunden mit 10 Sekunden Pause: Wasseralarm.", "mehr": "Diesen Alarm gibt es nur unterhalb von Stauanlagen. Das gefährdete Gebiet sofort verlassen, so wie es die Gemeinde vorgibt." },
+            { "text": "Eine Entwarnung per Sirene gibt es nicht.", "mehr": "Wann die Gefahr vorbei ist, sagen Radio und Alertswiss." }
+          ] }
+        } },
+        { "titel": "Was du jetzt tust", "punkte": [
+          { "text": "Radio einschalten und auf Durchsagen achten.", "verweis": { "text": "Vorsorge: Welcher Sender bei dir", "link": "#vorsorge?k=information&s=2" }, "land": {
+            "DE": { "mehr": "Amtliche Warnungen bringen vor allem die Sender der ARD in deinem Bundesland, z. B. WDR, SWR, BR oder NDR. Durchsagen kommen sofort oder zur vollen Stunde." },
+            "AT": { "mehr": "Amtliche Warnungen bringen vor allem die Radios des ORF: Ö3 und das Regionalradio deines Bundeslands." },
+            "CH": { "mehr": "Amtliche Meldungen bringen Radio SRF 1 und die Regionalradios. Die SRG sendet seit Mitte November 2026 schrittweise wieder auf UKW, sonst über DAB+." }
+          } },
+          { "text": "Die Warnung auf dem Handy lesen, wenn eine kam.", "land": {
+            "DE": { "mehr": "Die laute Warnung ohne App (Cell Broadcast) und Warn-Apps wie NINA sagen, was passiert ist, wo und was du tun sollst." },
+            "AT": { "mehr": "Die laute Warnung ohne App (AT-Alert) und Warn-Apps wie KATWARN sagen, was passiert ist, wo und was du tun sollst." },
+            "CH": { "mehr": "Die App Alertswiss sagt, was passiert ist, wo und was du tun sollst. Eine Warnung ohne App gibt es in der Schweiz noch nicht." }
+          } },
+          { "text": "Den Anweisungen der Behörden folgen.", "mehr": "Oft heißt es: in ein Gebäude gehen, Fenster und Türen schließen, Lüftung und Klimaanlage ausschalten. Bei Hochwasser kann es auch heißen, das Gebiet zu verlassen.", "lage": "raus" },
+          { "text": "Nachbarn Bescheid geben, vor allem Älteren und allen, die schlecht hören." },
+          { "text": "Nur kurz telefonieren.", "mehr": "Nach einer Warnung ist das Handynetz oft überlastet. SMS kommen eher durch als Anrufe." }
+        ] }
+      ],
+      "vorbereiten": ["information"],
+      "verweise": [],
+      "artikel": ["Sirenensignal", "Cell Broadcast", "Warnung der Bevölkerung"]
+    },
+    {
       "id": "strom", "titel": "Strom weg", "icon": "zap-off",
 
       "warnung": [
@@ -52,12 +96,13 @@
           { "text": "Herd, Bügeleisen und empfindliche Geräte ausschalten oder den Stecker ziehen.", "mehr": "Wenn der Strom zurückkommt, kann eine Spannungsspitze sie beschädigen. Eine Lampe eingeschaltet lassen, dann merkt man, wann der Strom wieder da ist." },
           { "text": "Kühlschrank und Gefriertruhe geschlossen halten.", "mehr": "Ein geschlossener Kühlschrank hält etwa 4 Stunden kalt. Ein Gefrierfach hält je nach Gerät 10 bis 24 Stunden, eine volle Gefriertruhe etwa 2 Tage. Den genauen Wert nennt die Anleitung unter „Lagerzeit bei Störung“." },
           { "text": "Das Handy schonen: Stromsparmodus, Bildschirm dunkel, nur kurz telefonieren oder SMS schreiben.", "mehr": "Das Handynetz hält oft nur Minuten bis wenige Stunden. SMS kommen eher durch als Anrufe." },
-          { "text": "Im Radio erfahren, wie groß der Stromausfall ist und wie lange er voraussichtlich dauert: Batterieradio oder Autoradio.", "mehr": "Durchsagen kommen meist zur vollen Stunde. Kein Radio? Dann bei Nachbarn mithören.", "verweis": { "text": "Vorsorge: Radio und Notruf vorbereiten", "link": "#vorsorge?k=information" } },
+          { "text": "Im Radio erfahren, wie groß der Stromausfall ist und wie lange er voraussichtlich dauert: Batterieradio oder Autoradio.", "mehr": "Durchsagen kommen meist zur vollen Stunde. Kein Radio? Dann bei Nachbarn mithören.", "verweis": [{ "text": "Vorsorge: Radio und Notruf vorbereiten", "link": "#vorsorge?k=information" }, { "text": "Vorsorge: Welcher Sender bei dir", "link": "#vorsorge?k=information&s=2" }] },
           { "text": "Licht mit Taschenlampe oder LED-Laterne machen. Kerzen nur als Reserve, in feuerfesten Haltern.", "verweis": { "text": "Vorsorge: Licht und Wärme vorbereiten", "link": "#vorsorge?k=strom" } }
         ] },
         { "titel": "In den ersten Tagen", "punkte": [
           { "text": "Zuerst essen, was im Kühlschrank verdirbt, dann aus dem Gefrierfach, zuletzt den Vorrat.", "mehr": "Gekochtes höchstens 2 Stunden ungekühlt stehen lassen, bei Hitze über 30 °C nur 1 Stunde. Aufgetautes Fleisch und Fisch bald durchgaren und nicht wieder einfrieren.", "verweis": { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit" } },
           { "text": "Warm halten: alle in einem Raum, Türen schließen, Fenster nachts mit Decken oder Pappe abdichten, mehrere Schichten Kleidung, Mütze auch drinnen.", "mehr": "Auch Gas- und Ölheizungen brauchen Strom. Eine Wohnung kühlt in 2 bis 3 Tagen deutlich aus.", "verweis": { "text": "Erste Hilfe: Kälte und Hitze", "link": "#erstehilfe?l=temperatur" } },
+          { "text": "Den Tag nach dem Tageslicht planen: kochen, Wasser holen und Wege erledigen, solange es hell ist.", "mehr": "Licht aus Batterien ist knapp. Im Winter wird es schon gegen halb fünf dunkel.", "verweis": { "text": "Karten: Wann wird es dunkel?", "link": "#karten?z=sonne" } },
           { "text": "Kommt kein Wasser mehr, die Toilette nicht mehr spülen und ein Notklo einrichten.", "lage": "wasser" },
           { "text": "Nach Nachbarn sehen, vor allem nach Älteren und Alleinlebenden.", "mehr": "Gemeinsam ist es leichter: ein warmer Raum, ein Kocher, Vorräte teilen." },
           { "text": "Die Anlaufstelle der Gemeinde suchen (Feuerwehrhaus, Rathaus, Aushänge).", "mehr": "Dort kann man Notrufe absetzen und erfährt Neues. Sie ist oft erst nach einigen Stunden besetzt und bietet meist kein Essen und keinen Schlafplatz.", "verweis": { "text": "Erste Hilfe: Wenn keine Hilfe kommt", "link": "#erstehilfe?l=keinehilfe" } },
@@ -109,7 +154,7 @@
           { "text": "Gartenmöbel, Mülltonnen und Loses sichern oder hereinholen." },
           { "text": "Wichtiges und Wertvolles aus dem Keller nach oben bringen." },
           { "text": "Fenster, Türen und Kellerfenster schließen." },
-          { "text": "Warnungen und Radio verfolgen.", "verweis": { "text": "Vorsorge: Warn-App einrichten", "link": "#vorsorge?k=information" } }
+          { "text": "Warnungen und Radio verfolgen.", "lage": "warnung", "verweis": { "text": "Vorsorge: Warnungen aufs Handy", "link": "#vorsorge?k=information" } }
         ] },
         { "titel": "Wenn es da ist", "punkte": [
           { "text": "Drinnen bleiben und weg von den Fenstern." },
@@ -384,7 +429,7 @@
     },
     {
       "id": "information", "titel": "Information und Notruf", "kurz": "Information", "icon": "phone",
-      "warum": "Bei einem großen Ausfall will man wissen, was los ist und wie lange es dauert. Und im Notfall muss man Hilfe rufen können, auch wenn man nicht sprechen kann oder das Netz wackelt.",
+      "warum": "Bei einem großen Ausfall oder einer Gefahr will man wissen, was los ist und was man tun soll. Und im Notfall muss man Hilfe rufen können, auch wenn man nicht sprechen kann oder das Netz wackelt.",
       "stufen": [
         {
           "text": [
@@ -394,10 +439,22 @@
             { "id": "nummern", "frei": true, "kiste": true, "text": "Wichtige Telefonnummern und Adressen auf Papier", "alt": ["stromausfall/nummern", "aufbewahren/k-nummern", "dokumente/nummernliste"] },
             { "id": "treffpunkt", "frei": true, "text": "Einen Treffpunkt ausmachen, falls das Handynetz ausfällt", "mehr": "Wenn alle unterwegs sind und niemand anrufen kann, weiß jeder, wo man sich trifft, z. B. zu Hause oder bei Verwandten in der Nähe. Für Kinder auch mit der Schule oder Kita klären, wer sie abholt." },
             { "id": "radio", "frei": true, "text": "Wissen, wo man ohne Strom Radio hören kann", "mehr": "Im Auto, bei Nachbarn oder mit einem Batterieradio. Viele neue Handys haben kein UKW-Radio mehr, am eigenen Handy also vorher ausprobieren.", "alt": ["stromausfall/radio"] },
-            { "id": "batterieradio", "kiste": true, "text": "Kleines Radio mit Batterien", "mehr": "Am besten mit denselben Batterien wie die Taschenlampe. Kurbelradios liefern für viel Kurbeln nur kurz Strom.", "alt": ["stromausfall/kurbelradio", "aufbewahren/k-radio"] },
+            { "id": "batterieradio", "kiste": true, "text": "Kleines Radio mit Batterien", "mehr": "Am besten mit denselben Batterien wie die Taschenlampe. Kurbelradios liefern für viel Kurbeln nur kurz Strom.", "alt": ["stromausfall/kurbelradio", "aufbewahren/k-radio"], "land": {
+              "CH": { "mehr": "Am besten eins mit UKW und DAB+, denn UKW kommt in der Schweiz noch nicht überall an. Mit denselben Batterien wie die Taschenlampe. Kurbelradios liefern für viel Kurbeln nur kurz Strom." }
+            } },
+            { "id": "sirenen", "frei": true, "text": "Wissen, was die Sirenensignale bedeuten", "mehr": "Sie unterscheiden sich von Land zu Land.", "verweis": { "text": "Was die Sirene bedeutet", "link": "#vorsorge?lage=warnung" } },
             { "id": "sos", "frei": true, "text": "Die Notruf-Funktion am Handy einrichten", "mehr": "In den Einstellungen nach „SOS“ suchen. Viele Handys rufen dann nach mehrmaligem Drücken der Seitentaste den Notruf oder schicken den Standort an Vertraute." },
             { "id": "notfallpass", "frei": true, "text": "Den Notfallpass im Handy ausfüllen", "mehr": "Vorerkrankungen, Medikamente und Notfallkontakte. Rettungskräfte sehen ihn auch bei gesperrtem Handy." },
-            { "id": "warnapp", "frei": true, "text": "Eine Warn-App einrichten", "mehr": "Deutschland: NINA, Österreich: KATWARN, Schweiz: Alertswiss. In den Handy-Einstellungen außerdem die Notfallwarnungen eingeschaltet lassen." },
+            { "id": "warnapp", "frei": true, "text": "Warnungen aufs Handy einrichten", "land": {
+              "DE": { "mehr": "Cell Broadcast schickt amtliche Warnungen ohne App an jedes Handy in der Nähe, laut und anonym. In den Einstellungen unter „Notfallwarnungen“ (iPhone: Mitteilungen, ganz unten) alle Stufen eingeschaltet lassen, auch die niedrigste, sonst fehlt die Entwarnung. Dazu die App NINA: Sie zeigt auch Warnungen für andere Orte, z. B. für den Wohnort der Eltern. Im Flugmodus oder ausgeschaltet kommt keine Warnung an." },
+              "AT": { "mehr": "AT-Alert schickt amtliche Warnungen ohne App an jedes Handy in der Nähe, laut und anonym. In den Einstellungen unter „Notfallwarnungen“ (iPhone: Mitteilungen, ganz unten) alle Stufen eingeschaltet lassen. Dazu die App KATWARN: Sie zeigt auch Warnungen für andere Orte, z. B. für den Wohnort der Eltern. Im Flugmodus oder ausgeschaltet kommt keine Warnung an." },
+              "CH": { "mehr": "Die App Alertswiss installieren und Mitteilungen erlauben. In der Schweiz kommen Warnungen bisher nur so aufs Handy. Eine Warnung ohne App (Cell Broadcast) plant der Bund, sie ist aber noch nicht da." }
+            } },
+            { "id": "probealarm", "frei": true, "text": "Beim nächsten Probealarm hinhören", "verweis": { "text": "Was die Sirene bedeutet", "link": "#vorsorge?lage=warnung" }, "land": {
+              "DE": { "mehr": "Jedes Jahr am zweiten Donnerstag im September um 11 Uhr ist bundesweiter Warntag. Hörst du die Sirene zu Hause? Kommt die Warnung aufs Handy? Wenn nicht, die Einstellungen am Handy prüfen." },
+              "AT": { "mehr": "Jedes Jahr am ersten Samstag im Oktober zwischen 12 und 12:45 Uhr ist Zivilschutz-Probealarm mit allen Sirenensignalen und AT-Alert. Hörst du die Sirene zu Hause? Kommt die Warnung aufs Handy? Wenn nicht, die Einstellungen am Handy prüfen." },
+              "CH": { "mehr": "Jedes Jahr am ersten Mittwoch im Februar um 13:30 Uhr werden die Sirenen getestet. Hörst du die Sirene zu Hause? Alertswiss schickt dazu eine Mitteilung." }
+            } },
             { "id": "anlaufstelle", "frei": true, "text": "Die nächste Notfall-Anlaufstelle heraussuchen und die Adresse aufschreiben", "mehr": "Viele Städte und Gemeinden richten bei einem Stromausfall Stellen ein, an denen man Notrufe absetzen kann und Neues erfährt, oft im Feuerwehrhaus. Sie heißen je nach Ort anders, z. B. Notfalltreffpunkt, Katastrophenschutz-Leuchtturm, Notfall-Infopunkt oder Notrufmeldestelle. Wo sie sind, gibt nur die eigene Gemeinde bekannt: auf ihrer Internetseite, mit einem Flyer oder am Telefon. Den Flyer aufheben, er hilft auch ohne Strom.", "alt": ["stromausfall/anlaufstelle"] }
           ]
         },
@@ -406,7 +463,11 @@
             "Bei längeren Ausfällen helfen ein paar Dinge, die ohne Netz und Strom auskommen."
           ],
           "punkte": [
-            { "id": "sender", "frei": true, "text": "Regionalsender und seine Frequenz aufgeschrieben", "mehr": "Durchsagen kommen meist zur vollen Stunde." },
+            { "id": "sender", "frei": true, "text": "Den Regionalsender und seine Frequenz aufschreiben", "land": {
+              "DE": { "mehr": "Amtliche Warnungen bringen vor allem die Sender der ARD in deinem Bundesland. Baden-Württemberg und Rheinland-Pfalz: SWR. Bayern: BR. Berlin und Brandenburg: rbb. Bremen: Radio Bremen. Hamburg, Mecklenburg-Vorpommern, Niedersachsen und Schleswig-Holstein: NDR. Hessen: hr. Nordrhein-Westfalen: WDR. Saarland: SR. Sachsen, Sachsen-Anhalt und Thüringen: MDR. Die Frequenz hängt vom Ort ab: mit dem Suchlauf finden und die Zahl aufschreiben. Durchsagen kommen meist zur vollen Stunde." },
+              "AT": { "mehr": "Amtliche Warnungen bringen vor allem Ö3 und das ORF-Regionalradio deines Bundeslands. Das sind Radio Wien, Radio Niederösterreich, Radio Burgenland, Radio Oberösterreich, Radio Salzburg, Radio Steiermark, Radio Kärnten, Radio Tirol und Radio Vorarlberg. Die Frequenz hängt vom Ort ab: mit dem Suchlauf finden und die Zahl aufschreiben. Durchsagen kommen meist zur vollen Stunde." },
+              "CH": { "mehr": "Amtliche Meldungen bringen Radio SRF 1 mit seinen Regionaljournalen und die Regionalradios, in der Westschweiz RTS und im Tessin RSI. Die SRG sendet seit Mitte November 2026 schrittweise wieder auf UKW, bis Ende 2028 soll das ganze Land abgedeckt sein. Die Frequenz hängt vom Ort ab: mit dem Suchlauf finden und die Zahl aufschreiben." }
+            } },
             { "id": "zweithandy", "text": "Ein altes Handy geladen als Reserve" },
             { "id": "karte", "text": "Eine Landkarte der Umgebung auf Papier", "mehr": "Fieldbook hat Karten, braucht aber selbst Strom." }
           ]

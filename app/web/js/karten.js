@@ -28,7 +28,13 @@ const Karten = (() => {
     return libsGeladen;
   }
 
-  async function zeigen() {
+  async function zeigen(p) {
+    await zeigenOhneSprung();
+    // #karten?z=sonne (z. B. aus Vorsorge „Strom weg“): Sonne und Mond gleich aufklappen
+    if (karte && p && p.get("z") === "sonne") Sonne.oeffnen();
+  }
+
+  async function zeigenOhneSprung() {
     const s = OW.status || await aktualisiereStatus();
     const leer = $("#karte-leer");
     if (!s.karten.length || !s.kartenAssets) {
@@ -44,7 +50,7 @@ const Karten = (() => {
       $("#karte-wrap").hidden = true;
       leer.hidden = false;
       leer.innerHTML = "";
-      leer.append(el("h1", {}, "Karten"), fehlerBox("Die Karte konnte nicht geladen werden. Bitte noch einmal versuchen.", zeigen, "Erneut versuchen", e && e.message));
+      leer.append(el("h1", {}, "Karten"), fehlerBox("Die Karte konnte nicht geladen werden. Bitte noch einmal versuchen.", zeigenOhneSprung, "Erneut versuchen", e && e.message));
       return;
     }
     $("#karte-wrap").hidden = false;
@@ -88,6 +94,8 @@ const Karten = (() => {
 
   function neuZeichnen() {
     karte.setStyle(stil());
+    // Beim Stilwechsel mit Diff kommt kein style.load: eigene Ebene danach wieder anlegen
+    karte.once("styledata", () => { ortsnamenEbene(); ladeOrtsnamen(); });
     fuelleSprungliste();
     zoomGrenze();
   }
@@ -178,8 +186,34 @@ const Karten = (() => {
           attribution: '© <a href="https://openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> · Protomaps',
         },
       },
-      layers: basemaps.layers("protomaps", basemaps.namedFlavor(flavor), { lang: "de" }),
+      layers: schnellstrassen(basemaps.layers("protomaps", basemaps.namedFlavor(flavor), { lang: "de" })),
     };
+  }
+
+  // Schnellstraßen (OSM „trunk“) wie Autobahnen zeichnen, nur etwas schmaler. Im Original gehören sie zu den
+  // Hauptstraßen und sind herausgezoomt kaum zu sehen; so verschwand z. B. die E4 nördlich von Gävle, die dort
+  // als Schnellstraße eingetragen ist (Nutzer, 14. Nov. 2026). Die Daten stecken ab Zoom 6 in den Kacheln.
+  function schnellstrassen(layers) {
+    const AUTOBAHN = JSON.stringify(["==", "kind", "highway"]), HAUPT = JSON.stringify(["==", "kind", "major_road"]);
+    const ersetze = (f, alt, neu) => Array.isArray(f) ? (JSON.stringify(f) === alt ? neu : f.map(x => ersetze(x, alt, neu))) : f;
+    const schmaler = (w) => {
+      if (!Array.isArray(w) || w[0] !== "interpolate") return w;
+      const neu = w.slice(0, 3);
+      for (let i = 3; i + 1 < w.length; i += 2)
+        neu.push(w[i], typeof w[i + 1] === "number" ? ["case", ["==", ["get", "kind_detail"], "trunk"], w[i + 1] * 0.75, w[i + 1]] : w[i + 1]);
+      return neu;
+    };
+    for (const l of layers) {
+      if (l["source-layer"] !== "roads" || !l.filter) continue;
+      const f = JSON.stringify(l.filter);
+      if (f.includes(AUTOBAHN)) {
+        l.filter = ersetze(l.filter, AUTOBAHN, ["any", ["==", "kind", "highway"], ["==", "kind_detail", "trunk"]]);
+        if (l.paint) for (const k of ["line-width", "line-gap-width"]) if (l.paint[k]) l.paint[k] = schmaler(l.paint[k]);
+      } else if (f.includes(HAUPT)) {
+        l.filter = ersetze(l.filter, HAUPT, ["all", ["==", "kind", "major_road"], ["!=", "kind_detail", "trunk"]]);
+      }
+    }
+    return layers;
   }
 
   function erstelle() {
@@ -223,6 +257,9 @@ const Karten = (() => {
     });
     // Bei aktiver Umkreissuche nach dem Verschieben neu suchen
     karte.on("moveend", nachBewegung);
+    karte.on("style.load", ortsnamenEbene);
+    karte.on("load", ladeOrtsnamen);
+    karte.on("moveend", () => { clearTimeout(ortsnamenTimer); ortsnamenTimer = setTimeout(ladeOrtsnamen, 250); });
     fuelleSprungliste();
 
     // Kategorien
@@ -272,13 +309,72 @@ const Karten = (() => {
     }
   }
 
+  // Zuletzt gesuchter Ort, für „bei …“ in Sonne und Mond (nur solange die Kartenmitte in seiner Nähe ist)
+  let letzterOrt = null;
+  function ortBeiMitte(km) {
+    if (!karte || !letzterOrt) return null;
+    const c = karte.getCenter();
+    return entfernung(c.lat, c.lng, letzterOrt.lat, letzterOrt.lon) <= km ? letzterOrt : null;
+  }
+
   function geheZu(o) {
+    letzterOrt = o;
     $("#ort-treffer").innerHTML = "";
     const zoom = o.art === "Hauptstadt" || o.art === "Stadt" ? 11 : o.art === "Ort" ? 13 : 14;
     karte.flyTo({ center: [o.lon, o.lat], zoom, speed: 1.6 });
     if (markierung) markierung.remove();
     markierung = new maplibregl.Marker({ color: "#b3261e" }).setLngLat([o.lon, o.lat])
       .setPopup(new maplibregl.Popup({ offset: 24 }).setText(o.name + " (" + o.art + ")")).addTo(karte);
+  }
+
+  // ------------------------------------------------ Zusätzliche Ortsnamen
+  // In dünn besiedelten Gegenden (z. B. Nordschweden) enthalten die Kartendaten bei mittlerem Zoom kaum Orte.
+  // Aus der Ortsliste (GeoNames) kommt deshalb je Feld eines festen Rasters der wichtigste Ort dazu (Stufe =
+  // gerundeter Zoom + 1, also Felder von etwa 180 bis 360 Pixeln). Das Raster hängt an der Weltkarte, nicht am Ausschnitt: Beim
+  // Verschieben bleibt alles stehen, beim Hineinzoomen kommen nur Orte dazu (Nutzer, 14. Nov. 2026: mit Feldern
+  // am Ausschnitt sprangen die Namen beim Schieben, und 110 Pixel waren zu viele). Die Ebene liegt unter den
+  // Ortsnamen der Karte: Wo die Karte selbst Namen hat, haben diese Vorrang, und die zusätzlichen fallen wegen
+  // Überlappung weg. Ab Zoom 11 hat die Karte alle Orte selbst.
+  const ORTSNAMEN_VON = 5, ORTSNAMEN_BIS = 11;
+  let ortsnamenTimer = null, ortsnamenAbbruch = null, ortsnamenSchluessel = "", ortsnamenDaten = { type: "FeatureCollection", features: [] };
+
+  function ortsnamenEbene() {
+    if (karte.getSource("ortsnamen")) return;
+    const f = basemaps.namedFlavor(dunkel() ? "dark" : "light");
+    karte.addSource("ortsnamen", { type: "geojson", data: ortsnamenDaten });
+    karte.addLayer({
+      id: "ortsnamen", type: "symbol", source: "ortsnamen", minzoom: ORTSNAMEN_VON, maxzoom: ORTSNAMEN_BIS,
+      layout: {
+        "icon-image": "townspot", "icon-size": 0.55,
+        "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10.5, 10, 12],
+        "text-variable-anchor": ["left", "right", "top", "bottom"], "text-radial-offset": 0.45, "text-justify": "auto",
+        "text-padding": 4, "symbol-sort-key": ["-", 0, ["get", "rang"]],
+      },
+      paint: { "text-color": f.city_label, "text-opacity": 0.8, "icon-opacity": 0.8, "text-halo-color": f.city_label_halo, "text-halo-width": 1 },
+    }, karte.getLayer("places_subplace") ? "places_subplace" : undefined);
+  }
+
+  async function ladeOrtsnamen() {
+    if (!karte || !OW.status || !OW.status.orte) return;
+    const z = karte.getZoom();
+    if (z < ORTSNAMEN_VON || z >= ORTSNAMEN_BIS) return;
+    if (ortsnamenAbbruch) ortsnamenAbbruch.abort();
+    const abbruch = ortsnamenAbbruch = new AbortController();
+    const b = karte.getBounds();
+    const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map(v => v.toFixed(4)).join(",");
+    try {
+      const r = await fetch("/api/ortsnamen?bbox=" + bbox + "&stufe=" + (Math.floor(z + 0.5) + 1), { signal: abbruch.signal });
+      if (!r.ok) return;
+      const liste = await r.json();
+      // Unverändert (z. B. nur ein Stück verschoben): nichts neu setzen, sonst ordnet MapLibre die Namen neu an
+      const schluessel = liste.map(o => o.name + o.lat).sort().join("|");
+      if (schluessel === ortsnamenSchluessel && karte.getSource("ortsnamen")) return;
+      ortsnamenSchluessel = schluessel;
+      ortsnamenDaten = { type: "FeatureCollection", features: liste.map(o => ({ type: "Feature", properties: { name: o.name, rang: o.rang }, geometry: { type: "Point", coordinates: [o.lon, o.lat] } })) };
+      const q = karte.getSource("ortsnamen");
+      if (q) q.setData(ortsnamenDaten);
+    } catch { /* abgebrochen oder Server weg: Karte bleibt wie sie ist */ }
   }
 
   // ------------------------------------------------ Einrichtungen in der Nähe
@@ -526,5 +622,5 @@ const Karten = (() => {
   // (ohne Diff, sonst gehen die Routen-Ebenen verloren; style.load zeichnet die Route neu)
   function themaGeaendert() { if (karte) karte.setStyle(stil(), { diff: false }); }
 
-  return { zeigen, sucheOrt, themaGeaendert, get karte() { return karte; } };
+  return { zeigen, sucheOrt, themaGeaendert, ortBeiMitte, get karte() { return karte; } };
 })();

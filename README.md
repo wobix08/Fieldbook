@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
 
-### **[Fieldbook 0.8.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.2/Fieldbook-0.8.2.zip)**
+### **[Fieldbook 0.8.3 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.3/Fieldbook-0.8.3.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -27,12 +27,12 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 | | Bereich | Was es kann |
 |---|---|---|
 | <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design (hell oder dunkel):<br>• Wikipedia auf Deutsch, komplett mit Bildern (49&nbsp;GB), ohne Bilder (19&nbsp;GB) oder kompakt (5&nbsp;GB)<br>• Medizin: Wikipedia-Medizin, MDWiki und Handbücher für Notlagen<br>• Reparieren: über 56.000 Reparaturanleitungen von iFixit (die meisten auf Englisch, Fieldbook übersetzt sie auf Knopfdruck ins Deutsche)<br>• Draußen und Selbstversorgung: Wasser aufbereiten, Knoten, Einkochen, Gärtnern, Energie ohne Netz<br>• Wikivoyage (Reiseführer), Wikibooks (Lehrbücher), Klexikon (Kinderlexikon), Project Gutenberg (Literatur) und mehr |
-| <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe |
+| <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe.<br>Beim Lesen fasst sie den offenen Artikel zusammen, erklärt ihn einfach oder beantwortet Fragen dazu. |
 | <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und Einkochen |
-| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe |
+| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe, Sonnenauf- und -untergang mit Mondphase |
 | <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
-| <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Vorbereiten in drei Stufen (Vorräte, Hausapotheke, Licht, Dokumente …) und was zu tun ist, wenn Strom oder Wasser weg sind |
+| <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Vorbereiten in drei Stufen (Vorräte, Hausapotheke, Licht, Dokumente …) und was zu tun ist, wenn Strom oder Wasser weg sind oder die Sirene heult (Sirenensignale und Warnungen für Deutschland, Österreich und die Schweiz) |
 
 | Karten | Übersetzer | Erste Hilfe |
 |---|---|---|
@@ -57,12 +57,13 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.2 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.2/Fieldbook-0.8.2.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.3 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.3/Fieldbook-0.8.3.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
    Er erkennt die Hardware, schlägt eine passende KI vor und lädt die gewählten Inhalte herunter.
-4. Ab dann funktioniert alles offline.
+4. Ab dann funktioniert alles offline.\
+   Ob wirklich alles da ist (Downloads fertig, KI eingerichtet, Karte für dein Land), zeigt *Einstellungen → Bereit für offline?*.
 
 Eine ausführliche Schritt-für-Schritt-Anleitung steht in der [GUIDE.md](GUIDE.md).
 
@@ -137,7 +138,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.8.2.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.8.3.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -211,7 +212,7 @@ Protokoll: `daten\logs\aktualisierung.log`.
 
 **Neue Fieldbook-Versionen**\
 Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
-Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen ganz oben unter *Fieldbook und Updates*).\
+Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen oben unter *Fieldbook und Updates*).\
 Möchtest du auch diese kurze Anfrage nicht, schaltest du sie dort bei *Beim Start nach neuer Fieldbook-Version fragen* aus.\
 Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach Updates suchen* klickst.\
 Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Haken *Dabei auch neue Fieldbook-Versionen mitladen*).\
@@ -356,6 +357,7 @@ Verwendete Bausteine:
 - [BRouter](https://github.com/abrensch/brouter) (läuft mit Java von Eclipse Temurin) für die Routenplanung
 - [pdf.js](https://mozilla.github.io/pdf.js/) für den PDF-Leser und den Text aus PDF-Büchern
 - [GeoNames](https://www.geonames.org) für die Ortssuche
+- [SunCalc](https://github.com/mourner/suncalc) für Sonnenauf- und -untergang und die Mondphase
 
 ### Entwicklung
 

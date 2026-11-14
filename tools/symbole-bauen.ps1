@@ -13,7 +13,7 @@ $namen = @(
   # Fragen
   'plus', 'history', 'x',
   # Karten und Routen
-  'compass', 'hospital', 'pill', 'droplet', 'shield', 'shopping-cart', 'fuel', 'footprints', 'bike', 'car',
+  'compass', 'hospital', 'pill', 'droplet', 'shield', 'shopping-cart', 'fuel', 'footprints', 'bike', 'car', 'sunrise', 'sunset',
   # Erste Hilfe
   'phone', 'phone-off', 'siren', 'baby', 'triangle-alert', 'heart', 'wind', 'activity', 'brain', 'bug', 'circle-alert',
   'candy', 'bone', 'skull', 'thermometer', 'bed', 'grape', 'axe', 'speech', 'soup', 'zap-off', 'drama',

@@ -151,7 +151,7 @@ try {
   <!-- LESEN -->
   <section class="ansicht ansicht-voll" data-ansicht="lesen">
     <div class="lese-leiste">
-      <!-- Drei Spalten: links Zurück und Titel, mittig Startseite · Suche · Zufall, rechts Übersetzen und neuer Tab -->
+      <!-- Drei Spalten: links Zurück und Titel, mittig Startseite · Suche · Zufall, rechts Übersetzen und Fragen -->
       <div class="lese-links">
         <button class="knopf" id="lese-zurueck">← Zurück</button>
         <span id="lese-titel" class="lese-titel"></span>
@@ -164,10 +164,29 @@ try {
       <div class="lese-rechts">
         <span id="uebersetzen-status" class="uebersetzen-status" aria-live="polite"></span>
         <button class="knopf" id="uebersetzen-knopf" hidden title="Artikel offline ins Deutsche übersetzen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#languages"/></svg>Auf Deutsch</button>
-        <a id="lese-neu" class="knopf" target="_blank" rel="noopener">In neuem Tab öffnen</a>
+        <button class="knopf" id="lese-fragen-knopf" hidden aria-expanded="false" aria-controls="lese-fragen" title="Die KI zu diesem Artikel fragen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#message-circle"/></svg>Fragen</button>
       </div>
     </div>
-    <iframe id="lese-rahmen" title="Artikel"></iframe>
+    <!-- Artikel und daneben die Seitenleiste „Zu diesem Artikel“ (js/lesefragen.js) -->
+    <div class="lese-koerper">
+      <iframe id="lese-rahmen" title="Artikel"></iframe>
+      <aside id="lese-fragen" class="lese-fragen" hidden aria-label="Zu diesem Artikel fragen">
+        <div id="lf-griff" class="lf-griff" role="separator" aria-orientation="vertical" aria-label="Breite der Leiste ändern" tabindex="0" title="Ziehen ändert die Breite, Doppelklick stellt sie zurück"></div>
+        <div class="lf-kopf">
+          <b>Zu diesem Artikel</b>
+          <button class="knopf" id="lf-zu" title="Schließen" aria-label="Schließen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#x"/></svg></button>
+        </div>
+        <div class="lf-schnell">
+          <button class="knopf knopf-klein" data-art="zusammenfassen">Zusammenfassen</button>
+          <button class="knopf knopf-klein" data-art="einfach">Einfach erklären</button>
+        </div>
+        <div id="lf-verlauf" class="lf-verlauf" aria-live="polite"></div>
+        <form id="lf-form" class="lf-form">
+          <textarea id="lf-feld" rows="2" aria-label="Eigene Frage zu diesem Artikel" placeholder="Eigene Frage zu diesem Artikel …"></textarea>
+          <button class="knopf knopf-haupt" id="lf-senden" type="submit" title="Frage stellen" aria-label="Frage stellen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#send"/></svg></button>
+        </form>
+      </aside>
+    </div>
   </section>
 
   <!-- PDF-BÜCHER (eigener Leser, js/pdfleser.js) -->
@@ -199,8 +218,10 @@ try {
         <select id="karten-region" aria-label="Karte wählen" hidden></select>
         <div class="routen-kopf">
           <button class="knopf" id="routen-knopf" type="button"><svg class="sym" aria-hidden="true"><use href="symbole.svg#compass"/></svg>Route planen</button>
+          <button class="knopf" id="sonne-knopf" type="button"><svg class="sym" aria-hidden="true"><use href="symbole.svg#sunset"/></svg>Sonne und Mond</button>
         </div>
         <div id="routen-panel" class="routen-panel" hidden></div>
+        <div id="sonne-panel" class="sonne-panel" hidden></div>
         <form id="ort-suche" class="ort-suche">
           <input type="search" id="ort-feld" aria-label="Ort suchen" placeholder="Ort suchen …" autocomplete="off">
         </form>
@@ -328,6 +349,7 @@ try {
 <script src="js/uebersetzer.js"></script>
 <script src="js/gespraech.js"></script>
 <script src="js/bibliothek.js"></script>
+<script src="js/lesefragen.js"></script>
 <script src="js/pdfleser.js"></script>
 <script src="js/paketstart.js"></script>
 <script src="js/erstehilfe.js"></script>
@@ -335,6 +357,8 @@ try {
 <script src="js/vorsorge.js"></script>
 <script src="js/karten.js"></script>
 <script src="js/routen.js"></script>
+<script src="vendor/suncalc.js"></script>
+<script src="js/sonne.js"></script>
 <script src="js/einstellungen.js"></script>
 <script src="js/inhalte.js"></script>
 <script src="js/app.js"></script>

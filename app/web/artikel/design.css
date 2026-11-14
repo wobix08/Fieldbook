@@ -73,7 +73,9 @@ html[data-fb] a:visited { color: var(--fb-besucht) !important; }
 /* Dunkel: alle Flächen der Pakete durchsichtig, Schrift und Linien einheitlich. Farbige Hervorhebungen
    gehen dabei verloren, dafür ist alles gut lesbar und sieht aus wie Fieldbook. */
 html[data-fb="dunkel"] :is(div, section, article, main, header, footer, nav, aside, table, thead, tbody, tfoot, tr, td, ul, ol, li, dl, dt, dd,
-  p, span, a, blockquote, figure, figcaption, details, summary, form, fieldset, center, font, label, small, b, strong, i, em, abbr, cite, sup, sub, h1, h2, h3, h4, h5, h6, hr) {
+  p, span, a, blockquote, figure, figcaption, details, summary, form, fieldset, center, font, label, small, b, strong, i, em, abbr, cite, sup, sub, h1, h2, h3, h4, h5, h6, hr):not(:where(#sim, #sim *, .voy-listing-map)) {
+  /* Ausnahmen: PhET-Simulationen (#sim) malen ihre eigenen Flächen, ohne die würden Beschriftungen unsichtbar.
+     Wikivoyage-Nummern (.voy-listing-map) sind farbige Plaketten mit weißer Ziffer. */
   background-color: transparent !important; color: inherit !important; border-color: var(--fb-linie) !important; box-shadow: none !important;
 }
 html[data-fb="dunkel"] body { background-image: none !important; }
@@ -81,11 +83,13 @@ html[data-fb="dunkel"] :is(th, caption) { background-color: var(--fb-flaeche) !i
 html[data-fb="dunkel"] :is(pre, code, kbd, samp) { background-color: var(--fb-flaeche) !important; color: var(--fb-text) !important; border-color: var(--fb-linie) !important; }
 html[data-fb="dunkel"] mark { background-color: var(--fb-gelb-hell) !important; color: var(--fb-gelb) !important; }
 html[data-fb="dunkel"] hr { background-color: var(--fb-linie) !important; }
+/* Listenpunkte als dunkle Bildchen (ältere MediaWiki-Oberflächen, z. B. WikiVet): normale Punkte in Schriftfarbe */
+html[data-fb="dunkel"] :is(ul, li) { list-style-image: none !important; }
 html[data-fb="dunkel"] :is(input, select, textarea, button) {
   background-color: var(--fb-flaeche) !important; color: var(--fb-text) !important; border: 1px solid var(--fb-linie) !important;
 }
 html[data-fb="dunkel"] ::placeholder { color: var(--fb-text2) !important; opacity: .8; }
-html[data-fb="dunkel"] :is(svg text) { fill: currentColor; }
+html[data-fb="dunkel"] :is(svg text):not(:where(#sim *)) { fill: currentColor; }
 html[data-fb="dunkel"] a:link { color: var(--fb-akzent) !important; }
 html[data-fb="dunkel"] a:visited { color: var(--fb-besucht) !important; }
 
@@ -114,6 +118,9 @@ html[data-fb] :is(.mw-body h1, .mw-body-content h1, .mw-body-content h2, h1.firs
 html[data-fb] a.new:link, html[data-fb] a.new:visited { color: var(--fb-rot) !important; }
 /* Klexikon (Oberfläche „timis“): Text klebt sonst am Fensterrand, leicht einrücken */
 html[data-fb] body.skin-timis #content { padding-left: 28px !important; padding-right: 28px !important; box-sizing: border-box; }
+/* Klexikon: Bildrahmen ohne Tabellen-Regel, die Bildunterschrift wurde dadurch nur 20 px breit (ein Buchstabe je Zeile) */
+html[data-fb] body.skin-timis figure[typeof^="mw:File"] { display: table !important; }
+html[data-fb] body.skin-timis figure[typeof^="mw:File"] > figcaption { display: table-caption !important; caption-side: bottom; }
 /* Durchsichtige Grafiken (Strichzeichnungen, Formeln) wären auf Dunkel unsichtbar: heller Grund wie Papier.
    Platzhalter in Paketen ohne Bilder (leere data:-Grafiken) bleiben durchsichtig.
    Erst wenn das Bild geladen ist (data-fb-da aus design.js), sonst blitzt der leere Rahmen hell auf. */
@@ -128,9 +135,20 @@ html[data-fb] body:is(.page-Main_Page, [class*="_Landing"], .page-App_IntroPage,
   :is(#firstHeading, .mw-first-heading, #contentSub, #siteSub) { display: none !important; }
 /* Knöpfe, die nur online gehen (Spenden, Newsletter, Anmelden) */
 html[data-fb] .main-page-intro-buttons,
+html[data-fb] body[class*="_Landing"] p:has(a[href^="https://kiwix.org/support"]),
 html[data-fb] body.page-Main_Page p:has(> span.button-link) { display: none !important; }
+/* Online-Karten (Appropedia-Startseite „Map“) laden offline nie: Überschrift, Text, Karte und „More maps“ weg */
+html[data-fb] div.map:has(.maps-leaflet),
+html[data-fb] p:has(+ div.map .maps-leaflet),
+html[data-fb] h2:has(+ p + div.map .maps-leaflet),
+html[data-fb] div.map:has(.maps-leaflet) + style + p:has(.template-button) { display: none !important; }
 /* „Das Beste von Wikipedia“: Namen auf den Kacheln */
 html[data-fb="dunkel"] body.page-list-home a.item figcaption { background-color: rgba(28, 29, 27, .88) !important; color: var(--fb-text) !important; }
+
+/* Wikivoyage: Kopf des Kurzinfo-Kastens blieb hellgrau; kleine farbige Symbole (Webseite, Wikipedia, Commons)
+   sind Bilder, auf Dunkel wie die anderen Bilder mit hellem Grund */
+html[data-fb="dunkel"]:not(#fb_) .voy-qb-header { background-color: var(--fb-flaeche) !important; color: var(--fb-text) !important; }
+html[data-fb="dunkel"] span[data-icon] { background-color: #f7f5f1 !important; border-radius: 3px; }
 
 /* ---------------------------------------------------------------- Stack Exchange (Fragen und Antworten) */
 
@@ -139,12 +157,25 @@ html[data-fb="dunkel"] :is(.post-tag, .s-tag) {
 }
 html[data-fb="dunkel"] .s-navigation--item.is-selected { background-color: var(--fb-flaeche2) !important; color: var(--fb-text) !important; }
 html[data-fb="dunkel"] :is(.s-badge, .badge1, .badge2, .badge3, .vote-count-post) { color: inherit !important; }
+/* Symbole der Seitenleiste (Home, Questions, Tags …) sind dunkle SVG-Bilder */
+html[data-fb="dunkel"] .nav-links img.svg-icon { filter: invert(.85); }
 
 /* ---------------------------------------------------------------- Low-tech Magazine: gerasterte Bilder sind durchsichtig und brauchen einen hellen Grund */
 
 html[data-fb="dunkel"] :is(.featured-img, img[src*="dithers"]) { background-color: #d8d4cb !important; }
+/* Die Seite mischt Bilder mit dem Hintergrund (multiply): auf Dunkel wurden sie dadurch fast schwarz */
+html[data-fb="dunkel"] :is(.featured-img, img[src*="dithers"], img[src*="dithers"] *) { mix-blend-mode: normal !important; }
+html[data-fb="dunkel"] :has(> img[src*="dithers"]) { mix-blend-mode: normal !important; }
 /* Im Menü nur, was offline geht: „Donate“ und die Schwesterseite „NTM“ (nur online) fallen weg */
 html[data-fb] #menu-list li:has(> a[href^="donate"], > a[href^="http"]) { display: none !important; }
+
+/* ---------------------------------------------------------------- PDF-Bibliotheken (zimgit, USDA) */
+
+/* Info-Symbol und Logo-Schrift sind schwarz und wären auf Dunkel kaum zu sehen */
+html[data-fb="dunkel"] header .about-btn img { filter: invert(.85); }
+html[data-fb="dunkel"] header img.logo[src="main-logo.png"] { filter: invert(1) hue-rotate(180deg); }
+/* Hell: Pfeil „nach oben“ auf dem dunklen Knopf war grün auf Schwarz */
+html[data-fb="hell"] a.btn.btn-dark { color: #fff !important; }
 
 /* ---------------------------------------------------------------- CD3WD (alte Seiten mit Frames)
    Die Symbole im Inhaltsverzeichnis sind GIFs mit festem weißem Grund: auf Dunkel umkehren, Abstandhalter unsichtbar.
@@ -184,16 +215,29 @@ html[data-fb] .pure-skin-gutenberg a:has(> i.fa-download) {
   --fb-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' x2='12' y1='15' y2='3'/%3E%3C/svg%3E");
 }
 html[data-fb] .pure-skin-gutenberg td.table-icons { white-space: nowrap; text-align: right; }
+/* Hell: Kopf bleibt rot wie im Original, grüne Links darauf wären unlesbar */
+html[data-fb="hell"] .pure-skin-gutenberg header :is(a:link, a:visited) { color: #fff !important; }
+/* Dunkel: aktuelle Seitenzahl unter der Bücherliste hatte hellgrauen Verlauf mit weißer Schrift */
+html[data-fb="dunkel"]:not(#fb_) .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+html[data-fb="dunkel"]:not(#fb_) .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: var(--fb-flaeche2) !important; color: var(--fb-text) !important; border: 1px solid var(--fb-linie) !important;
+}
 
 /* ---------------------------------------------------------------- PhET: Titelleiste auf den Vorschaubildern */
 
 html[data-fb="dunkel"] .sim-card .overlay h2 { background-color: rgba(28, 29, 27, .88) !important; color: var(--fb-text) !important; }
 
+/* ---------------------------------------------------------------- TED: Beschreibung unter dem Video war hellgrau auf Weiß */
+
+html[data-fb] #descriptions p.description { color: var(--fb-text2) !important; }
+
 /* ---------------------------------------------------------------- iFixit */
 
 html[data-fb="dunkel"] .featured-category-item { border-radius: 10px !important; overflow: hidden; }
-html[data-fb="dunkel"] .featured-category-item .shadow-overlay { background: linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.15) 60%) !important; }
+html[data-fb="dunkel"] .featured-category-item .shadow-overlay { background: none !important; }
 html[data-fb="dunkel"] .featured-category-title { color: #fff !important; }
+/* Die Namen stehen mitten auf hellen Zeichnungen: dunkler Streifen dahinter wie bei PhET */
+html[data-fb="dunkel"] .featured-category-title { background-color: rgba(28, 29, 27, .85) !important; padding: 3px 0 !important; }
 /* Weitere Kategorien unter den Bildern: jede als eigene Kachel wie in Fieldbook */
 html[data-fb="dunkel"] .sub-categories a.sub-category {
   background-color: var(--fb-flaeche) !important; border: 1px solid var(--fb-linie) !important; border-radius: 10px !important;

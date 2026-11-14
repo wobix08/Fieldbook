@@ -442,6 +442,21 @@ const PdfLeser = (() => {
     const f = $("#pdf-seite");
     if (f && document.activeElement !== f) f.value = String(n);
     adresseMerken();
+    zuletztSpaeter();
+  }
+
+  // „Zuletzt gelesen“: Buch mit der Seite merken, auf der man gerade ist. Erst wenn man 2 s auf einer Seite
+  // bleibt (beim Scrollen wechselt die Seite ständig), und nur solange der PDF-Leser offen ist
+  let zuletztTimer = null;
+  const sicherDateiname = (u) => { const d = u.split("/").pop().replace(/\.pdf$/i, ""); try { return decodeURIComponent(d); } catch { return d; } };
+  function zuletztSpaeter() {
+    clearTimeout(zuletztTimer);
+    zuletztTimer = setTimeout(() => {
+      if (!location.hash.startsWith("#pdf") || !url) return;
+      const titel = $("#pdf-titel").textContent.trim() || sicherDateiname(url);
+      const p = url.match(/^\/kiwix\/content\/([^/]+)\//);
+      zuletztMerken({ url, titel, paket: p ? decodeURIComponent(p[1]) : "", pdf: true, seite: aktuelleSeite });
+    }, 2000);
   }
 
   // Adresse folgt der Seite, ohne Verlaufseintrag (Neu laden zeigt dieselbe Stelle)

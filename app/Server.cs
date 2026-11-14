@@ -76,7 +76,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.2";
+        public const string Version = "0.8.3";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -1603,6 +1603,7 @@ namespace OfflineWissen
                 case "fortschritt": SendeJson(ctx, Fortschritt()); return;
                 case "uebersetzer/modelle": SendeJson(ctx, UebersetzerRegister()); return;
                 case "orte": SendeJson(ctx, OrteSuchen(Q("q") ?? "", 25)); return;
+                case "ortsnamen": SendeJson(ctx, OrteImAusschnitt(Q("bbox"), Q("stufe"))); return;
                 case "ifixit": SendeJson(ctx, Ifixit(Q("buch"), Q("pfad") ?? "")); return;
                 case "artikelliste": SendeJson(ctx, Artikelliste(Q("buch"))); return;
                 case "internet": SendeJson(ctx, InternetDa(Q("url"))); return;
@@ -1725,6 +1726,16 @@ namespace OfflineWissen
                         SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
                         return;
                     }
+                // „Zuletzt gelesen“ in der Bibliothek: die letzten Artikel und PDF-Bücher (wandert mit dem daten-Ordner mit)
+                case "zuletzt": SendeJson(ctx, ZuletztListe()); return;
+                case "zuletzt/merken":
+                    try { SendeJson(ctx, ZuletztMerken(LeseBody(ctx))); }
+                    catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", e.Message } }); }
+                    return;
+                case "zuletzt/leeren":
+                    lock (ZuletztLk) { try { SicherLoeschen(Path.Combine(Daten, "zuletzt.json")); } catch { } }
+                    SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                    return;
                 case "routengroesse": SendeJson(ctx, RoutenGroesse((Q("ids") ?? "").Split(','))); return;
                 case "installieren": SendeJson(ctx, Installieren(LeseBody(ctx))); return;
                 case "sprechen": Sprechen(ctx, Q("sprache"), Q("paar"), Q("erwartet")); return;
@@ -6473,6 +6484,54 @@ namespace OfflineWissen
             return erg;
         }
 
+        // Zusätzliche Ortsnamen für die Karte: In dünn besiedelten Gegenden (z. B. Nordschweden) enthalten die
+        // Kartendaten bei mittlerem Zoom kaum Orte. Die Welt wird in ein festes Raster geteilt (2^stufe Felder je
+        // Richtung, in Mercator wie die Kartenkacheln), je Feld kommt der wichtigste Ort zurück. Weil das Raster
+        // fest ist, bleiben die Orte beim Verschieben gleich; beim Hineinzoomen teilt sich jedes Feld in vier, der
+        // bisherige Ort bleibt also und es kommen nur neue dazu. Felder am Rand werden ganz berechnet.
+        // Wo die Karte schon Namen hat, blendet MapLibre die zusätzlichen wegen Überlappung von selbst aus.
+        static List<object> OrteImAusschnitt(string bbox, string stufeText)
+        {
+            var erg = new List<object>();
+            var t = (bbox ?? "").Split(',');
+            double w, s, o, n;
+            int stufe;
+            if (t.Length != 4
+                || !double.TryParse(t[0], NumberStyles.Float, CultureInfo.InvariantCulture, out w)
+                || !double.TryParse(t[1], NumberStyles.Float, CultureInfo.InvariantCulture, out s)
+                || !double.TryParse(t[2], NumberStyles.Float, CultureInfo.InvariantCulture, out o)
+                || !double.TryParse(t[3], NumberStyles.Float, CultureInfo.InvariantCulture, out n)
+                || !int.TryParse(stufeText, out stufe)) return erg;
+            stufe = Math.Max(1, Math.Min(stufe, 14));
+            s = Math.Max(s, -85); n = Math.Min(n, 85);
+            if (o <= w || n <= s) return erg;
+            long felder = 1L << stufe;
+            Func<double, long> feldX = l => Math.Max(0, Math.Min(felder - 1, (long)Math.Floor((l + 180) / 360 * felder)));
+            Func<double, long> feldY = b => Math.Max(0, Math.Min(felder - 1, (long)Math.Floor((1 - Math.Log(Math.Tan(Math.PI / 4 + b * Math.PI / 360)) / Math.PI) / 2 * felder)));
+            long x0 = feldX(w), x1 = feldX(o), y0 = feldY(n), y1 = feldY(s);
+            if ((x1 - x0 + 1) * (y1 - y0 + 1) > 4000) return erg;
+            // Grob vorfiltern (eine Feldbreite Rand), genau entscheidet das Feld
+            double randLon = 360.0 / felder, randLat = randLon;
+            var beste = new Dictionary<long, Tuple<double, Ort>>();
+            foreach (var ort in LadeOrte())
+            {
+                if (ort.Klasse != 'P' || ort.Lon < w - randLon || ort.Lon > o + randLon || ort.Lat < s - randLat || ort.Lat > n + randLat) continue;
+                long x = feldX(ort.Lon), y = feldY(ort.Lat);
+                if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+                // Ortsteile, verlassene, zerstörte und historische Orte nicht
+                string c = ort.Code;
+                if (c == "PPLX" || c == "PPLQ" || c == "PPLW" || c == "PPLH" || c == "PPLCH" || c == "PPLR") continue;
+                double wert = (c == "PPLC" ? 60 : c == "PPLA" ? 50 : c == "PPLA2" ? 40 : c == "PPLA3" ? 30 : c == "PPLA4" ? 20 : 10)
+                    + Math.Log10(ort.Pop + 1) * 12;
+                long feld = y * felder + x;
+                Tuple<double, Ort> bisher;
+                if (!beste.TryGetValue(feld, out bisher) || bisher.Item1 < wert) beste[feld] = Tuple.Create(wert, ort);
+            }
+            foreach (var b in beste.Values.OrderByDescending(v => v.Item1))
+                erg.Add(new Dictionary<string, object> { { "name", b.Item2.Name }, { "lat", b.Item2.Lat }, { "lon", b.Item2.Lon }, { "rang", Math.Round(b.Item1) } });
+            return erg;
+        }
+
         // ------------------------------------------------------------------ Hilfen
 
         // Chat-Verlauf: eine JSON-Datei pro Chat in daten\chats
@@ -6517,6 +6576,49 @@ namespace OfflineWissen
                 }
             }
             return new Dictionary<string, object> { { "chats", liste } };
+        }
+
+        // ------------------------------------------------------------------ Zuletzt gelesen
+
+        static readonly object ZuletztLk = new object();
+        const int ZuletztMax = 10;
+
+        static Dictionary<string, object> ZuletztListe()
+        {
+            lock (ZuletztLk)
+            {
+                return new Dictionary<string, object> { { "liste", Arr(LadeJson(Path.Combine(Daten, "zuletzt.json")), "liste") } };
+            }
+        }
+
+        // Eintrag nach oben setzen; derselbe Artikel bzw. dasselbe Buch steht nur einmal drin, höchstens zehn Einträge
+        static Dictionary<string, object> ZuletztMerken(Dictionary<string, object> b)
+        {
+            string url = Str(b, "url"), titel = Str(b, "titel");
+            if (string.IsNullOrEmpty(url) || !url.StartsWith("/kiwix/") || string.IsNullOrEmpty(titel))
+                return new Dictionary<string, object> { { "fehler", "Ungültiger Eintrag." } };
+            var neu = new Dictionary<string, object> {
+                { "url", url.Length > 2000 ? url.Substring(0, 2000) : url },
+                { "titel", titel.Length > 200 ? titel.Substring(0, 200) : titel },
+                { "paket", Str(b, "paket") ?? "" },
+                { "pdf", Bool(b, "pdf") },
+                { "zeit", DateTime.Now.ToString("s") } };
+            int seite;
+            if (int.TryParse(Convert.ToString(b.ContainsKey("seite") ? b["seite"] : null), out seite) && seite > 0) neu["seite"] = seite;
+            lock (ZuletztLk)
+            {
+                var alt = ZuletztListe()["liste"] as object[];
+                var liste = new List<object> { neu };
+                foreach (var o in alt)
+                {
+                    var e = o as Dictionary<string, object>;
+                    if (e == null || Str(e, "url") == url) continue;
+                    if (liste.Count >= ZuletztMax) break;
+                    liste.Add(e);
+                }
+                SicherSchreiben(Path.Combine(Daten, "zuletzt.json"), Json.Serialize(new Dictionary<string, object> { { "liste", liste } }));
+            }
+            return new Dictionary<string, object> { { "ok", true } };
         }
 
         static Dictionary<string, object> LadeJson(string pfad)

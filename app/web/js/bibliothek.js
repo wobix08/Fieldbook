@@ -86,6 +86,7 @@ const Bibliothek = (() => {
     if (params.get("kat")) offen.add("k:" + params.get("kat"));
     if (p) offen.add("k:" + (p.kategorien[0] || "sonstiges"));
     if (params.get("q")) kopf.append(el("h2", {}, "Kategorien"));
+    else zuletztZeile(regal, buecher);
     for (const kat of kategorien()) {
       const pakete = buecher.filter(x => x.kategorien[0] === kat.id);
       if (!pakete.length) continue;
@@ -95,6 +96,41 @@ const Bibliothek = (() => {
          el("span", { class: "e-zahl" }, anzahlText(pakete.length))],
         () => el("div", { class: "klapp-liste" }, pakete.map(paketZeile))));
     }
+  }
+
+  // „Zuletzt gelesen“ als erste Zeile über den Kategorien (nur ohne Suche und wenn es Einträge gibt).
+  // Die Liste kommt vom Server nach, deshalb erst ein leerer Platzhalter an der richtigen Stelle.
+  let zuletztLauf = 0;
+  async function zuletztZeile(regal, buecher) {
+    const platz = el("div", { class: "zuletzt-platz" });
+    regal.append(platz);
+    const lauf = ++zuletztLauf;
+    let liste;
+    try { liste = (await api("zuletzt")).liste || []; } catch { return; }
+    if (lauf !== zuletztLauf) return;
+    // Nur Einträge aus Paketen, die noch installiert sind
+    const eintraege = liste.map(e => ({ e, b: buecher.find(x => x.id === e.paket) })).filter(x => x.b);
+    if (!eintraege.length) { platz.remove(); offen.delete("zuletzt"); return; }
+    const leeren = el("button", { type: "button", class: "knopf knopf-klein zuletzt-leeren", onclick: async () => {
+      try { await api("zuletzt/leeren", {}); } catch { return; }
+      offen.delete("zuletzt");
+      box.remove();
+    } }, "Liste leeren");
+    const box = klappe("zuletzt", "klapp-kat",
+      [symFeld("history", "gross"),
+       el("span", { class: "e-text" }, el("b", {}, "Zuletzt gelesen"), el("small", {}, "Die zuletzt geöffneten Artikel und Bücher")),
+       el("span", { class: "e-zahl" }, eintraege.length === 1 ? "1 Eintrag" : eintraege.length + " Einträge")],
+      () => el("div", { class: "klapp-liste" }, eintraege.map(x => zuletztEintrag(x.e, x.b)), leeren));
+    platz.replaceWith(box);
+  }
+  function zuletztEintrag(e, b) {
+    const href = e.pdf
+      ? "#pdf?url=" + encodeURIComponent(e.url) + (e.seite ? "&seite=" + e.seite : "") + "&titel=" + encodeURIComponent(e.titel)
+      : "#lesen?url=" + encodeURIComponent(e.url) + "&titel=" + encodeURIComponent(b.titel);
+    return el("a", { class: "eintrag paket-zeile", href },
+      el("img", { class: "e-bild", src: b.bild || "icon.svg", alt: "", loading: "lazy" }),
+      el("span", { class: "e-text" }, el("b", {}, e.titel), el("small", {}, b.titel + (e.pdf && e.seite ? " · Seite " + e.seite : ""))),
+      el("span", { class: "paket-pfeil", "aria-hidden": "true" }));
   }
 
   // Link ins Lesefenster; extra z. B. "&zufall=1" oder "&suche=…"
@@ -325,6 +361,30 @@ const Bibliothek = (() => {
     const neu = "#lesen?url=" + encodeURIComponent(url) + "&titel=" + encodeURIComponent($("#lese-titel").textContent || "");
     if (neu !== location.hash) history.replaceState(history.state, "", neu);
   }
+  // „Zuletzt gelesen“: jeden geöffneten Artikel merken, aber keine Startseiten der Pakete, Trefferlisten und PDFs
+  // (die merkt der PDF-Leser selbst). Die Startseite verrät die Weiterleitung von „/kiwix/content/<paket>“.
+  const startseiten = new Map();
+  function startseiteVon(paket) {
+    if (!startseiten.has(paket)) startseiten.set(paket,
+      fetch("/kiwix/content/" + encodeURIComponent(paket), { method: "HEAD" })
+        .then(r => sicherDecode(new URL(r.url).pathname)).catch(() => ""));
+    return startseiten.get(paket);
+  }
+  async function artikelMerken(innen) {
+    let pfad, titel;
+    try {
+      const l = innen.contentWindow.location, doc = innen.contentDocument;
+      pfad = l.pathname;
+      const h1 = doc && doc.querySelector("h1");
+      titel = ((h1 && h1.textContent) || (doc && doc.title) || "").replace(/\s+/g, " ").trim();
+    } catch { return; }
+    const m = pfad.match(/^\/kiwix\/content\/([^/]+)\/./);
+    if (!m || /\.pdf$/i.test(pfad) || !titel) return;
+    const paket = sicherDecode(m[1]);
+    if (sicherDecode(pfad) === await startseiteVon(paket)) return;
+    zuletztMerken({ url: pfad, titel: titel.slice(0, 200), paket });
+  }
+
   // PDF-Links (z. B. Medizin-Handbücher) wollen ein neues Fenster öffnen, was je nach Browser zum
   // Download wird. Stattdessen öffnet sich der eigene PDF-Leser (js/pdfleser.js); "Zurück" führt zur Liste.
   // Außerdem: Treffer auf Suchseiten im Rahmen öffnen (siehe unten).
@@ -362,7 +422,7 @@ const Bibliothek = (() => {
       const w = $("#lese-rahmen").contentWindow;
       w.addEventListener("hashchange", leisteAnpassen);
       const innen = w.document.getElementById("content_iframe");
-      if (innen) { innen.addEventListener("load", () => { pdfImLesefenster(innen); leisteAnpassen(); }); pdfImLesefenster(innen); }
+      if (innen) { innen.addEventListener("load", () => { pdfImLesefenster(innen); leisteAnpassen(); artikelMerken(innen); }); pdfImLesefenster(innen); }
     } catch { }
   });
   $("#lese-start").addEventListener("click", async () => {
@@ -416,7 +476,6 @@ const Bibliothek = (() => {
     startPaket = p ? decodeURIComponent(p[1]) : null;
     const paket = startPaket, lauf = ++leseLauf; // beides lokal merken: ein späterer Aufruf löst dieses Warten ab
     $("#lese-titel").textContent = startTitel;
-    $("#lese-neu").href = url;
     // Von der Paket-Startseite: zufälligen Artikel zeigen oder suchen, sobald der Viewer bereit ist.
     // Die Startseite des Pakets wird dabei ersetzt (location.replace statt gotoRandomPage/performSearch des
     // Viewers, die einen Verlaufseintrag anlegen): Sonst führte der erste Klick auf „Zurück“ nur zu ihr.

@@ -267,6 +267,13 @@ function dauer(sek) {
   return "ca. " + h + " Std. " + (m % 60) + " Min.";
 }
 
+// „Zuletzt gelesen“ (Bibliothek): Artikel und PDF-Bücher, gespeichert in daten/zuletzt.json.
+// e = { url, titel, paket, pdf, seite }; Fehler sind egal (Verlauf ist nur eine Hilfe)
+function zuletztMerken(e) {
+  if (!e || !e.url || !e.titel) return;
+  api("zuletzt/merken", e).catch(() => { });
+}
+
 async function api(pfad, daten) {
   const opt = daten === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(daten) };
   const r = await fetch("/api/" + pfad, opt);

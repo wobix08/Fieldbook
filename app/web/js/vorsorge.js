@@ -6,12 +6,28 @@
 "use strict";
 
 const Vorsorge = (() => {
-  let konf = null;
+  let roh = null;              // vorsorge.json wie geladen
+  let konf = null;             // dieselbe Konfiguration mit den Texten des gewählten Landes
+  let konfLand = null;
   let stand = null;            // Häkchen, Datum und Personen aus daten/vorsorge.json
   const artikelCache = {};
 
+  // Texte je Land: Ein Eintrag mit 'land' {DE: {...}, AT: {...}, CH: {...}} übernimmt die Felder des
+  // gewählten Landes; {"weg": true} lässt ihn in diesem Land ganz weg (nur Einträge in Listen).
+  function fuerLand(x, code) {
+    if (Array.isArray(x)) return x.map(y => fuerLand(y, code)).filter(y => !(y && y.weg));
+    if (!x || typeof x !== "object") return x;
+    const o = {};
+    for (const k in x) if (k !== "land") o[k] = fuerLand(x[k], code);
+    if (x.land && x.land[code]) Object.assign(o, fuerLand(x.land[code], code));
+    return o;
+  }
+
   async function zeigen(params) {
-    if (!konf) konf = await ladeKonfigSprache("vorsorge");
+    if (!roh) roh = await ladeKonfigSprache("vorsorge");
+    // Das Land kann sich in den Einstellungen ändern, deshalb bei jedem Öffnen prüfen
+    const code = (Land.aktuell() || {}).code || "DE";
+    if (!konf || konfLand !== code) { konf = fuerLand(roh, code); konfLand = code; }
     const ziel = $("#vs-inhalt");
     if (!stand) {
       // Nur ein erfolgreich geladener Stand wird übernommen und gespeichert;
