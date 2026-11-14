@@ -661,7 +661,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .sonne-kopfbereich, .sonne-inhalt { display: flex; flex-direction: column; gap: 8px; }
 .sonne-datum { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sonne-datum small { color: var(--text2); }
-.sonne-datum input { width: auto; flex: 1 1 130px; padding: 4px 8px; border-radius: 8px; }
+.sonne-datum input { width: auto; flex: 1 1 130px; padding: 4px 8px; border-radius: 8px; background: var(--flaeche2); border: none; box-shadow: none; }
+.sonne-datum input:focus { outline: none; }  /* ohne Rahmen wie die Kacheln darunter (Nutzer, 14. Nov. 2026) */
 .sonne-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .sonne-kopf small, .sonne-zeile, .sonne-hinweis, .sonne-mond small, .sonne-status small { color: var(--text2); }
 .sonne-status { display: flex; flex-direction: column; gap: 2px; }
