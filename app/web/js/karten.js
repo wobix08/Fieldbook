@@ -238,6 +238,8 @@ const Karten = (() => {
       fadeDuration: 0, // keine Einblendungen: spart Rechenzeit ohne Grafikkarte
     });
     Routen.verbinden(karte);
+    karte.on("click", kartenKlick);
+    karte.on("dblclick", () => clearTimeout(klickTimer));
     karte.addControl(new maplibregl.NavigationControl(), "bottom-right");
     karte.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     karte.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }), "bottom-right");
@@ -309,22 +311,70 @@ const Karten = (() => {
     }
   }
 
-  // Zuletzt gesuchter Ort, für „bei …“ in Sonne und Mond (nur solange die Kartenmitte in seiner Nähe ist)
-  let letzterOrt = null;
-  function ortBeiMitte(km) {
-    if (!karte || !letzterOrt) return null;
-    const c = karte.getCenter();
-    return entfernung(c.lat, c.lng, letzterOrt.lat, letzterOrt.lon) <= km ? letzterOrt : null;
+  // Markierter Punkt: gesuchter Ort oder Klick in die Karte. Sonne und Mond rechnet mit ihm, solange er
+  // im sichtbaren Ausschnitt liegt, sonst mit der Kartenmitte.
+  let punktGesetzt = null; // { lat, lon, text }
+  function punkt() {
+    if (!karte || !punktGesetzt) return null;
+    return karte.getBounds().contains([punktGesetzt.lon, punktGesetzt.lat]) ? punktGesetzt : null;
+  }
+
+  function markiere(lat, lon, text, popupInhalt, popupAuf) {
+    if (markierung) markierung.remove();
+    punktGesetzt = { lat, lon, text };
+    markierung = new maplibregl.Marker({ color: "#b3261e" }).setLngLat([lon, lat])
+      .setPopup(new maplibregl.Popup({ offset: 24, maxWidth: "260px" }).setDOMContent(popupInhalt)).addTo(karte);
+    if (popupAuf) markierung.togglePopup();
+    Sonne.neu();
+  }
+
+  function markierungWeg() {
+    if (markierung) markierung.remove();
+    markierung = null;
+    punktGesetzt = null;
+    Sonne.neu();
   }
 
   function geheZu(o) {
-    letzterOrt = o;
     $("#ort-treffer").innerHTML = "";
     const zoom = o.art === "Hauptstadt" || o.art === "Stadt" ? 11 : o.art === "Ort" ? 13 : 14;
     karte.flyTo({ center: [o.lon, o.lat], zoom, speed: 1.6 });
-    if (markierung) markierung.remove();
-    markierung = new maplibregl.Marker({ color: "#b3261e" }).setLngLat([o.lon, o.lat])
-      .setPopup(new maplibregl.Popup({ offset: 24 }).setText(o.name + " (" + o.art + ")")).addTo(karte);
+    markiere(o.lat, o.lon, "bei " + o.name, popupText(o.name + " (" + o.art + ")", o.lat, o.lon), false);
+  }
+
+  // Koordinaten zum Durchsagen (z. B. beim Notruf): 48,1374° N · 11,5755° O
+  function koordinaten(lat, lon) {
+    const f = (x) => Math.abs(x).toLocaleString("de-DE", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + "°";
+    return f(lat) + (lat >= 0 ? " N" : " S") + " · " + f(lon) + (lon >= 0 ? " O" : " W");
+  }
+
+  function popupText(titel, lat, lon) {
+    return el("div", { class: "punkt-popup" }, el("b", {}, titel), el("small", {}, koordinaten(lat, lon)),
+      el("button", { type: "button", class: "punkt-weg", onclick: markierungWeg }, "Markierung entfernen"));
+  }
+
+  // Klick in die Karte (außer beim Routenplanen): Punkt markieren, nächsten Ort nennen.
+  // Kurz warten, damit ein Doppelklick (Hineinzoomen) keinen Punkt setzt.
+  let klickTimer = null, klickNr = 0;
+  function kartenKlick(e) {
+    if (Routen.offen) return;
+    const ziel = e.originalEvent && e.originalEvent.target;
+    if (ziel && ziel.closest && ziel.closest(".maplibregl-marker, .maplibregl-popup")) return;
+    clearTimeout(klickTimer);
+    const { lat, lng: lon } = e.lngLat;
+    klickTimer = setTimeout(async () => {
+      const nr = ++klickNr;
+      const nah = OW.status.orte ? await api("ortnah?lat=" + lat.toFixed(5) + "&lon=" + lon.toFixed(5)).catch(() => null) : null;
+      if (nr !== klickNr) return;
+      let titel = "Punkt auf der Karte", text = "am markierten Punkt";
+      if (nah && nah.name) {
+        const km = nah.km.toLocaleString("de-DE", { maximumFractionDigits: nah.km < 10 ? 1 : 0 });
+        if (nah.km < 1) { titel = nah.name; text = "bei " + nah.name; }
+        else titel = text = km + " km " + nah.richtung + " von " + nah.name;
+      }
+      // Mit offenem „Sonne und Mond“ zeigt der Kasten den Ort, das Fenster an der Markierung bleibt zu
+      markiere(lat, lon, text, popupText(titel, lat, lon), !Sonne.offen);
+    }, 250);
   }
 
   // ------------------------------------------------ Zusätzliche Ortsnamen
@@ -622,5 +672,5 @@ const Karten = (() => {
   // (ohne Diff, sonst gehen die Routen-Ebenen verloren; style.load zeichnet die Route neu)
   function themaGeaendert() { if (karte) karte.setStyle(stil(), { diff: false }); }
 
-  return { zeigen, sucheOrt, themaGeaendert, ortBeiMitte, get karte() { return karte; } };
+  return { zeigen, sucheOrt, themaGeaendert, punkt, get karte() { return karte; } };
 })();

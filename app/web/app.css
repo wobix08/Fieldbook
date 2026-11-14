@@ -645,6 +645,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 #karte .maplibregl-popup-anchor-top .maplibregl-popup-tip, #karte .maplibregl-popup-anchor-top-left .maplibregl-popup-tip, #karte .maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: var(--flaeche); }
 #karte .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--flaeche); }
 #karte .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--flaeche); }
+/* Angeklickter oder gesuchter Punkt (karten.js) */
+#karte .punkt-popup { display: flex; flex-direction: column; gap: 3px; }
+#karte .punkt-popup small { color: var(--text2); font-weight: 400; font-size: .85rem; }
+#karte .punkt-weg { align-self: flex-start; margin-top: 4px; background: none; border: 0; padding: 0; color: var(--akzent); font: inherit; font-size: .85rem; font-weight: 400; cursor: pointer; }
+#karte .punkt-weg:hover { text-decoration: underline; }
 .routen-kopf { box-shadow: none !important; display: flex; flex-wrap: wrap; gap: 8px; }
 .routen-kopf .knopf { box-shadow: var(--schatten); flex: 1 1 0; justify-content: center; padding: 9px 10px; white-space: nowrap; }
 .routen-kopf .knopf.aktiv { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
@@ -661,8 +666,27 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .sonne-kopfbereich, .sonne-inhalt { display: flex; flex-direction: column; gap: 8px; }
 .sonne-datum { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sonne-datum small { color: var(--text2); }
-.sonne-datum input { width: auto; flex: 1 1 130px; padding: 4px 8px; border-radius: 8px; background: var(--flaeche2); border: none; box-shadow: none; }
-.sonne-datum input:focus { outline: none; }  /* ohne Rahmen wie die Kacheln darunter (Nutzer, 14. Nov. 2026) */
+/* Datumsfeld ohne Rahmen wie die Kacheln darunter (Nutzer, 14. Nov. 2026) */
+.sonne-feld { flex: 1 1 130px; min-width: 0; display: flex; align-items: center; border-radius: 8px; background: var(--flaeche2); }
+.sonne-feld input { flex: 1; min-width: 0; width: auto; padding: 4px 8px; background: none; border: none; box-shadow: none; font-variant-numeric: tabular-nums; }
+.sonne-feld input:focus { outline: none; }
+.sonne-feld input[aria-invalid="true"] { color: var(--rot); }
+.sonne-feld button, .kal-kopf button { display: flex; align-items: center; background: none; border: 0; color: var(--text2); padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+.sonne-feld button:hover, .sonne-feld button[aria-expanded="true"], .kal-kopf button:hover { color: var(--text); }
+.sonne-feld .sym, .kal-kopf .sym { width: 16px; height: 16px; }
+/* Eigener Kalender (sonne.js): gewählter Tag gefüllt wie aktive Knöpfe, heute dünn umrandet */
+.kalender { background: var(--flaeche2); border-radius: 10px; padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 4px; }
+.kal-kopf { display: flex; align-items: center; justify-content: space-between; }
+.kal-kopf b { font-family: var(--titel); font-weight: 600; font-size: 1.05rem; }
+.kal-kopf button { padding: 4px 6px; }
+.kal-kopf button:hover { background: var(--flaeche); }
+.kal-tage { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.kal-wt { font-size: .75rem; color: var(--text2); padding: 2px 0 4px; }
+.kal-tag { background: none; border: 1px solid transparent; border-radius: 6px; color: var(--text); font: inherit; font-size: .9rem; padding: 3px 0; cursor: pointer; font-variant-numeric: tabular-nums; }
+.kal-tag:hover { background: var(--flaeche); }
+.kal-tag.heute { border-color: var(--akzent); }
+.kal-tag.gewaehlt { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); font-weight: 600; }
+.kal-tag:focus-visible, .sonne-feld button:focus-visible, .kal-kopf button:focus-visible { outline: 2px solid var(--akzent); outline-offset: 1px; }
 .sonne-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .sonne-kopf small, .sonne-zeile, .sonne-hinweis, .sonne-mond small, .sonne-status small { color: var(--text2); }
 .sonne-status { display: flex; flex-direction: column; gap: 2px; }

@@ -233,9 +233,11 @@ Alle installierten Länder sind zusammen zu sehen, mit **Springen zu …** komms
 Am Rand der geladenen Karten hält die Karte an, und ein Hinweis sagt, wie es weitergeht.\
 Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.\
 Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.\
-**Sonne und Mond** zeigt Sonnenaufgang, Sonnenuntergang, Dämmerung und Mondphase für die Mitte der Karte.\
-Such vorher deinen Ort, dann stimmen die Zeiten auf die Minute.\
-Unter **Anderer Tag** trägst du ein beliebiges Datum ein, **Heute** springt zurück.\
+Ein Klick in die Karte setzt eine Markierung.\
+Daneben stehen der nächste Ort und die Koordinaten (praktisch, um beim Notruf den Standort durchzugeben).\
+**Sonne und Mond** zeigt Sonnenaufgang, Sonnenuntergang, Dämmerung und Mondphase für die Markierung, ohne Markierung für die Mitte der Karte.\
+Such vorher deinen Ort oder klick ihn in der Karte an, dann stimmen die Zeiten auf die Minute.\
+Unter **Anderer Tag** tippst du ein Datum ein (zum Beispiel 24.12.) oder wählst es im Kalender, **Heute** springt zurück.\
 Berechnet wird ohne Internet, die Uhrzeiten richten sich nach der Uhr deines Computers.
 
 ### Kochen

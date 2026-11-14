@@ -298,5 +298,5 @@ const Routen = (() => {
     k.on("style.load", () => { if (geojson) zeichneLinie(); });
   }
 
-  return { verbinden };
+  return { verbinden, get offen() { return offen; } };
 })();

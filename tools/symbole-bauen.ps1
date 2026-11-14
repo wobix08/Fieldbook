@@ -14,6 +14,7 @@ $namen = @(
   'plus', 'history', 'x',
   # Karten und Routen
   'compass', 'hospital', 'pill', 'droplet', 'shield', 'shopping-cart', 'fuel', 'footprints', 'bike', 'car', 'sunrise', 'sunset',
+  'chevron-left', 'chevron-right',
   # Erste Hilfe
   'phone', 'phone-off', 'siren', 'baby', 'triangle-alert', 'heart', 'wind', 'activity', 'brain', 'bug', 'circle-alert',
   'candy', 'bone', 'skull', 'thermometer', 'bed', 'grape', 'axe', 'speech', 'soup', 'zap-off', 'drama',
@@ -34,6 +35,9 @@ $sb = New-Object Text.StringBuilder
 foreach ($n in $namen) {
   $js_name = -join ($n.Split('-') | ForEach-Object { $_.Substring(0, 1).ToUpper() + $_.Substring(1) })
   $m = [regex]::Match($js, "const $js_name = \[\s*""svg"",\s*defaultAttributes,\s*\[(.*?)\n  \];", 'Singleline')
+  # Symbole aus nur einem Teil stehen in einer Zeile: const ChevronLeft = ["svg", defaultAttributes, [["path", { … }]]];
+  $einzeilig = [regex]::Match($js, "const $js_name = \[""svg"", defaultAttributes, \[(\[[^\n]*\])\]\];")
+  if ($einzeilig.Success) { $m = $einzeilig }
   if (-not $m.Success) { throw "Symbol nicht gefunden: $n" }
   [void]$sb.Append("<symbol id=""$n"" viewBox=""0 0 24 24"">")
   foreach ($t in [regex]::Matches($m.Groups[1].Value, '"(\w+)",\s*\{([^}]*)\}')) {

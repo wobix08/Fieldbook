@@ -76,7 +76,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.3.1";
+        public const string Version = "0.8.3.2";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -1604,6 +1604,7 @@ namespace OfflineWissen
                 case "uebersetzer/modelle": SendeJson(ctx, UebersetzerRegister()); return;
                 case "orte": SendeJson(ctx, OrteSuchen(Q("q") ?? "", 25)); return;
                 case "ortsnamen": SendeJson(ctx, OrteImAusschnitt(Q("bbox"), Q("stufe"))); return;
+                case "ortnah": SendeJson(ctx, OrtNah(Q("lat"), Q("lon"))); return;
                 case "ifixit": SendeJson(ctx, Ifixit(Q("buch"), Q("pfad") ?? "")); return;
                 case "artikelliste": SendeJson(ctx, Artikelliste(Q("buch"))); return;
                 case "internet": SendeJson(ctx, InternetDa(Q("url"))); return;
@@ -6529,6 +6530,41 @@ namespace OfflineWissen
             }
             foreach (var b in beste.Values.OrderByDescending(v => v.Item1))
                 erg.Add(new Dictionary<string, object> { { "name", b.Item2.Name }, { "lat", b.Item2.Lat }, { "lon", b.Item2.Lon }, { "rang", Math.Round(b.Item1) } });
+            return erg;
+        }
+
+        // Nächster Ort zu einem angeklickten Punkt der Karte (Name, Entfernung in km, Richtung vom Ort aus).
+        // Nur bewohnte Orte, ohne verlassene, zerstörte und historische. Leeres Ergebnis, wenn im Umkreis
+        // von 50 km nichts liegt oder die Ortsliste fehlt.
+        static Dictionary<string, object> OrtNah(string latText, string lonText)
+        {
+            var erg = new Dictionary<string, object>();
+            double lat, lon;
+            if (!double.TryParse(latText, NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
+                || !double.TryParse(lonText, NumberStyles.Float, CultureInfo.InvariantCulture, out lon)) return erg;
+            double kosLat = Math.Cos(lat * Math.PI / 180), bester = double.MaxValue;
+            Ort treffer = null;
+            foreach (var ort in LadeOrte())
+            {
+                if (ort.Klasse != 'P') continue;
+                double dLat = ort.Lat - lat;
+                if (dLat > 0.5 || dLat < -0.5) continue;
+                string c = ort.Code;
+                if (c == "PPLQ" || c == "PPLW" || c == "PPLH" || c == "PPLCH" || c == "PPLR") continue;
+                double dLon = (ort.Lon - lon) * kosLat;
+                double d2 = dLat * dLat + dLon * dLon;
+                if (d2 < bester) { bester = d2; treffer = ort; }
+            }
+            if (treffer == null) return erg;
+            double km = Math.Sqrt(bester) * 111.2;
+            if (km > 50) return erg;
+            // Richtung vom Ort zum Punkt in acht Stufen
+            double winkel = Math.Atan2((lon - treffer.Lon) * kosLat, lat - treffer.Lat) * 180 / Math.PI;
+            string[] richtungen = { "nördlich", "nordöstlich", "östlich", "südöstlich", "südlich", "südwestlich", "westlich", "nordwestlich" };
+            int stufe = (int)Math.Round(((winkel + 360) % 360) / 45) % 8;
+            erg["name"] = treffer.Name;
+            erg["km"] = Math.Round(km, 1);
+            erg["richtung"] = richtungen[stufe];
             return erg;
         }
 
