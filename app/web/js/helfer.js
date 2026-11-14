@@ -114,13 +114,46 @@ function klappAbschnitt(offen, schluessel, icon, titel, unter, rechts, einzeln) 
 // Entschieden wird nach dem Zustand, wenn Auf- und Zuklappen fertig sind (dazwischen passt es oft kurz nicht, das
 // gab ein Zucken). Die Bewegung folgt dem Zuklappen der Abschnitte darüber, so läuft sie nur in eine Richtung.
 // top: Lage der Zeile vor dem Klick.
-function nachOben(knopf, top) {
-  if (!knopf.isConnected) return;
+// Sichtbarer Bereich der Seite: unter der Kopfzeile, über einer festen Leiste unten
+// (z. B. „Auswahl herunterladen“ bzw. „Neu herunterzuladen“)
+function sichtBereich() {
   const kopf = document.querySelector(".kopf");
   const oben = (kopf ? kopf.getBoundingClientRect().bottom : 0) + 12;
-  // Unten zählt die feste Leiste mit (z. B. „Auswahl herunterladen“ bzw. „Neu herunterzuladen“)
   const leiste = [...document.querySelectorAll(".summe")].find(x => x.offsetParent && getComputedStyle(x).position === "sticky");
   const unten = window.innerHeight - (leiste ? leiste.offsetHeight : 0) - 12;
+  return { oben, unten };
+}
+
+// Inhalt, der nach dem Aufklappen noch nachkommt (z. B. Dateiliste vom Server): Wächst der Abschnitt danach über den
+// unteren Rand, so weit nachscrollen, dass er ganz zu sehen ist; der Kopf rückt dabei höchstens bis unter die
+// Kopfzeile. Geprüft wird nach dem Aufklapp-Scrollen (nachOben, 300 ms) und noch zweimal danach. Scrollt nie nach oben.
+function nachAufklappenPruefen(knopf) {
+  const box = knopf.parentElement;
+  for (const ms of [450, 900, 1600]) setTimeout(() => {
+    if (!knopf.isConnected || !box.classList.contains("auf")) return;
+    const { oben, unten } = sichtBereich();
+    const ueber = box.getBoundingClientRect().bottom - unten;
+    const luft = knopf.getBoundingClientRect().top - oben;
+    const d = Math.min(ueber, luft);
+    if (d >= 4) window.scrollBy({ top: d, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, ms);
+}
+
+// In einer eigenen Bildlaufleiste (z. B. Leiste links auf der Karte): Bereich von obenEl bis untenEl ganz zeigen,
+// oben bleibt obenEl dabei sichtbar. Scrollt nur nach unten.
+function imKastenZeigen(kasten, obenEl, untenEl) {
+  if (!kasten || !obenEl || !obenEl.isConnected) return;
+  const k = kasten.getBoundingClientRect();
+  const ueber = (untenEl || obenEl).getBoundingClientRect().bottom - (k.bottom - 8);
+  const luft = obenEl.getBoundingClientRect().top - k.top;
+  const d = Math.min(ueber, luft);
+  if (d >= 2) kasten.scrollBy({ top: d, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+function nachOben(knopf, top) {
+  if (!knopf.isConnected) return;
+  const { oben, unten } = sichtBereich();
+  nachAufklappenPruefen(knopf);
   const box = knopf.parentElement;
   const huelle = box && box.querySelector(":scope > .klapp-huelle");
   const innen = huelle && huelle.querySelector(".klapp-innen");

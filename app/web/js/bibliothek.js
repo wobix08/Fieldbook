@@ -65,6 +65,8 @@ const Bibliothek = (() => {
     knopf.addEventListener("click", () => {
       const auf = !box.classList.contains("auf");
       if (auf) {
+        // Inhalt zuerst bauen, sonst misst nachOben beim ersten Öffnen eine leere Liste und scrollt nicht
+        if (!gebaut) { innen.append(inhalt()); gebaut = true; }
         // Nur ein Eintrag je Ebene offen: die anderen klappen zu
         const vorher = knopf.getBoundingClientRect().top;
         for (const nachbar of box.parentElement.children) {

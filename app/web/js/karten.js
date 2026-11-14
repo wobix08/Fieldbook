@@ -567,9 +567,13 @@ const Karten = (() => {
           const orte = sortiert.filter(o => (o.kategorie || "") === k);
           const aus = kategorienAus.includes(k);
           const offen = gruppenOffen.has(k);
-          inhalt.push(el("div", { class: "mein-gruppe" + (aus ? " aus" : "") + (offen ? " offen" : "") },
+          inhalt.push(el("div", { class: "mein-gruppe" + (aus ? " aus" : "") + (offen ? " offen" : ""), "data-kat": k },
             el("button", { type: "button", class: "mein-gruppe-auf", "aria-expanded": String(offen),
-              onclick: () => { if (offen) gruppenOffen.delete(k); else gruppenOffen.add(k); meineOrteZeichnen(); } },
+              onclick: () => {
+                if (offen) gruppenOffen.delete(k); else gruppenOffen.add(k);
+                meineOrteZeichnen();
+                if (!offen) gruppeZeigen(k);
+              } },
               sym("chevron-right"), el("span", {}, k || "Ohne Kategorie"), el("small", {}, String(orte.length))),
             augeKnopf(aus, aus ? "Kategorie wieder zeigen" : "Ganze Kategorie ausblenden", () => {
               kategorienAus = aus ? kategorienAus.filter(x => x !== k) : kategorienAus.concat([k]);
@@ -581,9 +585,21 @@ const Karten = (() => {
     }
     box.replaceChildren(
       el("button", { type: "button", class: "meine-orte-kopf" + (listeAuf ? " auf" : ""), "aria-expanded": String(listeAuf),
-        onclick: () => { listeAuf = !listeAuf; gruppenOffen.clear(); meineOrteZeichnen(); } }, // beim Öffnen alle Kategorien zu
+        onclick: () => { // beim Öffnen alle Kategorien zu
+          listeAuf = !listeAuf; gruppenOffen.clear(); meineOrteZeichnen();
+          if (listeAuf) imKastenZeigen($(".karte-panel"), box, box);
+        } },
         sym("bookmark"), el("span", {}, "Meine Orte"), el("small", {}, String(meineOrte.length)), sym("chevron-down")),
       listeAuf ? el("div", { class: "ort-treffer meine-liste" }, ...inhalt) : "");
+  }
+
+  // Aufgeklappte Kategorie in der Leiste ganz zeigen (Kopf bis letzter Ort)
+  function gruppeZeigen(k) {
+    const kopf = [...document.querySelectorAll("#meine-orte .mein-gruppe")].find(g => g.dataset.kat === k);
+    if (!kopf) return;
+    let letzter = kopf;
+    while (letzter.nextElementSibling && letzter.nextElementSibling.classList.contains("mein-zeile")) letzter = letzter.nextElementSibling;
+    imKastenZeigen($(".karte-panel"), kopf, letzter);
   }
 
   // Durchgestrichenes Auge: blassgrau, solange sichtbar; kräftig, wenn ausgeblendet
