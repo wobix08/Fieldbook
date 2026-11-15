@@ -1,0 +1,10 @@
+Wortlisten für die Spracherkennung im Sprechmodus des Übersetzers.
+
+Quelle: FrequencyWords von Hermit Dave, https://github.com/hermitdave/FrequencyWords
+(Inhalt 2018, aus Untertiteln von OpenSubtitles, https://www.opensubtitles.org)
+Lizenz: Creative Commons Namensnennung - Weitergabe unter gleichen Bedingungen 4.0 (CC BY-SA 4.0),
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Änderung: je Sprache auf die 5000 häufigsten Wörter gekürzt, erste Zeile "# gesamt <N>" ist die Summe
+aller Anzahlen der Liste mit 50 000 Wörtern. Die gekürzten Listen stehen ebenfalls unter CC BY-SA 4.0.
+Gebaut mit tools/woerter-bauen.ps1.

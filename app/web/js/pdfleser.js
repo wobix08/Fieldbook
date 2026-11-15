@@ -42,6 +42,7 @@ const PdfLeser = (() => {
         leisteAufbauen();
         aufbauen(neueSeite);
       } else if (neueSeite !== aktuelleSeite) springe(neueSeite);
+      lesezeichenAnpassen();
       return;
     }
     url = neuUrl;
@@ -49,6 +50,7 @@ const PdfLeser = (() => {
     suchText = null; suchEinlesen = null; suchbegriff = ""; trefferZu();
     ansicht = neueAnsicht;
     aktuelleSeite = neueSeite;
+    lesezeichenAnpassen();
     const meinBuch = ++buchLauf;
     lauf++;
     // Die Seiten des vorigen Buchs gelten nicht mehr (sonst überschreibt deren Scrollen die gewünschte Seite)
@@ -450,15 +452,23 @@ const PdfLeser = (() => {
   // bleibt (beim Scrollen wechselt die Seite ständig), und nur solange der PDF-Leser offen ist
   let zuletztTimer = null;
   const sicherDateiname = (u) => { const d = u.split("/").pop().replace(/\.pdf$/i, ""); try { return decodeURIComponent(d); } catch { return d; } };
+  // Eintrag für „Zuletzt gelesen“ und die Merkliste: dieses Buch auf der aktuellen Seite
+  function eintragJetzt() {
+    if (!location.hash.startsWith("#pdf") || !url) return null;
+    const p = url.match(/^\/kiwix\/content\/([^/]+)\//);
+    // Oben steht bei Paketen der Paketname; gemerkt wird der Name des Buchs (das Paket steht darunter)
+    const titel = (p ? sicherDateiname(url) : $("#pdf-titel").textContent.trim()) || sicherDateiname(url);
+    // Eigene Unterlagen (js/eigene.js) zählen als Paket „eigene“
+    const paket = p ? decodeURIComponent(p[1]) : url.startsWith("/api/eigene/") ? "eigene" : "";
+    return { url, titel, paket, pdf: true, seite: aktuelleSeite };
+  }
+  const lesezeichenAnpassen = Merkliste.knopf($("#pdf-lesezeichen"), eintragJetzt);
   function zuletztSpaeter() {
+    lesezeichenAnpassen();
     clearTimeout(zuletztTimer);
     zuletztTimer = setTimeout(() => {
-      if (!location.hash.startsWith("#pdf") || !url) return;
-      const titel = $("#pdf-titel").textContent.trim() || sicherDateiname(url);
-      const p = url.match(/^\/kiwix\/content\/([^/]+)\//);
-      // Eigene Unterlagen (js/eigene.js) zählen als Paket „eigene“
-      const paket = p ? decodeURIComponent(p[1]) : url.startsWith("/api/eigene/") ? "eigene" : "";
-      zuletztMerken({ url, titel, paket, pdf: true, seite: aktuelleSeite });
+      const e = eintragJetzt();
+      if (e) zuletztMerken(e);
     }, 2000);
   }
 

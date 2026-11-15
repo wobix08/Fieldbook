@@ -28,6 +28,8 @@ const Ansichten = {
   setup: { zeigen: (p) => Setup.zeigen(p) },
   einstellungen: { zeigen: () => Einstellungen.zeigen() },
   inhalte: { zeigen: (p) => Inhalte.zeigen(p) },
+  merkliste: { zeigen: () => MerkAnsicht.zeigen() },
+  werkzeuge: { zeigen: (p) => Werkzeuge.zeigen(p) },
 };
 
 function navigiere() {
@@ -47,11 +49,15 @@ function navigiere() {
     a.classList.toggle("aktiv", an);
     if (an) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
+  $("#merk-kopf").classList.toggle("aktiv", ziel === "merkliste");
+  $("#werkzeug-kopf").classList.toggle("aktiv", ziel === "werkzeuge");
   $$(".ansicht-fehler").forEach(x => x.remove());
   // Antwortet Fieldbook nicht, würde jede Seite „nichts installiert“ o. ä. zeigen: stattdessen den Fehler
   if (OW.nichtErreichbar && ziel !== "lesen" && ziel !== "pdf") ansichtFehler(ziel, null);
   // Fehler auch aus asynchronen Ansichten abfangen, sonst bliebe die Seite leer
   else try { Promise.resolve(Ansichten[ziel].zeigen(params)).catch(e => ansichtFehler(ziel, e)); } catch (e) { ansichtFehler(ziel, e); }
+  // Aus der Merkliste: zur gemerkten Textstelle springen (Erste Hilfe, Vorsorge, Kochen)
+  MerkAnsicht.nachNavigation(ziel, params);
   Statistik.bereich(ziel);
   if (ziel !== "lesen" && ziel !== "pdf") window.scrollTo(0, 0);
 }
@@ -169,6 +175,8 @@ function zeigeKopfStatus(s) {
   const a = s.akku || {};
   const akkuWarn = a.vorhanden && !a.netz && a.prozent <= 30;
   $("#akku-box").hidden = !a.vorhanden;
+  // Auf Akku spart Fieldbook selbst: keine Bewegungen, seltener nachfragen, PDF-Bücher erst am Netz auslesen
+  document.documentElement.classList.toggle("akku-sparen", aufAkku());
   if (a.vorhanden) {
     const ap = $("#akku-pill");
     pillSetzen(ap, [a.netz, akkuWarn, a.prozent, a.restMinuten].join("|"), () => {
@@ -220,6 +228,12 @@ async function schalteKi(an) {
   finally { statusUngueltig(); }
 }
 
+// Läuft der Laptop gerade ohne Netzteil?
+function aufAkku() {
+  const a = (OW.status || {}).akku || {};
+  return !!a.vorhanden && !a.netz;
+}
+
 // Restzeit des Akkus: kurz für die Kopfzeile, lang für das Menü
 function akkuZeit(min, lang) {
   const h = Math.floor(min / 60), m = min % 60;
@@ -242,6 +256,9 @@ function fuelleAkkuMenue() {
   else {
     teile.push(text(a.restMinuten > 0 ? "Reicht noch etwa " + akkuZeit(a.restMinuten, true) + "."
       : "Windows schätzt die Restzeit erst nach ein paar Minuten auf Akku."));
+    teile.push(el("div", { class: "menue-titel" }, "Fieldbook spart schon selbst"),
+      text("Keine Bewegungen in der Oberfläche.", el("br"), "Seltener nachsehen, was sich geändert hat.", el("br"),
+        "PDF-Bücher werden erst am Stromnetz für Suche und KI vorbereitet."));
     teile.push(el("div", { class: "menue-titel" }, "So hält der Akku länger"),
       text("Energiesparmodus von Windows einschalten.", el("br"), el("small", {}, "Zu finden über das Akku-Symbol unten rechts in der Taskleiste.")),
       text("Bildschirm dunkler stellen."),
@@ -441,9 +458,14 @@ window.addEventListener("hashchange", navigiere);
   document.documentElement.lang = "de";
   if (s && !s.setupFertig && s.wissen === 0 && !s.modell && !location.hash) location.hash = "#setup"; // löst hashchange und damit navigiere() aus
   else navigiere();
-  // Bei verstecktem Tab nur jede 4. Runde fragen
+  // Bei verstecktem Tab nur jede 4. Runde fragen, auf Akku jede 3. (alle 15 s)
   let runde = 0;
-  statusTimer = setInterval(() => { if (document.hidden && ++runde % 4) return; aktualisiereStatus(); }, 5000);
+  statusTimer = setInterval(() => {
+    runde++;
+    if (document.hidden && runde % 4) return;
+    if (aufAkku() && runde % 3) return;
+    aktualisiereStatus();
+  }, 5000);
   // Solange Fieldbook nicht antwortet, jede Sekunde nachfragen (ein neu gestartetes Fieldbook findet den Tab schneller)
   let schnellLaeuft = false;
   schnellTimer = setInterval(async () => {

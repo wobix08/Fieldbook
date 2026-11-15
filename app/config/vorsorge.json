@@ -260,19 +260,27 @@
             { "id": "oeffner", "text": "Ein Dosenöffner, der ohne Strom geht" },
             { "id": "vorne", "frei": true, "text": "Der Vorrat ist so sortiert, dass Älteres vorn steht („Vorne raus, hinten rein“)", "alt": ["vorraete/vorne"], "verweis": { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit" } },
             { "id": "einkauf", "frei": true, "text": "Was verbraucht ist, kommt gleich auf den Einkaufszettel", "alt": ["vorraete/einkauf"] },
+            { "id": "l-kuehl", "von": "aufbewahren", "frei": true, "text": "Vorräte kühl, trocken und dunkel lagern", "mehr": "Nicht neben Herd oder Heizung, nicht auf dem Dachboden und nicht in der Sonne, auch das Wasser nicht." },
+            { "id": "l-dosen", "von": "aufbewahren", "text": "Trockenes (Mehl, Reis, Nudeln, Nüsse) nach dem Öffnen in dicht schließenden Dosen oder Gläsern", "mehr": "Gegen Feuchtigkeit, Lebensmittelmotten und Mäuse. Karton und dünne Folie halten sie nicht auf." },
+            { "id": "l-beulen", "von": "aufbewahren", "frei": true, "text": "Gewölbte, undichte oder rostige Dosen nicht mehr verwenden" },
             { "id": "tiere", "text": "Tierfutter für 10 Tage", "mehr": "Wenn Haustiere im Haushalt leben.", "alt": ["vorraete/tiere"] },
             { "id": "saeugling", "text": "Für Säuglinge: Säuglingsnahrung, Wasser für Fläschchen, Windeln", "mehr": "Säuglingsnahrung nie über das Haltbarkeitsdatum hinaus verwenden.", "alt": ["vorraete/saeugling"] }
           ]
         },
         {
           "text": [
-            "Wer mehr Sicherheit will, legt einen Vorrat für 14 Tage an und kann auch ohne Strom warm essen. Wichtig ist, alles einmal auszuprobieren. Erst dann merkt man, was fehlt."
+            "Wer mehr Sicherheit will, legt einen Vorrat für 14 Tage an und kann auch ohne Strom warm essen. Wichtig ist, alles einmal auszuprobieren. Erst dann merkt man, was fehlt. Bei einem größeren Vorrat lohnt außerdem etwas Ordnung, damit nichts hinten im Regal alt wird."
           ],
           "punkte": [
             { "id": "vierzehn", "text": "Vorrat für 14 Tage statt 10", "mehr": "Der Rechner oben zeigt die Mengen für 10 Tage, für 14 Tage braucht ihr rund 40 Prozent mehr.", "verweis": { "text": "Zum Vorratsrechner", "link": "#vorsorge?k=essen&z=rechner" } },
             { "id": "kocher", "text": "Campingkocher mit passenden Kartuschen", "mehr": "Kartuschen passend zum Kocher kaufen und den Kocher einmal ausprobieren. Nach Herstellerangabe benutzen, meist nur draußen oder bei weit offenem Fenster.", "alt": ["vorraete/kocher", "stromausfall/kocher"], "verweis": { "text": "Kochen: Kochen ohne Strom", "link": "#kochen" } },
             { "id": "probe", "frei": true, "text": "Einmal einen Tag nur aus dem Vorrat kochen, ohne Kühlschrank", "mehr": "So merkt man, was fehlt: Würze, Fett, Brennstoff oder Dinge, die keiner mag.", "verweis": { "text": "Kochen: Rezepte aus dem Vorrat", "link": "#kochen?l=rezepte" } },
-            { "id": "probieren", "frei": true, "text": "Neue Konserven erst einzeln probieren, bevor ihr mehr davon kauft" }
+            { "id": "probieren", "frei": true, "text": "Neue Konserven erst einzeln probieren, bevor ihr mehr davon kauft" },
+            { "id": "l-ort", "von": "aufbewahren", "frei": true, "text": "Alles an einem oder zwei Orten, nicht über die ganze Wohnung verteilt" },
+            { "id": "l-keller", "von": "aufbewahren", "frei": true, "text": "Im Keller nur, wenn er trocken ist und kein Hochwasser droht, und nicht direkt auf dem Boden" },
+            { "id": "ablauf", "von": "aufbewahren", "frei": true, "text": "Was in diesem Jahr abläuft, kommt nach vorn oder in eine eigene Kiste und wird zuerst gegessen" },
+            { "id": "regal", "von": "aufbewahren", "text": "Dosen nicht direkt auf Metallregale stellen, sondern in eine Kiste oder auf Pappe", "mehr": "Rostet oder platzt eine Dose, verdirbt sie so nicht den Rest." },
+            { "id": "l-mhd", "von": "aufbewahren", "frei": true, "text": "Wissen: Das Mindesthaltbarkeitsdatum heißt nicht „danach giftig“", "mehr": "Vieles ist deutlich länger gut, aber nicht alles gleich lange.", "verweis": { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit" } }
           ]
         },
         {
@@ -291,7 +299,7 @@
         { "text": "Kochen: Rezepte aus dem Vorrat", "link": "#kochen?l=rezepte", "icon": "cooking-pot" },
         { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit", "icon": "cooking-pot" }
       ],
-      "artikel": ["Notvorrat", "Mindesthaltbarkeitsdatum", "Konserve"]
+      "artikel": ["Notvorrat", "Mindesthaltbarkeitsdatum", "Konserve", "Lebensmittelmotte"]
     },
     {
       "id": "wasser", "titel": "Wasser", "icon": "droplet",
@@ -641,42 +649,26 @@
       "artikel": ["Notgepäck"]
     },
     {
-      "id": "aufbewahren", "titel": "Notfallkiste und Lagerung", "kurz": "Notfallkiste", "icon": "box", "kiste": true,
+      "id": "aufbewahren", "titel": "Notfallkiste", "icon": "box", "kiste": true,
       "warum": "Vorsorge hilft nur, wenn man die Sachen im Ernstfall findet und sie dann noch gut sind. Entkeimungstabletten, die irgendwo in einem Schrank liegen, findet nach fünf Jahren niemand mehr, schon gar nicht im Dunkeln.",
       "stufen": [
         {
           "text": [
-            "Eine einzige Kiste für die kleinen Dinge, die man bei einem Stromausfall braucht. Sie bleibt zu Hause, anders als das Notgepäck, das man mitnimmt. Was hineinkommt, ist bei den anderen Themen markiert und steht unten als Packliste."
+            "Eine einzige Kiste für die kleinen Dinge, die man bei einem Stromausfall braucht. Sie bleibt zu Hause, anders als das Notgepäck, das man mitnimmt. Was hineinkommt, steht darunter in der Packliste."
           ],
           "punkte": [
             { "id": "box", "text": "Eine stabile Kunststoffbox mit Deckel, etwa so groß wie ein Schuhkarton bis eine Getränkekiste", "mehr": "Ein Tragegriff ist praktisch. Keine Tasche, die zusammenfällt.", "alt": ["aufbewahren/box"] },
             { "id": "platz", "frei": true, "text": "Ein fester Platz, den alle im Haushalt kennen und den man im Dunkeln erreicht", "mehr": "Z. B. im Flur oder in der Küche, nicht ganz hinten im Keller. Obenauf liegt die Taschenlampe." },
             { "id": "liste", "frei": true, "text": "Auf dem Deckel eine Inhaltsliste mit den Ablaufdaten", "mehr": "Die Packliste unten lässt sich ausdrucken.", "verweis": { "text": "Zur Packliste", "link": "#vorsorge?k=aufbewahren&z=packliste" } },
             { "id": "ausdruck", "frei": true, "kiste": true, "text": "Die Schritte „Wenn es passiert“ ausgedruckt", "mehr": "Fieldbook braucht selbst Strom. Gedruckt werden die Schritte zusammen mit der Packliste.", "alt": ["aufbewahren/k-ausdruck"], "verweis": { "text": "Für die Notfallkiste drucken", "link": "#vorsorge?druck=kiste" } },
-            { "id": "blick", "frei": true, "text": "Einmal im Jahr hineinschauen, z. B. bei der Zeitumstellung" },
-            { "id": "l-kuehl", "frei": true, "text": "Vorräte kühl, trocken und dunkel lagern", "mehr": "Nicht neben Herd oder Heizung, nicht auf dem Dachboden und nicht in der Sonne, auch das Wasser nicht." },
-            { "id": "l-keller", "frei": true, "text": "Im Keller nur, wenn er trocken ist und kein Hochwasser droht, und nicht direkt auf dem Boden" },
-            { "id": "l-dosen", "text": "Trockenes (Mehl, Reis, Nudeln, Nüsse) nach dem Öffnen in dicht schließenden Dosen oder Gläsern", "mehr": "Gegen Feuchtigkeit, Lebensmittelmotten und Mäuse. Karton und dünne Folie halten sie nicht auf." },
-            { "id": "l-beulen", "frei": true, "text": "Gewölbte, undichte oder rostige Dosen nicht mehr verwenden" },
-            { "id": "l-mhd", "frei": true, "text": "Wissen: Das Mindesthaltbarkeitsdatum heißt nicht „danach giftig“", "mehr": "Vieles ist deutlich länger gut, aber nicht alles gleich lange.", "verweis": { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit" } },
-            { "id": "l-ort", "frei": true, "text": "Alles an einem oder zwei Orten, nicht über die ganze Wohnung verteilt" }
+            { "id": "blick", "frei": true, "text": "Einmal im Jahr hineinschauen, z. B. bei der Zeitumstellung" }
           ]
         },
-        {
-          "text": [
-            "Bei einem größeren Vorrat lohnt etwas Ordnung, damit nichts hinten im Regal alt wird."
-          ],
-          "punkte": [
-            { "id": "ablauf", "frei": true, "text": "Was in diesem Jahr abläuft, kommt nach vorn oder in eine eigene Kiste und wird zuerst gegessen" },
-            { "id": "regal", "text": "Dosen nicht direkt auf Metallregale stellen, sondern in eine Kiste oder auf Pappe", "mehr": "Rostet oder platzt eine Dose, verdirbt sie so nicht den Rest." }
-          ]
-        },
+        { "text": [], "punkte": [] },
         { "text": [], "punkte": [] }
       ],
-      "verweise": [
-        { "text": "Kochen: Wie lange hält was?", "link": "#kochen?l=haltbarkeit", "icon": "cooking-pot" }
-      ],
-      "artikel": ["Lebensmittelmotte", "Mindesthaltbarkeitsdatum"]
+      "verweise": [],
+      "artikel": []
     }
   ]
 }

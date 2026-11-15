@@ -46,6 +46,7 @@ const Vorsorge = (() => {
       if (!geladen.personen) geladen.personen = { erwachsen: 1 };
       stand = geladen;
       if (stand.version !== 2) { uebernehmen(); speichern(); }
+      if (umziehen()) speichern();
     }
 
     ziel.innerHTML = "";
@@ -60,11 +61,15 @@ const Vorsorge = (() => {
     } else if (thema) {
       ziel.append(themaAnsicht(thema));
       const s = params.get("s");
-      // Sprung zu einer Stufe (s=2) oder Stelle (z=rechner, z=packliste); ist die Stufe zugeklappt,
-      // wird sie aufgeklappt. Bei der ersten Stufe wird nicht gesprungen: Sie steht
-      // ohnehin oben, und sonst rutschen Erklärung und Vorratsrechner aus dem Blick.
-      const ziel2 = s && s !== "1" ? "vs-s" + s : params.get("z") ? "vs-" + params.get("z") : null;
-      if (ziel2) setTimeout(() => { const z = document.getElementById(ziel2); if (z) { if (z.tagName === "DETAILS") z.open = true; z.scrollIntoView({ block: "start" }); } }, 50);
+      // Sprung zu einer Stufe (s=2) oder Stelle (z=rechner, z=packliste). Eine Stufe wird per Klick auf
+      // ihren Kopf aufgeklappt; Zuklappen der anderen und Hinrollen erledigt dann stufeAbschnitt.
+      const ziel2 = s ? "vs-s" + s : params.get("z") ? "vs-" + params.get("z") : null;
+      if (ziel2) setTimeout(() => {
+        const z = document.getElementById(ziel2);
+        if (!z) return;
+        if (z.classList.contains("klapp")) { if (!z.classList.contains("auf")) z.querySelector(".klapp-kopf").click(); }
+        else z.scrollIntoView({ block: "start" });
+      }, 50);
     } else if (lage) {
       ziel.append(lageAnsicht(lage));
     } else ziel.append(uebersicht());
@@ -81,6 +86,21 @@ const Vorsorge = (() => {
     stand.haken = neu;
     stand.datum = {};
     stand.version = 2;
+  }
+
+  // Punkte, die in ein anderes Thema umgezogen sind ("von": altes Thema, gleiche id), nehmen ihr Häkchen mit.
+  // Läuft bei jedem Laden; gibt true zurück, wenn sich etwas geändert hat.
+  function umziehen() {
+    let geaendert = false;
+    for (const t of konf.themen) for (const p of allePunkte(t)) {
+      const alt = p.von && stand.haken[p.von];
+      if (!alt || !alt.includes(p.id)) continue;
+      stand.haken[p.von] = alt.filter(x => x !== p.id);
+      const neu = stand.haken[t.id] = stand.haken[t.id] || [];
+      if (!neu.includes(p.id)) neu.push(p.id);
+      geaendert = true;
+    }
+    return geaendert;
   }
 
   function allePunkte(t) { return t.stufen.flatMap(s => s.punkte); }
@@ -284,7 +304,7 @@ const Vorsorge = (() => {
       druck ? null : el("div", { class: "eh-lektion-kopf vs-knoepfe" },
         el("a", { class: "knopf knopf-klein", href: "#vorsorge" }, "← Übersicht"),
         el("span", { class: "hinweis" }, "Thema " + nr + " von " + konf.themen.length + (datum ? " · " + datum : ""))),
-      el("h2", {}, sym(t.icon), t.titel),
+      el("h2", { class: "merk-h2" }, sym(t.icon), t.titel, druck ? null : Merkliste.seitenKnopf({ link: "#vorsorge?k=" + t.id, titel: t.titel, bereich: "vorsorge" })),
       el("p", { class: "vs-warum" }, zeilen(t.warum)),
       t.rechner ? rechner() : null,
       ...t.stufen.map((s, i) => stufeAbschnitt(t, s, i, druck)),
@@ -297,12 +317,35 @@ const Vorsorge = (() => {
         naechstes ? el("a", { class: "knopf knopf-haupt", href: "#vorsorge?k=" + naechstes.id }, "Nächstes Thema: " + (naechstes.kurz || naechstes.titel) + " →") : null));
   }
 
-  // Eine Stufe eines Themas. Die erste ist immer offen; die höheren sind zugeklappt, bis dort etwas
-  // abgehakt ist. Im Druck stehen alle offen da, bei „Das Wichtigste drucken“ nur die erste.
+  // Eine Stufe eines Themas. Alle Stufen sind anfangs zugeklappt (sonst erschlägt die Seite).
+  // Es ist immer nur eine offen: Beim Aufklappen gehen die anderen zu, und die Seite rollt zur
+  // geöffneten Stufe. Im Druck stehen alle offen da, bei „Das Wichtigste drucken“ nur die erste.
+  // Klappbarer Abschnitt (Stufe oder Packliste). Aufbau wie klappAbschnitt (helfer.js): Kopf-Knopf, darunter
+  // .klapp-huelle, die weich auf- und zugeht. Es ist nur einer offen; nachOben rollt im Takt des Zuklappens
+  // und nur so weit wie nötig (wie in der Bibliothek).
+  function klappStufe(id, name, zusatz, zaehler, inhalt) {
+    const knopf = el("button", { type: "button", class: "klapp-kopf vs-stufe-kopf", "aria-expanded": "false" },
+      el("span", { class: "vs-auf" }, "›"), el("span", { class: "vs-stufe-name" }, name),
+      el("span", { class: "hinweis" }, zusatz), zaehler);
+    const box = el("div", { class: "vs-stufe klapp", id }, knopf,
+      el("div", { class: "klapp-huelle" }, el("div", { class: "klapp-innen" }, ...inhalt)));
+    box._setzen = (jetzt) => { box.classList.toggle("auf", jetzt); knopf.setAttribute("aria-expanded", String(jetzt)); };
+    knopf.addEventListener("click", () => {
+      const jetzt = !box.classList.contains("auf");
+      if (jetzt) {
+        const vorher = knopf.getBoundingClientRect().top;
+        for (const x of box.parentElement.children) if (x !== box && x.classList.contains("auf") && x._setzen) x._setzen(false);
+        nachOben(knopf, vorher);
+      }
+      box._setzen(jetzt);
+    });
+    return box;
+  }
+
   function stufeAbschnitt(t, s, i, druck) {
     if (!s.punkte.length) return null;
     if (druck === "wichtigste" && i > 0) return null;
-    const aus = i > 0 && !druck;
+    const aus = !druck;
     const name = konf.stufen[i].name;
     const inhalt = [
       ...s.text.map(x => el("p", {}, zeilen(x))),
@@ -311,12 +354,7 @@ const Vorsorge = (() => {
     ];
     const fertig = s.punkte.filter(p => hat(t, p)).length;
     const zaehler = el("span", { class: "vs-zaehler" }, fertig + " von " + s.punkte.length);
-    if (aus) {
-      return el("details", { class: "vs-stufe zu", id: "vs-s" + (i + 1), open: fertig > 0 },
-        el("summary", {}, el("span", { class: "vs-auf" }, "›"), el("span", { class: "vs-stufe-name" }, name),
-          el("span", { class: "hinweis" }, " (zusätzlich) · " + s.punkte.length + " Punkte"), zaehler),
-        ...inhalt);
-    }
+    if (aus) return klappStufe("vs-s" + (i + 1), name, (i ? " (zusätzlich) · " : " · ") + s.punkte.length + " Punkte", zaehler, inhalt);
     return el("section", { class: "vs-stufe", id: "vs-s" + (i + 1) },
       el("h3", {}, el("span", { class: "vs-stufe-name" }, name), i ? el("span", { class: "hinweis" }, " (zusätzlich)") : null, druck ? null : zaehler),
       ...inhalt);
@@ -365,6 +403,13 @@ const Vorsorge = (() => {
         el("ul", { class: "eh-ueben vs-liste" }, ...liste.map(({ t, p }) => punkt(t, p, true))),
       ];
     }).filter(Boolean).flat();
+    if (!druck) {
+      const alle = konf.stufen.flatMap((st, i) => kistenPunkte(i));
+      const fertig = alle.filter(({ t, p }) => hat(t, p)).length;
+      return klappStufe("vs-packliste", "Was in die Notfallkiste kommt", " · " + alle.length + " Punkte", el("span", { class: "vs-zaehler" }, fertig + " von " + alle.length), [
+        el("p", { class: "hinweis" }, "Zusammengestellt aus den anderen Themen, z. B. die Taschenlampe aus „Licht, Strom und Wärme“.", el("br"), "Ein Häkchen hier gilt auch dort."),
+        ...gruppen]);
+    }
     return el("section", { class: "vs-stufe vs-packliste", id: "vs-packliste" },
       el("h3", {}, sym("box"), "Was in die Notfallkiste kommt"),
       el("p", { class: "hinweis" }, "Zusammengestellt aus den anderen Themen.", el("br"), "Ein Häkchen hier gilt auch dort."),
@@ -388,7 +433,7 @@ const Vorsorge = (() => {
       druck ? null : el("div", { class: "eh-lektion-kopf vs-knoepfe" },
         el("a", { class: "knopf knopf-klein", href: "#vorsorge" }, "← Übersicht"),
         el("span", { class: "hinweis" }, "Wenn es passiert")),
-      el("h2", {}, sym(l.icon), l.titel),
+      el("h2", { class: "merk-h2" }, sym(l.icon), l.titel, druck ? null : Merkliste.seitenKnopf({ link: "#vorsorge?lage=" + l.id, titel: l.titel, bereich: "vorsorge" })),
       (l.warnung || []).length ? el("div", { class: "fehlerbox vs-warnung" },
         el("b", {}, sym("triangle-alert"), "Mach das nicht"),
         ...l.warnung.map(w => el("p", {}, zeilen(w)))) : null,

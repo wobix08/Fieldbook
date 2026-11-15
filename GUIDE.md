@@ -173,6 +173,20 @@ Bei Links ins Internet zeigt Fieldbook erst, wohin der Link führt.\
 Mit **Im Browser öffnen** öffnet er sich in einem neuen Tab.\
 Gibt es gerade kein Internet, zeigt Fieldbook stattdessen einen kurzen Hinweis.
 
+**Artikel vorlesen lassen**\
+Neben jeder Überschrift steht ein kleiner Lautsprecher, ein Klick darauf liest ab dort vor.\
+Am Ende eines Abschnitts geht es mit dem nächsten weiter.\
+Der gerade gelesene Absatz ist grün hinterlegt, eine Markierung gleitet mit dem gesprochenen Wort mit.\
+Scrollst du selbst woanders hin, bleibt der Artikel dort stehen; **Zur Stelle** in der Leiste bringt dich zurück.\
+Tabellen, Infokästen, Bildunterschriften und Quellenangaben werden übersprungen.\
+Unter dem Artikel erscheint dabei eine Leiste mit dem Namen des Abschnitts und wie lange er dauert (geschätzt).\
+Mit der Zeitleiste spulst du im Abschnitt vor und zurück.\
+Links stehen die Knöpfe für Pause und nächsten Absatz, rechts das Kreuz zum Beenden.\
+Der kleine Regler rechts stellt die Lautstärke nur für Fieldbook ein, die Lautstärke von Windows bleibt gleich.\
+Wenn du Text markierst, erscheint daneben **Vorlesen**, dann wird nur dieser Text gelesen.\
+Dafür braucht es **Vorlesen** unter Inhalte → Sprachen → Grundfunktionen, für andere Sprachen als Deutsch zusätzlich **Text + Sprache** bei der Sprache.\
+Nach **Auf Deutsch** wird die deutsche Übersetzung vorgelesen.
+
 **Fremdsprachige Artikel auf Deutsch lesen**\
 Beim Lesen oben auf **Auf Deutsch** klicken.\
 Der Artikel wird offline übersetzt, meist in wenigen Sekunden.\
@@ -216,15 +230,22 @@ Die Rückübersetzung steht unter dem Original, so kann der Absender beides dire
 Mit dem Schiebeschalter ganz oben wechselst du von **Schreiben** zu **Sprechen**, dann geht es ohne Tippen und Klicken:\
 Fieldbook hört zu, erkennt nach einer kurzen Sprechpause, wer welche Sprache gesprochen hat, übersetzt und liest die Übersetzung vor.\
 Sprecht abwechselnd und macht nach jedem Satz eine kurze Pause.\
+Die Sprache erkennt Fieldbook am Klang und an den Wörtern, du kannst also auch zweimal hintereinander sprechen.\
+Wörter, die in beiden Sprachen gleich klingen (etwa „Okay“ oder „Hallo“ bei Deutsch und Englisch), können in der falschen Sprache landen; dann einfach einen ganzen Satz sagen.\
 Während Fieldbook vorliest, hört es nicht zu; mit **Stop** schaltest du das Zuhören ab, mit **Weiter** wieder an.\
 Beim Erkennen und Übersetzen hört es weiter zu: Redet jemand weiter, wird der neue Teil an seinen Satz angehängt und alles zusammen übersetzt und vorgelesen.\
 Daneben stellst du die **Sprechpause** ein: **kurz** übersetzt schneller, schneidet aber bei Denkpausen ab; **lang** wartet geduldiger.\
+Der kleine Regler mit dem Lautsprecher stellt ein, wie laut vorgelesen wird.\
+Das gilt nur für Fieldbook, die Lautstärke von Windows bleibt gleich.\
+Beim Schreiben findest du ihn unten in deinem Eingabefeld.\
 Korrigieren kann man vorher nichts, deshalb im Sprechmodus besonders auf die Rückübersetzung achten.\
 Das Mikrofon ist nur an, solange der Sprechmodus offen ist; beim nächsten Öffnen beginnt der Übersetzer wieder mit **Schreiben**.\
 Zu jedem Satz gibt es eine **Rückübersetzung** in der Sprache dessen, der ihn geschrieben hat: Daran sieht er, ob der Sinn angekommen ist.\
 **Vollbild** zeigt die Übersetzung bildschirmfüllend, dann kannst du den Laptop umdrehen.\
 **Vorlesen** spricht die Übersetzung laut aus, ein zweiter Klick hält an.\
 Dafür lädst du die Sprache unter **Inhalte** mit **Text + Sprache** statt **Nur Text** (die Stimme braucht etwa 60 bis 75 MB, Deutsch kommt einmal mit).\
+Mit der ersten Stimme kommt einmal **Vorlesen** mit, unter **Inhalte → Sprachen → Grundfunktionen**: das Vorleseprogramm (Piper mit eigenem Python, ohne Installation) und die deutsche Stimme, zusammen etwa 147 MB.\
+Wer nur deutsche Artikel vorlesen lassen will, wählt dort nur **Vorlesen**.\
 Bei einer schon geladenen Sprache holst du die Stimme mit **+ Sprache** dazu.\
 Für manche Sprachen gibt es keine freie Stimme, zum Beispiel Türkisch, Kroatisch und Arabisch; dort fehlt der Knopf.\
 Weitere Sprachen lädst du mit **Sprachen hinzufügen** oben rechts (oder unter **Inhalte** im Bereich **Sprachen**).\
@@ -241,7 +262,11 @@ Alle installierten Länder sind zusammen zu sehen, mit **Springen zu …** komms
 Am Rand der geladenen Karten hält die Karte an, und ein Hinweis sagt, wie es weitergeht.\
 Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.\
 Dafür vorher auf Stadt- oder Ortsebene hineinzoomen.\
+Sind dort weniger als drei, sucht Fieldbook von selbst im größeren Umkreis weiter, bis zu 20 km um die Kartenmitte.\
+Was einmal durchsucht wurde, merkt sich Fieldbook, auch nach einem Neustart.\
+Beim nächsten Mal sind die Treffer dort sofort da.\
 Ein Klick in die Karte setzt eine Markierung.\
+Ein Rechtsklick irgendwo in die Karte entfernt sie wieder.\
 Daneben stehen die Stadt, der nächste Ort oder Stadtteil und die Koordinaten (praktisch, um beim Notruf den Standort durchzugeben).\
 Mit **Ort merken** speicherst du die Stelle mit Namen und auf Wunsch einer Notiz, zum Beispiel „Treffpunkt Familie“.\
 Eine Farbe für die Stecknadel und eine Kategorie (zum Beispiel „Familie“) kannst du dabei auch wählen.\
@@ -254,6 +279,24 @@ Auch **Route planen** oben links übernimmt eine gesetzte Markierung als Ziel.\
 Das hinterlegte Feld (Start oder Ziel) ändert der nächste Klick in die Karte.\
 Ein Klick ins andere Feld hinterlegt dieses.\
 Der Pfeil rechts neben Start und Ziel tauscht die beiden.\
+Unter der berechneten Route steht das **Höhenprofil**: wie es bergauf und bergab geht, der höchste Punkt und die steilste Stelle.\
+Fährst du mit der Maus darüber, zeigt ein Punkt auf der Karte die Stelle, oben stehen Kilometer und Höhe.\
+Zu Fuß und mit dem Rad sucht der Schalter **Möglichst wenig bergauf** einen flacheren Weg.\
+Schon bevor du den Haken setzt, steht darunter, wie viel weniger es bergauf geht, wie viel länger oder kürzer der Weg ist und wie viel schneller oder langsamer.\
+Führt der flachere Weg mehr über Straßen mit Autoverkehr, steht das ebenfalls dort.\
+Gibt es keinen flacheren Weg, steht das dort auch.\
+**Weitere Strecken zeigen** listet bis zu drei andere Wege mit Länge, Dauer und Höhenmetern.\
+Die anderen Wege erscheinen gestrichelt und blass auf der Karte.\
+Ein Klick auf einen davon, in der Liste oder direkt auf der Karte, macht ihn zur gewählten Strecke.\
+\
+**Sperrungen**\
+Ist ein Weg gesperrt, etwa eine Brücke oder eine Baustelle, klickst du auf diese Stelle der Strecke und wählst **Stelle sperren**.\
+Für ein längeres Stück drückst du auf die Strecke und ziehst an ihr entlang, dann **Abschnitt sperren**.\
+Die Route führt danach außen herum.\
+Unter **Sperrungen** in der Leiste stehen alle Sperrungen, Fieldbook merkt sie sich für alle künftigen Routen.\
+Mit dem Plus zeichnest du eine Sperrung selbst ein: ein Klick für eine Stelle, mehrere Klicks für einen Abschnitt, die Linie folgt dabei dem Weg.\
+Das durchgestrichene Auge schaltet eine Sperrung vorübergehend aus.\
+Ein Klick auf eine Sperrung zeigt sie auf der Karte, dort kannst du sie umbenennen, löschen oder festlegen, ob sie nur für Fußgänger, Rad oder Auto gilt.\
 **Sonne und Mond** zeigt Sonnenaufgang, Sonnenuntergang, Dämmerung und Mondphase für die Markierung, ohne Markierung für die Mitte der Karte.\
 Such vorher deinen Ort oder klick ihn in der Karte an, dann stimmen die Zeiten auf die Minute.\
 Unter **Anderer Tag** tippst du ein Datum ein (zum Beispiel 24.12.) oder wählst es im Kalender, **Heute** springt zurück.\
@@ -276,15 +319,40 @@ Was die Sirenensignale bedeuten und welcher Sender Warnungen bringt, steht passe
 **Vorbereiten** ordnet die Themen (Essen mit Vorratsrechner, Wasser, Gesundheit, Licht und Wärme, Information, Haus, Unterwegs, Dokumente, Notgepäck, Notfallkiste) nach den drei Stufen.\
 Darüber siehst du, wie viel du in jeder Stufe schon abgehakt hast.\
 Jedes Thema erklärt, warum es wichtig ist, und hat Punkte zum Abhaken.\
-Die höheren Stufen sind zugeklappt, bis du dort etwas abhakst.\
-Die Packliste für die Notfallkiste entsteht von selbst und lässt sich zusammen mit den Schritten ausdrucken.\
+Alle Stufen sind zugeklappt und öffnen sich per Klick, immer nur eine auf einmal.\
+Beim Thema Notfallkiste steht die Packliste: Sie sammelt die passenden Punkte aus den anderen Themen und lässt sich zusammen mit den Schritten ausdrucken.\
 Drucken kannst du nur das Wichtigste oder alles.
+
+### Werkzeuge
+Das Werkzeug-Symbol oben rechts öffnet kleine Helfer.\
+**Umrechnen** rechnet Temperatur, Länge, Gewicht, Volumen und Geschwindigkeit um.\
+Unter **Küche** wird aus Tassen und Löffeln eine Angabe in Gramm, etwa für amerikanische Rezepte.\
+**Orientierung** zeigt, wie du ohne GPS die Himmelsrichtung findest: mit Uhr und Sonne, einem Schattenstab oder nachts mit dem Polarstern.\
+**Sonne und Mond** erklärt nützliche Faustregeln, etwa wie du mit den Fingern abschätzt, wie lange es noch hell ist.\
+Ein Knopf darunter öffnet die Karte mit den genauen Zeiten für einen Ort.\
+**Signale** übersetzt Text in Morsezeichen und zurück.\
+Mit **Als Lichtzeichen zeigen** blinkt der ganze Bildschirm im Morsetakt, ein Klick oder Esc beendet das.\
+Darunter stehen die wichtigsten Notsignale: SOS, das Alpine Notsignal und Zeichen für Hubschrauber und auf dem Boden.\
+Die Suche führt auch direkt hin, etwa bei „Morse“ oder „Fahrenheit“.
+
+### Merkliste
+Das Lesezeichen-Symbol oben rechts öffnet deine **Merkliste**.\
+Ganze Artikel, Buchseiten und Themen aus Erste Hilfe und Vorsorge merkst du mit dem Lesezeichen-Knopf neben dem Titel.\
+Ein zweiter Klick nimmt sie wieder von der Liste.\
+Für eine einzelne Stelle markierst du den Text und klickst auf **Merken**.\
+In der Merkliste steht die Stelle dann als Zitat, ein Klick öffnet die Seite und hebt die Stelle hervor.\
+Mit **Neuer Ordner** legst du eigene Ordner an, zum Beispiel „Notfall“ oder „Garten“.\
+Das Menü ⋮ an jedem Eintrag benennt ihn um, legt ihn in einen Ordner oder nimmt ihn von der Liste.\
+Wird ein Ordner gelöscht, bleiben seine Einträge erhalten und stehen dann ohne Ordner da.
 
 ## 5. Strom sparen
 
 - Oben rechts siehst du den Akkustand und, wenn das Fenster breit genug ist, wie lange er noch reicht.\
   Ab 30 % wird die Anzeige gelb, ab 15 % rot.\
   Ein Klick darauf zeigt Tipps zum Stromsparen und den Sparmodus.
+- Läuft der Laptop ohne Netzteil, spart Fieldbook von selbst:\
+  Die Oberfläche verzichtet auf Bewegungen und fragt seltener nach, was sich geändert hat.\
+  PDF-Bücher werden erst wieder am Stromnetz für Suche und KI vorbereitet.
 - Strom braucht die KI vor allem, während sie antwortet: Dann rechnet der Laptop mit voller Kraft.\
   Wer Akku sparen will, stellt also lieber wenige, gezielte Fragen.
 - Der **Sparmodus** schaltet die KI ganz ab und gibt den Arbeitsspeicher frei, den sie belegt.\

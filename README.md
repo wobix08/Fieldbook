@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
 
-### **[Fieldbook 0.8.4 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.4/Fieldbook-0.8.4.zip)**
+### **[Fieldbook 0.8.5 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.5/Fieldbook-0.8.5.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -26,13 +26,14 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 | | Bereich | Was es kann |
 |---|---|---|
-| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design (hell oder dunkel):<br>• Wikipedia auf Deutsch, komplett mit Bildern (49&nbsp;GB), ohne Bilder (19&nbsp;GB) oder kompakt (5&nbsp;GB)<br>• Medizin: Wikipedia-Medizin, MDWiki und Handbücher für Notlagen<br>• Reparieren: über 56.000 Reparaturanleitungen von iFixit (die meisten auf Englisch, Fieldbook übersetzt sie auf Knopfdruck ins Deutsche)<br>• Draußen und Selbstversorgung: Wasser aufbereiten, Knoten, Einkochen, Gärtnern, Energie ohne Netz<br>• Wikivoyage (Reiseführer), Wikibooks (Lehrbücher), Klexikon (Kinderlexikon), Project Gutenberg (Literatur) und mehr<br>• Eigene Unterlagen: eigene PDFs, Word-Dateien, Bilder und Texte ablegen, etwa Bedienungsanleitungen oder einen Medikamentenplan.<br>Die Suche und die KI finden auch, was darin steht. |
+| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design (hell oder dunkel):<br>• Wikipedia auf Deutsch, komplett mit Bildern (49&nbsp;GB), ohne Bilder (19&nbsp;GB) oder kompakt (5&nbsp;GB)<br>• Medizin: Wikipedia-Medizin, MDWiki, Medikamente A–Z (NHS), Reisegesundheit (CDC) und Handbücher für Notlagen<br>• Reparieren: über 56.000 Reparaturanleitungen von iFixit (die meisten auf Englisch, Fieldbook übersetzt sie auf Knopfdruck ins Deutsche)<br>• Draußen und Selbstversorgung: Wasser aufbereiten, Knoten, Einkochen, Gärtnern, Energie ohne Netz<br>• Wikivoyage (Reiseführer), Wikibooks (Lehrbücher), Klexikon (Kinderlexikon), Project Gutenberg (Literatur) und mehr<br>• Eigene Unterlagen: eigene PDFs, Word-Dateien, Bilder und Texte ablegen, etwa Bedienungsanleitungen oder einen Medikamentenplan.<br>Die Suche und die KI finden auch, was darin steht.<br>• Merkliste mit eigenen Ordnern für Artikel, Buchseiten, Erste-Hilfe- und Vorsorge-Themen und einzelne markierte Textstellen, damit man sie im Ernstfall sofort wiederfindet.<br>• Vorlesen: einen Abschnitt antippen oder Text markieren, Fieldbook liest ihn laut vor. |
 | <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe.<br>Beim Lesen fasst sie den offenen Artikel zusammen, erklärt ihn einfach oder beantwortet Fragen dazu. |
 | <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und Einkochen |
-| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, eigene Orte merken, Routenplanung, Ärzte, Apotheken und Trinkwasser in der Nähe, Sonnenauf- und -untergang mit Mondphase |
+| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, eigene Orte merken, Routenplanung mit Höhenprofil, flacheren Wegen, Ausweichstrecken und eigenen Sperrungen, Ärzte, Apotheken und Trinkwasser in der Nähe, Sonnenauf- und -untergang mit Mondphase |
 | <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
 | <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Vorbereiten in drei Stufen (Vorräte, Hausapotheke, Licht, Dokumente …) und was zu tun ist, wenn Strom oder Wasser weg sind oder die Sirene heult (Sirenensignale und Warnungen für Deutschland, Österreich und die Schweiz) |
+| <img src=".github/icons/tools.svg" width="32" height="32" align="left" alt=""> | **Werkzeuge** | Kleine Helfer über das Werkzeug-Symbol oben rechts:<br>• Umrechnen: Temperatur, Länge, Gewicht, Volumen, Geschwindigkeit und Küchenmaße (Tasse, Löffel in Gramm)<br>• Orientierung ohne GPS: mit Uhr und Sonne, Schattenstab oder Polarstern<br>• Sonne und Mond: Faustregeln (mit den Fingern abschätzen, wie lange es noch hell ist, Polarnacht, Südhalbkugel) und genaue Zeiten für einen Ort auf der Karte<br>• Signale: Morse-Übersetzer mit Lichtzeichen über den ganzen Bildschirm, SOS, Alpines Notsignal, Zeichen für Hubschrauber und auf dem Boden |
 
 | Karten | Übersetzer | Erste Hilfe |
 |---|---|---|
@@ -57,7 +58,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.4 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.4/Fieldbook-0.8.4.zip)** (ZIP-Datei, etwa 3 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.5 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.5/Fieldbook-0.8.5.zip)** (ZIP-Datei, etwa 4 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -126,7 +127,9 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   |---|---|
   | Wissenspakete, kiwix-serve | download.kiwix.org (Kiwix / Wikimedia) |
   | KI-Modelle, Modelle für die Spracheingabe, Stimmen zum Vorlesen | huggingface.co |
-  | llama.cpp, whisper.cpp, Piper, BRouter, PMTiles, Java (Eclipse Temurin) | github.com (offizielle Releases der Projekte) |
+  | llama.cpp, whisper.cpp, BRouter, PMTiles, Java (Eclipse Temurin) | github.com (offizielle Releases der Projekte) |
+  | Python (portabel, ohne Installation) fürs Vorlesen | python.org |
+  | Piper (Vorlesen) und seine Python-Bausteine | files.pythonhosted.org (offizielles Python-Paketverzeichnis PyPI, feste Versionen mit Prüfsumme) |
   | Karten | build.protomaps.com (OpenStreetMap-Daten) |
   | Wegedaten | brouter.de |
   | Ortsnamen | download.geonames.org |
@@ -138,7 +141,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.8.4.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.8.5.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -172,7 +175,7 @@ Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
 Bei Erste-Hilfe-Fragen und zur Hausapotheke antwortet sie aus dem eingebauten Erste-Hilfe-Kurs bzw. der Vorsorge-Liste, weil Artikel aus der Bibliothek dort oft anderen Regeln folgen (z. B. amerikanischen).\
 Die passenden Artikel stehen trotzdem zum Weiterlesen in der Quellenliste.\
 Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
-Auch Pakete aus PDF-Büchern durchsucht sie: Fieldbook liest deren Text nach der Installation einmal im Hintergrund aus.\
+Auch Pakete aus PDF-Büchern durchsucht sie: Fieldbook liest deren Text nach der Installation einmal im Hintergrund aus (auf Akku erst wieder am Stromnetz).\
 Eingescannte Bücher ohne Text bleiben dabei außen vor.\
 Die Bücher selbst öffnet ein eigener PDF-Leser, mit markierbarem Text in Fieldbook-Schrift, im dunklen Design und auf Knopfdruck auf Deutsch.\
 Deine eigenen Unterlagen (PDF, Word und Textdateien) durchsucht sie genauso und nennt sie als Quelle.\
@@ -326,6 +329,7 @@ Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbebloc
 | Karten | `build-metadata.protomaps.dev`, `build.protomaps.com` |
 | KI-Modelle, Spracheingabe und Stimmen | `huggingface.co`, `*.hf.co` (Download-Server von Hugging Face) |
 | Hilfsprogramme und Updates | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `objects.githubusercontent.com` |
+| Vorleseprogramm (Python und Piper) | `www.python.org`, `files.pythonhosted.org` |
 | Übersetzer | `cdn.jsdelivr.net`, `firefox.settings.services.mozilla.com`, `firefox-settings-attachments.cdn.mozilla.net` |
 | Ortsnamen | `download.geonames.org` |
 | Wegedaten | `brouter.de` |
@@ -340,10 +344,11 @@ Fieldbook.exe           Startdatei (sucht app\Start.bat neben sich)
 app\
   Start.bat, start.ps1        Starter (PowerShell, in Windows enthalten)
   Server.cs                   Kleiner lokaler Server, wird beim Start kompiliert
+  piper-dienst.py             Vorlesen mit Piper (läuft mit dem portablen Python aus programme\piper-py)
   config\                     Wissenspakete, KI, Karten, Sprachen, Kochen, Erste Hilfe, Vorsorge (JSON)
   web\                        Oberfläche (HTML, CSS, JavaScript, MapLibre, pdf.js)
 programme\                    Wird beim Einrichten gefüllt: kiwix-serve, llama.cpp, whisper.cpp,
-                              Piper, BRouter mit Java, PMTiles, Übersetzer
+                              Piper mit Python, BRouter mit Java, PMTiles, Übersetzer
 daten\                        Wird beim Einrichten gefüllt: Wissenspakete, KI-Modelle, Karten,
                               Wegedaten, Ortsnamen, eigene Orte, Chats, Einstellungen, Logs,
                               eigene Unterlagen (daten\eigene)
@@ -353,7 +358,7 @@ Verwendete Bausteine:
 - [Kiwix](https://kiwix.org) (`kiwix-serve`) für die ZIM-Wissenspakete
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`) für die KI
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) mit Parakeet (NVIDIA) und Whisper (OpenAI) für die Spracheingabe
-- [Piper](https://github.com/rhasspy/piper) mit freien Stimmen zum Vorlesen im Übersetzer
+- [Piper](https://github.com/OHF-Voice/piper1-gpl) mit freien Stimmen zum Vorlesen im Übersetzer und in der Bibliothek (mit portablem [Python](https://www.python.org), liefert die Zeit jedes Wortes fürs Mitlesen)
 - [Bergamot](https://github.com/browsermt/bergamot-translator) mit den Übersetzungsmodellen von Mozilla für den Übersetzer
 - [Protomaps / PMTiles](https://protomaps.com) und [MapLibre](https://maplibre.org) für die Karten
 - [BRouter](https://github.com/abrensch/brouter) (läuft mit Java von Eclipse Temurin) für die Routenplanung

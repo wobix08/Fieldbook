@@ -280,7 +280,8 @@ const Eigene = (() => {
   function anstossen() { angestossen = true; auslesen(); }
   // Nach jedem Status-Abruf (app.js), höchstens einmal je Minute; nach Änderungen sofort
   async function auslesen() {
-    if (leseLaeuft || (!angestossen && Date.now() - letzterLauf < 60000)) return;
+    // Auf Akku nur direkt nach dem Hinzufügen, nicht bei den regelmäßigen Nachproben
+    if (leseLaeuft || (!angestossen && (Date.now() - letzterLauf < 60000 || aufAkku()))) return;
     leseLaeuft = true; angestossen = false; letzterLauf = Date.now();
     try {
       const arbeit = async () => {

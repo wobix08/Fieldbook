@@ -280,7 +280,7 @@ const Gespraech = (() => {
       if (sprechen) uebersetze("de", sprache, "Sprechen").then(t => { if (!aufnahme) sprechen.lastChild.textContent = t; }).catch(() => { sprechen.lastChild.textContent = "Sprechen"; });
     }
     return el("div", { class: "gs-feld gs-feld-" + wer }, titel, text, pegel, meldung,
-      el("div", { class: "knopfreihe", style: "margin:0;justify-content:flex-end" }, sprechen, knopf));
+      el("div", { class: "knopfreihe", style: "margin:0;justify-content:flex-end" }, wer === "ich" ? lautRegler() : null, sprechen, knopf));
   }
 
   // ------------------------------------------------ Spracheingabe
@@ -471,7 +471,7 @@ const Gespraech = (() => {
     const pause = el("button", { class: "knopf", type: "button" }, sym("square"), "Stop");
     const ohneStimme = [ich, du].filter(x => !kannVorlesen(x)).map(x => info(x).name);
     const feld = el("div", { class: "karte-box gs-sprechmodus", "aria-live": "polite" }, status, fremd, pegel,
-      el("div", { class: "knopfreihe gs-sm-knoepfe" }, pause, pausenWahl()), meldung,
+      el("div", { class: "knopfreihe gs-sm-knoepfe" }, pause, pausenWahl(), lautRegler()), meldung,
       ohneStimme.length ? el("p", { class: "hinweis klein", style: "margin:10px 0 0" }, "Für " + ohneStimme.join(" und ") + " ist keine Stimme geladen: Die Übersetzung steht dann nur im Chat.") : null);
     uebersetze("de", du, "Bitte sprechen Sie. Ich übersetze.").then(t => { fremd.textContent = t; }).catch(() => { });
 
@@ -750,6 +750,7 @@ const Gespraech = (() => {
       } finally { clearTimeout(uhr); }
       if (wiedergabe !== w) return;
       w.audio = new Audio(URL.createObjectURL(blob));
+      w.audio.volume = lautstaerke();
       const vorbei = new Promise(res => { w.ende = res; });
       w.audio.onended = () => { if (wiedergabe === w) { vorlesenStopp(); danach(); } };
       await w.audio.play();
@@ -761,6 +762,24 @@ const Gespraech = (() => {
       m.vorlesenFehler = "Vorlesen hat nicht geklappt (" + (e && e.message || e) + ").";
       danach();
     }
+  }
+
+  // Lautstärke nur für Fieldbook (wie beim Vorlesen von Artikeln, derselbe gemerkte Wert), Windows bleibt unberührt
+  function lautstaerke() {
+    try { const v = parseFloat(localStorage.getItem("vlLautstaerke")); if (v >= 0 && v <= 1) return v; } catch { }
+    return 1;
+  }
+  function lautRegler() {
+    const r = el("input", { type: "range", class: "vl-regler vl-laut", min: "0", max: "100", step: "1", value: String(Math.round(lautstaerke() * 100)),
+      "aria-label": "Lautstärke beim Vorlesen", title: "Lautstärke beim Vorlesen, nur für Fieldbook" });
+    const fuellen = () => r.style.setProperty("--fort", r.value + "%");
+    fuellen();
+    r.addEventListener("input", () => {
+      fuellen();
+      try { localStorage.setItem("vlLautstaerke", String(r.value / 100)); } catch { }
+      if (wiedergabe && wiedergabe.audio) wiedergabe.audio.volume = r.value / 100;
+    });
+    return el("span", { class: "vl-laut-feld gs-laut" }, sym("volume-2"), r);
   }
 
   function vorlesenKnopf(m, danach) {

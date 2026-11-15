@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.4.1";
+        public const string Version = "0.8.5";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -123,6 +123,7 @@ namespace OfflineWissen
         static List<Ort> orte;
         static readonly object OrteLk = new object();
         static readonly object MeineOrteLk = new object();
+        static readonly object SperrungenLk = new object();
 
         // ------------------------------------------------------------------ Start
 
@@ -1865,6 +1866,10 @@ namespace OfflineWissen
                 case "orte": SendeJson(ctx, OrteSuchen(Q("q") ?? "", 25)); return;
                 case "ortsnamen": SendeJson(ctx, OrteImAusschnitt(Q("bbox"), Q("stufe"))); return;
                 case "ortnah": SendeJson(ctx, OrtNah(Q("lat"), Q("lon"))); return;
+                case "einrichtungen":
+                    if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, EinrichtungenMerken(ctx, Q("v")));
+                    else SendeText(ctx, 200, EinrichtungenLesen(Q("v")));
+                    return;
                 // Eigene Orte auf der Karte: ganze Liste lesen bzw. ersetzen (daten/orte/meine-orte.json)
                 case "meineorte":
                     {
@@ -1890,6 +1895,31 @@ namespace OfflineWissen
                         SendeJson(ctx, new Dictionary<string, object> {
                             { "orte", dd != null && dd.ContainsKey("orte") && dd["orte"] != null ? dd["orte"] : new object[0] },
                             { "kategorienAus", dd != null && dd.ContainsKey("kategorienAus") && dd["kategorienAus"] != null ? dd["kategorienAus"] : new object[0] } });
+                        return;
+                    }
+                // Gesperrte Stellen und Abschnitte für die Routenplanung: ganze Liste lesen bzw. ersetzen
+                // (daten/orte/sperrungen.json)
+                case "sperrungen":
+                    {
+                        string datei = Path.Combine(Daten, "orte", "sperrungen.json");
+                        if (ctx.Request.HttpMethod == "POST")
+                        {
+                            var b = LeseBody(ctx);
+                            var liste = b.ContainsKey("sperrungen") ? b["sperrungen"] as System.Collections.IList : null;
+                            if (liste == null) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Ungültige Liste." } }); return; }
+                            try
+                            {
+                                lock (SperrungenLk) SicherSchreiben(datei, Json.Serialize(new Dictionary<string, object> { { "sperrungen", liste } }));
+                                SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                            }
+                            catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Die Sperrungen ließen sich nicht speichern." }, { "technisch", e.Message } }); }
+                            return;
+                        }
+                        object d;
+                        lock (SperrungenLk) d = LadeJsonRoh(datei);
+                        var dd = d as Dictionary<string, object>;
+                        SendeJson(ctx, new Dictionary<string, object> {
+                            { "sperrungen", dd != null && dd.ContainsKey("sperrungen") && dd["sperrungen"] != null ? dd["sperrungen"] : new object[0] } });
                         return;
                     }
                 case "ifixit": SendeJson(ctx, Ifixit(Q("buch"), Q("pfad") ?? "")); return;
@@ -2024,6 +2054,12 @@ namespace OfflineWissen
                     lock (ZuletztLk) { try { SicherLoeschen(Path.Combine(Daten, "zuletzt.json")); } catch { } }
                     SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
                     return;
+                // Merkliste: selbst gemerkte Sachen aus allen Bereichen, mit eigenen Ordnern (daten/merkliste.json)
+                case "merkliste": lock (MerkLk) SendeJson(ctx, MerkLaden()); return;
+                case "merkliste/aendern":
+                    try { SendeJson(ctx, MerkAendern(LeseBody(ctx))); }
+                    catch (Exception e) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", e.Message } }); }
+                    return;
                 case "routengroesse": SendeJson(ctx, RoutenGroesse((Q("ids") ?? "").Split(','))); return;
                 case "installieren": SendeJson(ctx, Installieren(LeseBody(ctx))); return;
                 case "sprechen": Sprechen(ctx, Q("sprache"), Q("paar"), Q("erwartet")); return;
@@ -2120,6 +2156,7 @@ namespace OfflineWissen
                 {"spracheingabe", spracheingabe},
                 {"spracheingabeKomplett", spracheingabe && SprachModelle().All(m => File.Exists(SprachModellPfad(m)))},
                 {"stimmen", Stimmen()},
+                {"piperNeu", PiperPyPfad() != null},
                 {"stimmenFehlen", StimmenJobs(sprachen).Where(x => x.Art == "stimme").Select(x => x.Ziel).ToArray()},
                 {"kontext", AktuellesModellKontext()},
                 {"kontextFuer", Str(einst, "modell") ?? ""},
@@ -2203,6 +2240,7 @@ namespace OfflineWissen
                 {"spracheingabe", t["spracheingabe"]},
                 {"spracheingabeKomplett", t["spracheingabeKomplett"]},
                 {"stimmen", t["stimmen"]},
+                {"piperNeu", t["piperNeu"]},
                 {"stimmenFehlen", t["stimmenFehlen"]},
                 {"defektePakete", kiwixDefekt.ToArray()},
                 {"pdfTexte", t["pdfTexte"]},
@@ -3562,9 +3600,11 @@ namespace OfflineWissen
                     plan.Add(new Job { Art = "sprache", Titel = "Sprache: " + Str(si, "name"), Ziel = c, Gesamt = (long)(Num(si, "mb") * 1048576) });
                 }
                 // Stimmen zum Vorlesen nur auf Wunsch („Text + Sprache“), für neue oder schon installierte Sprachen;
-                // Deutsch kommt mit der ersten Stimme mit
+                // Deutsch kommt mit der ersten Stimme mit. "de" allein = Grundfunktion Vorlesen (Programm und deutsche Stimme)
                 var mitStimme = Arr(b, "stimmen").Select(x => Convert.ToString(x))
-                    .Where(c => sprachen.Contains(c) || sprachenDa.Contains(c)).ToList();
+                    .Where(c => c == "de" || sprachen.Contains(c) || sprachenDa.Contains(c)).ToList();
+                // Grundfunktion Vorlesen bei älteren Installationen: das neue Programm holen, auch wenn alle Stimmen da sind
+                if (mitStimme.Contains("de") && PiperPyPfad() == null && !plan.Any(y => y.Art == "programm" && y.Ziel == "piper-py")) plan.Add(PiperPyJob());
                 if (mitStimme.Count > 0) plan.AddRange(StimmenJobs(mitStimme).Where(x => x.Art != "programm" || !plan.Any(y => y.Art == "programm" && y.Ziel == x.Ziel)));
                 // Spracheingabe: Programm (whisper.cpp) und die beiden Modelle
                 if (Bool(b, "spracheingabe"))
@@ -3732,6 +3772,7 @@ namespace OfflineWissen
                 switch (j.Art)
                 {
                     case "programm":
+                        if (j.Ziel == "piper-py") { PiperPyLaden(j); break; }
                         if (j.Ziel.StartsWith("llama")) StoppeKi();
                         if (j.Ziel == "kiwix") StoppeKiwix();
                         if (j.Ziel == "java" || j.Ziel == "brouter") StoppeRouting();
@@ -4820,8 +4861,23 @@ namespace OfflineWissen
                     if (InstallierteSprachen().Length == 0)
                     {
                         StimmeLoeschen("de");
-                        string pd = Path.Combine(Prog, "piper");
-                        lock (vorlesenLk) if (Directory.Exists(pd)) Directory.Delete(pd, true);
+                        lock (vorlesenLk)
+                        {
+                            PiperDienstStoppen();
+                            foreach (var pd in new[] { Path.Combine(Prog, "piper"), Path.Combine(Prog, "piper-py") })
+                                if (Directory.Exists(pd)) Directory.Delete(pd, true);
+                        }
+                    }
+                }
+                else if (art == "vorlesen")
+                {
+                    // Grundfunktion Vorlesen: Programm und alle Stimmen weg, die Sprachen bleiben (dann „Nur Text“)
+                    foreach (var st in Arr(StimmenKonfig(), "stimmen").OfType<Dictionary<string, object>>()) StimmeLoeschen(Str(st, "code"));
+                    lock (vorlesenLk)
+                    {
+                        PiperDienstStoppen();
+                        foreach (var pd in new[] { Path.Combine(Prog, "piper"), Path.Combine(Prog, "piper-py") })
+                            if (Directory.Exists(pd)) Directory.Delete(pd, true);
                     }
                 }
                 else if (art == "spracheingabe")
@@ -5240,6 +5296,12 @@ namespace OfflineWissen
                 }
                 catch { }
             }
+            // Vorlesen: Installationen bis 0.8.4 haben das alte Piper, das neue liefert die Wortzeiten fürs Mitlesen
+            if (PiperPyPfad() == null && ProgrammPfad("piper") != null && Stimmen().Length > 0)
+            {
+                var pj = PiperPyJob();
+                liste.Add(new Dictionary<string, object> { { "art", "programm" }, { "titel", pj.Titel }, { "ziel", "piper-py" }, { "bytes", pj.Gesamt } });
+            }
             // Suchhilfe für die KI: ältere Installationen haben nur die KI
             if (KiInstalliert() && !SuchhilfeDa())
             {
@@ -5656,6 +5718,7 @@ namespace OfflineWissen
                     else if (j.Art == "route") Herunterladen(j, j.Url, j.Ziel + ".neu");
                     else if (j.Art == "karte") KarteLaden(j);
                     else if (j.Art == "datei") { Directory.CreateDirectory(Path.GetDirectoryName(j.Ziel)); Herunterladen(j, j.Url, j.Ziel); }
+                    else if (j.Art == "programm" && j.Ziel == "piper-py") { if (PiperPyPfad() == null) PiperPyLaden(j); }
                     else if (j.Art == "programm-update") { var t = (j.Extra ?? "|").Split('|'); ProgrammUpdateLaden(j, j.Url, t[0], t.Length > 1 ? t[1] : ""); }
                     j.Status = "fertig";
                     offen.Remove(u);
@@ -6151,23 +6214,30 @@ namespace OfflineWissen
                 {
                     if (zwei != null)
                     {
-                        // 1. Sprache am Klang bestimmen (tiny: 0,5 s; ohne tiny das größere Modell)
+                        // 1. Klang: Wahrscheinlichkeit nur der beiden gewählten Sprachen (tiny: 0,5 s; ohne tiny das größere Modell).
+                        // Wert > 0 spricht für zwei[0], < 0 für zwei[1]. Früher galt die wahrscheinlichste von 99 Sprachen,
+                        // dabei wurde kurzes Deutsch („Hallo, wie geht es dir?“) oft Englisch.
                         var tiny = SprachModelle().FirstOrDefault(m => Str(m, "id") == "tiny");
                         var lidModell = tiny != null && File.Exists(SprachModellPfad(tiny)) ? tiny : SprachModelle().First(m => Str(m, "id") == "whisper");
-                        var lid = WhisperStarten(new[] { "-m", SprachModellPfad(lidModell), "-f", wav, "-l", "auto", "-dl" });
-                        gehoert = WhisperSprache(lid[0] + lid[1]);
-                        gewaehlt = PaarSprache(gehoert, zwei, konf);
-                        if (gewaehlt == null)
+                        double klang = KlangWertung(lidModell, wav, zwei, konf, out gehoert);
+                        if (zwei.All(c => IstParakeet(c, konf)))
                         {
-                            if (zwei.All(c => IstParakeet(c, konf))) { /* Parakeet erkennt selbst, der Browser entscheidet am Text */ }
-                            else
-                            {
-                                // 2. Whisper small mit eigener Spracherkennung, liefert Sprache und Text in einem Durchgang
-                                var r = WhisperStarten(new[] { "-m", SprachModellPfad(SprachModelle().First(m => Str(m, "id") == "whisper")), "-f", wav, "-l", "auto", "-nt", "-sns" });
-                                gewaehlt = PaarSprache(WhisperSprache(r[1]), zwei, konf);
-                                if (gewaehlt != null) text = r[0];
-                                else { gewaehlt = erwartet; sicher = false; }
-                            }
+                            // 2. Parakeet schreibt ohne Sprachvorgabe auf; die Wörter entscheiden mit („danke“ ist deutsch,
+                            // „thanks“ englisch). Einzelwörter erkennt der Klang allein nicht sicher, dafür sind die Wortlisten da.
+                            text = SpracheErkennen(wav, null, sekunden, konf);
+                            double summe = klang + WortWertung(text, zwei[0], zwei[1]);
+                            if (summe == 0) { gewaehlt = erwartet; sicher = false; }   // weder Klang noch Wörter sagen etwas
+                            else { gewaehlt = summe > 0 ? zwei[0] : zwei[1]; sicher = Math.Abs(summe) >= 1; }
+                        }
+                        else if (Math.Abs(klang) >= KlangKlar) gewaehlt = klang > 0 ? zwei[0] : zwei[1];
+                        else
+                        {
+                            // 2. Klang unsicher: Whisper small mit eigener Spracherkennung, liefert Sprache und Text in einem Durchgang
+                            var r = WhisperStarten(new[] { "-m", SprachModellPfad(SprachModelle().First(m => Str(m, "id") == "whisper")), "-f", wav, "-l", "auto", "-nt", "-sns" });
+                            gewaehlt = PaarSprache(WhisperSprache(r[1]), zwei, konf);
+                            if (gewaehlt != null) text = r[0];
+                            else if (klang != 0) { gewaehlt = klang > 0 ? zwei[0] : zwei[1]; sicher = false; }
+                            else { gewaehlt = erwartet; sicher = false; }
                         }
                     }
                     modell = gewaehlt == null || IstParakeet(gewaehlt, konf) ? "parakeet" : "whisper";
@@ -6254,6 +6324,127 @@ namespace OfflineWissen
             return c;
         }
 
+        // Klang und Wörter als Log-Verhältnis (ln p1/p2). Ab KlangKlar (= 75 % zu 25 %) gilt der Klang allein;
+        // jede Stimme ist auf ±WertungMax begrenzt, damit ein klares Wort einen zweifelnden Klang überstimmen kann.
+        const double KlangKlar = 1.1, WertungMax = 4;
+
+        // Klang: ln(p(zwei[0]) / p(zwei[1])) aus whisper.dll über SprachHelfer.exe.
+        // Klappt das nicht, wie früher die eine von whisper-cli erkannte Sprache (±1, falls sie zum Paar gehört).
+        static double KlangWertung(Dictionary<string, object> modell, string wav, string[] zwei, Dictionary<string, object> konf, out string gehoert)
+        {
+            gehoert = null;
+            var codes = konf["whisperCodes"] as Dictionary<string, object>;
+            Func<string, string> wc = c => codes != null && codes.ContainsKey(c) ? Convert.ToString(codes[c]) : c;
+            try
+            {
+                string exe = SprachHelferExe();
+                string whisperOrdner = Path.GetDirectoryName(ProgrammPfad("whisper"));
+                int threads = Math.Max(2, Math.Min(8, Environment.ProcessorCount / 2));
+                var psi = new ProcessStartInfo(exe, "\"" + whisperOrdner + "\" \"" + SprachModellPfad(modell) + "\" \"" + wav + "\" " + wc(zwei[0]) + "," + wc(zwei[1]) + " " + threads)
+                {
+                    UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                    StandardOutputEncoding = Utf8, WorkingDirectory = whisperOrdner
+                };
+                using (var p = new Process { StartInfo = psi })
+                {
+                    p.Start();
+                    ChildJob.Add(p);
+                    var fehler = p.StandardError.ReadToEndAsync();
+                    string aus = p.StandardOutput.ReadToEnd();
+                    if (!p.WaitForExit(30000)) { try { p.Kill(); } catch { } throw new Exception("zu langsam"); }
+                    var w = aus.Split('\n').Select(z => z.Trim().Split(' ')).Where(t => t.Length == 2)
+                        .Select(t => double.Parse(t[1], System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+                    if (p.ExitCode != 0 || w.Length != 2) throw new Exception("Code " + p.ExitCode + ": " + fehler.Result.Trim().Split('\n').Last());
+                    gehoert = w[0] >= w[1] ? zwei[0] : zwei[1];
+                    return Math.Max(-WertungMax, Math.Min(WertungMax, Math.Log((w[0] + 1e-4) / (w[1] + 1e-4))));
+                }
+            }
+            catch (Exception e)
+            {
+                Log("Spracheingabe: Klang-Helfer geht nicht (" + e.Message + "), nehme whisper-cli");
+                var lid = WhisperStarten(new[] { "-m", SprachModellPfad(modell), "-f", wav, "-l", "auto", "-dl" });
+                gehoert = WhisperSprache(lid[0] + lid[1]);
+                string paar = PaarSprache(gehoert, zwei, konf);
+                return paar == null ? 0 : paar == zwei[0] ? 1 : -1;
+            }
+        }
+
+        // SprachHelfer.cs bei Bedarf zu einer .exe übersetzen (eigener Ordner, start.ps1 räumt daten\cache\programm auf)
+        static readonly object sprachHelferLk = new object();
+        static string SprachHelferExe()
+        {
+            lock (sprachHelferLk)
+            {
+                string quelle = Path.Combine(AppDir, "SprachHelfer.cs");
+                string ordner = Path.Combine(Daten, "cache", "sprachhelfer");
+                string exe = Path.Combine(ordner, "SprachHelfer-" + Sha256Datei(quelle).Substring(0, 16) + ".exe");
+                if (File.Exists(exe)) return exe;
+                Directory.CreateDirectory(ordner);
+                string tmp = Path.Combine(ordner, "neu-" + Guid.NewGuid().ToString("N") + ".exe");
+                using (var cs = new Microsoft.CSharp.CSharpCodeProvider())
+                {
+                    var cp = new System.CodeDom.Compiler.CompilerParameters { GenerateExecutable = true, OutputAssembly = tmp, CompilerOptions = "/platform:x64 /optimize" };
+                    var r = cs.CompileAssemblyFromFile(cp, quelle);
+                    if (r.Errors.HasErrors) { try { File.Delete(tmp); } catch { } throw new Exception("SprachHelfer.cs lässt sich nicht übersetzen: " + r.Errors[0].ErrorText); }
+                }
+                File.Move(tmp, exe);
+                foreach (var alt in Directory.GetFiles(ordner)) if (alt != exe) try { File.Delete(alt); } catch { }
+                return exe;
+            }
+        }
+
+        // Wörter: Summe je Wort von ln(Häufigkeit in Sprache 1 / in Sprache 2) nach den Wortlisten in config/woerter
+        // (Untertitel, also gesprochene Sprache). Wörter, die in keiner Liste stehen (Namen), zählen nicht.
+        static readonly Dictionary<string, Dictionary<string, double>> wortListen = new Dictionary<string, Dictionary<string, double>>();
+        static readonly Dictionary<string, double> wortBoden = new Dictionary<string, double>();
+
+        static Dictionary<string, double> WortListe(string sprache)
+        {
+            lock (wortListen)
+            {
+                Dictionary<string, double> l;
+                if (wortListen.TryGetValue(sprache, out l)) return l;
+                l = null;
+                string datei = Path.Combine(Config, "woerter", sprache + ".txt");
+                if (File.Exists(datei))
+                {
+                    l = new Dictionary<string, double>();
+                    double gesamt = 1, letzte = 1;
+                    foreach (var z in File.ReadAllLines(datei, Utf8))
+                    {
+                        var t = z.Split(' ');
+                        if (z.StartsWith("# gesamt ")) { gesamt = double.Parse(t[2], System.Globalization.CultureInfo.InvariantCulture); continue; }
+                        double n;
+                        if (t.Length != 2 || !double.TryParse(t[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out n)) continue;
+                        if (!l.ContainsKey(t[0])) l[t[0]] = Math.Log(n / gesamt);
+                        letzte = n;
+                    }
+                    // Nicht in den 5000 häufigsten: höchstens halb so häufig wie das letzte Wort der Liste
+                    wortBoden[sprache] = Math.Log(letzte / 2 / gesamt);
+                }
+                wortListen[sprache] = l;
+                return l;
+            }
+        }
+
+        static double WortWertung(string text, string a, string b)
+        {
+            var la = WortListe(a);
+            var lb = WortListe(b);
+            if (la == null || lb == null || string.IsNullOrEmpty(text)) return 0;
+            double summe = 0;
+            foreach (Match m in Regex.Matches(text.ToLowerInvariant(), @"\p{L}+(?:'\p{L}+)?"))
+            {
+                double wa, wb;
+                bool ia = la.TryGetValue(m.Value, out wa), ib = lb.TryGetValue(m.Value, out wb);
+                if (!ia && !ib) continue;
+                if (!ia) wa = wortBoden[a];
+                if (!ib) wb = wortBoden[b];
+                summe += Math.Max(-WertungMax, Math.Min(WertungMax, wa - wb));
+            }
+            return summe;
+        }
+
         // Welche der beiden Sprachen passt zur erkannten? Bei verwandten Sprachen die gewählte aus derselben Gruppe.
         static string PaarSprache(string erkannt, string[] zwei, Dictionary<string, object> konf)
         {
@@ -6290,11 +6481,183 @@ namespace OfflineWissen
             return s != null && File.Exists(StimmePfad(s)) && File.Exists(StimmePfad(s) + ".json");
         }
 
-        // Sprachen, die vorlesen können (Programm und Stimme da)
+        // Sprachen, die vorlesen können (Programm und Stimme da). Das alte Piper (bis 0.8.4) liest weiter vor,
+        // bis die Aktualisierung das neue (piper-py) geholt hat.
         static string[] Stimmen()
         {
-            if (ProgrammPfad("piper") == null) return new string[0];
+            if (PiperPyPfad() == null && ProgrammPfad("piper") == null) return new string[0];
             return Arr(StimmenKonfig(), "stimmen").OfType<Dictionary<string, object>>().Select(s => Str(s, "code")).Where(StimmeDa).ToArray();
+        }
+
+        // ------------------------------------------------ Piper 1.8 mit portablem Python (piper-py)
+        // Python (python.org) und die Pakete (PyPI) liegen in programme\piper-py, gestartet wird app\piper-dienst.py.
+        // Der Dienst läuft nur, solange vorgelesen wird: nach 1 Minute ohne Anfrage beendet er sich (Arbeitsspeicher).
+
+        static string PiperPyPfad()
+        {
+            string exe = Path.Combine(Prog, "piper-py", "python.exe");
+            return File.Exists(exe) && File.Exists(Path.Combine(Prog, "piper-py", "fertig.txt")) ? exe : null;
+        }
+
+        static long PiperPyBytes()
+        {
+            var info = ProgrammInfo("piper-py");
+            long b = (long)Num(info == null ? null : info["python"] as Dictionary<string, object>, "bytes");
+            foreach (var p in Arr(info, "pakete").OfType<Dictionary<string, object>>()) b += (long)Num(p, "bytes");
+            return b;
+        }
+
+        static Job PiperPyJob()
+        {
+            var info = ProgrammInfo("piper-py");
+            return new Job { Art = "programm", Titel = Str(info, "titel"), Ziel = "piper-py", Gesamt = PiperPyBytes() };
+        }
+
+        // Lädt Python und die Pakete in einen neuen Ordner, prüft alles und tauscht dann erst aus
+        static void PiperPyLaden(Job j)
+        {
+            var info = ProgrammInfo("piper-py");
+            var dateien = new List<Dictionary<string, object>> { (Dictionary<string, object>)info["python"] };
+            dateien.AddRange(Arr(info, "pakete").OfType<Dictionary<string, object>>());
+            string ladeDir = Path.Combine(Prog, "piper-py.laden"), neu = Path.Combine(Prog, "piper-py.neu"), ziel = Path.Combine(Prog, "piper-py");
+            Directory.CreateDirectory(ladeDir);
+            j.Gesamt = PiperPyBytes();
+            long fertig = 0;
+            foreach (var d in dateien)
+            {
+                string url = Str(d, "url"), datei = Path.Combine(ladeDir, url.Substring(url.LastIndexOf('/') + 1));
+                if (!File.Exists(datei) || Sha256Datei(datei) != Str(d, "sha256"))
+                {
+                    // Eigener Job je Datei, der Fortschritt wird auf den Gesamt-Job übertragen
+                    var t = new Job { Titel = j.Titel, Gesamt = (long)Num(d, "bytes") };
+                    long basis = fertig;
+                    bool laeuft = true;
+                    var uhr = new Thread(() => { while (laeuft) { j.Bytes = basis + t.Bytes; Thread.Sleep(300); } }) { IsBackground = true };
+                    uhr.Start();
+                    try { Herunterladen(t, url, datei); } finally { laeuft = false; }
+                    if (Sha256Datei(datei) != Str(d, "sha256")) { File.Delete(datei); throw new Exception("Die Prüfsumme des Vorleseprogramms stimmt nicht. Bitte erneut versuchen."); }
+                }
+                fertig += new FileInfo(datei).Length;
+                j.Bytes = fertig;
+            }
+            if (Directory.Exists(neu)) Directory.Delete(neu, true);
+            ZipFile.ExtractToDirectory(Path.Combine(ladeDir, Str(dateien[0], "url").Substring(Str(dateien[0], "url").LastIndexOf('/') + 1)), neu);
+            string paket = Path.Combine(neu, "paket");
+            Directory.CreateDirectory(paket);
+            foreach (var d in dateien.Skip(1))
+            {
+                string url = Str(d, "url");
+                ZipFile.ExtractToDirectory(Path.Combine(ladeDir, url.Substring(url.LastIndexOf('/') + 1)), paket);
+            }
+            // Python sucht seine Bausteine nur dort, wo die ._pth-Datei es sagt
+            foreach (var pth in Directory.GetFiles(neu, "python3*._pth"))
+                File.WriteAllText(pth, "python312.zip\r\n.\r\npaket\r\n", new UTF8Encoding(false));
+            // Hebräisch-Zusatz (21 MB) braucht Fieldbook nicht
+            string hebr = Path.Combine(paket, "piper", "hebrew");
+            if (Directory.Exists(hebr)) try { Directory.Delete(hebr, true); } catch { }
+            File.WriteAllText(Path.Combine(neu, "fertig.txt"), "piper-py", new UTF8Encoding(false));
+            lock (vorlesenLk)
+            {
+                PiperDienstStoppen();
+                if (Directory.Exists(ziel)) Directory.Delete(ziel, true);
+                Directory.Move(neu, ziel);
+                // Das alte Piper wird nicht mehr gebraucht
+                string alt = Path.Combine(Prog, "piper");
+                if (Directory.Exists(alt)) try { Directory.Delete(alt, true); } catch (Exception e) { Log("Altes Piper löschen: " + e.Message); }
+            }
+            try { Directory.Delete(ladeDir, true); } catch { }
+            // Ältere Fieldbook-Versionen haben aus den Stimm-Einstellungen Doppellaute entfernt (fürs alte Programm);
+            // das neue kann sie, also die unveränderten Einstellungen holen (je Stimme etwa 5 KB)
+            foreach (var s in Arr(StimmenKonfig(), "stimmen").OfType<Dictionary<string, object>>())
+            {
+                string onnx = StimmePfad(s);
+                if (!File.Exists(onnx + ".json") || Sha256Datei(onnx + ".json") == Str(s, "jsonSha256")) continue;
+                try { StimmeJsonLaden(s, Str(StimmenKonfig(), "basis") + Str(s, "pfad") + "/" + Str(s, "stimme") + ".onnx.json"); }
+                catch (Exception e) { Log("Stimm-Einstellungen " + Str(s, "code") + ": " + e.Message); }
+            }
+        }
+
+        static Process piperDienst;
+        static StreamWriter piperEin;
+        static StreamReader piperAus;
+        static DateTime piperZuletzt;
+
+        // Nur unter vorlesenLk aufrufen
+        static void PiperDienstStoppen()
+        {
+            var p = piperDienst;
+            piperDienst = null; piperEin = null; piperAus = null;
+            if (p == null) return;
+            try { if (!p.HasExited) p.Kill(); } catch { }
+            try { p.Dispose(); } catch { }
+        }
+
+        // Nur unter vorlesenLk aufrufen
+        static void PiperDienstStarten(string python)
+        {
+            var psi = new ProcessStartInfo(python, "-u -X utf8 \"" + Path.Combine(AppDir, "piper-dienst.py") + "\"")
+            {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                WorkingDirectory = Path.GetDirectoryName(python),
+                StandardOutputEncoding = new UTF8Encoding(false)
+            };
+            var p = new Process { StartInfo = psi };
+            p.ErrorDataReceived += (o, e) => { if (e.Data != null && e.Data.Trim().Length > 0) Log("Piper: " + e.Data); };
+            p.Start();
+            ChildJob.Add(p);
+            p.BeginErrorReadLine();
+            piperDienst = p;
+            piperEin = new StreamWriter(p.StandardInput.BaseStream, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" };
+            piperAus = p.StandardOutput;
+            string erste = piperAus.ReadLine();
+            if (erste == null || !erste.Contains("bereit")) { PiperDienstStoppen(); throw new Exception("Das Vorleseprogramm startet nicht."); }
+            // Wächter: nach 1 Minute ohne Anfrage beenden
+            var w = new Thread(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(10000);
+                    lock (vorlesenLk)
+                    {
+                        if (piperDienst != p) return;
+                        if (p.HasExited) { PiperDienstStoppen(); return; }
+                        if ((DateTime.Now - piperZuletzt).TotalSeconds >= 60) { PiperDienstStoppen(); return; }
+                    }
+                }
+            }) { IsBackground = true };
+            w.Start();
+        }
+
+        // Erzeugt die WAV-Datei und gibt die Wortzeiten als JSON-Liste zurück (nur unter vorlesenLk aufrufen)
+        static string PiperDienstVorlesen(string python, string stimme, string text, string wav)
+        {
+            for (int versuch = 0; ; versuch++)
+            {
+                if (piperDienst == null || piperDienst.HasExited) { PiperDienstStoppen(); PiperDienstStarten(python); }
+                piperZuletzt = DateTime.Now;
+                string antwort = null;
+                try
+                {
+                    piperEin.WriteLine(Json.Serialize(new Dictionary<string, object> { { "stimme", stimme }, { "text", text }, { "wav", wav } }));
+                    var lesen = piperAus.ReadLineAsync();
+                    if (!lesen.Wait(60000)) { PiperDienstStoppen(); throw new Exception("Das Vorlesen hat zu lange gedauert."); }
+                    antwort = lesen.Result;
+                }
+                catch (IOException) { antwort = null; }
+                piperZuletzt = DateTime.Now;
+                if (antwort == null)
+                {
+                    PiperDienstStoppen();
+                    if (versuch == 0) continue;   // abgestürzt: einmal neu starten
+                    throw new Exception("Das Vorleseprogramm ist abgestürzt.");
+                }
+                Dictionary<string, object> r;
+                try { r = Json.Deserialize<Dictionary<string, object>>(antwort); } catch { r = null; }
+                if (r == null) throw new Exception("Unerwartete Antwort vom Vorleseprogramm.");
+                if (Str(r, "fehler") != null) { Log("Vorlesen: " + Str(r, "fehler")); throw new Exception("Das Vorlesen ist fehlgeschlagen."); }
+                return r.ContainsKey("woerter") && Bool(r, "genau") ? Json.Serialize(r["woerter"]) : null;
+            }
         }
 
         // Fehlende Stimmen für diese Sprachen (Deutsch immer dazu) samt Programm als Jobs
@@ -6308,7 +6671,7 @@ namespace OfflineWissen
                 var si = SprachInfo(c);
                 jobs.Add(new Job { Art = "stimme", Titel = "Stimme: " + (c == "de" ? "Deutsch" : Str(si, "name") ?? c), Url = Str(StimmenKonfig(), "basis") + Str(s, "pfad") + "/" + Str(s, "stimme") + ".onnx", Ziel = c, Gesamt = (long)Num(s, "bytes") });
             }
-            if (jobs.Count > 0 && ProgrammPfad("piper") == null) jobs.Insert(0, ProgrammJob("piper"));
+            if (jobs.Count > 0 && PiperPyPfad() == null) jobs.Insert(0, PiperPyJob());
             return jobs;
         }
 
@@ -6323,16 +6686,23 @@ namespace OfflineWissen
                 Herunterladen(j, j.Url, onnx);
                 if (Sha256Datei(onnx) != Str(s, "sha256")) { File.Delete(onnx); throw new Exception("Die Prüfsumme der Stimme stimmt nicht. Bitte erneut versuchen."); }
             }
-            string tmp = json + ".neu";
+            StimmeJsonLaden(s, j.Url + ".json");
+        }
+
+        // Einstellungen der Stimme (.onnx.json) unverändert laden; das neue Piper versteht auch die Doppellaute,
+        // die ältere Fieldbook-Versionen fürs alte Programm entfernt haben
+        static void StimmeJsonLaden(Dictionary<string, object> s, string url)
+        {
+            string json = StimmePfad(s) + ".json", tmp = json + ".neu";
             if (File.Exists(tmp)) File.Delete(tmp);
-            Herunterladen(new Job { Titel = j.Titel }, j.Url + ".json", tmp);
+            Herunterladen(new Job { Titel = "Stimme" }, url, tmp);
             if (Sha256Datei(tmp) != Str(s, "jsonSha256")) { File.Delete(tmp); throw new Exception("Die Prüfsumme der Stimme stimmt nicht. Bitte erneut versuchen."); }
-            // Neuere Stimmen enthalten Einträge aus mehreren Zeichen (Doppellaute wie "aɪ"), die das
-            // Windows-Programm von Piper nicht lesen kann. Das Programm erzeugt sie ohnehin nie, also weg damit.
-            string text = File.ReadAllText(tmp, Encoding.UTF8);
-            text = Regex.Replace(text, @",\s*""[^""\\]{2,}""\s*:\s*\[\s*\d+\s*\]", "");
-            File.WriteAllText(json, text, new UTF8Encoding(false));
-            File.Delete(tmp);
+            lock (vorlesenLk)
+            {
+                PiperDienstStoppen();   // hält die alte Fassung sonst im Speicher
+                if (File.Exists(json)) File.Delete(json);
+                File.Move(tmp, json);
+            }
         }
 
         static void StimmeLoeschen(string code)
@@ -6341,6 +6711,7 @@ namespace OfflineWissen
             if (s == null) return;
             lock (vorlesenLk)
             {
+                PiperDienstStoppen();
                 string onnx = StimmePfad(s);
                 if (File.Exists(onnx)) File.Delete(onnx);
                 if (File.Exists(onnx + ".json")) File.Delete(onnx + ".json");
@@ -6352,15 +6723,18 @@ namespace OfflineWissen
             var b = LeseBody(ctx);
             string sprache = Str(b, "sprache"), text = Str(b, "text") ?? "";
             var s = sprache == null ? null : StimmeInfo(sprache);
-            string exe = ProgrammPfad("piper");
-            if (s == null || exe == null || !StimmeDa(sprache)) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Für diese Sprache ist keine Stimme da." } }, 404); return; }
+            string python = PiperPyPfad(), exe = python == null ? ProgrammPfad("piper") : null;
+            if (s == null || (python == null && exe == null) || !StimmeDa(sprache)) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Für diese Sprache ist keine Stimme da." } }, 404); return; }
             // Eine Zeile pro Aufruf (Piper liest zeilenweise), höchstens etwa eine Bildschirmseite
             text = Regex.Replace(text, @"\s+", " ").Trim();
             if (text.Length == 0 || text.Length > 3000) { SendeJson(ctx, new Dictionary<string, object> { { "fehler", "Der Text ist leer oder zu lang." } }, 400); return; }
             string wav = Path.Combine(Daten, "cache", "vorlesen-" + Guid.NewGuid().ToString("N") + ".wav");
+            string zeiten = null;
             try
             {
-                lock (vorlesenLk)
+                // Neues Piper: Dienst im Hintergrund, liefert die Zeit jedes Wortes (Kopfzeile X-Wortzeiten)
+                if (python != null) lock (vorlesenLk) zeiten = PiperDienstVorlesen(python, StimmePfad(s), text, wav);
+                else lock (vorlesenLk)
                 {
                     var psi = new ProcessStartInfo(exe, "-m \"" + StimmePfad(s) + "\" -f \"" + wav + "\" -q")
                     {
@@ -6395,6 +6769,7 @@ namespace OfflineWissen
                 ctx.Response.StatusCode = 200;
                 ctx.Response.ContentType = "audio/wav";
                 ctx.Response.AddHeader("Cache-Control", "no-store");
+                if (zeiten != null) ctx.Response.AddHeader("X-Wortzeiten", zeiten);
                 ctx.Response.ContentLength64 = daten.Length;
                 ctx.Response.OutputStream.Write(daten, 0, daten.Length);
             }
@@ -6798,6 +7173,73 @@ namespace OfflineWissen
         // fest ist, bleiben die Orte beim Verschieben gleich; beim Hineinzoomen teilt sich jedes Feld in vier, der
         // bisherige Ort bleibt also und es kommen nur neue dazu. Felder am Rand werden ganz berechnet.
         // Wo die Karte schon Namen hat, blendet MapLibre die zusätzlichen wegen Überlappung von selbst aus.
+        // Schnellsuche der Karte: schon gelesene Kacheln mit ihren Einrichtungen, eine Zeile je Kachel
+        // ("z/x/y", bei Treffern dahinter Tab und JSON). Nur abgeleitete Daten, darum im Zwischenspeicher.
+        // Der Dateiname hängt an den installierten Karten (Name, Größe, Datum) und der Version der Oberfläche:
+        // Neue oder geänderte Karten fangen mit einer neuen Datei an, alte Dateien werden dann gelöscht.
+        static readonly object EinrichtungenLk = new object();
+        static readonly Regex EinrichtungsZeile = new Regex(@"^\d{1,2}/\d{1,7}/\d{1,7}(\t\[.*\])?$");
+
+        static string EinrichtungsDatei(string version)
+        {
+            var sb = new StringBuilder("v" + (version ?? "1"));
+            var ordner = Path.Combine(Daten, "karten");
+            if (Directory.Exists(ordner))
+                foreach (var f in Directory.GetFiles(ordner, "*.pmtiles").OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (f.EndsWith(".neu.pmtiles") || f.EndsWith(".tmp.pmtiles")) continue;
+                    var fi = new FileInfo(f);
+                    sb.Append("|" + fi.Name + ":" + fi.Length + ":" + fi.LastWriteTimeUtc.Ticks);
+                }
+            string kennung;
+            using (var h = System.Security.Cryptography.SHA256.Create())
+                kennung = BitConverter.ToString(h.ComputeHash(Utf8.GetBytes(sb.ToString())), 0, 8).Replace("-", "").ToLowerInvariant();
+            return Path.Combine(Daten, "cache", "einrichtungen", kennung + ".txt");
+        }
+
+        static string EinrichtungenLesen(string version)
+        {
+            string datei = EinrichtungsDatei(version);
+            lock (EinrichtungenLk)
+            {
+                try { return File.Exists(datei) ? File.ReadAllText(datei, Utf8) : ""; }
+                catch { return ""; }
+            }
+        }
+
+        static Dictionary<string, object> EinrichtungenMerken(HttpListenerContext ctx, string version)
+        {
+            string text;
+            using (var r = new StreamReader(ctx.Request.InputStream, Encoding.UTF8)) text = r.ReadToEnd();
+            if (text.Length > 20000000) return new Dictionary<string, object> { { "fehler", "zu groß" } };
+            var gut = new StringBuilder();
+            int n = 0;
+            foreach (var zeile in text.Split('\n'))
+            {
+                string z = zeile.TrimEnd('\r');
+                if (z.Length == 0 || z.Length > 100000 || !EinrichtungsZeile.IsMatch(z)) continue;
+                gut.Append(z).Append('\n');
+                n++;
+            }
+            if (n == 0) return new Dictionary<string, object> { { "ok", true }, { "zeilen", 0 } };
+            string datei = EinrichtungsDatei(version);
+            lock (EinrichtungenLk)
+            {
+                try
+                {
+                    string ordner = Path.GetDirectoryName(datei);
+                    Directory.CreateDirectory(ordner);
+                    // Dateien zu einem alten Kartenstand weg (die Kacheln darin gibt es so nicht mehr)
+                    if (!File.Exists(datei))
+                        foreach (var alt in Directory.GetFiles(ordner, "*.txt"))
+                            try { File.Delete(alt); } catch { }
+                    File.AppendAllText(datei, gut.ToString(), new UTF8Encoding(false));
+                }
+                catch (Exception e) { return new Dictionary<string, object> { { "fehler", e.Message } }; }
+            }
+            return new Dictionary<string, object> { { "ok", true }, { "zeilen", n } };
+        }
+
         static List<object> OrteImAusschnitt(string bbox, string stufeText)
         {
             var erg = new List<object>();
@@ -6979,6 +7421,148 @@ namespace OfflineWissen
                 SicherSchreiben(Path.Combine(Daten, "zuletzt.json"), Json.Serialize(new Dictionary<string, object> { { "liste", liste } }));
             }
             return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        // ------------------------------------------------------------------ Merkliste
+
+        // Selbst gemerkte Sachen aus allen Bereichen (daten/merkliste.json): { ordner: [{ id, name }], liste: [...] }.
+        // Ein Eintrag: id, titel, bereich (bibliothek, kochen, erstehilfe, vorsorge), ordner ("" = ohne Ordner), zeit und
+        // entweder url (Artikel, PDF-Buch mit pdf/seite, eigene Unterlage) oder link (Seite in Fieldbook, z. B.
+        // "#erstehilfe?l=…"). Mit stelle ist es eine markierte Textstelle. Die früheren Lesezeichen
+        // (daten/lesezeichen.json) werden beim ersten Laden übernommen.
+        static readonly object MerkLk = new object();
+        static string MerkDatei { get { return Path.Combine(Daten, "merkliste.json"); } }
+        const int MerkMax = 1000, MerkOrdnerMax = 100;
+
+        static string MerkId() { return Guid.NewGuid().ToString("N").Substring(0, 12); }
+
+        static Dictionary<string, object> MerkLaden()
+        {
+            var d = LadeJson(MerkDatei);
+            if (d != null) return d;
+            var liste = new List<object>();
+            foreach (var o in Arr(LadeJson(Path.Combine(Daten, "lesezeichen.json")), "liste"))
+            {
+                var e = o as Dictionary<string, object>;
+                if (e == null || string.IsNullOrEmpty(Str(e, "url"))) continue;
+                e["id"] = MerkId();
+                e["bereich"] = "bibliothek";
+                e["ordner"] = "";
+                liste.Add(e);
+            }
+            d = new Dictionary<string, object> { { "ordner", new object[0] }, { "liste", liste.ToArray() } };
+            // Gleich speichern, sonst bekämen die übernommenen Einträge bei jedem Laden neue Kennungen
+            if (liste.Count > 0) try { SicherSchreiben(MerkDatei, Json.Serialize(d)); } catch (Exception e) { Log("Merkliste speichern: " + e.Message); }
+            return d;
+        }
+
+        static string Kuerzen(string s, int n) { s = (s ?? "").Trim(); return s.Length > n ? s.Substring(0, n) : s; }
+
+        static int MerkSeite(Dictionary<string, object> e)
+        {
+            int s;
+            return int.TryParse(Convert.ToString(e.ContainsKey("seite") ? e["seite"] : null, CultureInfo.InvariantCulture), out s) && s > 0 ? s : 0;
+        }
+
+        // Gleich sind Einträge mit derselben Adresse, Seite und Textstelle
+        static bool MerkGleich(Dictionary<string, object> a, Dictionary<string, object> b)
+        {
+            return (Str(a, "url") ?? "") == (Str(b, "url") ?? "") && (Str(a, "link") ?? "") == (Str(b, "link") ?? "") &&
+                MerkSeite(a) == MerkSeite(b) && (Str(a, "stelle") ?? "") == (Str(b, "stelle") ?? "");
+        }
+
+        static Dictionary<string, object> MerkFehler(string text) { return new Dictionary<string, object> { { "fehler", text } }; }
+
+        static Dictionary<string, object> MerkAendern(Dictionary<string, object> b)
+        {
+            string aktion = Str(b, "aktion") ?? "", id = Str(b, "id") ?? "";
+            lock (MerkLk)
+            {
+                var d = MerkLaden();
+                var liste = Arr(d, "liste").OfType<Dictionary<string, object>>().ToList();
+                var ordner = Arr(d, "ordner").OfType<Dictionary<string, object>>().ToList();
+                Dictionary<string, object> eintrag = liste.FirstOrDefault(x => Str(x, "id") == id);
+                Dictionary<string, object> ord = ordner.FirstOrDefault(x => Str(x, "id") == id);
+                string neueId = null;
+                switch (aktion)
+                {
+                    case "setzen":
+                    {
+                        string url = Str(b, "url") ?? "", link = Str(b, "link") ?? "";
+                        bool urlOk = url.StartsWith("/kiwix/") || url.StartsWith("/api/eigene/datei/");
+                        bool linkOk = Regex.IsMatch(link, "^#(erstehilfe|vorsorge|kochen)\\?[^\\s]{1,300}$");
+                        if (urlOk == linkOk || url.Length > 2000) return MerkFehler("Ungültiger Eintrag für die Merkliste.");
+                        var neu = new Dictionary<string, object>();
+                        if (urlOk) neu["url"] = url; else neu["link"] = link;
+                        int seite = MerkSeite(b);
+                        if (seite > 0) neu["seite"] = seite;
+                        string stelle = Kuerzen(Str(b, "stelle"), 1500);
+                        if (stelle.Length > 0) neu["stelle"] = stelle;
+                        liste.RemoveAll(x => MerkGleich(x, neu));
+                        if (Bool(b, "an"))
+                        {
+                            string titel = Kuerzen(Str(b, "titel"), 200);
+                            if (titel.Length == 0) return MerkFehler("Ungültiger Eintrag für die Merkliste.");
+                            string bereich = Str(b, "bereich") ?? "";
+                            if (!new[] { "bibliothek", "kochen", "erstehilfe", "vorsorge" }.Contains(bereich)) bereich = "bibliothek";
+                            string o = Str(b, "ordner") ?? "";
+                            if (!ordner.Any(x => Str(x, "id") == o)) o = "";
+                            neu["id"] = neueId = MerkId();
+                            neu["titel"] = titel;
+                            neu["bereich"] = bereich;
+                            neu["ordner"] = o;
+                            neu["paket"] = Kuerzen(Str(b, "paket"), 200);
+                            neu["pdf"] = Bool(b, "pdf");
+                            neu["zeit"] = DateTime.Now.ToString("s");
+                            liste.Insert(0, neu);
+                            if (liste.Count > MerkMax) liste.RemoveRange(MerkMax, liste.Count - MerkMax);
+                        }
+                        break;
+                    }
+                    case "entfernen":
+                        if (eintrag != null) liste.Remove(eintrag);
+                        break;
+                    case "umbenennen":
+                    {
+                        string titel = Kuerzen(Str(b, "titel"), 200);
+                        if (eintrag == null || titel.Length == 0) return MerkFehler("Der Name konnte nicht geändert werden.");
+                        eintrag["titel"] = titel;
+                        break;
+                    }
+                    case "verschieben":
+                    {
+                        string o = Str(b, "ordner") ?? "";
+                        if (eintrag == null || (o != "" && !ordner.Any(x => Str(x, "id") == o))) return MerkFehler("Der Eintrag konnte nicht verschoben werden.");
+                        eintrag["ordner"] = o;
+                        break;
+                    }
+                    case "ordnerNeu":
+                    {
+                        string name = Kuerzen(Str(b, "name"), 60);
+                        if (name.Length == 0) return MerkFehler("Bitte gib dem Ordner einen Namen.");
+                        if (ordner.Count >= MerkOrdnerMax) return MerkFehler("Es gibt schon " + MerkOrdnerMax + " Ordner.");
+                        ordner.Add(new Dictionary<string, object> { { "id", neueId = MerkId() }, { "name", name } });
+                        break;
+                    }
+                    case "ordnerUmbenennen":
+                    {
+                        string name = Kuerzen(Str(b, "name"), 60);
+                        if (ord == null || name.Length == 0) return MerkFehler("Der Ordner konnte nicht umbenannt werden.");
+                        ord["name"] = name;
+                        break;
+                    }
+                    case "ordnerLoeschen":
+                        // Die Einträge bleiben erhalten und stehen danach ohne Ordner da
+                        if (ord != null) { ordner.Remove(ord); foreach (var x in liste) if (Str(x, "ordner") == id) x["ordner"] = ""; }
+                        break;
+                    default:
+                        return MerkFehler("Unbekannte Aktion.");
+                }
+                var neuD = new Dictionary<string, object> { { "ordner", ordner.ToArray() }, { "liste", liste.ToArray() } };
+                SicherSchreiben(MerkDatei, Json.Serialize(neuD));
+                if (neueId != null) neuD["neu"] = neueId;
+                return neuD;
+            }
         }
 
         static Dictionary<string, object> LadeJson(string pfad)

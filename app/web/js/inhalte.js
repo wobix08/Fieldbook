@@ -495,12 +495,15 @@ const Inhalte = (() => {
     const spDa = sprachen.filter(sp => (s.sprachen || []).includes(sp.code));
     const ueNamen = [];
     if (s.uebersetzer) ueNamen.push("Artikel übersetzen");
+    if ((s.stimmen || []).length) ueNamen.push("Vorlesen");
     if (spDa.length) ueNamen.push(spDa.length === 1 ? "Sprache " + spDa[0].name : spDa.length + " Sprachen (" + spDa.map(sp => sp.name).join(", ") + ")");
     if (s.spracheingabe) ueNamen.push("Spracheingabe");
-    const ueGewaehlt = (auswahl.uebersetzer ? 1 : 0) + auswahl.sprachen.size + [...auswahl.stimmen].filter(x => !auswahl.sprachen.has(x)).length + (auswahl.spracheingabe ? 1 : 0);
+    const ueGewaehlt = (auswahl.uebersetzer ? 1 : 0) + (auswahl.vorlesen ? 1 : 0) + auswahl.sprachen.size + [...auswahl.stimmen].filter(x => !auswahl.sprachen.has(x)).length + (auswahl.spracheingabe ? 1 : 0);
     const ue = abschnitt("sprachen", "languages", "Sprachen", ueNamen, ueGewaehlt, spDa.length + " von " + sprachen.length + " Sprachen");
     const ueText = "Übersetzt englische Artikel in der Bibliothek beim Lesen ins Deutsche (Knopf „Auf Deutsch“), mit den Sprachen unten auch Artikel in diesen Sprachen. Für Gespräche brauchst du eine der Sprachen unten. Technik von Mozilla, wie in Firefox.";
     const ueLoeschen = () => knopf("Löschen", () => loeschen("uebersetzer", "", "Artikel übersetzen"), true);
+    // Grundfunktionen: brauchen alle Sprachen unten (Übersetzen bzw. Vorlesen)
+    ue.append(el("h3", { style: "margin:4px 0 8px" }, "Grundfunktionen"));
     if (s.uebersetzer && !s.uebersetzerAlt) {
       ue.append(zeile(["Artikel übersetzen (Englisch → Deutsch)", tag("Installiert", "tag-ok")], ueText, groesse(42e6), null, ueLoeschen()));
     } else {
@@ -511,12 +514,34 @@ const Inhalte = (() => {
         ["Artikel übersetzen (Englisch → Deutsch)", ...tags, ...(laedt ? [ladeTag()] : [])], ueText, groesse(42e6), s.uebersetzerAlt ? ueLoeschen() : null));
     }
 
-    // Sprachen für Gespräche (Menü „Übersetzer“), sortiert nach Entfernung
+    // Grundfunktion Vorlesen: Programm (Piper mit eigenem Python) und deutsche Stimme. Kommt automatisch mit,
+    // sobald unten eine Sprache mit „Text + Sprache“ gewählt ist.
+    const stimmenDa = new Set(s.stimmen || []);
+    const vlBytes = PIPER_BYTES + stimmeBytes("de");
+    const vlText = el("span", {}, "Liest Artikel in der Bibliothek und Übersetzungen laut vor und markiert dabei das gesprochene Wort.", el("br"),
+      "Enthält das Vorleseprogramm Piper mit einem eigenen Python (läuft nur im Fieldbook-Ordner, ohne Installation) und die deutsche Stimme.", el("br"),
+      "Stimmen für andere Sprachen wählst du unten mit „Text + Sprache“.");
+    const vlLaedt = offen.titel.has("Piper (Vorlesen)") || offen.titel.has("Stimme: Deutsch");
+    if (s.piperNeu && stimmenDa.has("de")) {
+      ue.append(zeile(["Vorlesen", tag("Installiert", "tag-ok"), ...(vlLaedt ? [ladeTag()] : [])], vlText, groesse(vlBytes), null,
+        knopf("Löschen", () => loeschen("vorlesen", "", "Vorlesen mit allen Stimmen"), true)));
+    } else {
+      // Kommt mit, wenn unten eine Stimme gewählt ist; ältere Installationen haben noch das alte Programm
+      const automatisch = [...auswahl.stimmen].some(c => !stimmenDa.has(c));
+      const alt = !s.piperNeu && stimmenDa.size > 0;
+      const tags = [...(alt ? [tag("Installiert · ältere Version", "tag-ok"), tag("genauere Version verfügbar", "tag-warn")] : []),
+        ...(automatisch && !vlLaedt ? [tag("kommt mit den Stimmen unten mit", "tag-ok")] : []), ...(vlLaedt ? [ladeTag()] : [])];
+      ue.append(auswahlZeile("checkbox", "inh-vorlesen", (auswahl.vorlesen || automatisch) && !vlLaedt, vlLaedt || automatisch,
+        (e) => { auswahl.vorlesen = e.target.checked; zeichneListe(aktiv); }, ["Vorlesen", ...tags], vlText, groesse(vlBytes)));
+    }
+
+    // Sprachen für Gespräche (Menü „Übersetzer“) und zum Vorlesen, sortiert nach Entfernung
     const da = new Set(s.sprachen || []);
-    ue.append(el("h3", { id: "inh-sprachen", style: "margin:18px 0 4px;scroll-margin-top:110px" }, "Sprachen für Gespräche"),
-      el("p", { class: "hinweis klein", style: "margin:0 0 10px" }, "Für Gespräche mit Menschen, die eine andere Sprache sprechen (Menü „Übersetzer“).", el("br"), "Jede Sprache übersetzt in beide Richtungen.", el("br"),
+    ue.append(el("h3", { id: "inh-sprachen", style: "margin:18px 0 4px;scroll-margin-top:110px" }, "Sprachen zum Übersetzen und Vorlesen"),
+      el("p", { class: "hinweis klein", style: "margin:0 0 10px" }, "Für Gespräche mit Menschen, die eine andere Sprache sprechen (Menü „Übersetzer“), und für Artikel in dieser Sprache.", el("br"), "Jede Sprache übersetzt in beide Richtungen.", el("br"),
         "Übersetzt wird über Englisch, deshalb laden Englisch und „Artikel übersetzen“ automatisch mit.", el("br"),
-        "Mit „Text + Sprache“ liest Fieldbook die Übersetzungen auch vor. Die deutsche Stimme kommt dann einmal mit."));
+        "Mit „Text + Sprache“ liest Fieldbook Übersetzungen und Artikel in dieser Sprache auch vor.", el("br"),
+        "Dafür kommt „Vorlesen“ oben einmal mit."));
     // Zwei Sortierungen: wie in sprachen.json (erst die häufigsten, dann nach Entfernung) oder von Nord nach Süd (erst Europa, dann der Rest)
     const sortKnopf = (wert, text) => el("button", { class: "knopf knopf-klein" + (sprachSort === wert ? " knopf-haupt" : ""), type: "button", "aria-pressed": String(sprachSort === wert),
       onclick: () => { sprachSort = wert; try { localStorage.setItem("fb-sprachen-sortierung", wert); } catch { } zeichneListe(aktiv); } }, text);
@@ -535,7 +560,6 @@ const Inhalte = (() => {
       ue.append(el("div", { class: "hinweis klein", style: "font-weight:600;margin:12px 0 6px" }, gruppe ? "Europa" : "Außerhalb Europas"));
     };
     // Je Sprache zwei Knöpfe: „Nur Text“ oder „Text + Sprache“ (mit Stimme zum Vorlesen); nochmal klicken hebt die Wahl auf
-    const stimmenDa = new Set(s.stimmen || []);
     const wahlKnopf = (an, gesperrt, text, bytes, fn) => el("button", { class: "knopf knopf-klein" + (an ? " knopf-haupt" : ""), type: "button",
       "aria-pressed": String(an), disabled: gesperrt, onclick: fn }, text + " · " + groesse(bytes));
     sortiert.forEach((sp, i) => {
@@ -598,7 +622,8 @@ const Inhalte = (() => {
 
     // Leiste zum Herunterladen
     const bytes = auswahlBytes();
-    const anzahl = auswahl.modelle.size + (auswahl.suchhilfe ? 1 : 0) + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (basisNoetig() ? 1 : 0) + sprachenNeu().length + (auswahl.spracheingabe ? 1 : 0) + [...auswahl.stimmen].filter(c => !auswahl.sprachen.has(c)).length;
+    const anzahl = auswahl.modelle.size + (auswahl.suchhilfe ? 1 : 0) + auswahl.pakete.size + auswahl.karten.size + (auswahl.routen && rg && rg.bytes > 0 ? 1 : 0) + (basisNoetig() ? 1 : 0) + sprachenNeu().length + (auswahl.spracheingabe ? 1 : 0) + [...auswahl.stimmen].filter(c => !auswahl.sprachen.has(c)).length
+      + (auswahl.vorlesen && ![...auswahl.stimmen].some(x => !(s.stimmen || []).includes(x)) ? 1 : 0);
     c.append(el("div", { class: "summe inhalte-leiste" },
       el("span", {}, anzahl ? anzahl + " ausgewählt · " + groesse(bytes) + " · frei: " + groesse(hw.freiGB * 1e9) : "Nichts ausgewählt"),
       el("button", { class: "knopf knopf-haupt", disabled: !anzahl, onclick: herunterladen }, sym("download"), aktiv ? "Zu den Downloads hinzufügen" : "Auswahl herunterladen")));
@@ -661,19 +686,23 @@ const Inhalte = (() => {
     if (basisNoetig()) b += 42e6;
     for (const c of sprachenNeu()) { const sp = sprachen.find(x => x.code === c); if (sp) b += sp.mb * 1048576; }
     if (auswahl.spracheingabe) b += (OW.status || {}).spracheingabe ? SPRECHEN_ZUSATZ : SPRECHEN_BYTES;
-    b += stimmenBytes([...auswahl.stimmen]);
+    b += stimmenBytes(stimmenAuswahl());
     return b;
   }
 
-  // Stimmen zum Vorlesen für diese Sprachen, Deutsch und das Programm (22 MB) kommen mit, falls sie fehlen
+  // Stimmen zum Vorlesen für diese Sprachen, Deutsch und das Programm (Piper mit Python, 84 MB) kommen mit, falls sie fehlen
   const stimmeBytes = (code) => { const v = stimmen.find(x => x.code === code); return v ? v.bytes : 0; };
   function stimmenBytes(codes) {
-    const da = new Set((OW.status || {}).stimmen || []);
+    const s = OW.status || {};
+    const da = new Set(s.stimmen || []);
     const fehlen = [...new Set(codes)].filter(c => stimmeBytes(c) && !da.has(c));
-    if (!fehlen.length) return 0;
+    // Grundfunktion Vorlesen bei älteren Installationen: alle Stimmen da, nur das neue Programm fehlt
+    if (!fehlen.length) return codes.includes("de") && !s.piperNeu ? PIPER_BYTES : 0;
     if (!da.has("de") && !fehlen.includes("de")) fehlen.push("de");
-    return fehlen.reduce((b, c) => b + stimmeBytes(c), da.size ? 0 : 22477236);
+    return fehlen.reduce((b, c) => b + stimmeBytes(c), s.piperNeu ? 0 : PIPER_BYTES);
   }
+  // Gewählte Stimmen; die Grundfunktion „Vorlesen“ allein ist die deutsche Stimme samt Programm
+  const stimmenAuswahl = () => [...auswahl.stimmen, ...(auswahl.vorlesen ? ["de"] : [])];
 
   // Programm (9 MB) plus Parakeet und Whisper small (siehe config/spracheingabe.json)
   const SPRECHEN_ZUSATZ = 43537433;   // Whisper tiny für den Sprechmodus
@@ -714,11 +743,11 @@ const Inhalte = (() => {
     const neueModelle = kat.modelle.filter(m => auswahl.modelle.has(m.id)).sort((a, b) => b.bytes - a.bytes);
     const aktivDa = kat.modelle.some(m => m.installiert && m.id === (OW.status || {}).modell);
     const body = { modell: !aktivDa && neueModelle.length ? neueModelle[0].id : "", modelle: neueModelle.map(m => m.id), suchhilfe: !!auswahl.suchhilfe,
-      pakete: [...auswahl.pakete], karten, routen, uebersetzer: !!auswahl.uebersetzer, sprachen: [...auswahl.sprachen], spracheingabe: !!auswahl.spracheingabe, stimmen: [...auswahl.stimmen] };
+      pakete: [...auswahl.pakete], karten, routen, uebersetzer: !!auswahl.uebersetzer, sprachen: [...auswahl.sprachen], spracheingabe: !!auswahl.spracheingabe, stimmen: stimmenAuswahl() };
     if (neueModelle.length) body.backend = (kat.einstellungen && kat.einstellungen.backend) || Setup.empfehlung(hw, kat.modelle).backend;
     const r = await api("installieren", body);
     if (r.fehler) { await dialog("Hinweis", r.fehler, [{ text: "OK", wert: 1, haupt: true }]); return; }
-    auswahl.modelle.clear(); auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false; auswahl.sprachen.clear(); auswahl.spracheingabe = false; auswahl.stimmen.clear(); auswahl.suchhilfe = false;
+    auswahl.modelle.clear(); auswahl.pakete.clear(); auswahl.karten.clear(); auswahl.routen = false; auswahl.routenGroesse = null; auswahl.uebersetzer = false; auswahl.sprachen.clear(); auswahl.spracheingabe = false; auswahl.stimmen.clear(); auswahl.suchhilfe = false; auswahl.vorlesen = false;
     warAktiv = null;
     window.scrollTo(0, 0);
     fortschritt();

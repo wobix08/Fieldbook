@@ -14,7 +14,7 @@ $namen = @(
   'plus', 'history', 'x',
   # Karten und Routen
   'compass', 'hospital', 'pill', 'droplet', 'shield', 'shopping-cart', 'fuel', 'footprints', 'bike', 'car', 'sunrise', 'sunset',
-  'chevron-left', 'chevron-right', 'bookmark', 'map-pin', 'chevron-down', 'arrow-up-down', 'eye-off',
+  'chevron-left', 'chevron-right', 'bookmark', 'map-pin', 'chevron-down', 'arrow-up-down', 'eye-off', 'ban',
   # Erste Hilfe
   'phone', 'phone-off', 'siren', 'baby', 'triangle-alert', 'heart', 'wind', 'activity', 'brain', 'bug', 'circle-alert',
   'candy', 'bone', 'skull', 'thermometer', 'bed', 'grape', 'axe', 'speech', 'soup', 'zap-off', 'drama',
@@ -27,7 +27,11 @@ $namen = @(
   # Eigene Unterlagen
   'folder-open', 'upload', 'pencil', 'trash-2', 'image',
   # Übersetzen
-  'arrow-left-right', 'maximize-2', 'send', 'mic', 'square', 'volume-2', 'messages-square', 'expand', 'arrow-right'
+  'arrow-left-right', 'maximize-2', 'send', 'mic', 'square', 'volume-2', 'messages-square', 'expand', 'arrow-right',
+  # Vorlesen im Lesefenster
+  'pause', 'play', 'skip-forward', 'arrow-down',
+  # Merkliste
+  'ellipsis-vertical', 'folder-plus', 'folder-input'
 )
 
 $js = [IO.File]::ReadAllText($Lucide)

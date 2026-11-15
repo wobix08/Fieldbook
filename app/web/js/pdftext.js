@@ -95,6 +95,7 @@ const PdfText = (() => {
       const key = buch.id + "/" + p.datei;
       // Nach 2 Fehlschlägen in dieser Sitzung überspringen (der nächste Start versucht es wieder)
       if ((fehlschlaege.get(key) || 0) >= 2) { uebersprungen = true; continue; }
+      if (aufAkku()) return;   // Netzteil gezogen: nach dem aktuellen Buch aufhören, am Netz geht es weiter
       nr++;
       hinweis("Bücher in „" + buch.titel + "“ werden für die KI vorbereitet (" + nr + " von " + pdfs.length + ") …");
       const url = basis + encodeURIComponent(p.datei);
@@ -121,12 +122,14 @@ const PdfText = (() => {
   // Nach jedem Status-Abruf: Gibt es installierte Pakete mit PDF-Büchern, deren Text noch fehlt?
   async function pruefen() {
     const s = OW.status;
-    if (laeuft || !s || !s.bibliothek || Date.now() < pauseBis || leserOffen()) return;
+    // Auf Akku ruht das Auslesen (braucht viel Rechenzeit), am Stromnetz geht es weiter
+    if (laeuft || !s || !s.bibliothek || Date.now() < pauseBis || leserOffen() || aufAkku()) return;
     laeuft = true;
     try {
       const fertig = s.pdfTexte || {};
       const arbeit = async () => {
         for (const b of await Kiwix.buecher()) {
+          if (aufAkku()) break;
           if (fertig[b.id] === true || ohnePdf.has(b.id)) continue;
           const pdfs = await pdfsIm(b.id);
           if (!pdfs.length) { ohnePdf.add(b.id); continue; }

@@ -257,6 +257,42 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .kachel-notfall .k-titel { color: var(--rot); }
 .kachel-notfall .feld { background: var(--flaeche); color: var(--rot); }
 
+/* Werkzeuge (js/werkzeuge.js) */
+.wz-kacheln { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .wz-kacheln { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wz-kachel { padding: 16px 18px; border-radius: 14px; }
+.wz-kachel .k-titel { font-size: 1.25rem; margin-top: 6px; }
+.wz-kachel .k-text { font-size: .92rem; }
+.wz-kachel.aktiv { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); }
+.wz-flaeche { margin-top: 18px; }
+.wz-panel { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 14px; padding: 18px 20px; }
+.wz-panel > h3:first-child { margin-top: 0; }
+.wz-chips { margin-bottom: 16px; }
+.wz-oben { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 16px; }
+.wz-oben .wz-klein { margin: 0; }
+.wz-zeile { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; max-width: 520px; }
+.wz-zeile select { flex: 1; min-width: 0; }
+.wz-zeile input.wz-zahl { width: 140px; flex: none; }
+.wz-zeile .knopf { width: 140px; justify-content: center; flex: none; }
+.wz-text { width: 140px; flex: none; text-align: center; color: var(--text2); }
+.wz-gleich > span { width: 140px; flex: none; text-align: center; color: var(--text2); font-size: 1.3rem; }
+.wz-ergebnis { font-family: var(--titel); font-size: 1.6rem; font-weight: 600; color: var(--akzent); }
+.wz-klein { color: var(--text2); font-size: .92rem; margin: 6px 0 0; }
+.wz-karten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+@media (max-width: 760px) { .wz-karten { grid-template-columns: 1fr; } }
+.wz-karte { border: 1px solid var(--linie); border-radius: 12px; padding: 12px 16px; background: var(--grund, transparent); }
+.wz-karte h3, .wz-karte h4 { margin: 0 0 6px; font-family: var(--titel); }
+.wz-karte h4 { font-size: 1.1rem; }
+.wz-karte p { margin: 6px 0; }
+.wz-karte ol, .wz-karte ul { margin: 0; padding-left: 1.3em; }
+.wz-karte li { margin: 3px 0; }
+.wz-code { font-family: Consolas, monospace; letter-spacing: .1em; }
+.wz-morse-feld { width: 100%; max-width: 620px; display: block; }
+.wz-morse { display: block; margin-top: 10px; font-family: Consolas, monospace; font-size: 1.4rem; letter-spacing: .12em; color: var(--akzent); word-break: break-word; }
+.wz-licht { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; }
+.wz-licht.an { background: #fff; }
+.wz-licht span { margin-bottom: 24px; color: #777; font-size: .9rem; }
+
 /* Kochen */
 .koch-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
 .koch-zeile { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -533,6 +569,47 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .lese-leiste { display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(min-content, 1fr); align-items: center; gap: 12px; padding: 8px 12px; background: var(--flaeche); border-bottom: 1px solid var(--linie); }
 .lese-links, .lese-mitte, .lese-rechts { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .lese-rechts { justify-content: flex-end; }
+/* Lesezeichen neben dem Titel: nur Symbol; gesetzt = gefüllt in Moosgrün */
+.lesezeichen-knopf { padding: 8px 10px; flex-shrink: 0; }
+.lesezeichen-knopf[aria-pressed="true"] { color: var(--akzent); border-color: var(--akzent); }
+.lesezeichen-knopf[aria-pressed="true"] .sym { fill: currentColor; }
+/* Lesezeichen entfernen wie die früheren Chats: Zeile gleitet nach links, dahinter liegt der rote Knopf */
+.lesezeichen-eintrag { position: relative; overflow: hidden; border-radius: var(--radius); }
+.lesezeichen-zeile { position: relative; display: flex; align-items: center; gap: 8px; background: var(--bg);
+  transition: transform .22s ease; }
+.lesezeichen-eintrag.gewischt .lesezeichen-zeile { transform: translateX(-108px); }
+.lesezeichen-endgueltig { position: absolute; top: 0; right: 0; bottom: 0; width: 100px; border: 0; border-radius: var(--radius);
+  cursor: pointer; background: var(--rot); color: var(--akzent-text); font-weight: 600; visibility: hidden; transition: visibility 0s .22s; }
+.lesezeichen-eintrag.gewischt .lesezeichen-endgueltig { visibility: visible; transition: none; }
+.lesezeichen-endgueltig:hover { filter: brightness(1.08); }
+@media (prefers-reduced-motion: reduce) { .lesezeichen-zeile { transition: none; } }
+.lesezeichen-zeile > a { flex: 1; min-width: 0; }
+.lesezeichen-weg { padding: 8px 10px; flex-shrink: 0; }
+/* Merkliste (js/merkliste.js): Zeile mit Menü daneben, Zitat der Textstelle, Filter nach Bereich */
+.merk-zeile { position: relative; display: flex; align-items: center; gap: 6px; }
+.merk-zeile > .eintrag { flex: 1; min-width: 0; }
+.merk-menue-knopf { padding: 8px; flex-shrink: 0; }
+.merk-menue { top: calc(100% - 4px); min-width: 230px; max-height: 60vh; overflow-y: auto; }
+.merk-stelle { display: block; margin: 4px 0 2px; padding-left: 10px; border-left: 3px solid var(--akzent);
+  color: var(--text); font-style: italic; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.merk-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.merk-filter .knopf.aktiv { border-color: var(--akzent); background: var(--akzent-hell); color: var(--akzent); }
+.merk-zwischen { font-size: 1.05rem; margin: 14px 0 0; color: var(--text2); }
+.merk-ordner-leer { margin: 4px 0; }
+.merk-ordner-leer .sym, .merk-leer .sym { width: 1em; height: 1em; vertical-align: -2px; }
+.merk-ordner-knoepfe { margin: 6px 0 0; }
+.merk-leer { padding: 18px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); }
+.merk-leer p { margin: 0 0 8px; }
+.merk-leer p:last-child { margin: 0; line-height: 1.6; }
+/* Lesezeichen-Knopf rechts neben der Überschrift (Erste Hilfe, Vorsorge) */
+.merk-h2 { display: flex; align-items: center; gap: 8px; }
+.merk-h2 > .lesezeichen-knopf { margin-left: auto; font-size: 1rem; }
+/* „Merken“ neben markiertem Text in Fieldbook-Seiten */
+.markfeld { position: absolute; z-index: 40; box-shadow: var(--schatten); border-radius: 8px; }
+.markfeld button { display: inline-flex; align-items: center; gap: 6px; }
+.markfeld svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.zahnrad.aktiv { color: var(--akzent); }
 .lese-titel { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .uebersetzen-status { color: var(--text2); font-size: .85rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .lese-suche { width: clamp(220px, 25vw, 560px); }
@@ -551,8 +628,55 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .lese-koerper { flex: 1; min-height: 0; display: flex; position: relative; }
 /* color-scheme light am Rahmen: Ein noch leerer Rahmen (about:blank, Seitenwechsel) ist dann durchsichtig und
    zeigt den dunklen Grund. Mit „dark“ malt Chrome für eine noch helle neue Seite eine weiße Fläche. */
-#lese-rahmen { flex: 1; min-width: 0; border: 0; width: 100%; background: var(--bg); color-scheme: light; }
+/* Spalte mit dem Artikel und darunter der Vorlese-Leiste */
+.lese-spalte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* width auto statt 100 %: lesefragen.js rückt den Rahmen mit margin-left ein, gestreckt bleibt er dann in der Spalte */
+#lese-rahmen { flex: 1; min-width: 0; min-height: 0; border: 0; width: auto; align-self: stretch; background: var(--bg); color-scheme: light; }
 #lese-fragen-knopf[aria-expanded="true"] { border-color: var(--akzent); color: var(--akzent); }
+/* Leiste beim Vorlesen (js/vorlesen.js): fest unter dem Artikel, über seine ganze Breite */
+.vl-leiste { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px;
+  padding: 10px 20px 12px; background: var(--flaeche); border-top: 1px solid var(--linie);
+  box-shadow: 0 -6px 18px -12px rgba(0, 0, 0, .45); }
+.vl-leiste[hidden], .vl-leiste [hidden] { display: none; }
+/* Nur so breit wie der Artikel (js/vorlesen.js setzt Breite und Abstand): oben abgerundet, Rahmen rundum außer unten */
+.vl-leiste.vl-schmal { align-self: flex-start; border: 1px solid var(--linie); border-bottom: 0; border-radius: 12px 12px 0 0; }
+.vl-knoepfe, .vl-rechts { display: flex; align-items: center; gap: 8px; }
+.vl-rechts { gap: 14px; }
+/* Runde Symbolknöpfe, der Hauptknopf (Pause/Fortsetzen) groß und moosgrün */
+.vl-rund { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--linie); background: transparent; color: var(--text); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.vl-rund:hover, .vl-rund:focus-visible { border-color: var(--akzent); color: var(--akzent); }
+.vl-rund .sym { width: 16px; height: 16px; }
+.vl-rund.vl-haupt { width: 42px; height: 42px; border: 0; background: var(--akzent); color: var(--bg); }
+.vl-rund.vl-haupt:hover, .vl-rund.vl-haupt:focus-visible { color: var(--bg); filter: brightness(1.1); }
+.vl-rund.vl-haupt .sym { width: 19px; height: 19px; }
+.vl-rund:disabled { cursor: default; }
+.vl-rund.vl-laedt { animation: vl-puls 1.2s ease-in-out infinite; }
+@keyframes vl-puls { 50% { opacity: .45; } }
+.vl-mitte { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.vl-kopf { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.vl-titel { font-family: var(--titel); font-weight: 600; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.vl-status { font-size: .88rem; color: var(--text2); white-space: nowrap; }
+/* „Zur Stelle“: nach eigenem Scrollen zurück zum gelesenen Wort */
+.vl-zur { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 2px 10px; border-radius: 999px; flex: none;
+  border: 1px solid var(--akzent); background: transparent; color: var(--akzent); font: inherit; font-size: .82rem; cursor: pointer; }
+.vl-zur:hover, .vl-zur:focus-visible { background: color-mix(in srgb, var(--akzent) 15%, transparent); }
+.vl-zur .sym { width: 14px; height: 14px; }
+.vl-zeit { display: flex; align-items: center; gap: 10px; }
+.vl-zeit-wert { font-size: .8rem; color: var(--text2); font-variant-numeric: tabular-nums; min-width: 2.6em; }
+.vl-zeit-wert:last-child { text-align: right; }
+/* Schmale Regler mit gefülltem Teil (--fort aus vorlesen.js), Griff erst beim Darüberfahren deutlich */
+.vl-regler { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; cursor: pointer; margin: 8px 0;
+  background: linear-gradient(to right, var(--akzent) var(--fort, 0%), var(--linie) var(--fort, 0%)); }
+.vl-regler::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--text);
+  border: 0; transform: scale(.8); transition: transform .15s; }
+.vl-regler:hover::-webkit-slider-thumb, .vl-regler:focus-visible::-webkit-slider-thumb { transform: scale(1.15); }
+.vl-spulen { flex: 1; min-width: 0; }
+.vl-laut-feld { display: inline-flex; align-items: center; gap: 8px; color: var(--text2); }
+.vl-laut-feld .sym { width: 16px; height: 16px; }
+.vl-laut { width: 96px; }
+/* Halbe Laptop-Breite: Lautstärke schmaler */
+@media (max-width: 900px) { .vl-leiste { gap: 12px; padding: 8px 14px 10px; } .vl-laut { width: 64px; } }
 .lese-fragen { width: 380px; max-width: 100%; flex: none; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
   background: var(--flaeche); border-left: 1px solid var(--linie); min-height: 0; position: relative; }
 .lese-fragen[hidden] { display: none; }
@@ -692,6 +816,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 #karte .punkt-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; }
 #karte .punkt-knoepfe .punkt-weg { margin-top: 0; }
 #karte .punkt-knoepfe + .punkt-knoepfe { margin-top: 0; }
+#karte .punkt-popup small.punkt-tipp { font-size: .78rem; opacity: .65; margin-top: 6px; }
 #karte .ort-notiz { white-space: pre-line; }
 #karte .ort-formular { display: flex; flex-direction: column; gap: 6px; font-weight: 400; min-width: 290px; }
 /* Kategorie: Eingabefeld mit eigenem Dropdown der vorhandenen Kategorien */
@@ -712,13 +837,13 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 #karte .ort-farbe:focus-visible { outline: 2px solid var(--akzent); outline-offset: 3px; }
 /* Meine Orte (karten.js): aufklappbare Liste im Kartenfeld */
 .meine-orte { display: flex; flex-direction: column; gap: 6px; box-shadow: none !important; }
-.meine-orte-kopf { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 12px; background: var(--flaeche); color: var(--text); padding: 8px 12px; cursor: pointer; font: inherit; box-shadow: var(--schatten); }
+.meine-orte-kopf { display: flex; align-items: center; gap: 8px; width: 100%; border: 1px solid var(--linie); border-radius: 12px; background: var(--flaeche); color: var(--text); padding: 8px 12px; cursor: pointer; font: inherit; box-shadow: var(--schatten); }
 .meine-orte-kopf:hover { background: var(--flaeche2); }
 .meine-orte-kopf span { flex: 1; text-align: left; font-weight: 600; }
 .meine-orte-kopf small { color: var(--text2); }
 .meine-orte-kopf .sym:first-child { color: var(--akzent); }
 .meine-orte-kopf.auf .sym:last-child { transform: rotate(180deg); }
-.meine-orte .ort-treffer { box-shadow: var(--schatten); max-height: none; overflow: hidden; } /* rollt mit der Leiste */
+.meine-orte .ort-treffer { border: 1px solid var(--linie); box-shadow: var(--schatten); max-height: none; overflow: hidden; } /* rollt mit der Leiste */
 .ort-treffer button .sym { width: 14px; height: 14px; color: var(--akzent); vertical-align: -2px; }
 /* Meine Orte: Kategorien und Ausblenden (Auge blass = sichtbar, kräftig = ausgeblendet) */
 .meine-liste .mein-gruppe { display: flex; align-items: center; border-bottom: 1px solid var(--linie); }
@@ -736,6 +861,39 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .meine-liste button.auge:hover .sym { opacity: .75; }
 .meine-liste button.auge.an .sym { color: var(--text); opacity: 1; stroke-width: 2.5; }
 .meine-liste button.auge.an { background: var(--flaeche2); }
+/* Sperrungen (sperrungen.js): wie Meine Orte, dazu das Plus zum Einzeichnen; Rot wie das Zeichen auf der Karte */
+.sperr-kopf { display: flex; gap: 6px; }
+.sperr-kopf .meine-orte-kopf { flex: 1; min-width: 0; }
+.sperrungen .meine-orte-kopf .sym:first-child, .sperrungen .ort-treffer button .sym, .sperr-beachtet .sym { color: #c8553d; }
+.sperr-plus { display: grid; place-items: center; flex: none; width: 40px; border: 1px solid var(--linie); border-radius: 12px; background: var(--flaeche); color: var(--text); cursor: pointer; box-shadow: var(--schatten); }
+.sperr-plus:hover { background: var(--flaeche2); }
+.sperr-plus.an { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+/* Mit Rahmen um die Liste keine doppelte Linie unter der letzten Zeile */
+.meine-orte .meine-liste > :last-child { border-bottom: 0; }
+.sperr-plus .sym { width: 18px; height: 18px; transition: transform .15s ease; }
+.sperr-plus.an .sym { transform: rotate(45deg); }
+.sperr-kasten { border: 1px solid var(--linie); background: var(--flaeche); border-radius: 12px; padding: 10px 12px; box-shadow: var(--schatten); font-size: .88rem; color: var(--text2); }
+.sperr-kasten p { margin: 0 0 6px; }
+.sperr-kasten small { display: block; margin-bottom: 6px; }
+.sperr-kasten .punkt-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.sperr-kasten .punkt-weg { background: none; border: 0; padding: 0; color: var(--akzent); font: inherit; font-size: .85rem; cursor: pointer; }
+.sperr-kasten .punkt-weg:hover { text-decoration: underline; }
+.sperr-kasten .knopf:disabled { opacity: .45; cursor: default; }
+.sperr-beachtet { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.sperr-beachtet .sym { width: 15px; height: 15px; flex: none; }
+#karte .sperr-fuer { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+#karte .sperr-fuer label { display: flex; align-items: center; gap: 5px; font-size: .9rem; cursor: pointer; }
+#karte .sperr-fuer input { width: auto; }
+#karte .sperr-fehler { color: #c8553d; }
+#karte .punkt-knoepfe .knopf .sym { width: 14px; height: 14px; margin-right: 5px; vertical-align: -2px; }
+/* Textknöpfe neben einem Knopf auf dessen Mitte, nicht oben */
+#karte .punkt-knoepfe .punkt-weg, .sperr-kasten .punkt-knoepfe .punkt-weg { align-self: center; }
+#karte .punkt-knoepfe .knopf { margin-top: 2px; }
+/* Häkchen in Moosgrün statt Browser-Blau */
+#karte .ort-formular input[type="checkbox"] { accent-color: var(--akzent); width: 15px; height: 15px; margin: 0; }
+#karte .ort-formular > small { color: var(--text2); font-weight: 400; }
+/* Platz für das Schließen-Kreuz über dem Namensfeld */
+#karte .ort-formular { margin-top: 14px; }
 .routen-kopf { box-shadow: none !important; display: flex; flex-wrap: wrap; gap: 8px; }
 .routen-kopf .knopf { box-shadow: var(--schatten); flex: 1 1 0; justify-content: center; padding: 9px 10px; white-space: nowrap; }
 .routen-kopf .knopf.aktiv { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }
@@ -802,6 +960,39 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .routen-ergebnis div { background: var(--flaeche2); border-radius: 10px; padding: 6px; }
 .routen-ergebnis b { display: block; font-size: 1.1rem; white-space: nowrap; }
 .routen-ergebnis small { color: var(--text2); }
+/* Schalter „Möglichst wenig bergauf“ und weitere Strecken (routen.js) */
+.routen-flach { flex-basis: 100%; }
+.routen-vergleich { margin: 4px 0 0 26px; min-height: 4.2em; line-height: 1.4; }
+.schalter.aus { opacity: .55; cursor: default; }
+/* Platz für Ladekreis und Hinweise freihalten, damit der Kasten beim Rechnen nicht springt */
+#routen-status { min-height: 2.8em; line-height: 1.4; }
+.routen-optionen { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: .9rem; }
+.strecken-liste { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.strecke { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; background: var(--flaeche2);
+  border: 1px solid transparent; border-radius: 10px; padding: 7px 10px; cursor: pointer; color: var(--text); font: inherit; font-size: .88rem; }
+.strecke span { color: var(--text2); font-size: .82rem; }
+.strecke:hover { border-color: var(--linie); }
+.strecke.aktiv { border-color: var(--akzent); }
+/* Höhenprofil unter den Zahlen (routen.js) */
+.hoehenprofil { margin-top: 8px; background: var(--flaeche2); border-radius: 10px; padding: 8px 10px 10px; }
+.hp-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .88rem; margin-bottom: 4px; }
+.hp-info { color: var(--text2); font-size: .82rem; white-space: nowrap; }
+.hp-feld { position: relative; height: 90px; cursor: crosshair; touch-action: none; }
+.hp-feld svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hp-flaeche { fill: var(--akzent); opacity: .22; }
+.hp-linie { fill: none; stroke: var(--akzent); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.hp-raster { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; }
+.hp-skala { position: relative; font-size: .72rem; color: var(--text2); min-width: 4.2em; }
+.hp-skala span { position: absolute; right: 0; transform: translateY(-50%); white-space: nowrap; }
+.hp-strich { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--text2); pointer-events: none; }
+.hp-punkt { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--akzent);
+  border: 2px solid var(--flaeche); pointer-events: none; }
+.hp-strich[hidden], .hp-punkt[hidden] { display: none; }
+.hp-achse { display: flex; justify-content: space-between; font-size: .72rem; color: var(--text2); margin-top: 2px; }
+.hp-zahlen { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--text2); margin-top: 6px; }
+.hp-zahlen b { color: var(--text); font-weight: 600; }
+/* Stelle aus dem Höhenprofil auf der Karte */
+.hp-kartenpunkt { width: 16px; height: 16px; border-radius: 50%; background: #1f6f6b; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); pointer-events: none; }
 .routen-hinweis { font-size: .88rem; color: var(--text2); }
 
 /* Erste Hilfe: oben „Im Ernstfall“, darunter der Kurs */
@@ -907,6 +1098,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .eh-bild-flaeche img { display: block; width: 100%; height: 100px; object-fit: contain; }
 .eh-bilder-gross .eh-bilder-reihe { grid-template-columns: repeat(auto-fill, minmax(240px, 340px)); }
 .eh-bilder-gross .eh-bild-flaeche img { height: 220px; }
+.eh-bilder-hoch .eh-bild-flaeche img { height: 240px; }
 .eh-bilder figcaption { font-size: .92rem; line-height: 1.4; }
 .eh-bilder small { font-size: .8rem; }
 .eh-kinder .eh-bilder { margin: 14px 0 4px; }
@@ -1132,11 +1324,12 @@ a.vs-r-feld:hover { border-color: var(--akzent); }
 .vs-stufe h3 { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; margin-top: 16px; }
 .vs-stufe-name { color: var(--akzent); }
 .vs-zaehler { margin-left: auto; color: var(--text2); font-size: .88rem; font-weight: 400; }
-.vs-stufe.zu summary { display: flex; align-items: baseline; gap: 8px; padding: 14px 0 6px; cursor: pointer; list-style: none; font-weight: 600; }
-.vs-stufe.zu summary::-webkit-details-marker { display: none; }
-.vs-stufe.zu summary:hover .vs-stufe-name { text-decoration: underline; }
-.vs-auf { font-size: 1.1rem; line-height: 1; transition: transform .15s ease; }
-.vs-stufe.zu[open] .vs-auf { transform: rotate(90deg); }
+.vs-stufe-kopf { display: flex; align-items: baseline; gap: 8px; padding: 14px 0 6px; background: none; border: 0; color: inherit; font-weight: 600; }
+.vs-stufe-kopf:hover .vs-stufe-name { text-decoration: underline; }
+.vs-stufe > .klapp-huelle > .klapp-innen > :last-child { margin-bottom: 4px; }
+.vs-auf { font-size: 1.1rem; line-height: 1; transition: transform .25s ease; }
+.vs-stufe.auf .vs-auf { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .vs-auf { transition: none; } }
 .vs-liste { gap: 6px; }
 .vs-liste li { padding: 8px 14px; }
 .vs-mehr { display: block; color: var(--text2); font-size: .88rem; margin: 2px 0 0 28px; line-height: 1.45; }
@@ -1276,6 +1469,8 @@ a.vs-marke.kiste:hover { border-color: var(--gelb); }
 .gs-sm-meldung { margin: 10px 0 0; color: var(--gelb); }
 .gs-sm-knoepfe { justify-content: center; align-items: center; margin: 4px 0 0; gap: 18px; }
 .gs-sm-pausen { display: flex; align-items: center; gap: 4px; }
+.gs-laut { margin-right: auto; }
+.gs-sm-knoepfe .gs-laut { margin: 0 0 0 auto; }
 .gs-sm-pausen .hinweis { margin-right: 4px; }
 .gs-gross { position: fixed; inset: 0; z-index: 120; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 6vw; gap: 24px; text-align: center; cursor: pointer; }
 .gs-gross-text { font-size: clamp(30px, 6vw, 76px); line-height: 1.25; font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -1364,3 +1559,7 @@ a.vs-marke.kiste:hover { border-color: var(--gelb); }
 @media (prefers-reduced-motion: reduce) {
   .hauptnav a, .zahnrad, .pill, .menue button, .knopf, .kachel, .ps-kachel, .beispielfrage, .eintrag, .wahl, .vs-lage { transition: none; }
 }
+/* Auf Akku (app.js): dieselben Bewegungen weglassen wie bei „Animationen aus“ */
+.akku-sparen :is(.hauptnav a, .zahnrad, .pill, .menue button, .knopf, .kachel, .ps-kachel, .beispielfrage, .eintrag, .wahl, .vs-lage,
+  .chat-zeile, .alle-weg #chats-loeschen, .klapp-huelle, .klapp-pfeil, .lesezeichen-zeile) { transition: none; }
+.akku-sparen .schritte-liste li::before { animation-duration: 2s; }

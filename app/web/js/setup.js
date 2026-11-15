@@ -494,12 +494,12 @@ const Setup = (() => {
   function sprachPaketBytes(spr, stm) {
     let b = 0;
     for (const c of sprachenNeu(spr)) { const sp = sprachen.find(x => x.code === c); if (sp) b += sp.mb * 1048576; }
-    // Stimmen: Deutsch und das Vorleseprogramm (22 MB) kommen mit, falls sie fehlen
+    // Stimmen: Deutsch und das Vorleseprogramm (Piper mit Python, 84 MB) kommen mit, falls sie fehlen
     const stDa = new Set((OW.status || {}).stimmen || []);
     const fehlen = [...stm].filter(c => stimmeBytes(c) && !stDa.has(c));
     if (fehlen.length) {
       if (!stDa.has("de") && !fehlen.includes("de")) fehlen.push("de");
-      b += fehlen.reduce((x, c) => x + stimmeBytes(c), stDa.size ? 0 : 22477236);
+      b += fehlen.reduce((x, c) => x + stimmeBytes(c), (OW.status || {}).piperNeu ? 0 : PIPER_BYTES);
     }
     return b;
   }

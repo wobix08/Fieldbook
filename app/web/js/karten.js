@@ -55,7 +55,7 @@ const Karten = (() => {
     }
     $("#karte-wrap").hidden = false;
     const stand = s.karten.map(k => k.id).join(","), geaendert = stand !== kartenStand;
-    if (geaendert) { await ladeKartenliste(s); kartenStand = stand; }
+    if (geaendert) { await ladeKartenliste(s); kartenStand = stand; speicherGeladen = ladeEinrichtungen(); }
     if (!karte) erstelle();
     else { if (geaendert) neuZeichnen(); setTimeout(() => karte.resize(), 50); }
   }
@@ -240,6 +240,12 @@ const Karten = (() => {
     Routen.verbinden(karte);
     karte.on("click", kartenKlick);
     karte.on("dblclick", () => clearTimeout(klickTimer));
+    // Rechtsklick irgendwo entfernt die rote Markierung (Nutzer, 15. Nov. 2026); gemerkte Orte bleiben
+    karte.on("contextmenu", (e) => {
+      if (e.originalEvent) e.originalEvent.preventDefault();
+      clearTimeout(klickTimer);
+      markierungWeg();
+    });
     karte.addControl(new maplibregl.NavigationControl(), "bottom-right");
     karte.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     karte.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }), "bottom-right");
@@ -377,8 +383,9 @@ const Karten = (() => {
         el("button", { type: "button", class: "punkt-weg", onclick: () => box.replaceChildren(ortFormular(
           { name: vorschlag || "", notiz: "" },
           (w) => { markierungWeg(); ortNeu(w, lat, lon); },
-          ansicht)) }, sym("bookmark"), "Ort merken"),
-        el("button", { type: "button", class: "punkt-weg", onclick: markierungWeg }, "Markierung entfernen")));
+          ansicht)) }, sym("bookmark"), "Ort merken")),
+      // Entfernen per Rechtsklick in die Karte (statt eigenem Knopf)
+      el("small", { class: "punkt-tipp" }, "Rechtsklick in die Karte entfernt die Markierung."));
     ansicht();
     return box;
   }
@@ -502,7 +509,7 @@ const Karten = (() => {
     const f = el("form", { class: "ort-formular", onsubmit: los }, name, katBox, notiz,
       el("div", { class: "ort-farben", role: "group", "aria-label": "Farbe" }, ...punkte),
       el("div", { class: "punkt-knoepfe" },
-        el("button", { type: "submit", class: "knopf knopf-klein" }, "Speichern"),
+        el("button", { type: "submit", class: "knopf knopf-klein knopf-haupt" }, "Speichern"),
         el("button", { type: "button", class: "punkt-weg", onclick: abbrechen }, "Abbrechen")));
     setTimeout(() => { name.focus(); name.select(); }, 0);
     return f;
@@ -554,8 +561,8 @@ const Karten = (() => {
     }
     // Liste im Kartenfeld
     const box = $("#meine-orte");
-    box.hidden = !meineOrte.length;
-    if (!meineOrte.length) { box.innerHTML = ""; return; }
+    // Auch leer da und aufklappbar, damit man weiß, dass man Orte merken kann (Nutzer, 15. Nov. 2026)
+    box.hidden = false;
     const sortiert = meineOrte.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));
     const kats = alleKategorien();
     let inhalt = [];
@@ -590,7 +597,9 @@ const Karten = (() => {
           if (listeAuf) imKastenZeigen($(".karte-panel"), box, box);
         } },
         sym("bookmark"), el("span", {}, "Meine Orte"), el("small", {}, String(meineOrte.length)), sym("chevron-down")),
-      listeAuf ? el("div", { class: "ort-treffer meine-liste" }, ...inhalt) : "");
+      !listeAuf ? "" : meineOrte.length ? el("div", { class: "ort-treffer meine-liste" }, ...inhalt)
+        : el("div", { class: "sperr-kasten" }, el("p", {}, "Noch keine eigenen Orte.", el("br"),
+          "Klick in die Karte oder such einen Ort und wähl dann „Ort merken“.")));
   }
 
   // Aufgeklappte Kategorie in der Leiste ganz zeigen (Kopf bis letzter Ort)
@@ -646,6 +655,8 @@ const Karten = (() => {
     if (Routen.offen) return;
     const ziel = e.originalEvent && e.originalEvent.target;
     if (ziel && ziel.closest && ziel.closest(".maplibregl-marker, .maplibregl-popup")) return;
+    // Sperrung einzeichnen oder anklicken (auch ohne Routenplanung, bei aufgeklappter Liste)
+    if (Sperrungen.klick(e)) return;
     clearTimeout(klickTimer);
     const { lat, lng: lon } = e.lngLat;
     klickTimer = setTimeout(async () => {
@@ -717,9 +728,11 @@ const Karten = (() => {
   // ------------------------------------------------ Einrichtungen in der Nähe
 
   // Gesucht wird im sichtbaren Ausschnitt, direkt in der Kartendatei (die Einrichtungen stecken nur in den
-  // detailliertesten Kacheln). Ist dort nichts, geht es in Ringen um die Mitte nach außen. Sehr große
+  // detailliertesten Kacheln). Sind dort weniger als WENIG, geht es in Ringen um die Mitte nach außen. Sehr große
   // Ausschnitte werden auf die Mitte begrenzt. Nach dem Verschieben der Karte wird neu gesucht.
-  const MAX_KM = 25, RINGE_KM = [2, 5, 10], LISTE = 25, MARKER = 150;
+  // WENIG: unter so vielen Treffern im Ausschnitt wird im größeren Umkreis weitergesucht.
+  // Obergrenze 20 km: ein Ring liest dann rund 2500 Kacheln, mehr wäre auf schwachen Laptops zu langsam.
+  const MAX_KM = 25, RINGE_KM = [2, 5, 10, 20], WENIG = 3, LISTE = 25, MARKER = 150;
   let suchLauf = 0, aktiveKat = null, eigeneBewegung = false, nachsuchen = null;
 
   function zeigePois(kat, knopf) {
@@ -772,7 +785,7 @@ const Karten = (() => {
     const kopf = ziel.querySelector(".leer");
     if (kopf) kopf.textContent = "Suche …"; else ziel.append(el("div", { class: "leer" }, "Suche …"));
 
-    let liste = [], radius = 0, z = 15;
+    let liste = [], radius = 0, imAusschnitt = 0, z = 15;
     const name = (p) => p.name || kat.titel;
     const passend = (pois) => {
       const m = new Map();
@@ -789,19 +802,33 @@ const Karten = (() => {
       || kartenListe.find(k => k.id === "welt") || kartenListe[0];
     try {
       z = quelle.maxZoom;
-      const erste = await poisImBereich(z, w, s, o, n, lauf);
+      await speicherGeladen;
+      if (lauf !== suchLauf) return;
+      const erste =await poisImBereich(z, w, s, o, n, lauf);
       if (!erste) return; // inzwischen neu gesucht
-      liste = passend(erste).filter(p => p.lon >= w && p.lon <= o && p.lat >= s && p.lat <= n);
-      // Im Ausschnitt nichts: in Ringen um die Mitte weitersuchen
-      if (!liste.length) {
-        for (radius of RINGE_KM) {
+      // Dazu alles, was schon gelesen wurde und im ganzen Ausschnitt liegt: so verschwindet beim
+      // Verschieben nichts, was eben noch gefunden war (kostet nichts, die Kacheln sind im Speicher)
+      const bw = b.getWest(), bs = b.getSouth(), bo = b.getEast(), bn = b.getNorth();
+      liste = passend(erste.concat(bekanntePois(z))).filter(p => p.lon >= bw && p.lon <= bo && p.lat >= bs && p.lat <= bn);
+      imAusschnitt = liste.length;
+      // Im Ausschnitt (fast) nichts: in Ringen um die Mitte weitersuchen, bis genug da sind.
+      // Ringe, die ganz im Ausschnitt liegen, bringen nichts Neues und werden übersprungen.
+      if (imAusschnitt < WENIG) {
+        const kmLat = 111.32, kmLon = 111.32 * Math.cos(mitte.lat * Math.PI / 180);
+        const innen = Math.min(mitte.lng - w, o - mitte.lng) * kmLon, innenNS = Math.min(mitte.lat - s, n - mitte.lat) * kmLat;
+        const imBild = new Set(liste.map(p => p.name + p.lon + p.lat));
+        for (const r of RINGE_KM) {
+          if (r <= Math.min(innen, innenNS) * 0.9) continue;
           if (lauf !== suchLauf) return;
-          const rLat = radius / 111.32, rLon = radius / (111.32 * Math.cos(mitte.lat * Math.PI / 180));
-          const ring = await poisImBereich(z, mitte.lng - rLon, mitte.lat - rLat, mitte.lng + rLon, mitte.lat + rLat, lauf);
+          radius = r;
+          const ring = await poisImBereich(z, mitte.lng - r / kmLon, mitte.lat - r / kmLat, mitte.lng + r / kmLon, mitte.lat + r / kmLat, lauf);
           if (!ring) return;
-          liste = passend(ring).filter(p => p.dist <= radius);
-          if (liste.length) break;
+          // Treffer im Ausschnitt behalten, auch wenn sie in einer Ecke knapp außerhalb des Kreises liegen
+          const neu = passend(ring).filter(p => p.dist <= r && !imBild.has(p.name + p.lon + p.lat));
+          liste = liste.filter(p => imBild.has(p.name + p.lon + p.lat)).concat(neu);
+          if (liste.length >= WENIG) break;
         }
+        if (liste.length === imAusschnitt) radius = 0; // außen nichts dazu gekommen
       }
     } catch (e) {
       if (lauf === suchLauf) { ziel.innerHTML = ""; ziel.append(el("div", { class: "leer" }, "Suche nicht möglich: " + e.message)); }
@@ -817,14 +844,15 @@ const Karten = (() => {
       ziel.append(el("div", { class: "leer" }, quelle.id === "welt"
         ? "Die Weltkarte ist zu grob für Einrichtungen. Bitte eine Länderkarte wählen."
         : z < 15 ? "Nichts gefunden. Diese Karte enthält nur wenige Details (Zoomstufe " + z + ") und deshalb keine kleinen Einrichtungen. Unter „Inhalte“ kannst du sie löschen und neu herunterladen."
-        : "Im Ausschnitt und im Umkreis von " + RINGE_KM[RINGE_KM.length - 1] + " km nichts gefunden. Karte auf einen anderen Ort schieben."));
+        : ["Im Ausschnitt und im Umkreis von " + RINGE_KM[RINGE_KM.length - 1] + " km nichts gefunden.", el("br"), "Karte auf einen anderen Ort schieben."]));
       return;
     }
     const anzahl = liste.length;
     ziel.append(el("div", { class: "leer" }, radius
-      ? "Im Ausschnitt nichts. " + (anzahl === 1 ? "Das nächste" : "Die nächsten") + " im Umkreis von " + radius + " km:"
-      : (anzahl > LISTE ? "Die " + LISTE + " nächsten von " + anzahl : String(anzahl)) + " im Ausschnitt" +
-        (begrenzt ? " (nur die mittleren " + MAX_KM + " km, für mehr näher heranzoomen)" : "")));
+      ? [(imAusschnitt ? "Im Ausschnitt nur " + imAusschnitt + "." : "Im Ausschnitt nichts."), el("br"), "Deshalb im größeren Umkreis gesucht.", el("br"),
+         (anzahl === 1 ? "Das nächste" : "Die " + Math.min(anzahl, LISTE) + " nächsten") + " im Umkreis von " + radius + " km:"]
+      : [(anzahl > LISTE ? "Die " + LISTE + " nächsten von " + anzahl : String(anzahl)) + " im Ausschnitt" + (begrenzt ? "." : ""),
+         begrenzt && el("br"), begrenzt && "Durchsucht sind die mittleren " + MAX_KM + " km und Gegenden, in denen die Karte schon war."]));
     for (const p of liste.slice(0, MARKER)) {
       const m = new maplibregl.Marker({ color: "#1f6f6b", scale: 0.8 }).setLngLat([p.lon, p.lat]).setPopup(new maplibregl.Popup({ offset: 20 }).setText(p.name)).addTo(karte);
       poiMarker.push(m);
@@ -852,8 +880,51 @@ const Karten = (() => {
     return dateien[id] || (dateien[id] = new pmtiles.PMTiles(location.origin + "/karten/" + id + ".pmtiles"));
   }
 
-  // Gelesene Kacheln merken, damit das Nachsuchen beim Verschieben nur die neuen Kacheln lesen muss
-  const kachelSpeicher = new Map();
+  // Gelesene Kacheln merken, damit das Nachsuchen beim Verschieben nur die neuen Kacheln lesen muss.
+  // Gemerkt werden nur Einrichtungen der Schnellsuchen; die meisten Kacheln sind dann leer und kosten kaum Platz.
+  // Dauerhaft liegen sie in einer Datei im Zwischenspeicher (/api/einrichtungen), so muss jede Gegend nur
+  // einmal gelesen werden, auch über einen Neustart hinweg. SPEICHER_V erhöhen, wenn sich KATEGORIEN ändert.
+  const kachelSpeicher = new Map(), LEER = [], SPEICHER_V = 1;
+  const MERKEN = new Set(KATEGORIEN.flatMap(k => k.arten));
+  let speicherGeladen = Promise.resolve(), zuSenden = [], sendeTimer = null;
+
+  async function ladeEinrichtungen() {
+    const stand = kartenStand;
+    let text = "";
+    try { const r = await fetch("/api/einrichtungen?v=" + SPEICHER_V); if (r.ok) text = await r.text(); } catch (e) { return; }
+    if (stand !== kartenStand) return;
+    for (const zeile of text.split("\n")) {
+      if (!zeile) continue;
+      const tab = zeile.indexOf("\t");
+      if (tab < 0) { kachelSpeicher.set(stand + "/" + zeile, LEER); continue; }
+      try {
+        const pois = JSON.parse(zeile.slice(tab + 1)).map(([kind, name, lon, lat]) => ({ kind, name, lon, lat }));
+        kachelSpeicher.set(stand + "/" + zeile.slice(0, tab), pois);
+      } catch (e) { /* kaputte Zeile (z. B. nach Absturz beim Schreiben): Kachel wird neu gelesen */ }
+    }
+  }
+
+  function merkeKachel(zxy, pois) {
+    zuSenden.push(pois.length ? zxy + "\t" + JSON.stringify(pois.map(p => [p.kind, p.name || "", +p.lon.toFixed(6), +p.lat.toFixed(6)])) : zxy);
+    clearTimeout(sendeTimer);
+    sendeTimer = setTimeout(sendeKacheln, 1500);
+  }
+
+  function sendeKacheln() {
+    clearTimeout(sendeTimer);
+    if (!zuSenden.length) return;
+    const text = zuSenden.join("\n");
+    zuSenden = [];
+    fetch("/api/einrichtungen?v=" + SPEICHER_V, { method: "POST", body: text }).catch(() => { });
+  }
+  addEventListener("pagehide", () => { if (zuSenden.length) navigator.sendBeacon("/api/einrichtungen?v=" + SPEICHER_V, zuSenden.join("\n")); zuSenden = []; });
+
+  // Alle Einrichtungen aus schon gelesenen Kacheln dieser Zoomstufe
+  function bekanntePois(z) {
+    const vorne = kartenStand + "/" + z + "/", pois = [];
+    for (const [key, liste] of kachelSpeicher) if (liste.length && key.startsWith(vorne)) for (const p of liste) pois.push(p);
+    return pois;
+  }
 
   // Alle Einrichtungen (Ebene "pois") aus den Kacheln, die den Bereich abdecken
   // Gibt null zurück, wenn inzwischen neu gesucht wurde (lauf !== suchLauf)
@@ -861,7 +932,9 @@ const Karten = (() => {
     const anzahl = 2 ** z, rad = Math.PI / 180;
     const kx = (l) => Math.floor((l + 180) / 360 * anzahl);
     const ky = (b) => Math.floor((1 - Math.log(Math.tan(b * rad) + 1 / Math.cos(b * rad)) / Math.PI) / 2 * anzahl);
-    if (kachelSpeicher.size > 4000) kachelSpeicher.clear();
+    // Ländliche Kacheln sind meist leer, im hohen Norden braucht ein 20-km-Ring über 6000 davon.
+    // Notbremse für den Arbeitsspeicher; die Datei bleibt, nach dem nächsten Öffnen ist alles wieder da.
+    if (kachelSpeicher.size > 400000) kachelSpeicher.clear();
     const pois = [], fehlend = [];
     for (let x = kx(w); x <= kx(o); x++)
       for (let y = ky(n); y <= ky(s); y++) {
@@ -874,8 +947,11 @@ const Karten = (() => {
       if (lauf !== suchLauf) return null;
       await Promise.all(fehlend.slice(i, i + 12).map(async ([x, y, key]) => {
         const data = await holeKachel(z, x, y);
-        const gefunden = data ? kachelPois(new Uint8Array(data), z, x, y) : [];
+        let gefunden = data ? kachelPois(new Uint8Array(data), z, x, y).filter(p => MERKEN.has(p.kind)) : LEER;
+        if (!gefunden.length) gefunden = LEER;
+        if (!key.startsWith(kartenStand + "/")) return; // Karten inzwischen geändert
         kachelSpeicher.set(key, gefunden);
+        merkeKachel(z + "/" + x + "/" + y, gefunden);
         pois.push(...gefunden);
       }));
     }

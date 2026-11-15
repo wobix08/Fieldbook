@@ -129,6 +129,7 @@ const Bibliothek = (() => {
       () => el("div", { class: "klapp-liste" }, eintraege.map(x => zuletztEintrag(x.e, x.b)), leeren));
     platz.replaceWith(box);
   }
+
   function zuletztEintrag(e, b) {
     const href = b.eigene ? Eigene.linkVon(e.url, e.seite) : e.pdf
       ? "#pdf?url=" + encodeURIComponent(e.url) + (e.seite ? "&seite=" + e.seite : "") + "&titel=" + encodeURIComponent(e.titel)
@@ -249,6 +250,24 @@ const Bibliothek = (() => {
   }
 
   // q: Suchbegriff; nurBuch: nur in diesem Paket suchen (Suchfeld eines PDF-Pakets), dann mit mehr Treffern
+  // Große Wikipedia und „Das Beste von Wikipedia“ enthalten dieselben Artikel: jeden Artikel nur einmal zeigen,
+  // und zwar in der Variante mit Bildern (bei Gleichstand in der großen Wikipedia)
+  function ohneDoppelteWikipedia(gruppen) {
+    const familie = (b) => { const m = /^wikipedia_([a-z]+)_(all|top)$/.exec(b.name || ""); return m ? m[1] : null; };
+    const rang = (b) => (b.flavour === "maxi" ? 0 : 2) + (/_all$/.test(b.name) ? 0 : 1);
+    const artikel = (t) => sicherDecode((t.url || "").replace(/^.*?\/content\/[^/]+\//, "")).toLowerCase();
+    // Steckt „Das Beste“ ganz in der großen Wikipedia (die hat Bilder oder dieselbe Variante), fällt es weg
+    const gross = gruppen.filter(g => familie(g.b) && /_all$/.test(g.b.name));
+    gruppen.forEach(g => {
+      if (familie(g.b) && /_top$/.test(g.b.name) && gross.some(a => familie(a.b) === familie(g.b) && (a.b.flavour === "maxi" || a.b.flavour === g.b.flavour))) g.liste = [];
+    });
+    const gesehen = {};
+    gruppen.filter(g => familie(g.b)).sort((x, y) => rang(x.b) - rang(y.b)).forEach(g => {
+      const s = gesehen[familie(g.b)] || (gesehen[familie(g.b)] = new Set());
+      g.liste = g.liste.filter(t => { const k = artikel(t); if (s.has(k)) return false; s.add(k); return true; });
+    });
+  }
+
   async function suchen(q, nurBuch) {
     const ziel = $("#bib-treffer");
     const mein = ++suchLauf;                   // überholte Suchen werfen ihr Ergebnis weg
@@ -282,9 +301,11 @@ const Bibliothek = (() => {
         if (wertung === 2) imTitel = true;
         liste.push(t);
       }
-      return { b, imTitel, liste: liste.slice(0, nurBuch ? 15 : 6) };
+      return { b, imTitel, liste };
     }));
     if (mein !== suchLauf) return; // inzwischen neu gesucht
+    ohneDoppelteWikipedia(gruppen);
+    for (const g of gruppen) g.liste = g.liste.slice(0, nurBuch ? 15 : 6);
     // Pakete, bei denen das Suchwort im Titel eines Treffers steht, zuerst (sonst Reihenfolge wie im Regal)
     // Treffer in den eigenen Unterlagen immer ganz oben
     gruppen.sort((x, y) => (y.b.eigene ? 1 : 0) - (x.b.eigene ? 1 : 0) || (y.imTitel ? 1 : 0) - (x.imTitel ? 1 : 0));
@@ -297,6 +318,9 @@ const Bibliothek = (() => {
     kopf.append(el("a", { class: "knopf knopf-haupt", href: "#fragen", onclick: () => setTimeout(() => { $("#frage-feld").value = q; }, 60) }, sym("message-circle"), "Die KI dazu fragen"));
     if (!eins && OW.status && OW.status.karten && OW.status.karten.length)
       kopf.append(el("a", { class: "knopf", href: "#karten", onclick: () => setTimeout(() => Karten.sucheOrt(q), 300) }, sym("map"), "Auf der Karte suchen"));
+    // Passt der Begriff zu einem Werkzeug (z. B. „Morse“, „Fahrenheit“), direkt dorthin
+    const wz = !eins && Werkzeuge.passend(q);
+    if (wz) kopf.prepend(el("a", { class: "knopf", href: wz.link }, sym(wz.symbol), "Werkzeug: " + wz.titel));
     ziel.append(kopf);
     let gefunden = 0;
     for (const { b, liste } of gruppen) {
@@ -431,19 +455,28 @@ const Bibliothek = (() => {
         .then(r => sicherDecode(new URL(r.url).pathname)).catch(() => ""));
     return startseiten.get(paket);
   }
+  // Artikel, der gerade im Lesefenster steht (für die Merkliste und „Zuletzt gelesen“), sonst null
+  let artikelJetzt = null;
+  let merkSprung = null;   // Eintrag der Merkliste, dessen Textstelle nach dem Laden gezeigt wird
+  const lesezeichenAnpassen = Merkliste.knopf($("#lese-lesezeichen"), () => location.hash.startsWith("#lesen") ? artikelJetzt : null);
   async function artikelMerken(innen) {
     let pfad, titel;
+    artikelJetzt = null;
     try {
       const l = innen.contentWindow.location, doc = innen.contentDocument;
       pfad = l.pathname;
       const h1 = doc && doc.querySelector("h1");
       titel = ((h1 && h1.textContent) || (doc && doc.title) || "").replace(/\s+/g, " ").trim();
-    } catch { return; }
+    } catch { lesezeichenAnpassen(); return; }
     const m = pfad.match(/^\/kiwix\/content\/([^/]+)\/./);
-    if (!m || /\.pdf$/i.test(pfad) || !titel) return;
+    if (!m || /\.pdf$/i.test(pfad) || !titel) { lesezeichenAnpassen(); return; }
     const paket = sicherDecode(m[1]);
+    const e = artikelJetzt = { url: pfad, titel: titel.slice(0, 200), paket };
+    lesezeichenAnpassen();
+    // Aus der Merkliste geöffnet: zur gemerkten Textstelle springen
+    if (merkSprung) { const id = merkSprung; merkSprung = null; MerkAnsicht.springen(innen.contentDocument.body, id, 3); }
     if (sicherDecode(pfad) === await startseiteVon(paket)) return;
-    zuletztMerken({ url: pfad, titel: titel.slice(0, 200), paket });
+    zuletztMerken(e);
   }
 
   // PDF-Links (z. B. Medizin-Handbücher) wollen ein neues Fenster öffnen, was je nach Browser zum
@@ -516,6 +549,7 @@ const Bibliothek = (() => {
     if (direkt && !/\.pdf(#|$)/i.test(direkt[1])) url = "/kiwix/viewer#" + direkt[1];
     $("#uebersetzen-knopf").hidden = !Uebersetzer.verfuegbar();
     warLesen = true;
+    merkSprung = params.get("merk");
     const rahmen = $("#lese-rahmen");
     // Ein neues Buch ohne zusätzlichen Verlaufseintrag laden (sonst führt "Zurück" ins vorher gelesene Buch
     // statt zur Übersicht). Links innerhalb des Artikels bleiben mit "Zurück" erreichbar.
@@ -597,5 +631,8 @@ const Bibliothek = (() => {
     } catch { }
   }
 
-  return { zeigen, lesen, anhalten };
+  // Artikel im Lesefenster für „Merken“ an einer markierten Stelle (js/vorlesen.js)
+  const artikel = () => location.hash.startsWith("#lesen") ? artikelJetzt : null;
+
+  return { zeigen, lesen, anhalten, artikel };
 })();

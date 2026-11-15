@@ -167,10 +167,19 @@
         "Beim Notruf musst du dir keine Reihenfolge merken. Die Leitstelle fragt alles, was sie braucht. Am wichtigsten ist: Wo ist es passiert? Ohne den Ort kann niemand kommen.",
         "Die 112 ist in ganz Europa kostenlos. Sie geht auch ohne Guthaben und bei gesperrtem Bildschirm. In Deutschland muss dafür aber eine SIM-Karte im Handy stecken, ein altes Handy ohne SIM-Karte kann dort keinen Notruf wählen. Hat dein eigenes Netz keinen Empfang, nutzt das Handy für den Notruf auch ein anderes Netz, wenn eins da ist."
       ],
+      "bilder": {
+        "dateien": ["bilder/erstehilfe/gefahr-1.png", "bilder/erstehilfe/gefahr-2.png"],
+        "titel": "So holst du eine Person aus der Gefahr",
+        "schritte": [
+          "Rautek-Griff: Die Person aufsetzen und dich hinter sie knien. Beide Arme unter ihren Achseln durchschieben und einen ihrer angewinkelten Unterarme fassen, die Daumen liegen dabei oben neben den Fingern. Dich aufrichten, die Person dabei auf deine Oberschenkel ziehen und rückwärts gehen.",
+          "Ist die Person zu schwer: sie auf eine Decke oder Jacke legen und diese am Kopfende rückwärts wegziehen."
+        ],
+        "quelle": "Zeichnungen: Baedr-9439, Wikimedia Commons (Rautek-maneuver.png, Blanket-drag.png), gemeinfrei (CC0)."
+      },
       "schritte": [
         "Kurz stehen bleiben und schauen: Gibt es Gefahr durch Verkehr, Feuer, Rauch, Strom, Gas, Wasser, Glas oder Tiere?",
         "Unfallstelle absichern: Warnblinker an, Warnweste anziehen, Warndreieck aufstellen (innerorts etwa 50 m, außerorts etwa 100 m, auf der Autobahn etwa 200 m vor der Stelle).",
-        "Eine Person nur aus der Gefahr holen, wenn das für dich sicher ist. Bei Strom erst abschalten. In einen verrauchten Raum oder einen Raum mit Gasgeruch nicht hineingehen.",
+        "Eine Person nur aus der Gefahr holen, wenn das für dich sicher ist, z. B. mit dem Rautek-Griff (Bild oben). Bei Strom erst abschalten. In einen verrauchten Raum oder einen Raum mit Gasgeruch nicht hineingehen.",
         "Notruf {notruf} wählen. Ruhig sagen, wo du bist: Ort, Straße, Hausnummer, Stockwerk oder auffällige Punkte in der Nähe.",
         "Die Fragen der Leitstelle beantworten, z. B. was passiert ist, wie viele Verletzte es gibt und wie es ihnen geht.",
         "Nicht auflegen, bis die Leitstelle das Gespräch beendet. Oft erklärt sie dir am Telefon, was du tun sollst.",
@@ -526,6 +535,14 @@
         "Der Körper wehrt sich zuerst: Das Herz schlägt schneller, die Haut wird blass und kalt. Später wird die Person unruhig, dann teilnahmslos und schließlich bewusstlos.",
         "Schock ist lebensgefährlich und wird oft übersehen. Wer ihn früh erkennt, kann viel tun: die Ursache behandeln, für Ruhe und Wärme sorgen und den Notruf wählen."
       ],
+      "bilder": {
+        "datei": "bilder/erstehilfe/schock-lagerung.svg",
+        "titel": "So lagerst du bei Schock",
+        "schritte": [
+          "Flach auf den Rücken, die Beine leicht hochlegen, z. B. auf eine gerollte Decke. Darunter eine Decke gegen die Bodenkälte. Nur ohne Atemnot, Brustschmerz oder Verletzung an Beinen, Becken oder Rücken."
+        ],
+        "quelle": "Zeichnung: Fieldbook."
+      },
       "schritte": [
         "Auf die Zeichen achten: blasse, kalte, feuchte Haut, Frieren, kalter Schweiß, Unruhe oder Angst, schneller und schwacher Puls, Durst.",
         "Sofort Notruf {notruf} (oder wählen lassen).",
@@ -576,6 +593,14 @@
         "Herzinfarkt: starker Druck, Enge oder Schmerz in der Brust, oft ausstrahlend in Arm, Hals, Kiefer, Rücken oder Oberbauch, länger als 5 Minuten. Dazu oft Atemnot, Übelkeit, kalter Schweiß und Angst. Bei Frauen und älteren Menschen sind die Zeichen oft schwächer: nur Übelkeit, Atemnot oder Bauchschmerzen.",
         "Schlaganfall: plötzlich eine schwache oder gelähmte Körperseite, ein hängender Mundwinkel, verwaschene Sprache, Sehstörungen, starker Schwindel oder heftigster Kopfschmerz. Der FAST-Test hilft beim Erkennen."
       ],
+      "bilder": {
+        "datei": "bilder/erstehilfe/herz-lagerung.svg",
+        "titel": "So lagerst du bei Verdacht auf Herzinfarkt",
+        "schritte": [
+          "Oberkörper hoch, z. B. an eine Wand oder ein Sofa gelehnt, ein Kissen im Rücken. Die Beine nicht hochlegen."
+        ],
+        "quelle": "Zeichnung: Fieldbook."
+      },
       "schritte": [
         "Herzinfarkt: Notruf {notruf} und sagen: „Verdacht auf Herzinfarkt“.",
         "Oberkörper hoch lagern (z. B. an eine Wand oder ein Sofa gelehnt), enge Kleidung öffnen, beruhigen. Die Person soll sich nicht mehr anstrengen und nicht herumlaufen.",
@@ -630,6 +655,21 @@
         "Als Maß gilt: Die Handfläche der verletzten Person mit Fingern entspricht etwa 1 Prozent ihrer Haut.",
         "Hausmittel wie Mehl, Butter, Öl oder Zahnpasta schaden. Sie halten die Hitze in der Haut und verschmutzen die Wunde."
       ],
+      "bilder": [{
+        "datei": "bilder/erstehilfe/verbrennung-kuehlen.svg",
+        "titel": "So kühlst du eine kleine Verbrennung",
+        "schritte": [
+          "Handwarmes Leitungswasser über die Stelle laufen lassen, höchstens etwa 5 Minuten. Nicht eiskalt, kein Eis."
+        ],
+        "quelle": "Zeichnung: Fieldbook."
+      }, {
+        "datei": "bilder/erstehilfe/verbrennung-hand.png",
+        "titel": "So schätzt du die Größe ab",
+        "schritte": [
+          "Die Handfläche der verletzten Person mit Fingern ist etwa 1 Prozent ihrer Haut. Miss mit ihrer Hand, nicht mit deiner."
+        ],
+        "quelle": "Zeichnung: Baedr-9439, Wikimedia Commons (Palmar-view-of-hand.png), gemeinfrei (CC0)."
+      }],
       "schritte": [
         "Brennt die Kleidung: Person am Boden wälzen oder mit einer Decke (nicht aus Kunstfaser) löschen. Die Decke fest an den Körper drücken und von oben nach unten arbeiten, damit die Flammen vom Gesicht weg erstickt werden. Die Decke danach nicht sofort wieder hochreißen. Nicht weglaufen lassen, das facht das Feuer an.",
         "Verbrühung: nasse, heiße Kleidung sofort ausziehen, bei Kindern auch die Windel.",
@@ -746,6 +786,14 @@
         "Kohlenmonoxid ist unsichtbar und riecht nicht. Es entsteht z. B. bei Gasgrill, Holzkohle, Ofen oder Notstromaggregat in geschlossenen Räumen, gerade bei Stromausfall. Zeichen sind Kopfschmerzen, Schwindel, Übelkeit und Benommenheit, oft bei mehreren Menschen gleichzeitig.",
         "Eine schwere allergische Reaktion (Anaphylaxie) kann in Minuten lebensbedrohlich werden: Schwellung in Mund und Hals, Atemnot, Kreislaufversagen."
       ],
+      "bilder": {
+        "datei": "bilder/erstehilfe/adrenalin-pen.png",
+        "titel": "So hilfst du beim Adrenalin-Pen",
+        "schritte": [
+          "Den Pen fest gegen die Außenseite des Oberschenkels drücken, das geht auch durch die Hose. Mit der anderen Hand das Bein ruhig halten. Wie lange man drückt, steht auf dem Pen."
+        ],
+        "quelle": "Zeichnung: Baedr-9439, Wikimedia Commons (Epinephrine-injection.png), gemeinfrei (CC0)."
+      },
       "schritte": [
         "Geschluckt: Mund ausspülen und Reste ausspucken lassen. Kein Erbrechen auslösen, keine Milch, kein Salzwasser.",
         "Giftnotruf anrufen: {giftnotruf} (die Nummer steht auch auf der Seite Erste Hilfe ganz oben unter „Im Ernstfall“), bei schweren Zeichen sofort Notruf {notruf}. Sagen: wer, was, wie viel, wann, und wie es der Person geht. Etwas zu trinken nur, wenn der Giftnotruf dazu rät.",
@@ -794,6 +842,24 @@
         "Bei Hitze kann sich der Körper irgendwann nicht mehr genug kühlen. Hitzeerschöpfung zeigt sich durch Schwäche, Schwindel und Übelkeit. Beim Hitzschlag ist die Haut heiß, die Person verwirrt oder bewusstlos. Das ist lebensgefährlich.",
         "Sonnenstich: Kopf und Nacken waren zu lange ungeschützt in der Sonne. Zeichen sind ein roter, heißer Kopf, Kopfschmerzen, Übelkeit und ein steifer Nacken."
       ],
+      "bilder": [{
+        "datei": "bilder/erstehilfe/unterkuehlung-{n}.png",
+        "titel": "So packst du eine unterkühlte Person ein",
+        "hoch": true,
+        "schritte": [
+          "Unten eine Unterlage gegen die Bodenkälte, darauf eine große Decke. Die Person darin zuerst in eine Rettungsdecke oder einen Schlafsack hüllen.",
+          "Die Seiten der großen Decke über den Körper schlagen und das Fußende hochklappen.",
+          "Zum Schluss Kopf und Hals einhüllen, nur das Gesicht bleibt frei."
+        ],
+        "quelle": "Zeichnung: Baedr-9439, Wikimedia Commons (Hypothermia-wrap.png), gemeinfrei (CC0), für Fieldbook in Einzelbilder aufgeteilt."
+      }, {
+        "datei": "bilder/erstehilfe/hitze-kuehlen.svg",
+        "titel": "So kühlst du bei Hitze",
+        "schritte": [
+          "Die Person in den Schatten bringen und hinlegen. Feuchte Tücher auf Stirn und Nacken legen und Luft zufächeln."
+        ],
+        "quelle": "Zeichnung: Fieldbook."
+      }],
       "schritte": [
         "Unterkühlung: vor weiterer Kälte schützen und in einen warmen, windgeschützten Raum bringen. Dabei nur vorsichtig bewegen.",
         "Nasse Kleidung vorsichtig ausziehen oder aufschneiden. Am besten zuerst in die Rettungsdecke aus dem Verbandkasten einwickeln (silberne Seite nach innen zum Körper), dann in Decken einpacken, auch den Kopf, und von unten gegen die Bodenkälte schützen. Wichtig ist vor allem, dass der Körper rundum eingehüllt ist.",

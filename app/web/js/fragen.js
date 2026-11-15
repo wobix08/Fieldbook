@@ -582,7 +582,13 @@ const Fragen = (() => {
       "Benenne zuerst unter \"thema\" in zwei bis vier Wörtern, worum es im Kern geht: das Sachgebiet und was der Nutzer erreichen will " +
       "(z. B. bei einer Frage nach einem verstauchten Fuß: \"Verstauchung Erste Hilfe\"). Leite die Suchbegriffe aus diesem Thema ab, nicht aus einzelnen Wörtern der Frage. " +
       "Gib dann 1 bis 3 kurze deutsche Suchbegriffe zurück, die wie Artikeltitel klingen (Substantive, z. B. \"Schnittwunde\", \"Radioempfänger\", \"Wundversorgung\"). " +
-      "Jeder Begriff ist ein Wort oder höchstens zwei, ohne Verb und ohne \"ohne\", so wie ein Lexikonartikel heißt. Die Lage der Frage (z. B. ohne Strom) steckt nicht im Suchbegriff. " +
+      "Jeder Begriff ist ein Wort oder höchstens zwei, ohne Verb und ohne \"ohne\", so wie ein Lexikonartikel heißt. " +
+      // Test 15. Nov. 2026 (120 Testfragen): Ohne diesen Satz erfand das 4B-Modell oft Wörter wie „Kartoffelkühlung“,
+      // die es als Artikel nicht gibt. Damit 172 statt 104 Begriffe mit echtem Artikel, 125 statt 99 deutsche Quellen.
+      // Die Beispiele kommen absichtlich in keiner Testfrage vor
+      "Nimm gebräuchliche Wörter, unter denen es wirklich einen Wikipedia-Artikel gibt, in der Einzahl (z. B. \"Zwiebel\", \"Prellung\", \"Sextant\"). " +
+      "Erfinde keine neuen zusammengesetzten Wörter wie \"Zwiebelkühlung\" oder \"Prellungsversorgung\". " +
+      "Die Lage der Frage (z. B. ohne Strom) steckt nicht im Suchbegriff. " +
       "Modellnummern, Marken und Eigennamen übernimmst du wörtlich, z. B. \"LG Kühlschrank\". " +
       "Der Nutzer will Dinge selbst und mit einfachen Mitteln lösen. Suche nach den Verfahren und Techniken, mit denen man es selbst schafft, " +
       "nicht nach dem Gerät oder der Dienstleistung, die fehlt. Gute Suchbegriffe sind Fachbegriffe für die Methode, zum Beispiel: " +

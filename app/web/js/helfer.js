@@ -10,6 +10,11 @@ const OW = {
 const $ = (sel, root) => (root || document).querySelector(sel);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
+// Bewegungen weglassen: Windows-Einstellung „Animationen aus“ oder Akkubetrieb (Klasse „akku-sparen“, app.js)
+function wenigBewegung() {
+  return document.documentElement.classList.contains("akku-sparen") || !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -41,7 +46,10 @@ function zeilen(text) {
 }
 
 // Text für „Fieldbook läuft nicht mehr oder antwortet nicht“ (jeder Satz in eigener Zeile über zeilen())
-const NICHT_ERREICHBAR = "Fieldbook antwortet gerade nicht. Läuft das schwarze Fieldbook-Fenster noch? Sonst Fieldbook neu starten.";
+// Größe des Vorleseprogramms (Python und Piper, Summe aus app/config/programme.json „piper-py“)
+const PIPER_BYTES = 83519981;
+
+const NICHT_ERREICHBAR ="Fieldbook antwortet gerade nicht. Läuft das schwarze Fieldbook-Fenster noch? Sonst Fieldbook neu starten.";
 
 // Roter Fehlerkasten mit Knopf zum nochmal Versuchen: fehlerBox("Text", () => neuLaden()).
 // nochmal fehlt: kein Knopf. knopfText: Beschriftung des Knopfs. technisch: nur als Tooltip (title), nicht im Text.
@@ -135,7 +143,7 @@ function nachAufklappenPruefen(knopf) {
     const ueber = box.getBoundingClientRect().bottom - unten;
     const luft = knopf.getBoundingClientRect().top - oben;
     const d = Math.min(ueber, luft);
-    if (d >= 4) window.scrollBy({ top: d, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    if (d >= 4) window.scrollBy({ top: d, behavior: wenigBewegung() ? "auto" : "smooth" });
   }, ms);
 }
 
@@ -147,7 +155,7 @@ function imKastenZeigen(kasten, obenEl, untenEl) {
   const ueber = (untenEl || obenEl).getBoundingClientRect().bottom - (k.bottom - 8);
   const luft = obenEl.getBoundingClientRect().top - k.top;
   const d = Math.min(ueber, luft);
-  if (d >= 2) kasten.scrollBy({ top: d, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  if (d >= 2) kasten.scrollBy({ top: d, behavior: wenigBewegung() ? "auto" : "smooth" });
 }
 
 function nachOben(knopf, top) {
@@ -182,7 +190,7 @@ function nachOben(knopf, top) {
   ziel = Math.min(ziel, zeileDoc);                                              // scrollY ≥ 0
   ziel = Math.max(ziel, zeileDoc - Math.max(0, docEnde - window.innerHeight));  // scrollY ≤ Maximum
   // Bewegung reduzieren: sofort springen
-  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (wenigBewegung()) {
     const d = knopf.getBoundingClientRect().top - ziel;
     if (Math.abs(d) >= 1) window.scrollBy(0, d);
     return;
@@ -306,6 +314,70 @@ function zuletztMerken(e) {
   if (!e || !e.url || !e.titel) return;
   api("zuletzt/merken", e).catch(() => { });
 }
+
+// Merkliste: selbst gemerkte Sachen aus allen Bereichen, mit eigenen Ordnern (daten/merkliste.json, Ansicht in
+// js/merkliste.js). Ein Eintrag: { id, titel, bereich, ordner, url | link, paket, pdf, seite, stelle }.
+// url: Artikel, PDF-Buch oder eigene Unterlage; link: Seite in Fieldbook (z. B. "#erstehilfe?l=…");
+// stelle: markierte Textstelle. Nach jeder Änderung kommt das Ereignis "merkliste" am document.
+const Merkliste = {
+  _d: null,
+  async laden(neu) {
+    if (!Merkliste._d || neu) Merkliste._d = await api("merkliste");
+    return Merkliste._d;
+  },
+  async liste(neu) { return (await Merkliste.laden(neu)).liste || []; },
+  async aendern(daten) {
+    const r = await api("merkliste/aendern", daten);
+    if (r.fehler) throw new Error(r.fehler);
+    Merkliste._d = r;
+    document.dispatchEvent(new Event("merkliste"));
+    return r;
+  },
+  // Ganzer Artikel bzw. ganze Seite (ohne Textstelle) mit derselben Adresse
+  gleich: (x, e) => !x.stelle && (x.url || "") === (e.url || "") && (x.link || "") === (e.link || "") && (x.seite || 0) === (e.seite || 0),
+  setzen: (e, an) => Merkliste.aendern(Object.assign({ aktion: "setzen" }, e, { an })),
+  // Knopf mit Lesezeichen-Symbol: holen() liefert den Eintrag für das, was gerade offen ist (oder null).
+  // Gibt eine Funktion zurück, die den Knopf neu einstellt (nach jedem Seiten- oder Artikelwechsel aufrufen).
+  knopf(knopf, holen) {
+    let lauf = 0;
+    const anpassen = async () => {
+      const mein = ++lauf;
+      const e = holen();
+      knopf.hidden = !e;
+      if (!e) return;
+      let an = false;
+      try { an = (await Merkliste.liste()).some(x => Merkliste.gleich(x, e)); } catch { }
+      if (mein !== lauf) return;
+      knopf.setAttribute("aria-pressed", String(an));
+      knopf.title = an ? "Von der Merkliste nehmen" : "Auf die Merkliste";
+      knopf.setAttribute("aria-label", knopf.title);
+    };
+    knopf.addEventListener("click", async () => {
+      const e = holen();
+      if (!e) return;
+      const an = knopf.getAttribute("aria-pressed") !== "true";
+      try { await Merkliste.setzen(e, an); }
+      catch (err) { await zeigeFehler("Die Merkliste konnte nicht gespeichert werden.", err); }
+      anpassen();
+    });
+    // Nach Änderungen anderswo (z. B. in der Merkliste entfernt) neu einstellen; Knöpfe, die schon auf der Seite
+    // waren und wieder weg sind (neu gezeichnete Ansicht), hören auf
+    let warDa = false;
+    const hoerer = () => {
+      if (knopf.isConnected) warDa = true;
+      else if (warDa) { document.removeEventListener("merkliste", hoerer); return; }
+      anpassen();
+    };
+    document.addEventListener("merkliste", hoerer);
+    return anpassen;
+  },
+  // Kleiner Knopf zum Merken einer Seite in Fieldbook (Erste Hilfe, Vorsorge), z. B. neben der Überschrift
+  seitenKnopf(e) {
+    const k = el("button", { type: "button", class: "knopf knopf-symbol lesezeichen-knopf", "aria-pressed": "false" }, sym("bookmark"));
+    Merkliste.knopf(k, () => e)();
+    return k;
+  },
+};
 
 async function api(pfad, daten) {
   const opt = daten === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(daten) };
@@ -666,7 +738,7 @@ const Kiwix = {
       const sprache = t("language");
       liste.push({
         // Deutsche Titel und Beschreibungen aus pakete.json, sonst die (oft englischen) aus dem Kiwix-Katalog
-        id, name, titel: paket.titel ? paket.titel.replace(/\s*\(Englisch\)$/, "") : t("title"), text: paket.text || t("summary"), sprache,
+        id, name, flavour, titel: paket.titel ? paket.titel.replace(/\s*\(Englisch\)$/, "") : t("title"), text: paket.text || t("summary"), sprache,
         englisch: /eng/.test(sprache) && !/deu/.test(sprache),
         volltext: /_ftindex:yes/.test(t("tags")),
         durchsuchen: !paket.keineSuche,

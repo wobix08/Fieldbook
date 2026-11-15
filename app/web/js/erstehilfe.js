@@ -86,7 +86,7 @@ const ErsteHilfe = (() => {
     const artikelKnopf = el("span", { class: "hinweis" }, "Artikel wird gesucht …");
     const lektion = t.lektion && konf.lektionen.find(x => x.id === t.lektion && x.schritte);
     const d = el("div", { class: "notfall-detail" },
-      el("h2", {}, sym(t.icon), t.titel),
+      el("h2", { class: "merk-h2" }, sym(t.icon), t.titel, Merkliste.seitenKnopf({ link: "#erstehilfe?k=" + t.id, titel: t.titel, bereich: "erstehilfe" })),
       el("h3", {}, "Sofort tun"),
       el("ol", {}, ...t.sofort.map(s => el("li", {}, zeilen(s)))),
       t.takt ? taktUebung({}) : null,
@@ -242,7 +242,7 @@ const ErsteHilfe = (() => {
       el("div", { class: "eh-lektion-kopf" },
         el("a", { class: "knopf knopf-klein", href: "#erstehilfe" }, "← Zum Kurs"),
         el("span", { class: "hinweis" }, "Lektion " + nr + " von " + konf.lektionen.length)),
-      el("h2", {}, sym(t.icon), t.titel),
+      el("h2", { class: "merk-h2" }, sym(t.icon), t.titel, Merkliste.seitenKnopf({ link: "#erstehilfe?l=" + t.id, titel: t.titel, bereich: "erstehilfe" })),
       el("h3", {}, "1. Verstehen"),
       ...t.verstehen.map(s => el("p", {}, zeilen(s))),
       el("h3", {}, "2. Schritt für Schritt"),
@@ -271,10 +271,10 @@ const ErsteHilfe = (() => {
   }
 
   // Schritt-Bilder (je Schritt eine Datei, {n} = Nummer, oder eine Liste „dateien“), darunter die Quelle
-  // Bei nur ein oder zwei Bildern werden sie größer gezeigt, ein Einzelbild hat keine Nummer.
+  // Bei nur ein oder zwei Bildern werden sie größer gezeigt, „hoch“ macht schmale Hochformat-Bilder höher, ein Einzelbild hat keine Nummer.
   function bilderReihe(b) {
     const anzahl = b.schritte.length;
-    return el("div", { class: "eh-bilder" + (anzahl <= 2 ? " eh-bilder-gross" : "") },
+    return el("div", { class: "eh-bilder" + (anzahl <= 2 ? " eh-bilder-gross" : "") + (b.hoch ? " eh-bilder-hoch" : "") },
       b.titel ? el("b", {}, b.titel) : null,
       el("div", { class: "eh-bilder-reihe" }, ...b.schritte.map((text, i) => el("figure", {},
         el("div", { class: "eh-bild-flaeche" }, el("img", { src: b.dateien ? b.dateien[i] : b.datei.replace("{n}", i + 1), alt: text })),
@@ -388,7 +388,7 @@ const ErsteHilfe = (() => {
         el("a", { class: "knopf knopf-klein", href: "#erstehilfe" }, "← Zum Kurs"),
         el("span", { class: "hinweis" }, "Fallbeispiel · " + (stufe === 1 ? "Stufe 1: Auswählen" : "Stufe 2: In eigenen Worten")),
         andere),
-      el("h2", {}, sym(f.icon), f.titel),
+      el("h2", { class: "merk-h2" }, sym(f.icon), f.titel, Merkliste.seitenKnopf({ link: "#erstehilfe?f=" + f.id, titel: f.titel, bereich: "erstehilfe" })),
       passend.length ? el("p", { class: "hinweis" }, "Passt zu: ", ...passend.flatMap((x, i) => [i ? ", " : "", el("a", { href: "#erstehilfe?l=" + x.id }, x.titel)])) : null,
       el("p", { class: "eh-fall-situation eh-fall-start" }, zeilen(f.einleitung)),
     ].filter(Boolean);
