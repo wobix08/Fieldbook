@@ -239,7 +239,15 @@ const Setup = (() => {
     c.innerHTML = "";
     c.append(
       el("h1", {}, "Willkommen bei Fieldbook"),
-      el("p", {}, "Der Assistent richtet alles in wenigen Schritten ein.", el("br"), "Dafür wird einmal Internet gebraucht.", el("br"), "Danach funktioniert alles offline."));
+      el("p", {}, "Der Assistent richtet alles in wenigen Schritten ein.", el("br"), "Dafür wird einmal Internet gebraucht.", el("br"), "Danach funktioniert alles offline."),
+      // Vorher umsehen: Der Rundgang läuft mit Beispielinhalten, ohne dass etwas geladen sein muss
+      el("div", { class: "karte-box rundgang-angebot", style: "margin-bottom:16px" },
+        el("span", { class: "rundgang-angebot-symbol" }, sym("compass")),
+        el("div", {}, el("b", {}, "Erst umsehen?"),
+          el("small", {}, "Im Rundgang probierst du alle Bereiche mit Beispielinhalten aus, noch bevor du etwas herunterlädst.", el("br"),
+            "So siehst du, was du wirklich brauchst.", el("br"),
+            "Danach geht es hier mit der Einrichtung weiter.")),
+        el("button", { type: "button", class: "knopf knopf-klein", onclick: () => Rundgang.uebersicht() }, "Rundgang ansehen")));
     // Ohne Internet: Hinweis und die Übernahme vom USB-Stick (z. B. von einem anderen Fieldbook-Laptop)
     if (!kat.katalogOnline) c.append(el("div", { class: "warnung", style: "display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px" },
       el("span", {}, "Keine Internetverbindung erkannt.", el("br"), "Zum Herunterladen wird Internet gebraucht.", el("br"), "Hast du die Inhalte auf einem USB-Stick, kannst du sie von dort übernehmen."),
@@ -290,9 +298,9 @@ const Setup = (() => {
     c.innerHTML = "";
     c.append(el("h1", {}, "KI-Assistent wählen"),
       el("p", {}, "Die KI beantwortet Fragen anhand der Offline-Bibliothek.", el("br"),
-        "Im Moment bietet Fieldbook nur Qwen 3.5 (4B) an.", el("br"),
-        "Es läuft auf jedem Laptop mit 8 GB Arbeitsspeicher.", el("br"),
-        "Weitere KIs folgen, sobald sie getestet sind."));
+        "Qwen 3.5 (4B) läuft auf jedem Laptop mit 8 GB Arbeitsspeicher.", el("br"),
+        "Qwen 3.5 (9B) antwortet besser, braucht aber eine Grafikkarte mit 8 GB.", el("br"),
+        "Ohne Grafikkarte läuft es erst ab 16 GB Arbeitsspeicher, die Antworten dauern dann sehr lange."));
     if (g && g.vramGB >= 4) {
       c.append(el("p", {},
         el("label", { class: "schalter" },
@@ -520,7 +528,8 @@ const Setup = (() => {
     if (m && kat.suchhilfe && !kat.suchhilfe.installiert) b += kat.suchhilfe.bytes;
     for (const p of kat.pakete) if (wahl.pakete.has(p.id) && (!p.installiert || p.update)) b += p.bytes || 0;
     for (const [id, k] of wahl.karten) { const r = kat.karten.find(x => x.id === id); if (r && !r.installiert) b += k.bytes > 0 ? k.bytes : kartenSchaetzung(r, wahl.sparen); }
-    if (wahl.routen && wahl.routenGroesse && wahl.routenGroesse.bytes > 0) b += wahl.routenGroesse.bytes + (OW.status && OW.status.routen ? 0 : 56e6);
+    // Ohne Karten keine Routen (die Größe bleibt sonst von einer früheren Kartenauswahl stehen)
+    if (wahl.routen && wahl.karten.size && wahl.routenGroesse && wahl.routenGroesse.bytes > 0) b += wahl.routenGroesse.bytes + (OW.status && OW.status.routen ? 0 : 56e6);
     if (wahl.uebersetzer && !(OW.status && OW.status.uebersetzer)) b += 42e6;
     return b + sprachenBytes();
   }
@@ -713,6 +722,8 @@ const Setup = (() => {
     if (wahl.statistik) await api("statistik/einstellen", wahl.statistik).catch(() => { });
     // Desktop-Symbol anlegen oder entfernen (nebenbei, blockiert den Download nicht)
     if (wahl.desktop !== !!(OW.status && OW.status.desktopSymbol)) api("desktopsymbol", { an: !!wahl.desktop }).catch(() => { });
+    // Erste Einrichtung: Auf der Seite Inhalte den Rundgang anbieten, solange der Download läuft
+    if (ersteEinrichtung()) try { sessionStorage.setItem("fb-rundgang-angebot", "1"); } catch { }
     hw = null; kat = null; // beim nächsten Öffnen neu laden
     await aktualisiereStatus();
     location.hash = "#inhalte";

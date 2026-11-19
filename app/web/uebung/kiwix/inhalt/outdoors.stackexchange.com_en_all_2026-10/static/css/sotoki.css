@@ -1,0 +1,71 @@
+/* we don't include SE's topbar */
+body {
+     padding-top: 0;
+}
+/* outbound array icon for all external links */
+ a.external-link {
+    /* overriden in template to account for relative path */
+     background-image: url('static/img/external-link-ltr-icon.svg');
+     background-position: center right;
+     background-repeat: no-repeat;
+     padding-right: 13px;
+}
+/* kiwix-serve hack so we don't break the magnifier icon */
+ .kiwix_searchform input.ui-autocomplete-input {
+     margin-top: 0;
+     margin-bottom: 0;
+}
+ .kiwix_searchform {
+     font-size: 14px;
+}
+ @media screen and (max-width: 640px) {
+     .post-layout--left, .post-layout--left.votecell {
+         padding-right: 0;
+    }
+     html.html__responsive:not(.html__unpinned-leftnav) #content {
+         padding-left: 8px;
+         padding-right: 8px;
+    }
+     html.html__responsive:not(.html__unpinned-leftnav) .question-summary {
+         padding-left: 0 !important;
+         padding-right: 0 !important;
+    }
+     body.tagged-questions-page #questions.pl24 .mln24 {
+         margin-left: 0 !important;
+    }
+    /* User profile: display all blocks as rows */
+     body.user-page .profile-box {
+         display: block !important;
+    }
+     body.user-page .reputation-box, .metadata-box {
+         margin: auto;
+         flex-shrink: unset
+    }
+     body.user-page .metadata-box {
+         max-width: unset;
+    }
+     body.user-page .profile-user--name {
+         text-align: center;
+    }
+     body.user-page .flex-spacer {
+         display: none;
+         flex-grow: unset;
+    }
+}
+
+/* custom rule to fill space behind the mobile topbar */
+header.kiwix-topbar-fill {
+     position: static !important;
+}
+
+/* custom rule used to push stuff behind mobile topbar */
+.z-minus-1 {
+     z-index: -1;
+}
+
+/* custom rule to not adapt header logo on small screens for stackoverflow domains */
+@media screen and (max-width: 640px) {
+  html.html__responsive .s-topbar .s-topbar--logo .-img._glyph {
+    width: 150px !important;
+  }
+}

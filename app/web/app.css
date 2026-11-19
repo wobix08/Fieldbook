@@ -19,6 +19,7 @@
   --gelb: #9a6700;
   --gelb-hell: #fff3d1;
   --gruen: #2f7a32;
+  --blatt: #ffffff;   /* Blatt der Notizen */
   --radius: 14px;
   --schatten: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.05);
   --schrift: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
@@ -30,6 +31,7 @@
     --bg: #161715; --flaeche: #1c1d1b; --flaeche2: #252725; --text: #f7f5f1; --text2: #e6e2dc;
     --linie: #363836; --akzent: #9fb78f; --akzent-hell: #262925; --akzent-text: #121412;
     --rot: #db8b73; --rot-hell: #33201a; --gelb: #f2c14e; --gelb-hell: #3a301a; --gruen: #8fcf7f;
+    --blatt: #232522;
     color-scheme: dark;
   }
 }
@@ -37,6 +39,7 @@
   --bg: #161715; --flaeche: #1c1d1b; --flaeche2: #252725; --text: #f7f5f1; --text2: #e6e2dc;
   --linie: #363836; --akzent: #9fb78f; --akzent-hell: #262925; --akzent-text: #121412;
   --rot: #db8b73; --rot-hell: #33201a; --gelb: #f2c14e; --gelb-hell: #3a301a; --gruen: #8fcf7f;
+  --blatt: #232522;
   color-scheme: dark;
 }
 
@@ -258,8 +261,11 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .kachel-notfall .feld { background: var(--flaeche); color: var(--rot); }
 
 /* Werkzeuge (js/werkzeuge.js) */
-.wz-kacheln { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 900px) { .wz-kacheln { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wz-kacheln { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .wz-kacheln { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.wz-blitz-knopf { min-width: 190px; justify-content: center; }
+.wz-blitz-zeit { min-width: 90px; }
+.wz-blitz-ergebnis p { margin: 6px 0; }
 .wz-kachel { padding: 16px 18px; border-radius: 14px; }
 .wz-kachel .k-titel { font-size: 1.25rem; margin-top: 6px; }
 .wz-kachel .k-text { font-size: .92rem; }
@@ -289,6 +295,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .wz-code { font-family: Consolas, monospace; letter-spacing: .1em; }
 .wz-morse-feld { width: 100%; max-width: 620px; display: block; }
 .wz-morse { display: block; margin-top: 10px; font-family: Consolas, monospace; font-size: 1.4rem; letter-spacing: .12em; color: var(--akzent); word-break: break-word; }
+.wz-blink-warnung { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; }
+.wz-blink-warnung .sym { flex: none; margin-top: 3px; }
 .wz-licht { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; }
 .wz-licht.an { background: #fff; }
 .wz-licht span { margin-bottom: 24px; color: #777; font-size: .9rem; }
@@ -393,7 +401,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .antwort { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 16px 16px 16px 4px; padding: 14px 18px; box-shadow: var(--schatten); }
 .schritte-liste { list-style: none; padding: 0; margin: 0 0 8px; color: var(--text2); font-size: .92rem; }
 /* Laufender Schritt: Ladekreis, der sich dreht (zeigt, dass noch gearbeitet wird) */
-.schritte-liste li:not(.fertig):not(.fehler)::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: .45em;
+.schritte-liste li:not(.fertig):not(.fehler):not(.angehalten)::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: .45em;
   vertical-align: -.08em; border: 2px solid var(--linie); border-top-color: var(--akzent); border-radius: 50%; animation: lade-kreis .8s linear infinite; }
 @keyframes lade-kreis { to { transform: rotate(360deg); } }
 /* Derselbe Ladekreis als eigenes Element (z. B. „Route wird berechnet …“) */
@@ -402,6 +410,10 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 @media (prefers-reduced-motion: reduce) { .schritte-liste li::before { animation-duration: 2s; } }
 .schritte-liste li.fertig::before { content: "✓ "; color: var(--gruen); }
 .schritte-liste li.fehler::before { content: "✗ "; color: var(--rot); }
+/* Knopf „Anhalten“ während einer Antwort: kleines volles Quadrat wie bei einem Player */
+.schritte-liste li.angehalten::before { content: ""; display: inline-block; width: .6em; height: .6em; margin-right: .5em;
+  background: var(--text2); border-radius: 2px; vertical-align: .02em; }
+#frage-senden.anhalten .sym { width: 14px; height: 14px; fill: currentColor; }
 .antwort-text { white-space: pre-wrap; }
 .antwort-text .zitat { color: var(--akzent); font-weight: 600; cursor: pointer; }
 .quellen { margin-top: 12px; border-top: 1px solid var(--linie); padding-top: 8px; font-size: .92rem; }
@@ -410,6 +422,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .quellen.vorlaeufig summary { cursor: pointer; }
 .quellen.vorlaeufig:not([open]) { opacity: .8; }
 .medizin-hinweis { margin-top: 10px; font-size: .9rem; }
+.antwort-knoepfe { margin-top: 10px; }
 .weitersuchen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
 .frage-form { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 16px; padding: 10px; box-shadow: var(--schatten); }
 .frage-form textarea { border: 1px solid var(--linie); background: var(--bg); border-radius: 10px; resize: vertical; min-height: 64px; }
@@ -487,6 +500,50 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .dok-bild { box-sizing: border-box; height: 100%; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .dok-bild img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .dok-laden { text-align: center; margin-top: 48px; }
+/* Notizen (js/notizen.js) */
+/* Kopf, Werkzeuge und Blatt so breit wie die übrigen Seiten (.spalte, z. B. Bibliothek; Nutzer, 17. Nov. 2026) */
+.notiz-kopf, .notiz-werkzeuge { background: var(--flaeche); border-bottom: 1px solid var(--linie); padding: 8px 16px; }
+.notiz-werkzeuge { padding-top: 6px; padding-bottom: 6px; }
+.notiz-spalte { max-width: 1100px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.notiz-kopf .notiz-spalte { gap: 10px; }
+.notiz-titel { flex: 1; min-width: 160px; padding: 8px 14px; font-size: 1.05rem; font-weight: 600; }
+.notiz-status { min-width: 6.5em; text-align: right; }
+.notiz-werkzeuge select { width: auto; padding: 6px 10px; }
+.notiz-werkzeuge .knopf-symbol { padding: 7px 9px; }
+.notiz-werkzeuge [aria-pressed="true"] { color: var(--akzent); border-color: var(--akzent); }
+.notiz-tabelle-knoepfe { display: inline-flex; gap: 6px; margin-left: 6px; }
+.notiz-tabelle-knoepfe[hidden] { display: none; }
+/* Das Blatt: eigene Fläche mit Rand, damit man sieht, wie groß es ist */
+/* Die Ansicht spart rechts Platz für eine Bildlaufleiste aus (--leiste); die eigene Leiste der Fläche kommt dorthin,
+   sonst stünde das Blatt um ihre Breite weiter links als Kopf und Werkzeuge */
+.notiz-flaeche { padding: 24px 16px 48px; margin-right: calc(-1 * var(--leiste, 0px)); }
+.notiz-text { outline: none; min-height: 70vh; cursor: text; max-width: 1100px; box-sizing: border-box; padding: 32px 40px 48px;
+  background: var(--blatt); border: 1px solid var(--linie); border-radius: var(--radius); box-shadow: var(--schatten); }
+.notiz-text:focus-within { border-color: var(--text2); }
+.notiz-text h1 { font-size: 1.9rem; } .notiz-text h2 { font-size: 1.45rem; } .notiz-text h3 { font-size: 1.15rem; }
+.notiz-text p, .notiz-text li { margin: .35em 0; }
+.notiz-text .klein { font-size: .85em; color: var(--text2); }
+/* Tabellen bleiben im Blatt: Spalten werden so schmal wie ihr längstes Wort; reicht das nicht, lässt sich die
+   Tabelle innerhalb des Blatts seitlich schieben (statt über den Rand zu ragen) */
+.notiz-text table { display: block; max-width: 100%; overflow-x: auto; width: max-content; }
+.notiz-text th { background: color-mix(in srgb, var(--blatt) 88%, var(--text)); font-weight: 600; }
+.notiz-text td, .notiz-text th { min-width: 3em; }
+/* Webseiten sichern (js/webseiten.js) */
+.web-form { display: flex; gap: 8px; width: clamp(260px, 36vw, 640px); }
+.web-form input { flex: 1; min-width: 0; padding: 9px 14px; font-size: 1rem; }
+.web-status { color: var(--text2); font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.web-status a { color: var(--akzent); }
+.web-rahmen { flex: 1; min-height: 0; border: 0; width: 100%; background: #fff; color-scheme: light; }
+.web-rahmen[hidden], .web-leer[hidden], .web-fensterleiste[hidden] { display: none; }
+.web-fensterleiste { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; background: var(--flaeche); border-bottom: 1px solid var(--linie); font-size: .92rem; }
+.web-bild { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(0, 0, 0, .9); cursor: zoom-out; }
+.web-bild img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 6px 30px rgba(0, 0, 0, .5); }
+.web-bild-zu { position: absolute; top: 12px; right: 12px; padding: 8px 10px; }
+.web-bild-fehlt { color: #ddd; text-align: center; }
+.web-fensterleiste .wf-zeile { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.web-fensterleiste .wf-titel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.web-fensterleiste .wf-titel small { color: var(--text2); margin-left: 8px; }
 .paket-themen { display: flex; flex-wrap: wrap; gap: 6px; }
 /* Eigene Startseite eines Pakets (Klexikon): Kopf, Themen, Kacheln mit Bild, ABC-Leiste */
 .ps-kopf { display: flex; align-items: center; gap: 16px; margin: 4px 0 18px; }
@@ -942,6 +999,19 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .kal-tag:focus-visible, .sonne-feld button:focus-visible, .kal-kopf button:focus-visible { outline: 2px solid var(--akzent); outline-offset: 1px; }
 .sonne-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .sonne-kopf small, .sonne-zeile, .sonne-hinweis, .sonne-mond small, .sonne-status small { color: var(--text2); }
+/* Entfernung messen (messen.js): Aufbau wie Sonne und Mond, große Zahl wie dort */
+.mess-kopf { display: flex; align-items: center; gap: 8px; }
+.mess-kopf > .sym { width: 18px; height: 18px; color: var(--akzent); }
+.mess-kopf b { flex: 1; font-family: var(--titel); font-weight: 600; font-size: 1.05rem; }
+.mess-zu { display: flex; background: none; border: 0; color: var(--text2); padding: 4px; border-radius: 8px; cursor: pointer; }
+.mess-zu:hover { color: var(--text); background: var(--flaeche2); }
+.mess-zu .sym { width: 16px; height: 16px; }
+.mess-wert { display: flex; align-items: baseline; gap: 8px; }
+.mess-wert b { font-family: var(--titel); font-weight: 600; font-size: 1.6rem; color: var(--akzent); font-variant-numeric: tabular-nums; }
+.mess-wert span { color: var(--text2); }
+.mess-panel .hinweis { margin: 0; }
+.mess-knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+.mess-knoepfe .sym { width: 14px; height: 14px; }
 .sonne-status { display: flex; flex-direction: column; gap: 2px; }
 .sonne-status b { font-family: var(--titel); font-weight: 600; font-size: 1.3rem; color: var(--akzent); }
 .sonne-werte { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
@@ -1195,6 +1265,22 @@ a.schritt:hover { text-decoration: underline; filter: brightness(1.1); }
 .stufen-seite.an { color: var(--akzent-text); }
 .stufen.leer .stufen-knopf { opacity: 0; }
 .stufen-zeile { margin: 4px 0 6px; }
+/* Rundgang anbieten: vor der Einrichtung und während des ersten Downloads */
+.rundgang-angebot { display: flex; align-items: center; gap: 14px; }
+.rundgang-angebot > div { flex: 1; min-width: 0; }
+.rundgang-angebot small { display: block; color: var(--text2); margin-top: 2px; }
+.rundgang-angebot-symbol { color: var(--akzent); flex: none; }
+.rundgang-angebot-symbol .sym { width: 26px; height: 26px; }
+.rundgang-angebot-zu { flex: none; border: 0; background: none; color: var(--text2); cursor: pointer; padding: 4px; border-radius: 6px; }
+.rundgang-angebot-zu:hover { color: var(--text); }
+#inhalte-rundgang { margin: 0 0 16px; }
+.rundgang-liste .einst-zeile:last-child { border-bottom: 0; }
+.fu-ende { color: var(--text2); }
+/* Automatische Aktualisierung: Umschalter rechts, Fieldbook selbst abgetrennt */
+.akt-zeile .stufen { width: 260px; }
+.akt-zeile .stufen-seite { min-width: 0; padding: 5px 14px; white-space: nowrap; }
+.akt-inhalte-titel, .akt-programm h3 { margin: 18px 0 6px; padding-top: 14px; border-top: 1px solid var(--linie); }
+.akt-programm small { display: block; color: var(--text2); margin-top: 4px; }
 /* Paket mit Varianten als eine Zeile, der Schalter steht unter der Beschreibung */
 .wahl.variante { cursor: default; }
 .variante-schalter { margin-top: 8px; }
@@ -1563,3 +1649,80 @@ a.vs-marke.kiste:hover { border-color: var(--gelb); }
 .akku-sparen :is(.hauptnav a, .zahnrad, .pill, .menue button, .knopf, .kachel, .ps-kachel, .beispielfrage, .eintrag, .wahl, .vs-lage,
   .chat-zeile, .alle-weg #chats-loeschen, .klapp-huelle, .klapp-pfeil, .lesezeichen-zeile) { transition: none; }
 .akku-sparen .schritte-liste li::before { animation-duration: 2s; }
+
+/* ---------------------------------------------------------------- Rundgang (js/rundgang.js) */
+/* Lichtkegel: ein Rahmen um das Ziel, dessen riesiger Schatten den Rest abdunkelt. Klicks gehen durch. */
+.fu-licht { position: fixed; z-index: 900; pointer-events: none; border-radius: 10px;
+  box-shadow: 0 0 0 2px var(--akzent), 0 0 0 200vmax rgba(8, 10, 8, .62); }
+.fu-licht.fu-ohne { box-shadow: 0 0 0 200vmax rgba(8, 10, 8, .62); }
+.fu-kasten { position: fixed; z-index: 901; width: min(340px, calc(100vw - 24px)); box-sizing: border-box;
+  background: var(--flaeche); color: var(--text); border: 1px solid var(--akzent); border-radius: var(--radius);
+  padding: 14px 16px 12px; box-shadow: 0 10px 34px rgba(0,0,0,.35);
+  transition: opacity .15s; }
+/* Gleiten nur beim Wechsel zum nächsten Schritt (rundgang.js setzt fu-gleitet kurz), beim Mitwandern mit der Seite nicht */
+.fu-gleitet .fu-licht { transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease; }
+.fu-gleitet .fu-kasten { transition: left .3s ease, top .3s ease, opacity .15s; }
+.fu-kasten.fu-wartet, .fu-kasten.fu-weg { opacity: 0; pointer-events: none; }
+.fu-kopf { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.fu-kapitel { font: 600 12px/1.2 var(--titel); letter-spacing: .06em; text-transform: uppercase; color: var(--akzent); }
+.fu-zu { background: none; border: 0; color: var(--text2, var(--text)); cursor: pointer; padding: 4px; margin: -4px -6px -4px 0; border-radius: 6px; display: flex; }
+.fu-zu:hover { background: var(--akzent-hell); }
+.fu-kasten h3 { font: 600 21px/1.2 var(--titel); margin: 0 0 6px; }
+.fu-text { margin: 0 0 12px; line-height: 1.5; }
+.fu-fuss { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.fu-zahl { font-size: 13px; opacity: .75; }
+.fu-knoepfe { display: flex; gap: 6px; margin-left: auto; }
+.fu-pfeil { position: absolute; width: 12px; height: 12px; background: var(--flaeche); border: 1px solid var(--akzent); transform: rotate(45deg); }
+.fu-pfeil[data-seite="unten"] { top: -7px; margin-left: -6px; border-right: 0; border-bottom: 0; }
+.fu-pfeil[data-seite="oben"] { bottom: -7px; margin-left: -6px; border-left: 0; border-top: 0; }
+.fu-pfeil[data-seite="rechts"] { left: -7px; margin-top: -6px; border-right: 0; border-top: 0; }
+.fu-pfeil[data-seite="links"] { right: -7px; margin-top: -6px; border-left: 0; border-bottom: 0; }
+.fu-streifen { position: fixed; z-index: 902; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 10px;
+  background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-radius: 999px; padding: 5px 6px 5px 14px;
+  box-shadow: var(--schatten); font-size: 13px; max-width: calc(100vw - 24px); }
+.fu-streifen .sym { color: var(--akzent); flex: none; }
+.fu-streifen b { font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .fu-licht, .fu-kasten { transition: none; } }
+.akku-sparen :is(.fu-licht, .fu-kasten) { transition: none; }
+/* Schritt mit Aufgabe: Rahmen pulsiert, statt „Weiter“ steht „Du bist dran“ */
+.fu-licht.fu-aktion { animation: fu-puls 1.6s ease-in-out infinite; }
+@keyframes fu-puls {
+  0%, 100% { box-shadow: 0 0 0 2px var(--akzent), 0 0 0 200vmax rgba(8, 10, 8, .62); }
+  50% { box-shadow: 0 0 0 5px var(--akzent), 0 0 0 200vmax rgba(8, 10, 8, .62); }
+}
+.fu-dran { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--akzent); padding: 0 4px; }
+.fu-dran[hidden] { display: none; }
+.fu-punkt { width: 8px; height: 8px; border-radius: 50%; background: var(--akzent); animation: fu-blink 1.6s ease-in-out infinite; }
+@keyframes fu-blink { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .fu-licht.fu-aktion, .fu-punkt { animation: none; } }
+.akku-sparen :is(.fu-licht.fu-aktion, .fu-punkt) { animation: none; }
+/* Sperre während des Rundgangs: unsichtbar, fängt Klicks neben der markierten Stelle ab */
+.fu-sperre { position: fixed; z-index: 899; background: transparent; }
+/* Ringe über der Abdunklung (Schritt-Feld „betonen“), z. B. um die Trinkwasser-Punkte; Mitte = left/top */
+/* Abdunklung mit Löchern (rundgang.js, dunkelZeichnen): Der Lichtkegel zeigt dann nur noch seinen grünen Rand */
+.fu-dunkel { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 900; pointer-events: none; }
+.fu-dunkel[hidden] { display: none; }
+.fu-maske .fu-licht { box-shadow: 0 0 0 2px var(--akzent); }
+.fu-maske .fu-licht.fu-ohne { box-shadow: none; }
+.fu-maske .fu-licht.fu-aktion { animation-name: fu-puls-rand; }
+@keyframes fu-puls-rand { 0%, 100% { box-shadow: 0 0 0 2px var(--akzent); } 50% { box-shadow: 0 0 0 5px var(--akzent); } }
+.fu-ringe { position: fixed; z-index: 900; overflow: hidden; pointer-events: none; }
+.fu-ringe[hidden] { display: none; }
+.fu-ring { position: absolute; box-sizing: border-box; border-radius: 50%;
+  border: 3px solid var(--akzent); box-shadow: 0 0 0 2px rgba(0, 0, 0, .45), 0 0 12px var(--akzent); pointer-events: none; }
+/* Betonte Stecknadeln über der Abdunklung (nicht anklickbar, die Sperre gilt weiter) */
+.fu-oben { z-index: 900 !important; pointer-events: none !important; }
+.fu-ring[hidden] { display: none; }
+/* Ring auf der Karte (Schritt-Feld „punkt“), Klicks gehen hindurch in die Karte */
+.fu-kartenpunkt { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--akzent); box-shadow: 0 0 0 2px rgba(0, 0, 0, .45); pointer-events: none !important; }
+.fu-warnung { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+  background: var(--gelb-hell); color: var(--gelb); font-size: 14px; font-weight: 600; }
+.fu-warnung .sym { flex: none; margin-top: 2px; }
+.fu-hinweis { margin: -4px 0 12px; padding: 6px 10px; border-radius: 8px; background: var(--gelb-hell); color: var(--gelb); font-size: 14px; font-weight: 600; }
+.fu-hinweis[hidden] { display: none; }
+.fu-kasten.fu-stups { animation: fu-stups .4s ease; }
+@keyframes fu-stups { 20% { translate: -7px 0; } 40% { translate: 6px 0; } 60% { translate: -4px 0; } 80% { translate: 2px 0; } }
+@media (prefers-reduced-motion: reduce) { .fu-kasten.fu-stups { animation: none; } }
+.akku-sparen .fu-kasten.fu-stups { animation: none; }
+/* Vorlesen lässt sich während des ganzen Rundgangs anhalten: Die Vorlese-Leiste liegt über Sperre und Abdunklung */
+html.uebung .vl-leiste { position: relative; z-index: 901; }

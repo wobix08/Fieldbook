@@ -113,6 +113,16 @@
       ]
     },
     {
+      "id": "nasenbluten", "titel": "Nasenbluten", "kurz": "Nasenbluten", "gruppe": "krank", "icon": "droplet",
+      "artikel": ["Nasenbluten"],
+      "sofort": [
+        "Aufrecht hinsetzen und den Kopf leicht nach vorn beugen. Nicht hinlegen und den Kopf nicht in den Nacken legen, sonst läuft das Blut in den Rachen.",
+        "Die weichen Nasenflügel mit Daumen und Zeigefinger 10 bis 15 Minuten fest zusammendrücken, ohne zwischendurch loszulassen. Dabei durch den Mund atmen.",
+        "Blut ausspucken, nicht schlucken. Ein kalter, nasser Lappen im Nacken kann helfen.",
+        "Hört es nach etwa 20 Minuten nicht auf, kam es nach einem Schlag auf den Kopf oder nimmt die Person blutverdünnende Mittel: ärztliche Hilfe holen. Bei sehr starker Blutung Notruf {notruf}."
+      ]
+    },
+    {
       "id": "verbrennung", "titel": "Verbrennung", "kurz": "Verbrennung", "gruppe": "unfall", "icon": "flame", "lektion": "verbrennung",
       "artikel": ["Verbrennung (Medizin)", "Brandwunde", "Verbrühung"],
       "sofort": [

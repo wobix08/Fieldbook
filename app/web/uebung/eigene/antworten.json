@@ -1,0 +1,20 @@
+{
+  "_hinweis": "Beispiel-KI im Rundgang, Kapitel Eigene Unterlagen. Gleiches Format wie uebung/ki/antworten.json (js/fragen.js lädt beide). Die Quellen sind die Beispieldatei und die Beispiel-Webseite, die man im Kapitel selbst hinzufügt bzw. sichert. Jede Aussage steht in der angegebenen Quelle (anleitung-vorlage.html, webseite.html).",
+  "antworten": [
+    {
+      "frage": "Wie oft muss ich beim Stromerzeuger das Öl wechseln?",
+      "nach": 0,
+      "erkennen": ["öl|oel", "strom|generator|aggregat"],
+      "schritte": [
+        "Suchbegriffe: Ölwechsel · Stromerzeuger · Motoröl",
+        "Gefunden: 2 Stellen in Eigene Unterlagen",
+        "2 passende Stellen gelesen"
+      ],
+      "quellen": [
+        { "titel": "Stromerzeuger Bedienungsanleitung, Seite 3", "url": "/api/eigene/datei/Stromerzeuger%20Bedienungsanleitung.pdf#page=3", "buch": { "titel": "Eigene Unterlagen", "name": "eigene" }, "text": "Ölwechsel: Wechsle das Motoröl zum ersten Mal nach 20 Betriebsstunden. Danach wechselst du es alle 100 Betriebsstunden, spätestens einmal im Jahr. Lass das alte Öl bei warmem Motor ab, dann fließt es besser. Fülle 0,6 Liter Motoröl SAE 10W-30 ein." },
+        { "titel": "Notstrom sicher nutzen – Stadt Musterstadt", "url": "/gesichert/musterstadt.example/notstrom/index.html", "buch": { "titel": "Eigene Unterlagen", "name": "eigene" }, "text": "Wichtig: Ein Stromerzeuger gehört immer ins Freie. In Garage, Keller oder Wohnung sammelt sich Kohlenmonoxid an." }
+      ],
+      "antwort": "Laut deiner Bedienungsanleitung wechselst du das Öl zum ersten Mal nach **20 Betriebsstunden** [1]. Danach wechselst du es **alle 100 Betriebsstunden**, spätestens aber einmal im Jahr [1].\n\nLass das alte Öl am besten bei warmem Motor ab, dann fließt es besser [1]. Fülle danach 0,6 Liter Motoröl SAE 10W-30 ein [1].\n\nDenk beim Betrieb daran: Der Stromerzeuger gehört immer ins Freie, nie in Garage, Keller oder Wohnung [2]."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "_hinweis": "Rundgang, Kapitel Sprachen (js/gespraech.js): Im Übungsmodus ist der Übersetzer nur gespielt. sprache: Beispielsprache rechts (Code aus config/sprachen.json). saetze: alle Sätze, die der gespielte Übersetzer kennt, in beide Richtungen (Groß-/Kleinschreibung und Satzzeichen egal), auch Beschriftungen der Seite. unbekannt: Meldung bei anderen Sätzen. spracheingabe: was „Sprechen“ ins Feld schreibt, je Sprache. gespraech: das gespielte Gespräch im Sprechmodus, der Reihe nach.",
+  "sprache": "es",
+  "saetze": [
+    { "de": "Wo ist das nächste Krankenhaus?", "es": "¿Dónde está el hospital más cercano?" },
+    { "de": "Ich brauche Wasser.", "es": "Necesito agua." },
+    { "de": "Wo gibt es eine Apotheke?", "es": "¿Dónde hay una farmacia?" },
+    { "de": "Die Apotheke ist neben der Kirche.", "es": "La farmacia está al lado de la iglesia." },
+    { "de": "Zurückübersetzt", "es": "Traducción inversa" },
+    { "de": "Original", "es": "Original" },
+    { "de": "Du hast geschrieben", "es": "Has escrito" },
+    { "de": "Du hast gesagt", "es": "Has dicho" },
+    { "de": "Schreiben Sie hier in Ihrer Sprache.", "es": "Escriba aquí en su idioma." },
+    { "de": "Übersetzen", "es": "Traducir" },
+    { "de": "Sprechen", "es": "Hablar" },
+    { "de": "Aufnahme beenden", "es": "Terminar grabación" },
+    { "de": "Bitte sprechen Sie. Ich übersetze.", "es": "Hable, por favor. Yo traduzco." }
+  ],
+  "unbekannt": "Im Rundgang kennt der Übersetzer nur die Beispielsätze.",
+  "spracheingabe": { "de": "Ich brauche Wasser.", "es": "Necesito agua." },
+  "gespraech": [
+    { "sprache": "de", "text": "Wo gibt es eine Apotheke?" },
+    { "sprache": "es", "text": "La farmacia está al lado de la iglesia." }
+  ]
+}

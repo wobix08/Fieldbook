@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.5";
+        public const string Version = "0.8.6";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -87,6 +87,8 @@ namespace OfflineWissen
         static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
 
         static Process kiwix, llama, brouter, suchhilfe;
+        // Womit die KI gerade rechnet ("cpu", "vulkan", …); die Suchhilfe folgt ihr auf die Grafikkarte
+        static string kiBackend = "cpu";
         static string llmStatus = "aus", llmFehler = "", llmModell = "";
         static int llmGen = 0;
 
@@ -362,6 +364,8 @@ namespace OfflineWissen
                 // Fremde Webseiten dürfen weder die Schnittstelle noch die Dienste dahinter benutzen
                 bool geschuetzt = pfad.StartsWith("/api/") || pfad.StartsWith("/llm/") || pfad.StartsWith("/suchhilfe/") || pfad.StartsWith("/route/");
                 if (geschuetzt && FremdeHerkunft(ctx.Request)) { SendeText(ctx, 403, "Zugriff von einer fremden Webseite abgelehnt."); return; }
+                // Rundgang (Übungsmodus): Beispieldaten statt der echten Inhalte
+                if (Uebung(ctx, pfad)) return;
 
                 if (pfad == "/kiwix" || pfad.StartsWith("/kiwix/"))
                 {
@@ -405,6 +409,14 @@ namespace OfflineWissen
                 else if (pfad.StartsWith("/karten/")) SendeDatei(ctx, SichererPfad(Path.Combine(Daten, "karten"), pfad.Substring(8)));
                 else if (pfad.StartsWith("/karten-assets/")) SendeDatei(ctx, SichererPfad(Path.Combine(Prog, "karten-assets"), pfad.Substring(15)));
                 else if (pfad.StartsWith("/config/")) SendeDatei(ctx, SichererPfad(Config, pfad.Substring(8)));
+                else if (pfad.StartsWith("/gesichert/"))
+                {
+                    // Gesicherte Webseiten: nie Programmcode ausführen (CSP sandbox ohne Skripte), keine Liste und keine Teilergebnisse
+                    string rel = pfad.Substring(11);
+                    ctx.Response.AddHeader("Content-Security-Policy", WebCsp);
+                    ctx.Response.AddHeader("Referrer-Policy", "no-referrer");
+                    SendeDatei(ctx, rel.EndsWith(".json", StringComparison.OrdinalIgnoreCase) || rel.EndsWith(".part", StringComparison.OrdinalIgnoreCase) ? null : SichererPfad(WebseitenOrdner, rel));
+                }
                 else if (pfad.StartsWith("/uebersetzer/")) SendeDatei(ctx, SichererPfad(UebersetzerDir, pfad.Substring(13)));
                 else
                 {
@@ -463,9 +475,714 @@ namespace OfflineWissen
             {".json","application/json; charset=utf-8"},{".png","image/png"},{".svg","image/svg+xml"},{".ico","image/x-icon"},
             {".pbf","application/x-protobuf"},{".pmtiles","application/octet-stream"},{".woff2","font/woff2"},{".txt","text/plain; charset=utf-8"},
             {".md","text/plain; charset=utf-8"},{".jpg","image/jpeg"},{".webp","image/webp"},{".wasm","application/wasm"},
-            {".jpeg","image/jpeg"},{".gif","image/gif"},{".pdf","application/pdf"},
+            {".jpeg","image/jpeg"},{".gif","image/gif"},{".pdf","application/pdf"},{".avif","image/avif"},{".bmp","image/bmp"},
+            {".woff","font/woff"},{".ttf","font/ttf"},{".otf","font/otf"},
             {".docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document"},{".doc","application/msword"}
         };
+
+        // ------------------------------------------------------------------ Übungsmodus (Rundgang)
+        // Während des Rundgangs (Cookie „fb-uebung=1“, gesetzt von js/rundgang.js) beantwortet Fieldbook die Schnittstelle
+        // und die Bibliothek mit Beispieldaten aus app/web/uebung. Echte Inhalte werden dabei weder gezeigt noch verändert:
+        // Schreibende Anfragen landen nirgends, lesende nur bei wenigen Abfragen ohne persönliche Daten beim echten Server.
+        // Ortsnamen auf der Karte und „nächster Ort“ kommen aus der echten Ortsliste (keine persönlichen Daten)
+        static readonly HashSet<string> UebungEcht = new HashSet<string> { "hardware", "katalog", "beenden", "fortschritt", "ortnah", "ortsnamen" };
+        static readonly object UebungLk = new object();
+        static List<Dictionary<string, object>> uebungZuletzt, uebungMerk;
+        static Dictionary<string, object> uebungOrte, uebungSperrungen;
+        // Kapitel KI: In der Übung antwortet eine Beispiel-KI mit vorbereiteten Antworten (uebung/ki, js/fragen.js),
+        // ganz ohne Modell. Ausschalten (Sparmodus) gilt nur für sie.
+        static bool uebungKiAus;
+        static void UebungKi(Dictionary<string, object> s)
+        {
+            bool aus;
+            lock (UebungLk) aus = uebungKiAus;
+            s["modell"] = "beispiel";
+            s["sparmodus"] = aus;
+            s["ki"] = new Dictionary<string, object> { { "status", aus ? "aus" : "bereit" }, { "fehler", null }, { "modell", "Beispiel-KI" }, { "kontext", 0 }, { "suchhilfe", false } };
+        }
+
+        // Beispielkarte des Kapitels Karten: kommt nicht in die ZIP, sondern wird vor dem ersten Start geladen
+        // (POST /api/uebung/beispielkarte), auf dieselbe Weise wie eine echte Karte. Ausschnitt in uebung/status.json.
+        static string BeispielKartenOrdner { get { return Path.Combine(Daten, "cache", "uebung"); } }
+        static readonly object BeispielKarteLk = new object();
+
+        static Dictionary<string, object> BeispielKarteInfo()
+        {
+            var s = UebungJson(Path.Combine(Web, "uebung", "status.json"));
+            var k = s != null ? Arr(s, "karten") : new object[0];
+            return k.Length > 0 ? k[0] as Dictionary<string, object> : null;
+        }
+
+        static string BeispielKartePfad()
+        {
+            var info = BeispielKarteInfo();
+            return info == null ? null : SichererPfad(BeispielKartenOrdner, Str(info, "id") + ".pmtiles");
+        }
+
+        static Dictionary<string, object> BeispielKarteLaden()
+        {
+            string ziel = BeispielKartePfad();
+            if (ziel == null) return new Dictionary<string, object> { { "fehler", "Die Beispielkarte ist nicht eingetragen." } };
+            lock (BeispielKarteLk)
+            {
+                if (File.Exists(ziel) && ProgrammPfad("karten-assets") != null) return new Dictionary<string, object> { { "ok", true } };
+                try
+                {
+                    Directory.CreateDirectory(BeispielKartenOrdner);
+                    if (SicherstellenProgramm("karten-assets") == null) throw new Exception("Kartenschriften fehlen");
+                    StatusCacheLeeren();
+                    if (!File.Exists(ziel))
+                    {
+                        string exe = SicherstellenProgramm("pmtiles");
+                        if (exe == null) throw new Exception("pmtiles fehlt");
+                        string tmp = ziel.Replace(".pmtiles", ".tmp.pmtiles");
+                        var j = new Job { Art = "karte", Titel = "Beispielkarte", Ziel = ziel };
+                        string fehler = KarteVersuch(j, exe, new[] { BboxText(BeispielKarteInfo()), "15" }, tmp);
+                        if (fehler != null) { try { File.Delete(tmp); } catch { } throw new Exception(fehler); }
+                        File.Move(tmp, ziel);
+                    }
+                    return new Dictionary<string, object> { { "ok", true } };
+                }
+                catch (Exception e)
+                {
+                    Log("Beispielkarte: " + e.Message);
+                    return new Dictionary<string, object> { { "fehler", "Die Beispielkarte konnte nicht geladen werden." }, { "technisch", e.Message } };
+                }
+            }
+        }
+
+        // Route im Rundgang: Es gibt nur die vorbereitete Beispielroute (uebung/routen), BRouter läuft dafür nicht
+        static void UebungRoute(HttpListenerContext ctx, string ordner, Dictionary<string, string> q)
+        {
+            string rOrdner = Path.Combine(ordner, "routen");
+            var info = UebungJson(Path.Combine(rOrdner, "routen.json"));
+            string ll, profil, alt;
+            q.TryGetValue("lonlats", out ll);
+            if (!q.TryGetValue("profile", out profil)) profil = "";
+            if (!q.TryGetValue("alternativeidx", out alt)) alt = "0";
+            bool passt = false;
+            var p = (ll ?? "").Split('|');
+            if (info != null && p.Length == 2)
+            {
+                Func<string, object[], bool> nah = (text, soll) =>
+                {
+                    var t = text.Split(',');
+                    double lon, lat;
+                    return t.Length == 2 && soll.Length == 2
+                        && double.TryParse(t[0], NumberStyles.Float, CultureInfo.InvariantCulture, out lon)
+                        && double.TryParse(t[1], NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
+                        && Math.Abs(lon - Convert.ToDouble(soll[0], CultureInfo.InvariantCulture)) < 0.003
+                        && Math.Abs(lat - Convert.ToDouble(soll[1], CultureInfo.InvariantCulture)) < 0.003;
+                };
+                passt = nah(p[0], Arr(info, "start")) && nah(p[1], Arr(info, "ziel"));
+            }
+            // Mit Zusatzwerten fürs Profil („Möglichst wenig bergauf“) gibt es eine eigene Datei
+            bool extra = q.Keys.Any(k => k.StartsWith("profile:"));
+            string datei = SichererPfad(rOrdner, profil + "-" + alt + (extra ? "-flach" : "") + ".json");
+            // Sperrung an der Beispielstelle (routen.json „sperrung“): Umweg aus <…>-gesperrt.json, wo die Route dort entlangführt
+            string nogos;
+            var sp = info != null && info.ContainsKey("sperrung") ? Arr(info, "sperrung") : null;
+            if (passt && sp != null && sp.Length == 2 && q.TryGetValue("nogos", out nogos))
+            {
+                double sLon = Convert.ToDouble(sp[0], CultureInfo.InvariantCulture), sLat = Convert.ToDouble(sp[1], CultureInfo.InvariantCulture);
+                bool trifft = nogos.Split('|').Any(n =>
+                {
+                    var t = n.Split(',');
+                    double lon, lat;
+                    return t.Length >= 2 && double.TryParse(t[0], NumberStyles.Float, CultureInfo.InvariantCulture, out lon)
+                        && double.TryParse(t[1], NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
+                        && Math.Abs(lon - sLon) < 0.002 && Math.Abs(lat - sLat) < 0.0013;
+                });
+                string umweg = SichererPfad(rOrdner, profil + "-" + alt + (extra ? "-flach" : "") + "-gesperrt.json");
+                if (trifft && umweg != null && File.Exists(umweg)) datei = umweg;
+            }
+            if (passt && datei != null && File.Exists(datei)) SendeUebung(ctx, File.ReadAllBytes(datei), "application/json; charset=utf-8");
+            else SendeText(ctx, 400, (info != null ? Str(info, "fehler") : null) ?? "Im Beispiel gibt es nur eine Route.");
+        }
+
+        // ------------------------------------------------------------------ Rundgang: Eigene Unterlagen
+        // Im Kapitel „Eigene Unterlagen“ liegen die hinzugefügte Beispieldatei, Notizen und gesicherte Webseiten nur hier
+        // im Speicher, nie in daten/eigene. Beispieldatei und die einzige Beispiel-Webseite: uebung/eigene/daten.json.
+        // Den Text für Suche und KI liest die Seite selbst aus (wie sonst auch) und schickt ihn an eigene/text.
+        class UebungEintrag
+        {
+            public string Datei, Html, Url, Name, Ordner, Datum;
+            public bool Web;
+            public long Groesse;
+            public int Stand = 1;
+            public string[] Seiten;
+            public DateTime Geaendert = DateTime.Now;
+            public string Schluessel { get { return Web ? "web:" + Ordner : Datei; } }
+            public string Kennung { get { return "uebung-" + Stand; } }
+        }
+        static List<UebungEintrag> uebungEigene;
+
+        static List<UebungEintrag> UebungEigeneListe()
+        {
+            if (uebungEigene == null) uebungEigene = new List<UebungEintrag>();
+            return uebungEigene;
+        }
+
+        static void UebungWebSenden(HttpListenerContext ctx, string html)
+        {
+            ctx.Response.AddHeader("Content-Security-Policy", WebCsp);
+            ctx.Response.AddHeader("Referrer-Policy", "no-referrer");
+            SendeUebung(ctx, Utf8.GetBytes(html), "text/html; charset=utf-8");
+        }
+
+        // /gesichert/<ordner>/index.html im Rundgang
+        static void UebungGesichert(HttpListenerContext ctx, string pfad)
+        {
+            string rel;
+            try { rel = Uri.UnescapeDataString(pfad.Substring(11)); } catch { rel = ""; }
+            UebungEintrag e = null;
+            if (rel.EndsWith("/index.html"))
+            {
+                string o = rel.Substring(0, rel.Length - 11);
+                lock (UebungLk) e = UebungEigeneListe().FirstOrDefault(x => x.Web && x.Ordner == o);
+            }
+            if (e == null) { SendeText(ctx, 404, "Nicht gefunden"); return; }
+            UebungWebSenden(ctx, e.Html);
+        }
+
+        static bool UebungEigene(HttpListenerContext ctx, string was, Dictionary<string, string> q, string ordner)
+        {
+            if (!was.StartsWith("eigene") && !was.StartsWith("web/") && was != "uebung/beispieldatei" && was != "pdftext/suche") return false;
+            string eo = Path.Combine(ordner, "eigene");
+            var info = UebungJson(Path.Combine(eo, "daten.json")) ?? new Dictionary<string, object>();
+            string beispiel = Str(info, "datei") ?? "";
+            var webInfo = info.ContainsKey("webseite") ? info["webseite"] as Dictionary<string, object> : null;
+            Uri webUrl = webInfo != null ? WebUri(Str(webInfo, "url")) : null;
+            string webFehler = "Im Rundgang gibt es nur eine Beispielseite. Schreib „" + (webInfo != null ? Str(webInfo, "anzeige") : "") + "“ in die Adresszeile.";
+            Func<string, Uri> beispielSeite = s =>
+            {
+                var u = WebUri(s);
+                return u != null && webUrl != null && WebOrdnerVon(u) == WebOrdnerVon(webUrl) ? webUrl : null;
+            };
+            Func<string> beispielHtml = () => File.ReadAllText(Path.Combine(eo, Str(webInfo, "datei")), Utf8);
+            var ok = new Dictionary<string, object> { { "ok", true } };
+            Func<string, Dictionary<string, object>> fehler = t => new Dictionary<string, object> { { "fehler", t } };
+
+            if (was.StartsWith("eigene/datei/"))
+            {
+                string roh = ctx.Request.RawUrl ?? "";
+                int i = roh.IndexOf("/eigene/datei/", StringComparison.Ordinal);
+                string n = i < 0 ? "" : roh.Substring(i + 14);
+                int ende = n.IndexOfAny(new[] { '?', '#' });
+                if (ende >= 0) n = n.Substring(0, ende);
+                string name;
+                try { name = Uri.UnescapeDataString(n); } catch { name = ""; }
+                UebungEintrag e;
+                lock (UebungLk) e = UebungEigeneListe().FirstOrDefault(x => !x.Web && x.Datei == name);
+                if (e == null) SendeText(ctx, 404, "Nicht gefunden");
+                else if (e.Html != null) UebungWebSenden(ctx, NotizHtml(Path.GetFileNameWithoutExtension(e.Datei), e.Html));
+                else SendeDatei(ctx, SichererPfad(eo, beispiel));
+                return true;
+            }
+            if (was == "pdftext/suche")
+            {
+                if (!q.ContainsKey("buch") || q["buch"] != EigenePaket) return false;
+                var b = new PdfBuch { Stand = DateTime.Now };
+                long zeichen = 0, seiten = 0;
+                lock (UebungLk)
+                    foreach (var e in UebungEigeneListe().Where(x => x.Seiten != null))
+                    {
+                        b.Dateien.Add(new PdfDatei { Datei = e.Schluessel, Titel = e.Web ? e.Name : Path.GetFileNameWithoutExtension(e.Datei), Seiten = e.Seiten });
+                        foreach (var s in e.Seiten) zeichen += s.Length;
+                        seiten += e.Seiten.Length;
+                    }
+                if (seiten > 0) b.Schnitt = Math.Max(1.0, (double)zeichen / seiten);
+                int anzahl;
+                if (!q.ContainsKey("n") || !int.TryParse(q["n"], out anzahl)) anzahl = 5;
+                SendeJson(ctx, PdfSuche(EigenePaket, q.ContainsKey("q") ? q["q"] : "", Math.Min(20, Math.Max(1, anzahl)), b));
+                return true;
+            }
+            // Online-Ansicht im Browser von Fieldbook: nur die Beispielseite, sonst eine Meldung wie bei einer echten Seite
+            if (was == "web/ansehen")
+            {
+                var u = beispielSeite(q.ContainsKey("url") ? q["url"] : "");
+                if (u != null) UebungWebSenden(ctx, WebZumAnsehen(beispielHtml(), u));
+                else UebungWebSenden(ctx, "<!doctype html><meta charset=\"utf-8\"><meta name=\"fieldbook-fehler\" content=\"1\"><title>Nicht geöffnet</title>" +
+                    "<body style=\"font:16px Segoe UI,sans-serif;padding:32px;color:#ddd;background:#1b1d1a\"><p>" +
+                    Regex.Replace(HtmlAttr(webFehler), @"([.?!]) (?=[A-ZÄÖÜ])", "$1<br>") + "</p>");
+                return true;
+            }
+
+            var body = ctx.Request.HttpMethod == "POST" ? LeseBody(ctx) : new Dictionary<string, object>();
+            object antwort;
+            lock (UebungLk)
+            {
+                var liste = UebungEigeneListe();
+                Func<string, UebungEintrag> datei = d => liste.FirstOrDefault(x => !x.Web && x.Datei == d);
+                Func<string, UebungEintrag> seite = o => liste.FirstOrDefault(x => x.Web && x.Ordner == o);
+                switch (was)
+                {
+                    case "eigene":
+                        antwort = new Dictionary<string, object> {
+                            { "dateien", liste.Select(e => (object)(e.Web
+                                ? new Dictionary<string, object> { { "datei", e.Schluessel }, { "web", true }, { "name", e.Name }, { "url", e.Url },
+                                    { "ordner", e.Ordner }, { "adresse", WebAdresseVonOrdner(e.Ordner) }, { "datum", e.Datum }, { "gruppe", "" },
+                                    { "groesse", e.Html.Length }, { "geaendert", e.Geaendert.ToString("s") }, { "kennung", e.Kennung },
+                                    { "auslesen", e.Seiten == null }, { "text", e.Seiten != null && e.Seiten.Any(s => !string.IsNullOrWhiteSpace(s)) } }
+                                : new Dictionary<string, object> { { "datei", e.Datei }, { "groesse", e.Html != null ? e.Html.Length : e.Groesse },
+                                    { "geaendert", e.Geaendert.ToString("s") }, { "gruppe", "" }, { "kennung", e.Kennung },
+                                    { "auslesen", e.Seiten == null }, { "text", e.Seiten != null && e.Seiten.Any(s => !string.IsNullOrWhiteSpace(s)) } })).ToList() },
+                            { "gruppen", new object[0] } };
+                        break;
+                    // „Datei hinzufügen“ im Rundgang: die Beispieldatei statt der Dateiauswahl von Windows
+                    case "uebung/beispieldatei":
+                        if (datei(beispiel) == null)
+                        {
+                            var fi = new FileInfo(Path.Combine(eo, beispiel));
+                            liste.Add(new UebungEintrag { Datei = beispiel, Groesse = fi.Exists ? fi.Length : 0 });
+                        }
+                        antwort = new Dictionary<string, object> { { "ok", true }, { "datei", beispiel } };
+                        break;
+                    case "eigene/hochladen":
+                        antwort = fehler("Im Rundgang nimmst du die Beispieldatei.");
+                        break;
+                    case "eigene/ordner":
+                        antwort = ok;
+                        break;
+                    case "eigene/text":
+                        {
+                            string d = Str(body, "datei") ?? "";
+                            var e = liste.FirstOrDefault(x => x.Schluessel == d);
+                            if (e != null && e.Kennung == Str(body, "kennung")) e.Seiten = Arr(body, "seiten").Select(x => x as string ?? "").ToArray();
+                            antwort = ok;
+                            break;
+                        }
+                    case "eigene/umbenennen":
+                        {
+                            var e = datei(Str(body, "datei") ?? "");
+                            if (e == null) { antwort = fehler("Datei nicht gefunden."); break; }
+                            string ext = Path.GetExtension(e.Datei);
+                            string neu = EigenerName(Str(body, "neu"));
+                            if (neu.EndsWith(ext, StringComparison.OrdinalIgnoreCase)) neu = neu.Substring(0, neu.Length - ext.Length).TrimEnd('.', ' ');
+                            if (neu.Length == 0) { antwort = fehler("Bitte einen Namen eingeben."); break; }
+                            neu += ext;
+                            if (liste.Any(x => x != e && !x.Web && string.Equals(x.Datei, neu, StringComparison.OrdinalIgnoreCase))) { antwort = fehler("Es gibt schon eine Datei mit diesem Namen."); break; }
+                            e.Datei = neu;
+                            antwort = new Dictionary<string, object> { { "ok", true }, { "datei", neu } };
+                            break;
+                        }
+                    case "eigene/loeschen":
+                        liste.RemoveAll(x => !x.Web && x.Datei == (Str(body, "datei") ?? ""));
+                        antwort = ok;
+                        break;
+                    case "eigene/notiz/neu":
+                        {
+                            string titel = EigenerName(Str(body, "titel") ?? "");
+                            if (titel.Length == 0) titel = "Neue Notiz";
+                            string n = titel + ".html";
+                            for (int i = 2; datei(n) != null; i++) n = titel + " (" + i + ").html";
+                            liste.Add(new UebungEintrag { Datei = n, Html = "<p><br></p>" });
+                            antwort = new Dictionary<string, object> { { "ok", true }, { "datei", n } };
+                            break;
+                        }
+                    case "eigene/notiz/speichern":
+                        {
+                            var e = datei(Str(body, "datei") ?? "");
+                            if (e == null || e.Html == null) { antwort = fehler("Diese Notiz gibt es nicht mehr."); break; }
+                            e.Html = Str(body, "html") ?? "";
+                            e.Stand++;
+                            e.Seiten = null;
+                            e.Geaendert = DateTime.Now;
+                            antwort = new Dictionary<string, object> { { "ok", true }, { "kennung", e.Kennung } };
+                            break;
+                        }
+                    // Rundgang „Zurück“ (js/rundgang.js): nimmt zurück, was man im Schritt angelegt hat
+                    case "eigene/uebung-zurueck":
+                        {
+                            string z = Str(body, "was") ?? "";
+                            if (z == "datei") liste.RemoveAll(x => !x.Web && x.Html == null);
+                            if (z == "notiz") liste.RemoveAll(x => x.Html != null && !x.Web);
+                            if (z == "webseite") liste.RemoveAll(x => x.Web);
+                            var notiz = liste.FirstOrDefault(x => !x.Web && x.Html != null);
+                            if (notiz != null && z == "notizName") notiz.Datei = "Neue Notiz.html";
+                            if (notiz != null && z == "notizText") { notiz.Html = "<p><br></p>"; notiz.Stand++; notiz.Seiten = null; }
+                            antwort = ok;
+                            break;
+                        }
+                    case "web/holen":
+                        {
+                            var u = beispielSeite(Str(body, "url"));
+                            antwort = u == null ? fehler(webFehler) : new Dictionary<string, object> { { "html", beispielHtml() }, { "url", u.AbsoluteUri }, { "gerendert", true } };
+                            break;
+                        }
+                    case "web/dateien":
+                        {
+                            var u = WebUri(Str(body, "url"));
+                            antwort = u == null ? fehler("Ungültige Adresse.") : new Dictionary<string, object> { { "karte", new Dictionary<string, object>() }, { "ordner", WebOrdnerVon(u) } };
+                            break;
+                        }
+                    case "web/speichern":
+                        {
+                            var u = WebUri(Str(body, "url"));
+                            string html = Str(body, "html");
+                            if (u == null || string.IsNullOrEmpty(html)) { antwort = fehler("Die Seite ließ sich nicht speichern."); break; }
+                            string o = WebOrdnerVon(u);
+                            string name = (Str(body, "name") ?? "").Trim();
+                            var e = seite(o);
+                            if (e == null) { e = new UebungEintrag { Web = true, Ordner = o, Url = u.AbsoluteUri, Name = name.Length > 0 ? name : u.Host }; liste.Add(e); }
+                            else if (name.Length > 0) e.Name = name;
+                            e.Html = html;
+                            e.Datum = DateTime.Now.ToString("s");
+                            e.Stand++;
+                            e.Seiten = null;
+                            antwort = new Dictionary<string, object> { { "ok", true }, { "ordner", o } };
+                            break;
+                        }
+                    case "web/html":
+                        {
+                            var e = seite(Str(body, "ordner") ?? "");
+                            if (e != null && !string.IsNullOrEmpty(Str(body, "html"))) { e.Html = Str(body, "html"); e.Stand++; e.Seiten = null; }
+                            antwort = ok;
+                            break;
+                        }
+                    case "web/liste":
+                        antwort = new Dictionary<string, object> { { "seiten", liste.Where(x => x.Web).Select(e => (object)new Dictionary<string, object> {
+                            { "ordner", e.Ordner }, { "url", e.Url }, { "name", e.Name }, { "datum", e.Datum }, { "adresse", WebAdresseVonOrdner(e.Ordner) }, { "gruppe", "" } }).ToList() } };
+                        break;
+                    case "web/umbenennen":
+                        {
+                            var e = seite(Str(body, "ordner") ?? "");
+                            string name = (Str(body, "name") ?? "").Trim();
+                            if (e != null && name.Length > 0) e.Name = name;
+                            antwort = ok;
+                            break;
+                        }
+                    case "web/loeschen":
+                        liste.RemoveAll(x => x.Web && x.Ordner == (Str(body, "ordner") ?? ""));
+                        antwort = ok;
+                        break;
+                    case "web/fenster":
+                        antwort = new Dictionary<string, object> { { "offen", false }, { "seiten", new object[0] } };
+                        break;
+                    case "web/gruppen":
+                        antwort = fehler("Ordner zum Sortieren gibt es im Rundgang nicht.");
+                        break;
+                    default:
+                        // Ordner, Browserfenster und alles andere: im Rundgang nicht
+                        antwort = was.StartsWith("web/fenster") ? (object)fehler(webFehler) : ok;
+                        break;
+                }
+            }
+            SendeJson(ctx, antwort);
+            return true;
+        }
+
+        static bool Uebung(HttpListenerContext ctx, string pfad)
+        {
+            var c = ctx.Request.Cookies["fb-uebung"];
+            if (c == null || c.Value != "1") return false;
+            // Gesicherte Webseiten kommen im Rundgang nur aus dem Speicher (Kapitel Eigene Unterlagen)
+            if (pfad.StartsWith("/gesichert/")) { UebungGesichert(ctx, pfad); return true; }
+            bool api = pfad.StartsWith("/api/"), karte = pfad.StartsWith("/karten/"), route = pfad.StartsWith("/route/");
+            if (!api && !karte && !route && !(pfad == "/kiwix" || pfad.StartsWith("/kiwix/"))) return false;
+            // Statt der installierten Karten nur die Beispielkarte
+            if (karte) { SendeDatei(ctx, SichererPfad(BeispielKartenOrdner, pfad.Substring(8))); return true; }
+            string ordner = Path.Combine(Web, "uebung");
+            var q = new Dictionary<string, string>();
+            foreach (var teil in ctx.Request.Url.Query.TrimStart('?').Split('&'))
+            {
+                if (teil.Length == 0) continue;
+                int i = teil.IndexOf('=');
+                string k = Uri.UnescapeDataString((i < 0 ? teil : teil.Substring(0, i)).Replace('+', ' '));
+                q[k] = i < 0 ? "" : Uri.UnescapeDataString(teil.Substring(i + 1).Replace('+', ' '));
+            }
+            if (route) { UebungRoute(ctx, ordner, q); return true; }
+
+            if (api)
+            {
+                string was = pfad.Substring(5);
+                // KI ein- und ausschalten (Kapitel KI): nur die Beispiel-KI der Übung, die echte bleibt, wie sie ist.
+                // Die Antwort ist wie beim echten Schalter der neue Status.
+                if (was == "ki" && ctx.Request.HttpMethod == "POST")
+                {
+                    var b = LeseBody(ctx);
+                    lock (UebungLk) uebungKiAus = !Bool(b, "an");
+                    was = "status";
+                }
+                if (was == "status")
+                {
+                    // Echter Status (Akku, Version), Bibliothek und KI sind die der Übung
+                    var s = Status();
+                    var extra = UebungJson(Path.Combine(ordner, "status.json"));
+                    if (extra != null) foreach (var kv in extra) s[kv.Key] = kv.Value;
+                    // Beispielkarte noch nicht geladen: dann gibt es in der Übung keine Karte
+                    string bk = BeispielKartePfad();
+                    if (bk == null || !File.Exists(bk)) s["karten"] = new object[0];
+                    UebungKi(s);
+                    SendeJson(ctx, s);
+                    return true;
+                }
+                if (ctx.Request.HttpMethod == "GET" && UebungEcht.Contains(was)) return false;
+                if (was == "uebung/beispielkarte") return false;
+                if (UebungEigene(ctx, was, q, ordner)) return true;
+                // Ortssuche: nur Orte im Ausschnitt der Beispielkarte (uebung/api/orte.json), Name enthält den Suchtext
+                if (was == "orte")
+                {
+                    string such = q.ContainsKey("q") ? q["q"].Trim() : "";
+                    var alle = UebungJson(Path.Combine(ordner, "api", "orte.json"));
+                    var treffer = (alle != null ? Arr(alle, "liste") : new object[0]).OfType<Dictionary<string, object>>()
+                        .Where(o => such.Length >= 2 && (Str(o, "name") ?? "").IndexOf(such, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+                    SendeJson(ctx, treffer);
+                    return true;
+                }
+                // Einrichtungen (Apotheke, Trinkwasser …) liest die Karte selbst aus den Kacheln; nichts davon speichern
+                if (was == "einrichtungen")
+                {
+                    if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                    else SendeText(ctx, 200, "");
+                    return true;
+                }
+                // Gemerkte Orte: wie die Merkliste nur im Speicher (Beispiel aus uebung/api/meineorte.json)
+                if (was == "meineorte")
+                {
+                    lock (UebungLk)
+                    {
+                        if (uebungOrte == null) uebungOrte = UebungJson(Path.Combine(ordner, "api", "meineorte.json")) ?? new Dictionary<string, object> { { "orte", new object[0] } };
+                        if (ctx.Request.HttpMethod == "POST")
+                        {
+                            var b = LeseBody(ctx);
+                            if (b.ContainsKey("orte")) uebungOrte = b;
+                            SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                        }
+                        else SendeJson(ctx, uebungOrte);
+                    }
+                    return true;
+                }
+                // Sperrungen: genauso nur im Speicher, beim Start leer
+                if (was == "sperrungen")
+                {
+                    lock (UebungLk)
+                    {
+                        if (uebungSperrungen == null) uebungSperrungen = new Dictionary<string, object> { { "sperrungen", new object[0] } };
+                        if (ctx.Request.HttpMethod == "POST")
+                        {
+                            var b = LeseBody(ctx);
+                            if (b.ContainsKey("sperrungen")) uebungSperrungen = b;
+                            SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                        }
+                        else SendeJson(ctx, uebungSperrungen);
+                    }
+                    return true;
+                }
+                // Vorlesen spricht nur den mitgeschickten Text, das darf in der Übung echt laufen
+                if (was == "vorlesen") return false;
+                // Merkliste und „Zuletzt gelesen“ reagieren in der Übung echt, aber nur im Speicher (beim Start des Rundgangs leer bzw. Beispiel)
+                if (was == "uebung/neu" || was == "zuletzt" || was == "zuletzt/merken" || was == "zuletzt/leeren" || was == "merkliste" || was == "merkliste/aendern")
+                {
+                    var b = ctx.Request.HttpMethod == "POST" ? LeseBody(ctx) : new Dictionary<string, object>();
+                    lock (UebungLk)
+                    {
+                        if (was == "uebung/neu" || uebungZuletzt == null)
+                        {
+                            var z = UebungJson(Path.Combine(ordner, "api", "zuletzt.json"));
+                            uebungZuletzt = z != null && z.ContainsKey("liste") ? Arr(z, "liste").OfType<Dictionary<string, object>>().ToList() : new List<Dictionary<string, object>>();
+                            uebungMerk = new List<Dictionary<string, object>>();
+                            uebungOrte = null;
+                            uebungSperrungen = null;
+                            uebungEigene = null;
+                            uebungKiAus = false;
+                        }
+                        if (was == "zuletzt/merken" && !string.IsNullOrEmpty(Str(b, "url")))
+                        {
+                            uebungZuletzt.RemoveAll(x => Str(x, "url") == Str(b, "url"));
+                            uebungZuletzt.Insert(0, new Dictionary<string, object> { { "url", Str(b, "url") }, { "titel", Kuerzen(Str(b, "titel"), 200) }, { "paket", Str(b, "paket") ?? "" } });
+                            if (uebungZuletzt.Count > 10) uebungZuletzt.RemoveRange(10, uebungZuletzt.Count - 10);
+                        }
+                        if (was == "zuletzt/leeren") uebungZuletzt.Clear();
+                        if (was == "merkliste/aendern")
+                        {
+                            string url = Str(b, "url") ?? "", id = Str(b, "id") ?? "";
+                            // Seiten in Fieldbook (z. B. eine Lektion der Ersten Hilfe) merkt die Übung auch, mit „link“ statt „url“
+                            string link = Str(b, "link") ?? "";
+                            bool seitenLink = url.Length == 0 && Regex.IsMatch(link, "^#(erstehilfe|vorsorge|kochen)\\?[^\\s]{1,300}$");
+                            if (Str(b, "aktion") == "setzen" && (url.StartsWith("/kiwix/") || seitenLink))
+                            {
+                                // Ganzer Artikel und gemerkte Textstellen sind eigene Einträge
+                                string stelle = Kuerzen(Str(b, "stelle"), 1500);
+                                uebungMerk.RemoveAll(x => (Str(x, "url") ?? "") == url && (Str(x, "link") ?? "") == link && (Str(x, "stelle") ?? "") == stelle);
+                                if (Bool(b, "an"))
+                                {
+                                    var neu = new Dictionary<string, object> { { "id", MerkId() }, { "titel", Kuerzen(Str(b, "titel"), 200) },
+                                        { "bereich", seitenLink ? link.Substring(1, link.IndexOf('?') - 1) : "bibliothek" }, { "ordner", "" }, { "paket", Str(b, "paket") ?? "" }, { "pdf", false }, { "zeit", DateTime.Now.ToString("s") } };
+                                    if (seitenLink) neu["link"] = link; else neu["url"] = url;
+                                    if (stelle.Length > 0) neu["stelle"] = stelle;
+                                    uebungMerk.Insert(0, neu);
+                                }
+                            }
+                            else if (Str(b, "aktion") == "entfernen") uebungMerk.RemoveAll(x => Str(x, "id") == id);
+                        }
+                        if (was.StartsWith("zuletzt")) SendeJson(ctx, new Dictionary<string, object> { { "liste", uebungZuletzt.ToList() } });
+                        else SendeJson(ctx, new Dictionary<string, object> { { "ordner", new object[0] }, { "liste", uebungMerk.ToList() } });
+                    }
+                    return true;
+                }
+                string datei = SichererPfad(Path.Combine(ordner, "api"), was + ".json");
+                if (datei != null && File.Exists(datei)) SendeUebung(ctx, File.ReadAllBytes(datei), "application/json; charset=utf-8");
+                else SendeJson(ctx, new Dictionary<string, object>());
+                return true;
+            }
+
+            string rest = pfad.Length > 7 ? pfad.Substring(7) : "";
+            var buecher = UebungBuecher(ordner);
+            if (rest.StartsWith("catalog/"))
+            {
+                string xml = Path.Combine(ordner, "kiwix", "katalog.xml");
+                if (rest.StartsWith("catalog/v2/entries") && File.Exists(xml)) SendeUebung(ctx, File.ReadAllBytes(xml), "application/atom+xml; charset=utf-8");
+                else SendeText(ctx, 404, "Nicht gefunden");
+                return true;
+            }
+            if (rest == "viewer") { SendeUebung(ctx, File.ReadAllBytes(Path.Combine(ordner, "kiwix", "viewer.html")), "text/html; charset=utf-8"); return true; }
+            if (rest == "suggest" || rest == "search")
+            {
+                string buch = q.ContainsKey("books.name") ? q["books.name"] : q.ContainsKey("content") ? q["content"] : "";
+                string begriff = q.ContainsKey("term") ? q["term"] : q.ContainsKey("pattern") ? q["pattern"] : "";
+                int anzahl = 10;
+                string n;
+                if (q.TryGetValue(rest == "suggest" ? "count" : "pageLength", out n)) int.TryParse(n, out anzahl);
+                var treffer = UebungSuche(buecher, buch, begriff, rest == "suggest").Take(Math.Max(1, anzahl)).ToList();
+                if (rest == "suggest")
+                {
+                    SendeJson(ctx, treffer.Select(t => new Dictionary<string, object> { { "value", t["titel"] }, { "label", t["titel"] }, { "kind", "path" }, { "path", t["pfad"] } }).ToList());
+                }
+                else if (q.ContainsKey("format") && q["format"] == "xml")
+                {
+                    var sb = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><rss><channel>");
+                    foreach (var t in treffer)
+                        sb.Append("<item><title>" + System.Security.SecurityElement.Escape(Str(t, "titel")) + "</title><link>/kiwix/content/" + Uri.EscapeDataString(buch) + "/" + System.Security.SecurityElement.Escape(Str(t, "pfad")) +
+                            "</link><description>" + System.Security.SecurityElement.Escape(Str(t, "auszug")) + "</description></item>");
+                    sb.Append("</channel></rss>");
+                    SendeUebung(ctx, Utf8.GetBytes(sb.ToString()), "application/rss+xml; charset=utf-8");
+                }
+                else
+                {
+                    // Trefferliste im Lesefenster (Suche oben im Lesefenster), aufgebaut wie die von Kiwix (Vorlage suche.html)
+                    var b = buecher.ContainsKey(buch) ? buecher[buch] as Dictionary<string, object> : null;
+                    string buchTitel = (b != null ? Str(b, "buchTitel") : null) ?? buch;
+                    var sb = new StringBuilder();
+                    foreach (var t in treffer)
+                    {
+                        sb.Append("          <li>\n            <a href=\"/kiwix/content/" + Uri.EscapeDataString(buch) + "/" + WebUtility.HtmlEncode(Str(t, "pfad")) + "\">\n              " +
+                            WebUtility.HtmlEncode(Str(t, "titel")) + "\n            </a>\n              <cite>..." + WebUtility.HtmlEncode(Str(t, "auszug")) + "...</cite>\n" +
+                            "              <div class=\"book-title\">from " + WebUtility.HtmlEncode(buchTitel) + "</div>\n");
+                        if (t.ContainsKey("woerter")) sb.Append("              <div class=\"informations\">" + Convert.ToInt32(t["woerter"]).ToString("N0", CultureInfo.InvariantCulture) + " words</div>\n");
+                        sb.Append("          </li>\n");
+                    }
+                    string kopf = treffer.Count == 0 ? "No results were found for <b>\"" + WebUtility.HtmlEncode(begriff) + "\"</b>"
+                        : "Results <b>1-" + treffer.Count + "</b> of <b>" + treffer.Count + "</b> for <b>\"" + WebUtility.HtmlEncode(begriff) + "\"</b>";
+                    string html = File.ReadAllText(Path.Combine(ordner, "kiwix", "suche.html"), Utf8)
+                        .Replace("{{BEGRIFF}}", WebUtility.HtmlEncode(begriff)).Replace("{{KOPF}}", kopf).Replace("{{TREFFER}}", sb.ToString());
+                    SendeUebung(ctx, ArtikelDesign(Utf8.GetBytes(html)), "text/html; charset=utf-8");
+                }
+                return true;
+            }
+            if (rest.StartsWith("content/"))
+            {
+                string r2 = rest.Substring(8);
+                int i = r2.IndexOf('/');
+                string id = Uri.UnescapeDataString(i < 0 ? r2 : r2.Substring(0, i));
+                string artikel = i < 0 ? "" : r2.Substring(i + 1);
+                var b = buecher.ContainsKey(id) ? buecher[id] as Dictionary<string, object> : null;
+                if (b == null) { SendeText(ctx, 404, "Nicht gefunden"); return true; }
+                if (artikel == "")
+                {
+                    // Wie Kiwix: das Paket selbst leitet zur Startseite weiter
+                    ctx.Response.StatusCode = 302;
+                    ctx.Response.RedirectLocation = "/kiwix/content/" + Uri.EscapeDataString(id) + "/" + Str(b, "start");
+                    return true;
+                }
+                string datei = UebungDatei(Path.Combine(ordner, "kiwix", "inhalt", id), artikel);
+                // Beispielartikel einzelner Kapitel liegen in uebung/<kapitel>/kiwix/inhalt (z. B. Kochen)
+                foreach (var kap in Directory.GetDirectories(ordner))
+                    if (datei == null || !File.Exists(datei)) datei = UebungDatei(Path.Combine(kap, "kiwix", "inhalt", id), artikel) ?? datei;
+                if (datei == null || !File.Exists(datei))
+                {
+                    // Artikel, die im Beispielpaket fehlen (Links in echten Seiten): freundliche Seite statt „Nicht gefunden“
+                    if (artikel.StartsWith("_") || Path.HasExtension(artikel)) { SendeText(ctx, 404, "Nicht gefunden"); return true; }
+                    string seite = "<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Nicht im Beispielpaket</title></head><body>" +
+                        "<h1>Nicht im Beispielpaket</h1><p>Dieser Artikel gehört nicht zum Beispiel des Rundgangs.<br>Im echten Paket steht er hier.</p>" +
+                        "<p><a href=\"javascript:history.back()\">Zurück</a></p></body></html>";
+                    SendeUebung(ctx, ArtikelDesign(Utf8.GetBytes(seite)), "text/html; charset=utf-8");
+                    return true;
+                }
+                if (datei.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+                    SendeUebung(ctx, ctx.Request.HttpMethod == "HEAD" ? new byte[0] : ArtikelDesign(File.ReadAllBytes(datei)), "text/html; charset=utf-8");
+                else SendeDatei(ctx, datei);
+                return true;
+            }
+            SendeText(ctx, 404, "Nicht gefunden");
+            return true;
+        }
+
+        // Datei eines Beispielartikels (auch ohne „.html“ in der Adresse); null, wenn die Adresse aus dem Ordner führt
+        static string UebungDatei(string basis, string artikel)
+        {
+            string datei = SichererPfad(basis, artikel);
+            if (datei != null && !File.Exists(datei) && File.Exists(datei + ".html")) datei += ".html";
+            return datei;
+        }
+
+        // Bücher der Übung aus uebung/kiwix/artikel.json; Kapitel mit eigenen Beispielartikeln (uebung/<kapitel>/kiwix/artikel.json)
+        // hängen ihre Artikel an dasselbe Paket an
+        static Dictionary<string, object> UebungBuecher(string ordner)
+        {
+            var buecher = UebungJson(Path.Combine(ordner, "kiwix", "artikel.json")) ?? new Dictionary<string, object>();
+            foreach (var kap in Directory.GetDirectories(ordner))
+            {
+                var dazu = UebungJson(Path.Combine(kap, "kiwix", "artikel.json"));
+                if (dazu == null) continue;
+                foreach (var kv in dazu)
+                {
+                    var neu = kv.Value as Dictionary<string, object>;
+                    if (neu == null) continue;
+                    var alt = buecher.ContainsKey(kv.Key) ? buecher[kv.Key] as Dictionary<string, object> : null;
+                    if (alt == null) { buecher[kv.Key] = neu; continue; }
+                    var liste = new List<object>();
+                    foreach (var name in new[] { alt, neu })
+                    {
+                        var a = name.ContainsKey("artikel") ? name["artikel"] as System.Collections.IEnumerable : null;
+                        if (a != null) foreach (var x in a) liste.Add(x);
+                    }
+                    alt["artikel"] = liste;
+                }
+            }
+            return buecher;
+        }
+
+        static Dictionary<string, object> UebungJson(string datei)
+        {
+            try { return File.Exists(datei) ? Json.DeserializeObject(File.ReadAllText(datei, Utf8)) as Dictionary<string, object> : null; }
+            catch { return null; }
+        }
+
+        // Artikel der Übungs-Bibliothek, in denen jedes Suchwort vorkommt (Vorschläge: nur im Titel)
+        static IEnumerable<Dictionary<string, object>> UebungSuche(Dictionary<string, object> buecher, string buch, string begriff, bool nurTitel)
+        {
+            var b = buecher.ContainsKey(buch) ? buecher[buch] as Dictionary<string, object> : null;
+            var liste = b != null && b.ContainsKey("artikel") ? b["artikel"] as System.Collections.IEnumerable : null;
+            var woerter = (begriff ?? "").ToLowerInvariant().Split(new[] { ' ', ',', '?', '!', '.' }, StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length >= 2).ToArray();
+            if (liste == null || woerter.Length == 0) yield break;
+            foreach (var o in liste)
+            {
+                var a = o as Dictionary<string, object>;
+                if (a == null) continue;
+                string text = (Str(a, "titel") + " " + (nurTitel ? "" : Str(a, "auszug") + " " + Str(a, "stichwoerter"))).ToLowerInvariant();
+                if (woerter.All(w => text.Contains(w))) yield return a;
+            }
+        }
+
+        static void SendeUebung(HttpListenerContext ctx, byte[] b, string typ)
+        {
+            ctx.Response.StatusCode = 200;
+            ctx.Response.ContentType = typ;
+            ctx.Response.AddHeader("Cache-Control", "no-store");
+            ctx.Response.ContentLength64 = b.Length;
+            if (ctx.Request.HttpMethod != "HEAD") ctx.Response.OutputStream.Write(b, 0, b.Length);
+        }
 
         static void SendeDatei(HttpListenerContext ctx, string pfad)
         {
@@ -1416,10 +2133,15 @@ namespace OfflineWissen
         // benachbarten Seiten derselben Stelle kommt nur die bessere, die nächste Seite liest die KI ohnehin mit.
         static List<object> PdfSuche(string buch, string q, int max)
         {
+            if (!PdfPaketOk(buch) || string.IsNullOrWhiteSpace(q)) return new List<object>();
+            return PdfSuche(buch, q, max, PdfLaden(buch));
+        }
+
+        // Suche in einem schon geladenen Buch (auch die eigenen Unterlagen im Rundgang, die nur im Speicher liegen)
+        static List<object> PdfSuche(string buch, string q, int max, PdfBuch b)
+        {
             var erg = new List<object>();
-            if (!PdfPaketOk(buch) || string.IsNullOrWhiteSpace(q)) return erg;
-            var b = PdfLaden(buch);
-            if (b == null) return erg;
+            if (b == null || string.IsNullOrWhiteSpace(q)) return erg;
             var woerter = PdfWort.Matches(q).Cast<Match>().Select(m => m.Value).Where(w => !PdfStopp.Contains(w))
                 .Distinct(StringComparer.OrdinalIgnoreCase).Take(6).ToList();
             if (woerter.Count == 0) return erg;
@@ -1479,7 +2201,8 @@ namespace OfflineWissen
                 erg.Add(new Dictionary<string, object> {
                     { "titel", d.Titel + (seiten ? ", Seite " + seite : "") },
                     { "url", "/api/pdftext/seite/" + buch + "/" + z[0] + "/" + seite },
-                    { "pdf", buch == EigenePaket ? "/api/eigene/datei/" + Uri.EscapeDataString(d.Datei) + (seiten ? "#page=" + seite : "")
+                    { "pdf", buch == EigenePaket && d.Datei.StartsWith("web:") ? WebAdresseVonOrdner(d.Datei.Substring(4))
+                                                 : buch == EigenePaket ? "/api/eigene/datei/" + Uri.EscapeDataString(d.Datei) + (seiten ? "#page=" + seite : "")
                                                  : "/kiwix/content/" + buch + "/files/" + Uri.EscapeDataString(d.Datei) + "#page=" + seite },
                     { "auszug", PdfAuszug(d.Seiten[z[1]], woerter) },
                     { "punkte", Math.Round(kv.Key, 2) } });
@@ -1552,8 +2275,9 @@ namespace OfflineWissen
         const string EigenePaket = "eigene";
         static string EigeneOrdner { get { return Path.Combine(Daten, "eigene"); } }
         static string EigeneTexteDatei { get { return Path.Combine(Daten, "cache", "eigene-texte.json"); } }
-        static readonly string[] EigeneEndungen = { ".pdf", ".docx", ".doc", ".txt", ".md", ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-        static readonly string[] EigeneMitText = { ".pdf", ".docx", ".txt", ".md" };
+        // .html = Notizen aus Fieldbook (js/notizen.js); angezeigt werden sie nur gefiltert, nie mit Programmcode
+        static readonly string[] EigeneEndungen = { ".pdf", ".docx", ".doc", ".txt", ".md", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".html" };
+        static readonly string[] EigeneMitText = { ".pdf", ".docx", ".txt", ".md", ".html" };
         static readonly object EigeneLk = new object();
 
         // Nur PDFs haben echte Seiten; bei Word und Text sind die "Seiten" Stücke des Texts
@@ -1592,6 +2316,8 @@ namespace OfflineWissen
         static Dictionary<string, object> EigeneListe()
         {
             var liste = new List<object>();
+            Dictionary<string, object> dateiGruppen;
+            lock (WebLk) dateiGruppen = DateiGruppenLaden();
             lock (EigeneLk)
             {
                 var texte = EigeneTexte();
@@ -1603,30 +2329,62 @@ namespace OfflineWissen
                     bool fertig = t != null && Str(t, "kennung") == EigeneKennung(f);
                     liste.Add(new Dictionary<string, object> {
                         { "datei", f.Name }, { "groesse", f.Length }, { "geaendert", f.LastWriteTime.ToString("s") },
+                        { "gruppe", dateiGruppen.ContainsKey(f.Name) ? dateiGruppen[f.Name] as string ?? "" : "" },
                         { "kennung", EigeneKennung(f) },
                         // Text fehlt noch (oder die Datei hat sich geändert): die Seite liest ihn aus
                         { "auslesen", EigeneMitText.Contains(ext) && !fertig },
                         { "text", fertig && Arr(t, "seiten").Any(s => !string.IsNullOrWhiteSpace(s as string)) } });
                 }
+                // Gesicherte Webseiten: Schlüssel "web:<ordner>", Text liest die Seite aus wie bei Word
+                foreach (var kv in WebSeiten())
+                {
+                    string key = "web:" + Str(kv.Key, "ordner");
+                    object o;
+                    var t = texte.TryGetValue(key, out o) ? o as Dictionary<string, object> : null;
+                    bool fertig = t != null && Str(t, "kennung") == EigeneKennung(kv.Value);
+                    liste.Add(new Dictionary<string, object> {
+                        { "datei", key }, { "web", true }, { "name", Str(kv.Key, "name") }, { "url", Str(kv.Key, "url") },
+                        { "ordner", Str(kv.Key, "ordner") }, { "adresse", WebAdresseVonOrdner(Str(kv.Key, "ordner")) },
+                        { "datum", Str(kv.Key, "datum") }, { "gruppe", Str(kv.Key, "gruppe") ?? "" },
+                        { "groesse", kv.Value.Length }, { "geaendert", kv.Value.LastWriteTime.ToString("s") },
+                        { "kennung", EigeneKennung(kv.Value) }, { "auslesen", !fertig },
+                        { "text", fertig && Arr(t, "seiten").Any(s => !string.IsNullOrWhiteSpace(s as string)) } });
+                }
             }
-            return new Dictionary<string, object> { { "dateien", liste } };
+            List<Dictionary<string, object>> gruppen;
+            lock (WebLk) gruppen = WebGruppenLaden();
+            return new Dictionary<string, object> { { "dateien", liste }, { "gruppen", gruppen } };
         }
 
         // Text einer Datei speichern ({datei, kennung, seiten}); Einträge gelöschter Dateien fallen dabei weg
         static Dictionary<string, object> EigeneTextSpeichern(Dictionary<string, object> b)
         {
-            string pfad = EigenePfad(Str(b, "datei"));
-            if (pfad == null || !File.Exists(pfad)) return new Dictionary<string, object> { { "fehler", "Datei nicht gefunden." } };
-            var fi = new FileInfo(pfad);
+            string datei = Str(b, "datei") ?? "";
+            var webSeiten = WebSeiten();
+            FileInfo fi;
+            if (datei.StartsWith("web:"))
+            {
+                var w = webSeiten.FirstOrDefault(kv => "web:" + Str(kv.Key, "ordner") == datei);
+                if (w.Key == null) return new Dictionary<string, object> { { "fehler", "Seite nicht gefunden." } };
+                fi = w.Value;
+            }
+            else
+            {
+                string pfad = EigenePfad(datei);
+                if (pfad == null || !File.Exists(pfad)) return new Dictionary<string, object> { { "fehler", "Datei nicht gefunden." } };
+                fi = new FileInfo(pfad);
+                datei = fi.Name;
+            }
             // Inzwischen geändert: nicht speichern, die Seite liest beim nächsten Mal neu aus
             if (Str(b, "kennung") != EigeneKennung(fi)) return new Dictionary<string, object> { { "ok", false } };
             lock (EigeneLk)
             {
                 var texte = EigeneTexte();
                 var da = new HashSet<string>(EigeneDateien().Select(f => f.Name), StringComparer.OrdinalIgnoreCase);
+                foreach (var kv in webSeiten) da.Add("web:" + Str(kv.Key, "ordner"));
                 var neu = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-                foreach (var kv in texte) if (da.Contains(kv.Key) && !string.Equals(kv.Key, fi.Name, StringComparison.OrdinalIgnoreCase)) neu[kv.Key] = kv.Value;
-                neu[fi.Name] = new Dictionary<string, object> { { "kennung", EigeneKennung(fi) }, { "seiten", Arr(b, "seiten").Select(x => x as string ?? "").ToArray() } };
+                foreach (var kv in texte) if (da.Contains(kv.Key) && !string.Equals(kv.Key, datei, StringComparison.OrdinalIgnoreCase)) neu[kv.Key] = kv.Value;
+                neu[datei] = new Dictionary<string, object> { { "kennung", EigeneKennung(fi) }, { "seiten", Arr(b, "seiten").Select(x => x as string ?? "").ToArray() } };
                 Directory.CreateDirectory(Path.GetDirectoryName(EigeneTexteDatei));
                 SicherSchreiben(EigeneTexteDatei, Json.Serialize(new Dictionary<string, object> { { "dateien", neu } }));
             }
@@ -1655,6 +2413,17 @@ namespace OfflineWissen
                     if (t == null || Str(t, "kennung") != EigeneKennung(f)) continue;
                     var s = Arr(t, "seiten").Select(x => x as string ?? "").ToArray();
                     b.Dateien.Add(new PdfDatei { Datei = f.Name, Titel = Path.GetFileNameWithoutExtension(f.Name), Seiten = s });
+                    foreach (var x in s) zeichen += x.Length;
+                    seiten += s.Length;
+                }
+                foreach (var kv in WebSeiten())
+                {
+                    object o;
+                    string key = "web:" + Str(kv.Key, "ordner");
+                    var t = texte.TryGetValue(key, out o) ? o as Dictionary<string, object> : null;
+                    if (t == null || Str(t, "kennung") != EigeneKennung(kv.Value)) continue;
+                    var s = Arr(t, "seiten").Select(x => x as string ?? "").ToArray();
+                    b.Dateien.Add(new PdfDatei { Datei = key, Titel = Str(kv.Key, "name") ?? key, Seiten = s });
                     foreach (var x in s) zeichen += x.Length;
                     seiten += s.Length;
                 }
@@ -1745,6 +2514,7 @@ namespace OfflineWissen
                 }
                 catch { }
             }
+            try { DateiGruppeUmziehen(altName, neu); } catch (Exception e) { Log("Ordner der Datei umbenennen: " + e.Message); }
             return new Dictionary<string, object> { { "ok", true }, { "datei", neu } };
         }
 
@@ -1757,8 +2527,947 @@ namespace OfflineWissen
                 try { File.Delete(pfad); }
                 catch (Exception e) { return new Dictionary<string, object> { { "fehler", "Löschen ging nicht. Ist die Datei gerade in einem anderen Programm offen?" }, { "technisch", e.Message } }; }
             }
+            try { DateiGruppeUmziehen(Path.GetFileName(pfad), null); } catch (Exception e) { Log("Ordner der Datei löschen: " + e.Message); }
             Log("Eigene Unterlage gelöscht (" + Path.GetExtension(pfad).ToLowerInvariant() + ").");
             return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        // ------------------------------------------------------------------ Notizen
+        // Eine Notiz ist eine kleine HTML-Datei in daten/eigene (Titel = Dateiname). Die Oberfläche schickt nur den
+        // Inhalt (schon gefiltert); hier kommt der Rahmen dazu, damit sie auch per Doppelklick ordentlich aussieht.
+
+        static string NotizHtml(string titel, string inhalt)
+        {
+            return "<!DOCTYPE html>\n<html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"fieldbook-notiz\" content=\"1\"><title>" +
+                HtmlAttr(titel).Replace(">", "&gt;") + "</title><style>body{font-family:'Segoe UI',sans-serif;max-width:780px;margin:2em auto;padding:0 1em;line-height:1.55}" +
+                "table{border-collapse:collapse;margin:1em 0;max-width:100%}td,th{border:1px solid #999;padding:5px 9px;vertical-align:top;overflow-wrap:anywhere}th{background:#eee}" +
+                ".klein{font-size:.85em}</style></head>\n<body>\n" + inhalt + "\n</body></html>\n";
+        }
+
+        static Dictionary<string, object> NotizNeu(Dictionary<string, object> b)
+        {
+            string titel = EigenerName(Str(b, "titel") ?? "");
+            if (titel.Length == 0) titel = "Neue Notiz";
+            if (titel.Length > 120) titel = titel.Substring(0, 120).TrimEnd('.', ' ');
+            Directory.CreateDirectory(EigeneOrdner);
+            string datei;
+            lock (EigeneLk)
+            {
+                datei = EigenerFreierName(titel + ".html");
+                File.WriteAllText(Path.Combine(EigeneOrdner, datei), NotizHtml(Path.GetFileNameWithoutExtension(datei), "<p><br></p>"), new UTF8Encoding(false));
+            }
+            Log("Notiz angelegt.");
+            return new Dictionary<string, object> { { "ok", true }, { "datei", datei } };
+        }
+
+        static Dictionary<string, object> NotizSpeichern(Dictionary<string, object> b)
+        {
+            string pfad = EigenePfad(Str(b, "datei"));
+            if (pfad == null || !pfad.EndsWith(".html", StringComparison.OrdinalIgnoreCase) || !File.Exists(pfad))
+                return new Dictionary<string, object> { { "fehler", "Diese Notiz gibt es nicht mehr." } };
+            string inhalt = Str(b, "html") ?? "";
+            if (inhalt.Length > 5000000) return new Dictionary<string, object> { { "fehler", "Die Notiz ist zu lang." } };
+            try
+            {
+                lock (EigeneLk)
+                {
+                    string tmp = pfad + ".part";
+                    File.WriteAllText(tmp, NotizHtml(Path.GetFileNameWithoutExtension(pfad), inhalt), new UTF8Encoding(false));
+                    File.Copy(tmp, pfad, true);
+                    File.Delete(tmp);
+                }
+            }
+            catch (Exception e) { return new Dictionary<string, object> { { "fehler", "Die Notiz ließ sich nicht speichern." }, { "technisch", e.Message } }; }
+            var fi = new FileInfo(pfad);
+            return new Dictionary<string, object> { { "ok", true }, { "kennung", EigeneKennung(fi) } };
+        }
+
+        // ------------------------------------------------------------------ Webseiten sichern
+        // Gesicherte Webseiten liegen in daten/eigene/webseiten, geordnet wie die Website:
+        //   landkreis-beispiel.de/buerger/notfall/index.html, Bilder und Schriften gemeinsam in landkreis-beispiel.de/_dateien.
+        // Die Seite selbst (HTML) baut die Oberfläche zusammen (js/webseiten.js): Server holt die Seite (mit Edge
+        // fertig aufgebaut, sonst roh), lädt Bilder/CSS/Schriften und schreibt die Dateien. Programmcode (JavaScript)
+        // wird nie mitgespeichert; ausgeliefert wird unter /gesichert/ mit CSP ohne Skripte.
+        // Liste mit Namen und Adresse: webseiten/webseiten.json ({ seiten: [{ ordner, url, name, datum }] }).
+
+        static string WebseitenOrdner { get { return Path.Combine(EigeneOrdner, "webseiten"); } }
+        static string WebseitenListeDatei { get { return Path.Combine(WebseitenOrdner, "webseiten.json"); } }
+        static readonly object WebLk = new object();
+        const string WebBrowserKennung = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0";
+        const string WebCsp = "sandbox allow-same-origin; script-src 'none'; object-src 'none'; frame-src 'none'; base-uri *";
+
+        static string WebKurz(string s, int n)
+        {
+            using (var sha = System.Security.Cryptography.SHA1.Create())
+            {
+                var h = sha.ComputeHash(Utf8.GetBytes(s));
+                return string.Concat(h.Select(x => x.ToString("x2"))).Substring(0, n);
+            }
+        }
+
+        // Nur http(s) und keine Adressen dieses Rechners (sonst könnte man über Fieldbook lokale Dienste abfragen)
+        static Uri WebUri(string s)
+        {
+            Uri u;
+            if (string.IsNullOrWhiteSpace(s) || !Uri.TryCreate(s.Trim(), UriKind.Absolute, out u)) return null;
+            if (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps) return null;
+            string h = u.Host.ToLowerInvariant();
+            if (u.IsLoopback || h == "localhost" || h.EndsWith(".localhost") || h == "0.0.0.0" || h == "[::]") return null;
+            return u;
+        }
+
+        // Ein Teil des Ordnerpfads: ohne verbotene Zeichen, nicht zu lang, nicht wie reservierte Windows-Namen
+        static string WebTeil(string s)
+        {
+            var sb = new StringBuilder();
+            foreach (char c in s) sb.Append(c < 32 || "<>:\"/\\|?*".IndexOf(c) >= 0 ? '_' : c);
+            string t = sb.ToString().Trim().TrimEnd('.', ' ');
+            if (t.Length == 0) t = "seite";
+            if (t.StartsWith("_") || t.StartsWith(".")) t = "x" + t;   // "_dateien" ist für Bilder reserviert
+            if (Regex.IsMatch(t, @"^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$", RegexOptions.IgnoreCase)) t += "_";
+            if (t.Length > 50) t = t.Substring(0, 40).TrimEnd('.', ' ') + "-" + WebKurz(t, 8);
+            return t;
+        }
+
+        // Adresse → Ordner (mit "/"): Rechnername ohne "www.", dann die Teile des Pfads. Abfragen (?id=5) und sehr
+        // lange Pfade bekommen eine kurze Prüfsumme, damit jede Seite einen eigenen Ordner hat und Windows-Pfade kurz bleiben.
+        static string WebOrdnerVon(Uri u)
+        {
+            string host = u.Host.ToLowerInvariant();
+            if (host.StartsWith("www.")) host = host.Substring(4);
+            if (!u.IsDefaultPort) host += "_" + u.Port;
+            var teile = new List<string> { WebTeil(host) };
+            foreach (var s in u.AbsolutePath.Split('/'))
+            {
+                if (s.Length == 0) continue;
+                string d;
+                try { d = Uri.UnescapeDataString(s); } catch { d = s; }
+                teile.Add(WebTeil(d));
+            }
+            if (u.Query.Length > 1)
+            {
+                if (teile.Count == 1) teile.Add("seite-" + WebKurz(u.Query, 8));
+                else teile[teile.Count - 1] = WebTeil(teile[teile.Count - 1] + "-" + WebKurz(u.Query, 8));
+            }
+            string erg = string.Join("/", teile);
+            if (erg.Length > 140)
+            {
+                var kurz = new List<string>();
+                int laenge = 0;
+                foreach (var t in teile) { if (laenge + t.Length > 100) break; kurz.Add(t); laenge += t.Length + 1; }
+                kurz.Add("seite-" + WebKurz(erg, 10));
+                erg = string.Join("/", kurz);
+            }
+            return erg;
+        }
+
+        static string WebOrdnerPfad(string ordner)
+        {
+            if (string.IsNullOrWhiteSpace(ordner) || ordner.Contains("..") || ordner.Contains("\\")) return null;
+            return SichererPfad(WebseitenOrdner, ordner.Replace("%", "%25"));
+        }
+
+        static string WebAdresseVonOrdner(string ordner)
+        {
+            return "/gesichert/" + string.Join("/", ordner.Split('/').Select(Uri.EscapeDataString)) + "/index.html";
+        }
+
+        static List<Dictionary<string, object>> WebSeitenLaden()
+        {
+            var d = LadeJson(WebseitenListeDatei);
+            var liste = new List<Dictionary<string, object>>();
+            if (d != null) foreach (var o in Arr(d, "seiten")) { var e = o as Dictionary<string, object>; if (e != null && Str(e, "ordner") != null) liste.Add(e); }
+            return liste;
+        }
+
+        // Eigene Ordner zum Sortieren in Fieldbook (nur in der Liste, die Dateien bleiben nach Website geordnet):
+        // { gruppen: [{ id, name }] }, jede Seite mit "gruppe" = id
+        static List<Dictionary<string, object>> WebGruppenLaden()
+        {
+            var d = LadeJson(WebseitenListeDatei);
+            var liste = new List<Dictionary<string, object>>();
+            if (d != null) foreach (var o in Arr(d, "gruppen")) { var g = o as Dictionary<string, object>; if (g != null && Str(g, "id") != null) liste.Add(g); }
+            return liste;
+        }
+
+        // Eigene Dateien in Ordnern: { dateiGruppen: { "Plan.pdf": id } } (in derselben Datei wie die Ordner)
+        static Dictionary<string, object> DateiGruppenLaden()
+        {
+            var d = LadeJson(WebseitenListeDatei);
+            var m = d != null && d.ContainsKey("dateiGruppen") ? d["dateiGruppen"] as Dictionary<string, object> : null;
+            var erg = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            if (m != null) foreach (var kv in m) erg[kv.Key] = kv.Value;
+            return erg;
+        }
+
+        static void WebSeitenSchreiben(List<Dictionary<string, object>> liste, List<Dictionary<string, object>> gruppen = null, Dictionary<string, object> dateiGruppen = null)
+        {
+            Directory.CreateDirectory(WebseitenOrdner);
+            SicherSchreiben(WebseitenListeDatei, Json.Serialize(new Dictionary<string, object> {
+                { "seiten", liste }, { "gruppen", gruppen ?? WebGruppenLaden() }, { "dateiGruppen", dateiGruppen ?? DateiGruppenLaden() } }));
+        }
+
+        // Ordner einer eigenen Datei beim Umbenennen mitnehmen (neu == null: beim Löschen entfernen)
+        static void DateiGruppeUmziehen(string alt, string neu)
+        {
+            lock (WebLk)
+            {
+                var m = DateiGruppenLaden();
+                object g;
+                if (!m.TryGetValue(alt, out g)) return;
+                m.Remove(alt);
+                if (neu != null) m[neu] = g;
+                WebSeitenSchreiben(WebSeitenLaden(), null, m);
+            }
+        }
+
+        // {aktion: neu|umbenennen|loeschen|verschieben, id, name, ordner (Seite), gruppe}
+        static Dictionary<string, object> WebGruppen(Dictionary<string, object> b)
+        {
+            string aktion = Str(b, "aktion"), id = Str(b, "id"), name = (Str(b, "name") ?? "").Trim();
+            if (name.Length > 100) name = name.Substring(0, 100);
+            lock (WebLk)
+            {
+                var seiten = WebSeitenLaden();
+                var gruppen = WebGruppenLaden();
+                var g = gruppen.FirstOrDefault(x => Str(x, "id") == id);
+                switch (aktion)
+                {
+                    case "neu":
+                        if (name.Length == 0) return new Dictionary<string, object> { { "fehler", "Bitte einen Namen eingeben." } };
+                        if (gruppen.Count >= 100) return new Dictionary<string, object> { { "fehler", "Es gibt schon sehr viele Ordner." } };
+                        string neu = "g" + DateTime.Now.Ticks.ToString("x");
+                        gruppen.Add(new Dictionary<string, object> { { "id", neu }, { "name", name } });
+                        WebSeitenSchreiben(seiten, gruppen.OrderBy(x => Str(x, "name"), StringComparer.CurrentCultureIgnoreCase).ToList());
+                        return new Dictionary<string, object> { { "ok", true }, { "neu", neu } };
+                    case "umbenennen":
+                        if (g == null) return new Dictionary<string, object> { { "fehler", "Ordner nicht gefunden." } };
+                        if (name.Length == 0) return new Dictionary<string, object> { { "fehler", "Bitte einen Namen eingeben." } };
+                        g["name"] = name;
+                        WebSeitenSchreiben(seiten, gruppen.OrderBy(x => Str(x, "name"), StringComparer.CurrentCultureIgnoreCase).ToList());
+                        break;
+                    case "loeschen":
+                        // Die Seiten bleiben, sie stehen dann ohne Ordner da
+                        if (g == null) return new Dictionary<string, object> { { "fehler", "Ordner nicht gefunden." } };
+                        gruppen.Remove(g);
+                        foreach (var s in seiten) if (Str(s, "gruppe") == id) s.Remove("gruppe");
+                        var dg = DateiGruppenLaden();
+                        foreach (var k in dg.Where(kv => kv.Value as string == id).Select(kv => kv.Key).ToList()) dg.Remove(k);
+                        WebSeitenSchreiben(seiten, gruppen, dg);
+                        break;
+                    case "verschieben":
+                        // Webseite ({ordner}) oder eigene Datei ({datei})
+                        string ziel = Str(b, "gruppe") ?? "";
+                        if (ziel.Length > 0 && !gruppen.Any(x => Str(x, "id") == ziel)) return new Dictionary<string, object> { { "fehler", "Ordner nicht gefunden." } };
+                        if (Str(b, "datei") != null)
+                        {
+                            string pfad = EigenePfad(Str(b, "datei"));
+                            if (pfad == null || !File.Exists(pfad)) return new Dictionary<string, object> { { "fehler", "Datei nicht gefunden." } };
+                            var m = DateiGruppenLaden();
+                            if (ziel.Length > 0) m[Path.GetFileName(pfad)] = ziel; else m.Remove(Path.GetFileName(pfad));
+                            WebSeitenSchreiben(seiten, gruppen, m);
+                            break;
+                        }
+                        var seite = seiten.FirstOrDefault(x => Str(x, "ordner") == Str(b, "ordner"));
+                        if (seite == null) return new Dictionary<string, object> { { "fehler", "Seite nicht gefunden." } };
+                        if (ziel.Length > 0) seite["gruppe"] = ziel; else seite.Remove("gruppe");
+                        WebSeitenSchreiben(seiten, gruppen);
+                        break;
+                    default: return new Dictionary<string, object> { { "fehler", "Unbekannte Aktion." } };
+                }
+            }
+            return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        // Gesicherte Seiten, deren index.html noch da ist (im Explorer gelöschte fallen weg)
+        static List<KeyValuePair<Dictionary<string, object>, FileInfo>> WebSeiten()
+        {
+            var erg = new List<KeyValuePair<Dictionary<string, object>, FileInfo>>();
+            List<Dictionary<string, object>> liste;
+            lock (WebLk) liste = WebSeitenLaden();
+            foreach (var e in liste)
+            {
+                string p = WebOrdnerPfad(Str(e, "ordner"));
+                if (p == null) continue;
+                var fi = new FileInfo(Path.Combine(p, "index.html"));
+                if (fi.Exists) erg.Add(new KeyValuePair<Dictionary<string, object>, FileInfo>(e, fi));
+            }
+            return erg;
+        }
+
+        // Webseite für den Browser in Fieldbook: Antwort, Bytes, Zeichensatz, Ziel nach Weiterleitungen
+        class WebAntwort { public byte[] Daten; public string Typ = ""; public Uri Ziel; }
+
+        static WebAntwort WebLaden(Uri u, string referer, long max, int timeout)
+        {
+            var req = (HttpWebRequest)WebRequest.Create(u);
+            req.UserAgent = WebBrowserKennung;
+            req.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8";
+            req.Headers["Accept-Language"] = "de-DE,de;q=0.9,en;q=0.7";
+            req.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+            req.CookieContainer = new CookieContainer();
+            req.Timeout = timeout;
+            req.ReadWriteTimeout = timeout;
+            req.MaximumAutomaticRedirections = 10;
+            if (referer != null) req.Referer = referer;
+            using (var resp = (HttpWebResponse)req.GetResponse())
+            using (var s = resp.GetResponseStream())
+            using (var ms = new MemoryStream())
+            {
+                // Weiterleitung auf eine Adresse dieses Rechners: ablehnen
+                if (WebUri(resp.ResponseUri.AbsoluteUri) == null) throw new WebException("Ungültiges Ziel der Weiterleitung.");
+                var buf = new byte[65536];
+                int n;
+                while ((n = s.Read(buf, 0, buf.Length)) > 0)
+                {
+                    ms.Write(buf, 0, n);
+                    if (ms.Length > max) throw new WebException("Die Datei ist zu groß.");
+                }
+                return new WebAntwort { Daten = ms.ToArray(), Typ = resp.ContentType ?? "", Ziel = resp.ResponseUri };
+            }
+        }
+
+        // Text dekodieren: Zeichensatz aus dem Kopf, sonst aus <meta charset>, sonst UTF-8
+        static string WebText(WebAntwort a)
+        {
+            string cs = null;
+            var m = Regex.Match(a.Typ, @"charset=[""']?([\w-]+)", RegexOptions.IgnoreCase);
+            if (m.Success) cs = m.Groups[1].Value;
+            if (cs == null)
+            {
+                string anfang = Encoding.ASCII.GetString(a.Daten, 0, Math.Min(a.Daten.Length, 4096));
+                m = Regex.Match(anfang, @"<meta[^>]+charset=[""']?([\w-]+)", RegexOptions.IgnoreCase);
+                if (m.Success) cs = m.Groups[1].Value;
+            }
+            Encoding enc = Utf8;
+            if (cs != null) try { enc = Encoding.GetEncoding(cs); } catch { enc = Utf8; }
+            string t = enc.GetString(a.Daten);
+            return t.Length > 0 && t[0] == '﻿' ? t.Substring(1) : t;
+        }
+
+        // Verständliche Meldung, wenn eine Webseite nicht antwortet. Schutzdienste wie Cloudflare lassen nur Menschen im
+        // normalen Browser durch (Antwort mit "cf-mitigated: challenge"); das umgeht Fieldbook bewusst nicht.
+        const string WebSchutzText = "Diese Webseite lässt nur Besucher im normalen Browser herein (Schutz vor automatischen Abrufen).";
+        static string WebFehlerText(WebException e)
+        {
+            var r = e.Response as HttpWebResponse;
+            if (r == null) return "Die Webseite ist nicht erreichbar. Gibt es gerade Internet?";
+            int code = (int)r.StatusCode;
+            bool schutz = r.Headers["cf-mitigated"] != null || ((code == 403 || code == 429 || code == 503) &&
+                Regex.IsMatch((r.Headers["Server"] ?? "") + " " + (r.Headers["X-Sucuri-ID"] ?? "") + " " + (r.Headers["X-DataDome"] ?? ""), @"cloudflare|sucuri|datadome|akamai", RegexOptions.IgnoreCase));
+            if (schutz) return WebSchutzText + " Öffne sie im Browserfenster, dann kann Fieldbook sie von dort speichern.";
+            if (code == 404) return "Diese Seite gibt es nicht (Fehler 404). Stimmt die Adresse?";
+            if (code == 403 || code == 401) return "Die Webseite verweigert den Zugriff (Fehler " + code + ").";
+            return "Die Webseite antwortet mit Fehler " + code + ".";
+        }
+
+        static string HtmlAttr(string s) { return (s ?? "").Replace("&", "&amp;").Replace("\"", "&quot;").Replace("<", "&lt;"); }
+
+        // Seite fürs Anschauen in Fieldbook: Programmcode raus, <base> auf die echte Adresse (Bilder kommen direkt
+        // aus dem Internet), Adresse als <meta> für die Oberfläche. Läuft in einem Rahmen ohne Skripte (CSP sandbox).
+        static string WebZumAnsehen(string html, Uri ziel)
+        {
+            var o = RegexOptions.IgnoreCase | RegexOptions.Singleline;
+            html = Regex.Replace(html, @"<script\b.*?</script\s*>", "", o);
+            html = Regex.Replace(html, @"<script\b[^>]*/>", "", o);
+            html = Regex.Replace(html, @"<iframe\b.*?</iframe\s*>", "", o);
+            html = Regex.Replace(html, @"<base\b[^>]*>", "", o);
+            html = Regex.Replace(html, @"<meta\b[^>]*http-equiv\s*=\s*[""']?(refresh|content-security-policy)[^>]*>", "", o);
+            html = Regex.Replace(html, @"</?noscript\b[^>]*>", "", o);   // ohne Skripte gilt der Ersatzinhalt
+            string kopf = "<base href=\"" + HtmlAttr(ziel.AbsoluteUri) + "\"><meta name=\"fieldbook-url\" content=\"" + HtmlAttr(ziel.AbsoluteUri) + "\">";
+            var h = Regex.Match(html, @"<head\b[^>]*>", RegexOptions.IgnoreCase);
+            if (h.Success) return html.Insert(h.Index + h.Length, kopf);
+            return kopf + html;
+        }
+
+        static void WebAnsehen(HttpListenerContext ctx, string adresse)
+        {
+            var u = WebUri(adresse);
+            string fehler = null, html = null;
+            if (u == null) fehler = "Diese Adresse kann Fieldbook nicht öffnen.";
+            else
+            {
+                try
+                {
+                    var a = WebLaden(u, null, 15000000, 20000);
+                    if (!Regex.IsMatch(a.Typ, @"html|xml", RegexOptions.IgnoreCase) && a.Typ.Length > 0)
+                        fehler = "Das ist keine Webseite, sondern eine Datei (" + a.Typ.Split(';')[0] + ").\nGesichert werden können nur Webseiten.";
+                    else html = WebZumAnsehen(WebText(a), a.Ziel);
+                }
+                catch (WebException e) { fehler = WebFehlerText(e); }
+                catch (Exception) { fehler = "Die Webseite ließ sich nicht öffnen."; }
+            }
+            if (html == null)
+                html = "<!doctype html><meta charset=\"utf-8\"><meta name=\"fieldbook-fehler\" content=\"" + (fehler.StartsWith(WebSchutzText) ? "schutz" : "1") + "\"><title>Nicht geöffnet</title>" +
+                    "<body style=\"font:16px Segoe UI,sans-serif;padding:32px;color:#ddd;background:#1b1d1a\"><p>" +
+                    Regex.Replace(HtmlAttr(fehler).Replace("\n", " "), @"([.?!]) (?=[A-ZÄÖÜ])", "$1<br>") + "</p>";   // jeder Satz in eigener Zeile
+            var b = Utf8.GetBytes(html);
+            ctx.Response.ContentType = "text/html; charset=utf-8";
+            ctx.Response.AddHeader("Content-Security-Policy", WebCsp);
+            ctx.Response.AddHeader("Referrer-Policy", "no-referrer");
+            ctx.Response.AddHeader("Cache-Control", "no-store");
+            ctx.Response.ContentLength64 = b.Length;
+            ctx.Response.OutputStream.Write(b, 0, b.Length);
+        }
+
+        // Edge (oder Chrome) unsichtbar starten und die fertig aufgebaute Seite holen. Eigenes Profil in daten/cache,
+        // damit Fieldbook nicht in den Browser des Nutzers greift. null, wenn es nicht klappt.
+        static string WebBrowserPfad()
+        {
+            var orte = new[] {
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Microsoft\Edge\Application\msedge.exe",
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\Microsoft\Edge\Application\msedge.exe",
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Microsoft\Edge\Application\msedge.exe",
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\Google\Chrome\Application\chrome.exe",
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Google\Chrome\Application\chrome.exe",
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Google\Chrome\Application\chrome.exe" };
+            return orte.FirstOrDefault(File.Exists);
+        }
+
+        static string WebGerendert(Uri u)
+        {
+            string exe = WebBrowserPfad();
+            if (exe == null) return null;
+            string profil = Path.Combine(Daten, "cache", "browser-profil");
+            Directory.CreateDirectory(profil);
+            string proxy = ProxyFuer(u.AbsoluteUri);
+            string args = "--headless=new --disable-gpu --no-first-run --no-default-browser-check --disable-extensions --disable-sync --mute-audio" +
+                " --hide-scrollbars --window-size=1280,2000 --virtual-time-budget=8000 --lang=de-DE --user-data-dir=\"" + profil + "\"" +
+                (proxy != null ? " --proxy-server=\"" + proxy + "\"" : "") + " --dump-dom \"" + u.AbsoluteUri.Replace("\"", "%22") + "\"";
+            var psi = new ProcessStartInfo(exe, args) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Utf8 };
+            var aus = new StringBuilder();
+            try
+            {
+                using (var p = new Process { StartInfo = psi })
+                {
+                    p.OutputDataReceived += (s, e) => { if (e.Data != null) lock (aus) aus.Append(e.Data).Append('\n'); };
+                    p.ErrorDataReceived += (s, e) => { };
+                    p.Start();
+                    ChildJob.Add(p);
+                    p.BeginOutputReadLine();
+                    p.BeginErrorReadLine();
+                    if (!p.WaitForExit(45000))
+                    {
+                        // Ganzen Baum beenden (Edge startet Unterprozesse)
+                        try { Process.Start(new ProcessStartInfo("taskkill", "/T /F /PID " + p.Id) { UseShellExecute = false, CreateNoWindow = true }); } catch { }
+                        Log("Webseite sichern: Browser hat nicht rechtzeitig geantwortet.");
+                        return null;
+                    }
+                    p.WaitForExit();
+                }
+            }
+            catch (Exception e) { Log("Webseite sichern: Browser ließ sich nicht starten (" + e.GetType().Name + ")."); return null; }
+            string html;
+            lock (aus) html = aus.ToString();
+            return html.IndexOf("<body", StringComparison.OrdinalIgnoreCase) >= 0 ? html : null;
+        }
+
+        // Seite zum Speichern holen: {url} → {html, url (nach Weiterleitungen), gerendert}
+        static Dictionary<string, object> WebHolen(Dictionary<string, object> b)
+        {
+            var u = WebUri(Str(b, "url"));
+            if (u == null) return new Dictionary<string, object> { { "fehler", "Diese Adresse kann Fieldbook nicht sichern." } };
+            WebAntwort a;
+            try { a = WebLaden(u, null, 15000000, 20000); }
+            catch (WebException e) { string t = WebFehlerText(e); return new Dictionary<string, object> { { "fehler", t }, { "schutz", t.StartsWith(WebSchutzText) }, { "technisch", e.Message } }; }
+            catch (Exception e) { return new Dictionary<string, object> { { "fehler", "Die Webseite ließ sich nicht laden." }, { "technisch", e.Message } }; }
+            if (a.Typ.Length > 0 && !Regex.IsMatch(a.Typ, @"html|xml", RegexOptions.IgnoreCase))
+                return new Dictionary<string, object> { { "fehler", "Das ist keine Webseite, sondern eine Datei. Gesichert werden können nur Webseiten." } };
+            string html = WebGerendert(a.Ziel);
+            bool gerendert = html != null;
+            if (html == null) html = WebText(a);
+            return new Dictionary<string, object> { { "html", html }, { "url", a.Ziel.AbsoluteUri }, { "gerendert", gerendert } };
+        }
+
+        static readonly Dictionary<string, string> WebEndungen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            { "image/png", ".png" }, { "image/jpeg", ".jpg" }, { "image/jpg", ".jpg" }, { "image/gif", ".gif" }, { "image/webp", ".webp" },
+            { "image/svg+xml", ".svg" }, { "image/avif", ".avif" }, { "image/x-icon", ".ico" }, { "image/vnd.microsoft.icon", ".ico" },
+            { "image/bmp", ".bmp" }, { "text/css", ".css" }, { "font/woff2", ".woff2" }, { "font/woff", ".woff" }, { "application/font-woff", ".woff" },
+            { "application/x-font-woff", ".woff" }, { "font/ttf", ".ttf" }, { "application/x-font-ttf", ".ttf" }, { "font/otf", ".otf" } };
+        static readonly string[] WebErlaubt = { ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".ico", ".bmp", ".css", ".woff2", ".woff", ".ttf", ".otf" };
+
+        // Eine Datei (Bild, CSS, Schrift) nach _dateien laden; Name = Prüfsumme der Adresse, gleiche Dateien also nur einmal.
+        // CSS wird umgeschrieben, damit Hintergrundbilder und Schriften ebenfalls lokal liegen. null, wenn es nicht geht.
+        static string WebDateiLaden(string adresse, string ziel, string referer, int tiefe, long[] gesamt)
+        {
+            var u = WebUri(adresse);
+            if (u == null) return null;
+            string hash = WebKurz(u.AbsoluteUri, 16);
+            try
+            {
+                var da = Directory.GetFiles(ziel, hash + ".*");
+                if (da.Length > 0) return Path.GetFileName(da[0]);
+            }
+            catch (DirectoryNotFoundException) { }
+            if (Interlocked.Read(ref gesamt[0]) > 300000000) return null;   // höchstens etwa 300 MB je Seite
+            WebAntwort a;
+            try { a = WebLaden(u, referer, 30000000, 30000); }
+            catch { return null; }
+            Interlocked.Add(ref gesamt[0], a.Daten.Length);
+            string typ = a.Typ.Split(';')[0].Trim(), ext;
+            if (!WebEndungen.TryGetValue(typ, out ext))
+            {
+                ext = Path.GetExtension(u.AbsolutePath).ToLowerInvariant();
+                if (ext == ".jpeg") ext = ".jpg";
+                if (!WebErlaubt.Contains(ext)) return null;   // HTML-Fehlerseiten, Skripte usw. nicht speichern
+            }
+            byte[] daten = a.Daten;
+            if (ext == ".css") daten = Utf8.GetBytes(WebCssUmschreiben(WebText(a), a.Ziel, ziel, tiefe, gesamt));
+            string name = hash + ext;
+            Directory.CreateDirectory(ziel);
+            string tmp = Path.Combine(ziel, "." + Guid.NewGuid().ToString("N") + ".part");
+            try
+            {
+                File.WriteAllBytes(tmp, daten);
+                if (!File.Exists(Path.Combine(ziel, name))) File.Move(tmp, Path.Combine(ziel, name));
+            }
+            catch { }
+            finally { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } }
+            return File.Exists(Path.Combine(ziel, name)) ? name : null;
+        }
+
+        static string WebCssUmschreiben(string css, Uri basis, string ziel, int tiefe, long[] gesamt)
+        {
+            if (tiefe >= 3) return css;
+            MatchEvaluator ersetzen = m =>
+            {
+                string r = m.Groups[2].Value.Trim();
+                if (r.Length == 0 || r.StartsWith("data:", StringComparison.OrdinalIgnoreCase) || r.StartsWith("#")) return m.Value;
+                Uri abs;
+                if (!Uri.TryCreate(basis, r, out abs)) return m.Value;
+                string n = WebDateiLaden(abs.AbsoluteUri, ziel, basis.AbsoluteUri, tiefe + 1, gesamt);
+                return m.Value.StartsWith("@") ? "@import url(\"" + (n ?? abs.AbsoluteUri) + "\")" : "url(\"" + (n ?? abs.AbsoluteUri) + "\")";
+            };
+            css = Regex.Replace(css, @"@import\s+(['""])(.*?)\1", ersetzen, RegexOptions.IgnoreCase);
+            css = Regex.Replace(css, @"url\(\s*(['""]?)(.*?)\1\s*\)", ersetzen, RegexOptions.IgnoreCase);
+            return css;
+        }
+
+        // {url (der Seite), dateien: [Adressen]} → {karte: {Adresse: Dateiname in _dateien}}
+        static Dictionary<string, object> WebDateien(Dictionary<string, object> b)
+        {
+            var seite = WebUri(Str(b, "url"));
+            if (seite == null) return new Dictionary<string, object> { { "fehler", "Ungültige Adresse." } };
+            string host = WebOrdnerVon(seite).Split('/')[0];
+            string ziel = Path.Combine(WebseitenOrdner, host, "_dateien");
+            var adressen = Arr(b, "dateien").Select(x => x as string).Where(x => x != null).Distinct().Take(500).ToList();
+            var karte = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+            var gesamt = new long[1];
+            System.Threading.Tasks.Parallel.ForEach(adressen, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 6 }, adr =>
+            {
+                string n = WebDateiLaden(adr, ziel, seite.AbsoluteUri, 0, gesamt);
+                if (n != null) karte[adr] = n;
+            });
+            return new Dictionary<string, object> { { "karte", karte.ToDictionary(kv => kv.Key, kv => (object)kv.Value) }, { "ordner", WebOrdnerVon(seite) } };
+        }
+
+        static string WebIndexSchreiben(string ordner, string html)
+        {
+            string pfad = WebOrdnerPfad(ordner);
+            if (pfad == null) return null;
+            Directory.CreateDirectory(pfad);
+            string datei = Path.Combine(pfad, "index.html"), tmp = datei + ".part";
+            File.WriteAllText(tmp, html, new UTF8Encoding(false));
+            if (File.Exists(datei)) File.Delete(datei);
+            File.Move(tmp, datei);
+            return datei;
+        }
+
+        // {url, name, html} → speichert index.html und trägt die Seite in die Liste ein
+        static Dictionary<string, object> WebSpeichern(Dictionary<string, object> b)
+        {
+            var u = WebUri(Str(b, "url"));
+            string html = Str(b, "html");
+            if (u == null || string.IsNullOrEmpty(html)) return new Dictionary<string, object> { { "fehler", "Die Seite ließ sich nicht speichern." } };
+            string name = (Str(b, "name") ?? "").Trim();
+            if (name.Length > 200) name = name.Substring(0, 200);
+            if (name.Length == 0) name = u.Host;
+            string ordner = WebOrdnerVon(u);
+            try
+            {
+                lock (WebLk)
+                {
+                    WebIndexSchreiben(ordner, html);
+                    var alle = WebSeitenLaden();
+                    var vorher = alle.FirstOrDefault(e => Str(e, "ordner") == ordner);
+                    var liste = alle.Where(e => Str(e, "ordner") != ordner).ToList();
+                    var eintrag = new Dictionary<string, object> { { "ordner", ordner }, { "url", u.AbsoluteUri }, { "name", name }, { "datum", DateTime.Now.ToString("s") } };
+                    // Ordner in Fieldbook: gewählt beim Speichern, sonst der bisherige (bei „Neu holen“)
+                    string gruppe = b.ContainsKey("gruppe") ? Str(b, "gruppe") : vorher != null ? Str(vorher, "gruppe") : null;
+                    if (!string.IsNullOrEmpty(gruppe) && WebGruppenLaden().Any(g => Str(g, "id") == gruppe)) eintrag["gruppe"] = gruppe;
+                    liste.Add(eintrag);
+                    WebSeitenSchreiben(liste.OrderBy(e => Str(e, "ordner"), StringComparer.OrdinalIgnoreCase).ToList());
+                }
+            }
+            catch (Exception e)
+            {
+                Log("Webseite sichern: " + e.GetType().Name);
+                return new Dictionary<string, object> { { "fehler", "Die Seite ließ sich nicht speichern. Ist genug Platz auf dem Laufwerk?" }, { "technisch", e.Message } };
+            }
+            Log("Webseite gesichert.");
+            return new Dictionary<string, object> { { "ok", true }, { "ordner", ordner } };
+        }
+
+        // {ordner, html}: Links einer schon gesicherten Seite neu setzen (nachdem eine andere Seite dazukam oder wegfiel)
+        static Dictionary<string, object> WebHtmlErsetzen(Dictionary<string, object> b)
+        {
+            string ordner = Str(b, "ordner"), html = Str(b, "html");
+            if (string.IsNullOrEmpty(html)) return new Dictionary<string, object> { { "fehler", "Leer." } };
+            lock (WebLk)
+            {
+                if (!WebSeitenLaden().Any(e => Str(e, "ordner") == ordner)) return new Dictionary<string, object> { { "fehler", "Seite nicht gefunden." } };
+                try { WebIndexSchreiben(ordner, html); }
+                catch (Exception e) { return new Dictionary<string, object> { { "fehler", "Speichern ging nicht." }, { "technisch", e.Message } }; }
+            }
+            return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        static Dictionary<string, object> WebUmbenennen(Dictionary<string, object> b)
+        {
+            string ordner = Str(b, "ordner"), name = (Str(b, "name") ?? "").Trim();
+            if (name.Length == 0) return new Dictionary<string, object> { { "fehler", "Bitte einen Namen eingeben." } };
+            if (name.Length > 200) name = name.Substring(0, 200);
+            lock (WebLk)
+            {
+                var liste = WebSeitenLaden();
+                var e = liste.FirstOrDefault(x => Str(x, "ordner") == ordner);
+                if (e == null) return new Dictionary<string, object> { { "fehler", "Seite nicht gefunden." } };
+                e["name"] = name;
+                WebSeitenSchreiben(liste);
+            }
+            lock (PdfLk) pdfBuecher.Remove(EigenePaket);   // Titel in Suche und KI neu
+            return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        // Seite löschen: index.html weg, leere Ordner weg; Bilder, die keine Seite der Website mehr braucht, auch
+        static Dictionary<string, object> WebLoeschen(Dictionary<string, object> b)
+        {
+            string ordner = Str(b, "ordner");
+            string pfad = WebOrdnerPfad(ordner);
+            if (pfad == null) return new Dictionary<string, object> { { "fehler", "Seite nicht gefunden." } };
+            string host = ordner.Split('/')[0];
+            string hostPfad = Path.Combine(WebseitenOrdner, host);
+            lock (WebLk)
+            {
+                var liste = WebSeitenLaden();
+                if (!liste.Any(e => Str(e, "ordner") == ordner)) return new Dictionary<string, object> { { "fehler", "Seite nicht gefunden." } };
+                try
+                {
+                    string datei = Path.Combine(pfad, "index.html");
+                    if (File.Exists(datei)) File.Delete(datei);
+                    // Leere Ordner bis hinauf zum Rechnernamen entfernen
+                    for (var d = new DirectoryInfo(pfad); d != null && d.FullName.Length > hostPfad.Length; d = d.Parent)
+                        if (d.Exists && !d.EnumerateFileSystemInfos().Any()) d.Delete(); else break;
+                }
+                catch (Exception e) { return new Dictionary<string, object> { { "fehler", "Löschen ging nicht. Ist die Seite gerade in einem anderen Programm offen?" }, { "technisch", e.Message } }; }
+                liste = liste.Where(e => Str(e, "ordner") != ordner).ToList();
+                WebSeitenSchreiben(liste);
+                try { WebDateienAufraeumen(host, liste); } catch (Exception e) { Log("Webseite löschen, aufräumen: " + e.Message); }
+            }
+            Log("Gesicherte Webseite gelöscht.");
+            return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        static void WebDateienAufraeumen(string host, List<Dictionary<string, object>> liste)
+        {
+            string hostPfad = Path.Combine(WebseitenOrdner, host), dateien = Path.Combine(hostPfad, "_dateien");
+            var seiten = liste.Where(e => (Str(e, "ordner") ?? "").Split('/')[0] == host).ToList();
+            if (!seiten.Any())
+            {
+                if (Directory.Exists(dateien)) Directory.Delete(dateien, true);
+                if (Directory.Exists(hostPfad) && !Directory.EnumerateFileSystemEntries(hostPfad).Any()) Directory.Delete(hostPfad);
+                return;
+            }
+            if (!Directory.Exists(dateien)) return;
+            var name = new Regex(@"[0-9a-f]{16}\.[a-z0-9]{2,5}");
+            var gebraucht = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var e in seiten)
+            {
+                string p = WebOrdnerPfad(Str(e, "ordner"));
+                if (p == null || !File.Exists(Path.Combine(p, "index.html"))) continue;
+                foreach (Match m in name.Matches(File.ReadAllText(Path.Combine(p, "index.html")))) gebraucht.Add(m.Value);
+            }
+            // Was die gebrauchten CSS-Dateien laden (Schriften, Hintergründe), bleibt auch
+            var offen = new Queue<string>(gebraucht.Where(n => n.EndsWith(".css")));
+            while (offen.Count > 0)
+            {
+                string css = Path.Combine(dateien, offen.Dequeue());
+                if (!File.Exists(css)) continue;
+                foreach (Match m in name.Matches(File.ReadAllText(css)))
+                    if (gebraucht.Add(m.Value) && m.Value.EndsWith(".css")) offen.Enqueue(m.Value);
+            }
+            foreach (var f in Directory.GetFiles(dateien))
+                if (!gebraucht.Contains(Path.GetFileName(f))) try { File.Delete(f); } catch { }
+        }
+
+        // ---------------- Seiten aus einem sichtbaren Edge-Fenster übernehmen
+        // Für Seiten mit Roboterschutz (Cloudflare & Co.): Fieldbook öffnet ein normales, sichtbares Edge-Fenster
+        // (eigenes Profil daten/cache/browser-fenster, Fernsteuerung nur auf 127.0.0.1). Der Nutzer besucht die Seite
+        // dort selbst und geht selbst durch eine Prüfung. Beim Speichern liest Fieldbook die fertige Seite und die schon
+        // geladenen Bilder aus diesem Fenster (wie „Speichern unter“). Es löst keine Prüfungen und verschleiert nichts.
+
+        static int webFensterPort;
+        static readonly object WebFensterLk = new object();
+
+        static string WebFensterHttp(string pfad, string methode)
+        {
+            var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + webFensterPort + pfad);
+            req.Proxy = null;
+            req.Method = methode;
+            req.Timeout = 5000;
+            using (var resp = req.GetResponse())
+            using (var r = new StreamReader(resp.GetResponseStream(), Utf8))
+                return r.ReadToEnd();
+        }
+
+        static bool WebFensterLaeuft()
+        {
+            if (webFensterPort == 0) return false;
+            try { WebFensterHttp("/json/version", "GET"); return true; } catch { return false; }
+        }
+
+        static Dictionary<string, object> WebFensterOeffnen(Dictionary<string, object> b)
+        {
+            var u = WebUri(Str(b, "url"));
+            if (u == null) return new Dictionary<string, object> { { "fehler", "Diese Adresse kann Fieldbook nicht öffnen." } };
+            lock (WebFensterLk)
+            {
+                if (WebFensterLaeuft())
+                {
+                    try { WebFensterHttp("/json/new?" + u.AbsoluteUri, "PUT"); return new Dictionary<string, object> { { "ok", true } }; }
+                    catch (Exception e) { Log("Edge-Fenster, neuer Tab: " + e.Message); }
+                }
+                string exe = WebBrowserPfad();
+                if (exe == null) return new Dictionary<string, object> { { "fehler", "Dafür braucht Fieldbook Microsoft Edge oder Google Chrome, beides ist auf diesem Rechner nicht zu finden." } };
+                string profil = Path.Combine(Daten, "cache", "browser-fenster");
+                Directory.CreateDirectory(profil);
+                int port = FreierPort();
+                string proxy = ProxyFuer(u.AbsoluteUri);
+                string args = "--remote-debugging-port=" + port + " --user-data-dir=\"" + profil + "\" --no-first-run --no-default-browser-check --disable-sync" +
+                    (proxy != null ? " --proxy-server=\"" + proxy + "\"" : "") + " --new-window \"" + u.AbsoluteUri.Replace("\"", "%22") + "\"";
+                try
+                {
+                    var p = Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = false });
+                    ChildJob.Add(p);
+                }
+                catch (Exception e)
+                {
+                    Log("Edge-Fenster ließ sich nicht starten (" + e.GetType().Name + ").");
+                    return new Dictionary<string, object> { { "fehler", "Das Browserfenster ließ sich nicht öffnen." }, { "technisch", e.Message } };
+                }
+                webFensterPort = port;
+                for (int i = 0; i < 60 && !WebFensterLaeuft(); i++) Thread.Sleep(250);
+            }
+            return new Dictionary<string, object> { { "ok", true } };
+        }
+
+        static List<Dictionary<string, object>> WebFensterTabs()
+        {
+            var liste = Json.DeserializeObject(WebFensterHttp("/json/list", "GET")) as object[] ?? new object[0];
+            return liste.OfType<Dictionary<string, object>>()
+                .Where(t => Str(t, "type") == "page" && WebUri(Str(t, "url")) != null).ToList();
+        }
+
+        static Dictionary<string, object> WebFensterStatus()
+        {
+            if (webFensterPort == 0) return new Dictionary<string, object> { { "offen", false } };
+            try
+            {
+                var seiten = WebFensterTabs().Select(t => (object)new Dictionary<string, object> {
+                    { "id", Str(t, "id") }, { "titel", Str(t, "title") }, { "url", Str(t, "url") } }).ToList();
+                return new Dictionary<string, object> { { "offen", true }, { "seiten", seiten } };
+            }
+            catch { return new Dictionary<string, object> { { "offen", false } }; }
+        }
+
+        // Kleine Verbindung zum Browser (Chrome DevTools Protocol über WebSocket), nur für das Auslesen beim Speichern
+        class Cdp : IDisposable
+        {
+            readonly System.Net.WebSockets.ClientWebSocket ws = new System.Net.WebSockets.ClientWebSocket();
+            int nr;
+            public Cdp(string adresse)
+            {
+                if (!ws.ConnectAsync(new Uri(adresse), CancellationToken.None).Wait(10000)) throw new TimeoutException("Keine Verbindung zum Browser.");
+            }
+            public Dictionary<string, object> Rufe(string methode, Dictionary<string, object> par, int frist)
+            {
+                int id = ++nr;
+                var b = Utf8.GetBytes(Json.Serialize(new Dictionary<string, object> { { "id", id }, { "method", methode }, { "params", par ?? new Dictionary<string, object>() } }));
+                ws.SendAsync(new ArraySegment<byte>(b), System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+                var ende = DateTime.UtcNow.AddMilliseconds(frist);
+                while (true)
+                {
+                    var d = Json.DeserializeObject(Empfange(ende)) as Dictionary<string, object>;
+                    if (d == null || !d.ContainsKey("id") || Convert.ToInt32(d["id"]) != id) continue;   // Ereignisse überspringen
+                    if (d.ContainsKey("error")) throw new InvalidOperationException(Json.Serialize(d["error"]));
+                    return d.ContainsKey("result") ? d["result"] as Dictionary<string, object> ?? new Dictionary<string, object>() : new Dictionary<string, object>();
+                }
+            }
+            string Empfange(DateTime ende)
+            {
+                var ms = new MemoryStream();
+                var buf = new byte[65536];
+                while (true)
+                {
+                    int rest = (int)(ende - DateTime.UtcNow).TotalMilliseconds;
+                    if (rest <= 0) throw new TimeoutException("Der Browser antwortet nicht.");
+                    var t = ws.ReceiveAsync(new ArraySegment<byte>(buf), new CancellationTokenSource(rest).Token);
+                    t.Wait();
+                    ms.Write(buf, 0, t.Result.Count);
+                    if (t.Result.EndOfMessage) return Utf8.GetString(ms.ToArray());
+                }
+            }
+            public void Dispose()
+            {
+                try { ws.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).Wait(2000); } catch { }
+                ws.Dispose();
+            }
+        }
+
+        // {id (Tab)} → {html, url, titel}; Bilder, CSS und Schriften der Seite landen gleich in _dateien
+        static Dictionary<string, object> WebFensterHolen(Dictionary<string, object> b)
+        {
+            Dictionary<string, object> tab;
+            try { tab = WebFensterTabs().FirstOrDefault(t => Str(t, "id") == Str(b, "id")); }
+            catch { return new Dictionary<string, object> { { "fehler", "Das Browserfenster ist nicht mehr offen." } }; }
+            if (tab == null) return new Dictionary<string, object> { { "fehler", "Diese Seite ist im Browserfenster nicht mehr offen." } };
+            var u = WebUri(Str(tab, "url"));
+            string wsAdresse = Str(tab, "webSocketDebuggerUrl");
+            if (u == null || wsAdresse == null) return new Dictionary<string, object> { { "fehler", "Diese Seite lässt sich nicht übernehmen." } };
+            try
+            {
+                using (var c = new Cdp(wsAdresse))
+                {
+                    Func<string, string> werte = (ausdruck) =>
+                    {
+                        var r = c.Rufe("Runtime.evaluate", new Dictionary<string, object> { { "expression", ausdruck }, { "returnByValue", true } }, 20000);
+                        var w = r.ContainsKey("result") ? r["result"] as Dictionary<string, object> : null;
+                        return w != null ? Str(w, "value") : null;
+                    };
+                    string html = werte("document.documentElement.outerHTML");
+                    string titel = werte("document.title");
+                    string adresse = werte("location.href");
+                    var echt = WebUri(adresse) ?? u;
+                    if (string.IsNullOrEmpty(html)) return new Dictionary<string, object> { { "fehler", "Die Seite ist noch nicht fertig geladen." } };
+                    int dateien = 0;
+                    try { dateien = WebFensterDateien(c, echt); } catch (Exception e) { Log("Edge-Fenster, Dateien: " + e.Message); }
+                    try { dateien += WebFensterBildLinks(c, echt, werte); } catch (Exception e) { Log("Edge-Fenster, große Bilder: " + e.Message); }
+                    Log("Webseite aus dem Browserfenster übernommen (" + dateien + " Dateien).");
+                    return new Dictionary<string, object> { { "html", html }, { "url", echt.AbsoluteUri }, { "titel", titel ?? "" }, { "gerendert", true } };
+                }
+            }
+            catch (Exception e)
+            {
+                Log("Edge-Fenster auslesen: " + e.GetType().Name + " " + e.Message);
+                return new Dictionary<string, object> { { "fehler", "Die Seite ließ sich nicht aus dem Browserfenster übernehmen. Ist sie dort fertig geladen?" }, { "technisch", e.Message } };
+            }
+        }
+
+        // Schon geladene Dateien des Tabs aus dem Zwischenspeicher des Browsers nach _dateien schreiben (kein neuer Abruf)
+        static int WebFensterDateien(Cdp c, Uri seite)
+        {
+            var baum = c.Rufe("Page.getResourceTree", null, 10000);
+            var ft = baum.ContainsKey("frameTree") ? baum["frameTree"] as Dictionary<string, object> : null;
+            if (ft == null) return 0;
+            var frame = ft["frame"] as Dictionary<string, object>;
+            string frameId = Str(frame, "id");
+            string ziel = Path.Combine(WebseitenOrdner, WebOrdnerVon(seite).Split('/')[0], "_dateien");
+            Directory.CreateDirectory(ziel);
+            var gesamt = new long[1];
+            var res = Arr(ft, "resources").OfType<Dictionary<string, object>>()
+                .Where(r => { string t = Str(r, "type"); return t == "Image" || t == "Font" || t == "Stylesheet"; })
+                .OrderBy(r => Str(r, "type") == "Stylesheet" ? 1 : 0).Take(500).ToList();   // CSS zuletzt: Schriften liegen dann schon da
+            int n = 0;
+            foreach (var r in res)
+            {
+                var ru = WebUri(Str(r, "url"));
+                if (ru == null) continue;
+                string hash = WebKurz(ru.AbsoluteUri, 16);
+                if (Directory.GetFiles(ziel, hash + ".*").Length > 0) continue;
+                string ext;
+                if (!WebEndungen.TryGetValue((Str(r, "mimeType") ?? "").Split(';')[0].Trim(), out ext))
+                {
+                    ext = Path.GetExtension(ru.AbsolutePath).ToLowerInvariant();
+                    if (ext == ".jpeg") ext = ".jpg";
+                    if (!WebErlaubt.Contains(ext)) continue;
+                }
+                Dictionary<string, object> inhalt;
+                try { inhalt = c.Rufe("Page.getResourceContent", new Dictionary<string, object> { { "frameId", frameId }, { "url", Str(r, "url") } }, 15000); }
+                catch { continue; }
+                string text = Str(inhalt, "content") ?? "";
+                byte[] daten = Bool(inhalt, "base64Encoded") ? Convert.FromBase64String(text) : Utf8.GetBytes(text);
+                if (ext == ".css") daten = Utf8.GetBytes(WebCssUmschreiben(Bool(inhalt, "base64Encoded") ? Utf8.GetString(daten) : text, ru, ziel, 0, gesamt));
+                string tmp = Path.Combine(ziel, "." + Guid.NewGuid().ToString("N") + ".part");
+                try
+                {
+                    File.WriteAllBytes(tmp, daten);
+                    if (!File.Exists(Path.Combine(ziel, hash + ext))) { File.Move(tmp, Path.Combine(ziel, hash + ext)); n++; }
+                }
+                catch { }
+                finally { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } }
+            }
+            return n;
+        }
+
+        // Bilder, die nur verlinkt sind (Vorschaubild → großes Bild), im Fenster selbst abrufen: dort gilt die Freigabe
+        // der Seite schon. Klappt es nicht (z. B. Bild von einem anderen Server), lädt sie später WebDateien.
+        static int WebFensterBildLinks(Cdp c, Uri seite, Func<string, string> werte)
+        {
+            string ziel = Path.Combine(WebseitenOrdner, WebOrdnerVon(seite).Split('/')[0], "_dateien");
+            Directory.CreateDirectory(ziel);
+            var liste = Json.DeserializeObject(werte("JSON.stringify([...new Set([...document.querySelectorAll('a[href]')].map(a => a.href)" +
+                ".filter(h => { try { return /^https?:/i.test(h) && /\\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(new URL(h).pathname); } catch (e) { return false; } }))].slice(0, 100))") ?? "[]") as object[];
+            int n = 0;
+            foreach (var o in liste ?? new object[0])
+            {
+                var u = WebUri(o as string);
+                if (u == null) continue;
+                string hash = WebKurz(u.AbsoluteUri, 16);
+                if (Directory.GetFiles(ziel, hash + ".*").Length > 0) continue;
+                Dictionary<string, object> r;
+                try
+                {
+                    r = c.Rufe("Runtime.evaluate", new Dictionary<string, object> {
+                        { "expression", "fetch(" + Json.Serialize(u.AbsoluteUri) + ", { credentials: 'include' }).then(r => r.ok ? r.blob() : null)" +
+                            ".then(b => !b || b.size > 25000000 ? null : new Promise(ok => { const f = new FileReader(); f.onload = () => ok(f.result); f.onerror = () => ok(null); f.readAsDataURL(b); }))" +
+                            ".catch(() => null)" },
+                        { "awaitPromise", true }, { "returnByValue", true } }, 30000);
+                }
+                catch { continue; }
+                var w = r.ContainsKey("result") ? r["result"] as Dictionary<string, object> : null;
+                var m = Regex.Match(w != null ? Str(w, "value") ?? "" : "", @"^data:([^;,]*)(;base64)?,(.*)$", RegexOptions.Singleline);
+                if (!m.Success || m.Groups[2].Length == 0) continue;
+                string ext;
+                if (!WebEndungen.TryGetValue(m.Groups[1].Value, out ext) || ext == ".css")
+                {
+                    ext = Path.GetExtension(u.AbsolutePath).ToLowerInvariant();
+                    if (ext == ".jpeg") ext = ".jpg";
+                    if (!WebErlaubt.Contains(ext) || ext == ".css") continue;
+                }
+                if (WebDateiSchreiben(ziel, hash + ext, Convert.FromBase64String(m.Groups[3].Value))) n++;
+            }
+            return n;
+        }
+
+        static bool WebDateiSchreiben(string ziel, string name, byte[] daten)
+        {
+            string tmp = Path.Combine(ziel, "." + Guid.NewGuid().ToString("N") + ".part");
+            try
+            {
+                File.WriteAllBytes(tmp, daten);
+                if (File.Exists(Path.Combine(ziel, name))) return false;
+                File.Move(tmp, Path.Combine(ziel, name));
+                return true;
+            }
+            catch { return false; }
+            finally { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } }
+        }
+
+        static object WebListe()
+        {
+            return WebSeiten().Select(kv => new Dictionary<string, object> {
+                { "ordner", Str(kv.Key, "ordner") }, { "url", Str(kv.Key, "url") }, { "name", Str(kv.Key, "name") },
+                { "datum", Str(kv.Key, "datum") }, { "adresse", WebAdresseVonOrdner(Str(kv.Key, "ordner")) } }).ToList();
         }
 
         static void SendeText(HttpListenerContext ctx, int code, string text)
@@ -1816,6 +3525,8 @@ namespace OfflineWissen
                 if (ende >= 0) n = n.Substring(0, ende);
                 string name;
                 try { name = Uri.UnescapeDataString(n); } catch { name = null; }
+                // Notizen (HTML) direkt geöffnet: ohne Programmcode
+                if (name != null && name.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) ctx.Response.AddHeader("Content-Security-Policy", WebCsp);
                 SendeDatei(ctx, EigenePfad(name));
                 return;
             }
@@ -1829,6 +3540,21 @@ namespace OfflineWissen
                 case "eigene/text": SendeJson(ctx, EigeneTextSpeichern(LeseBody(ctx))); return;
                 case "eigene/umbenennen": SendeJson(ctx, EigeneUmbenennen(LeseBody(ctx))); return;
                 case "eigene/loeschen": SendeJson(ctx, EigeneLoeschen(LeseBody(ctx))); return;
+                case "eigene/notiz/neu": SendeJson(ctx, NotizNeu(LeseBody(ctx))); return;
+                case "eigene/notiz/speichern": SendeJson(ctx, NotizSpeichern(LeseBody(ctx))); return;
+                // Webseiten sichern (Browser in Fieldbook, js/webseiten.js)
+                case "web/ansehen": WebAnsehen(ctx, Q("url")); return;
+                case "web/holen": SendeJson(ctx, WebHolen(LeseBody(ctx))); return;
+                case "web/dateien": SendeJson(ctx, WebDateien(LeseBody(ctx))); return;
+                case "web/speichern": SendeJson(ctx, WebSpeichern(LeseBody(ctx))); return;
+                case "web/html": SendeJson(ctx, WebHtmlErsetzen(LeseBody(ctx))); return;
+                case "web/umbenennen": SendeJson(ctx, WebUmbenennen(LeseBody(ctx))); return;
+                case "web/loeschen": SendeJson(ctx, WebLoeschen(LeseBody(ctx))); return;
+                case "web/liste": SendeJson(ctx, new Dictionary<string, object> { { "seiten", WebListe() } }); return;
+                case "web/gruppen": SendeJson(ctx, WebGruppen(LeseBody(ctx))); return;
+                case "web/fenster": SendeJson(ctx, WebFensterStatus()); return;
+                case "web/fenster/oeffnen": SendeJson(ctx, WebFensterOeffnen(LeseBody(ctx))); return;
+                case "web/fenster/holen": SendeJson(ctx, WebFensterHolen(LeseBody(ctx))); return;
                 case "eigene/ordner":
                     try
                     {
@@ -1869,6 +3595,15 @@ namespace OfflineWissen
                 case "einrichtungen":
                     if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, EinrichtungenMerken(ctx, Q("v")));
                     else SendeText(ctx, 200, EinrichtungenLesen(Q("v")));
+                    return;
+                // Rundgang, Kapitel Karten: Beispielkarte da? (GET) bzw. jetzt laden (POST, dauert einige Sekunden)
+                case "uebung/beispielkarte":
+                    if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, BeispielKarteLaden());
+                    else
+                    {
+                        string bk = BeispielKartePfad();
+                        SendeJson(ctx, new Dictionary<string, object> { { "da", bk != null && File.Exists(bk) && ProgrammPfad("karten-assets") != null } });
+                    }
                     return;
                 // Eigene Orte auf der Karte: ganze Liste lesen bzw. ersetzen (daten/orte/meine-orte.json)
                 case "meineorte":
@@ -6827,6 +8562,8 @@ namespace OfflineWissen
                 string datei = Path.Combine(Daten, "modelle", Str(m, "datei"));
                 if (!File.Exists(datei)) { llmStatus = "aus"; return; }
                 string backend = Str(einst, "backend") ?? "cpu";
+                // Nur zum Messen der Laptop-Zeit: OW_KI_CPU=1 rechnet die KI auf dem Prozessor, ohne die Einstellung zu ändern
+                if (Environment.GetEnvironmentVariable("OW_KI_CPU") == "1") backend = "cpu";
                 exe = ProgrammPfad("llama-" + backend);
                 if (exe == null && backend != "cpu") { backend = "cpu"; exe = ProgrammPfad("llama-cpu"); }
                 if (exe == null) { llmStatus = "fehler"; llmFehler = "llama.cpp fehlt. Bitte im Setup die KI neu einrichten."; return; }
@@ -6848,7 +8585,9 @@ namespace OfflineWissen
                 gen = ++llmGen;
                 llama = StarteDienst(exe, args + " --reasoning-budget 0", Path.Combine(Logs, "ki.log"));
                 Log("KI wird geladen: " + llmModell + " [" + backend + "]");
-                StarteSuchhilfe();
+                kiBackend = backend;
+                // Auf dem Prozessor gleich mitstarten. Mit Grafikkarte erst, wenn die KI geladen ist (siehe StarteSuchhilfe)
+                if (backend == "cpu") StarteSuchhilfe();
             }
             bool zweiterVersuch = false;
             var ladeUhr = Stopwatch.StartNew();
@@ -6885,6 +8624,8 @@ namespace OfflineWissen
                     llmStatus = "bereit";
                     Log("KI ist bereit.");
                     StatKi("laden", ladeUhr.Elapsed.TotalSeconds);
+                    // Mit Grafikkarte jetzt die Suchhilfe dazuladen (die KI hat ihren Speicher schon)
+                    StarteSuchhilfe();
                     return;
                 }
                 // Nicht endlos warten: nach 10 Minuten aufgeben, damit der Status nicht für immer "laedt" zeigt
@@ -6924,7 +8665,7 @@ namespace OfflineWissen
 
         // ------------------------------------------------------------------ Suchhilfe (Bedeutungsmodell)
         // Ein kleines Modell (EmbeddingGemma) sortiert die Treffer der KI-Suche nach Bedeutung statt nach
-        // gleichen Wörtern. Läuft als zweiter llama-server mit --embedding, immer auf dem Prozessor
+        // gleichen Wörtern. Läuft als zweiter llama-server mit --embedding, mit der KI auf der Grafikkarte, sonst auf dem Prozessor
         // (etwa 1 s je Frage). Fehlt es oder läuft es nicht, sucht die KI wie vorher.
 
         static Dictionary<string, object> SuchhilfeInfo()
@@ -6966,12 +8707,58 @@ namespace OfflineWissen
             {
                 if (suchhilfe != null && !suchhilfe.HasExited) return;
                 if (!SuchhilfeDa()) return;
-                // Immer auf dem Prozessor: das Programm für den Prozessor, sonst das der KI ohne Grafikkarte
-                string exe = ProgrammPfad("llama-cpu") ?? ProgrammPfad("llama-" + (Str(einst, "backend") ?? "cpu"));
-                if (exe == null) return;
-                string args = "-m \"" + SuchhilfeDatei() + "\" --host 127.0.0.1 --port " + SuchPort + " --embedding -c 8192 -b 2048 -ub 2048 --parallel 4 -ngl 0";
-                try { suchhilfe = StarteDienst(exe, args, Path.Combine(Logs, "suchhilfe.log")); }
-                catch (Exception e) { suchhilfe = null; Log("Suchhilfe konnte nicht starten: " + e.Message); }
+                // Läuft die KI auf der Grafikkarte, kommt die Suchhilfe dazu (40 Absätze 0,8 s statt 4,8 s). Erst wenn die KI
+                // geladen ist, damit sie ihren Speicher sicher hat. Passt die Suchhilfe nicht mehr drauf oder startet sie dort
+                // nicht, läuft sie wie früher auf dem Prozessor (PruefeSuchhilfeGpu).
+                string gpuExe = kiBackend != "cpu" && llmStatus == "bereit" ? ProgrammPfad("llama-" + kiBackend) : null;
+                if (gpuExe != null)
+                {
+                    try
+                    {
+                        var p = StarteDienst(gpuExe, SuchhilfeArgs(true), Path.Combine(Logs, "suchhilfe.log"));
+                        suchhilfe = p;
+                        new Thread(() => PruefeSuchhilfeGpu(p)) { IsBackground = true }.Start();
+                        return;
+                    }
+                    catch (Exception e) { suchhilfe = null; Log("Suchhilfe auf der Grafikkarte nicht gestartet: " + e.Message); }
+                }
+                StarteSuchhilfeCpu();
+            }
+        }
+
+        static string SuchhilfeArgs(bool gpu)
+        {
+            return "-m \"" + SuchhilfeDatei() + "\" --host 127.0.0.1 --port " + SuchPort + " --embedding -c 8192 -b 2048 -ub 2048 --parallel 4 -ngl " + (gpu ? "99" : "0");
+        }
+
+        // Auf dem Prozessor: das Programm für den Prozessor, sonst das der KI ohne Grafikkarte. Aufruf nur unter lock (Lk).
+        static void StarteSuchhilfeCpu()
+        {
+            string exe = ProgrammPfad("llama-cpu") ?? ProgrammPfad("llama-" + kiBackend);
+            if (exe == null) return;
+            try { suchhilfe = StarteDienst(exe, SuchhilfeArgs(false), Path.Combine(Logs, "suchhilfe.log")); }
+            catch (Exception e) { suchhilfe = null; Log("Suchhilfe konnte nicht starten: " + e.Message); }
+        }
+
+        // Suchhilfe auf der Grafikkarte bis 60 s beobachten: Beendet sie sich (z. B. Grafikspeicher voll) oder antwortet sie
+        // nicht, wird sie auf dem Prozessor neu gestartet.
+        static void PruefeSuchhilfeGpu(Process p)
+        {
+            var uhr = Stopwatch.StartNew();
+            while (uhr.Elapsed.TotalSeconds < 60)
+            {
+                Thread.Sleep(1000);
+                if (suchhilfe != p) return; // inzwischen gestoppt oder ersetzt
+                if (p.HasExited) break;
+                if (HttpOk("http://127.0.0.1:" + SuchPort + "/health")) { Log("Suchhilfe läuft auf der Grafikkarte."); return; }
+            }
+            lock (Lk)
+            {
+                if (suchhilfe != p) return;
+                try { if (!p.HasExited) { p.Kill(); p.WaitForExit(5000); } } catch { }
+                Log("Suchhilfe passt nicht auf die Grafikkarte, läuft auf dem Prozessor.");
+                suchhilfe = null;
+                StarteSuchhilfeCpu();
             }
         }
 
@@ -7397,7 +9184,7 @@ namespace OfflineWissen
         static Dictionary<string, object> ZuletztMerken(Dictionary<string, object> b)
         {
             string url = Str(b, "url"), titel = Str(b, "titel");
-            if (string.IsNullOrEmpty(url) || !(url.StartsWith("/kiwix/") || url.StartsWith("/api/eigene/datei/")) || string.IsNullOrEmpty(titel))
+            if (string.IsNullOrEmpty(url) || !(url.StartsWith("/kiwix/") || url.StartsWith("/api/eigene/datei/") || url.StartsWith("/gesichert/")) || string.IsNullOrEmpty(titel))
                 return new Dictionary<string, object> { { "fehler", "Ungültiger Eintrag." } };
             var neu = new Dictionary<string, object> {
                 { "url", url.Length > 2000 ? url.Substring(0, 2000) : url },
@@ -7489,7 +9276,7 @@ namespace OfflineWissen
                     case "setzen":
                     {
                         string url = Str(b, "url") ?? "", link = Str(b, "link") ?? "";
-                        bool urlOk = url.StartsWith("/kiwix/") || url.StartsWith("/api/eigene/datei/");
+                        bool urlOk = url.StartsWith("/kiwix/") || url.StartsWith("/api/eigene/datei/") || url.StartsWith("/gesichert/");
                         bool linkOk = Regex.IsMatch(link, "^#(erstehilfe|vorsorge|kochen)\\?[^\\s]{1,300}$");
                         if (urlOk == linkOk || url.Length > 2000) return MerkFehler("Ungültiger Eintrag für die Merkliste.");
                         var neu = new Dictionary<string, object>();

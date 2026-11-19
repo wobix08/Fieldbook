@@ -1,0 +1,14 @@
+.zim-footer {
+  clear: both;
+  border-top: dashed 2px #aaaaaa;
+  padding: 0.5em 0.5em 0.5em 0.5em;
+  margin-top: 1em;
+}
+
+.zim-footer a {
+  background-image: url(./external-link.svg);
+  background-position: center right;
+  background-repeat: no-repeat;
+  background-size: 0.857em;
+  padding-right: 1em;
+}

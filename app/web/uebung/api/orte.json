@@ -1,0 +1,13 @@
+{
+  "_hinweis": "Ortssuche im Rundgang: nur Orte im Ausschnitt der Beispielkarte, Einträge wie in der echten Ortsliste (GeoNames, CC BY 4.0). Der Server liefert alle, deren Name den Suchtext enthält.",
+  "liste": [
+    { "name": "Garmisch", "original": "Garmisch", "land": "DE", "lat": 47.49257, "lon": 11.08649, "art": "Ortsteil", "einwohner": 0 },
+    { "name": "Garmisch-Partenkirchen", "original": "Garmisch-Partenkirchen", "land": "DE", "lat": 47.49209, "lon": 11.09576, "art": "Ort", "einwohner": 26022 },
+    { "name": "Garmischer Hof", "original": "Garmischer Hof", "land": "DE", "lat": 47.49445, "lon": 11.09387, "art": "Hotel", "einwohner": 0 },
+    { "name": "Garmisch-Partenkirchen", "original": "Garmisch-Partenkirchen", "land": "DE", "lat": 47.49145, "lon": 11.09701, "art": "Bahnhof", "einwohner": 0 },
+    { "name": "Garmisch-Partenkirchen Hausberg", "original": "Garmisch-Partenkirchen Hausberg", "land": "DE", "lat": 47.48349, "lon": 11.09234, "art": "Bahnhof", "einwohner": 0 },
+    { "name": "Partenkirchen", "original": "Partenkirchen", "land": "DE", "lat": 47.49482, "lon": 11.10778, "art": "Ortsteil", "einwohner": 0 },
+    { "name": "Post Hotel Partenkirchen", "original": "Post Hotel Partenkirchen", "land": "DE", "lat": 47.4944, "lon": 11.1101, "art": "Hotel", "einwohner": 0 },
+    { "name": "Wank", "original": "Wank", "land": "DE", "lat": 47.50872, "lon": 11.14296, "art": "Berg", "einwohner": 0 }
+  ]
+}

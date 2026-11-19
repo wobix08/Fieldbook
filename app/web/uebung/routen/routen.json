@@ -1,0 +1,7 @@
+{
+  "_hinweis": "Beispielroute des Rundgangs (Server.cs, UebungRoute): Start Garmisch-Partenkirchen, Ziel Wank. Dateien <profil>-<alternativeidx>[-flach].json sind echte BRouter-Antworten (GeoJSON); -flach ist „Möglichst wenig bergauf“. sperrung: Stelle, die der Rundgang sperren lässt; mit einer Sperrung dort kommt die Route aus <…>-gesperrt.json (echte BRouter-Antwort mit nogos=Stelle,40), nur das Rad führt dort entlang.",
+  "sperrung": [11.111077, 47.500079],
+  "start": [11.09576, 47.49209],
+  "ziel": [11.14296, 47.50872],
+  "fehler": "Im Beispiel gibt es nur die Route von Garmisch-Partenkirchen auf den Wank."
+}

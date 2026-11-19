@@ -88,7 +88,8 @@ const Bibliothek = (() => {
     // Alte Links (#bibliothek?kat=… oder ?paket=…) öffnen die passende Stelle
     const p = params.get("paket") && buecher.find(x => x.id === params.get("paket"));
     if (params.get("kat") || p) offen.clear();
-    if (params.get("kat")) offen.add("k:" + params.get("kat"));
+    // ?kat=eigene öffnet die eigenen Unterlagen (z. B. am Ende des Rundgang-Kapitels)
+    if (params.get("kat")) offen.add(params.get("kat") === "eigene" ? "eigene" : "k:" + params.get("kat"));
     if (p) offen.add("k:" + (p.kategorien[0] || "sonstiges"));
     if (params.get("q")) kopf.append(el("h2", {}, "Kategorien"));
     else { zuletztZeile(regal, buecher); eigeneZeile(regal); }
@@ -146,10 +147,10 @@ const Bibliothek = (() => {
   // „Eigene Unterlagen“: immer da (auch leer), damit man sieht, dass es das gibt. Inhalt in js/eigene.js
   function eigeneZeile(regal) {
     const zahl = el("span", { class: "e-zahl" });
-    const setzen = (n) => { zahl.textContent = n === 1 ? "1 Datei" : n ? n + " Dateien" : ""; };
+    const setzen = (n) => { zahl.textContent = n === 1 ? "1 Eintrag" : n ? n + " Einträge" : ""; };
     const box = klappe("eigene", "klapp-kat eigene-box",
       [symFeld("folder-open", "gross"),
-       el("span", { class: "e-text" }, el("b", {}, "Eigene Unterlagen"), el("small", {}, "Deine eigenen Dateien: Anleitungen, Pläne, Fotos")),
+       el("span", { class: "e-text" }, el("b", {}, "Eigene Unterlagen"), el("small", {}, "Deine eigenen Dateien und gesicherten Webseiten")),
        zahl],
       () => Eigene.inhalt(setzen));
     regal.append(box);
@@ -282,8 +283,8 @@ const Bibliothek = (() => {
     const anzahl = nurBuch ? 20 : 8;
     const woerter = suchWoerter(q);
     // Eigene Dateien auch nach ihrem Namen finden (Bilder haben nur den Namen)
-    const nachName = (b) => b.eigene ? eigene.filter(d => passt(woerter, { titel: Eigene.ohneEndung(d.datei) }) === 2)
-      .map(d => ({ titel: Eigene.ohneEndung(d.datei), url: Eigene.url(d.datei), pdf: Eigene.url(d.datei), buch: b })) : null;
+    const nachName = (b) => b.eigene ? eigene.filter(d => passt(woerter, { titel: Eigene.titel(d) }) === 2)
+      .map(d => ({ titel: Eigene.titel(d), url: Eigene.url(d.datei), pdf: Eigene.url(d.datei), buch: b })) : null;
     // Zählen, wie viele Abfragen scheitern: scheitern alle, ist das kein „keine Treffer“
     let fehlgeschlagen = 0;
     const gruppen = await Promise.all(buecher.map(async b => {
@@ -295,9 +296,11 @@ const Bibliothek = (() => {
       for (const t of titel.concat(voll)) {
         const k = sicherDecode(t.url || "").toLowerCase();
         if (gesehen.has(k) || NUTZERSEITE.test(k)) continue;
-        gesehen.add(k);
+        // Erst nach der Prüfung als gesehen merken: Ein Titelvorschlag ohne Auszug fällt sonst weg und
+        // verdeckt denselben Artikel aus der Volltextsuche, dessen Auszug das Suchwort enthält
         const wertung = passt(woerter, t);
         if (!wertung) continue;
+        gesehen.add(k);
         if (wertung === 2) imTitel = true;
         liste.push(t);
       }
@@ -458,6 +461,7 @@ const Bibliothek = (() => {
   // Artikel, der gerade im Lesefenster steht (für die Merkliste und „Zuletzt gelesen“), sonst null
   let artikelJetzt = null;
   let merkSprung = null;   // Eintrag der Merkliste, dessen Textstelle nach dem Laden gezeigt wird
+  let textSprung = null;   // Textstelle aus einer KI-Antwort, die nach dem Laden gezeigt wird
   const lesezeichenAnpassen = Merkliste.knopf($("#lese-lesezeichen"), () => location.hash.startsWith("#lesen") ? artikelJetzt : null);
   async function artikelMerken(innen) {
     let pfad, titel;
@@ -475,6 +479,8 @@ const Bibliothek = (() => {
     lesezeichenAnpassen();
     // Aus der Merkliste geöffnet: zur gemerkten Textstelle springen
     if (merkSprung) { const id = merkSprung; merkSprung = null; MerkAnsicht.springen(innen.contentDocument.body, id, 3); }
+    // Aus einer KI-Antwort geöffnet: zur Stelle springen, aus der die Antwort stammt
+    if (textSprung) { const s = textSprung; textSprung = null; MerkAnsicht.textZeigen(innen.contentDocument.body, s, 3); }
     if (sicherDecode(pfad) === await startseiteVon(paket)) return;
     zuletztMerken(e);
   }
@@ -559,6 +565,7 @@ const Bibliothek = (() => {
     // würde ihn ersetzen und einen leeren Schritt im Verlauf hinterlassen. Beim Öffnen dagegen immer laden:
     // Die Adresse des Viewers verrät nicht, ob er gerade z. B. eine Trefferliste zeigt.
     const zurueckGekommen = navArt === "traverse" && aktuell;
+    textSprung = zurueckGekommen ? null : params.get("stelle");
     if (!zurueckGekommen) {
       verdeckenBisGeladen(rahmen);
       // Gleiche Adresse: replace wäre wirkungslos (nur die Sprungmarke), deshalb neu laden

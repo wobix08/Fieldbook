@@ -1,0 +1,5 @@
+
+/* start https://de.wikipedia.org/w/load.php?lang=de&modules=ext.gadget.citeRef&only=styles&skin=vector-2022 */
+
+sup.reference{font-family:sans-serif;font-variant:normal}ol.references li a[href|="#cite_ref"]{font-style:italic}span[rel="mw:referencedBy"]{counter-reset:mw-ref-linkback 0}span[rel="mw:referencedBy"] > a::before{font-style:italic;content:counter(mw-ref-linkback,lower-alpha)}ol.references li div.sisterproject{display:inline}
+/* end   https://de.wikipedia.org/w/load.php?lang=de&modules=ext.gadget.citeRef&only=styles&skin=vector-2022 */

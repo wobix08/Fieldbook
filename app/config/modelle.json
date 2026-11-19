@@ -1,7 +1,7 @@
 {
   "_hinweis": "Liste der KI-Modelle. Neue Modelle einfach hier eintragen. minRamGB gilt ohne Grafikkarte, minVramGB mit Grafikkarte. cpuGeeignet=false heisst: ohne Grafikkarte zu langsam. ausgemustert=true heisst: wird nicht mehr angeboten, bleibt aber nutzbar, wo es schon installiert ist. ungetestet=true heisst: noch nicht mit den Testfragen geprueft (wie ausgemustert, nur anders beschriftet). Zum Freigeben beide Zeilen loeschen.",
   "suchhilfe": {
-    "_hinweis": "Kleines Bedeutungsmodell für die KI-Suche: sortiert die gefundenen Artikel nach Bedeutung statt nach gleichen Wörtern. Kommt mit jeder KI mit, läuft immer auf dem Prozessor. Liegt in daten/modelle/suchhilfe/.",
+    "_hinweis": "Kleines Bedeutungsmodell für die KI-Suche: sortiert die gefundenen Artikel nach Bedeutung statt nach gleichen Wörtern. Kommt mit jeder KI mit. Läuft die KI auf der Grafikkarte, lädt die Suchhilfe danach auch dorthin; passt sie nicht mehr, läuft sie auf dem Prozessor. Liegt in daten/modelle/suchhilfe/.",
     "modell": "EmbeddingGemma (300M)",
     "datei": "embeddinggemma-300M-Q8_0.gguf",
     "url": "https://huggingface.co/ggml-org/embeddinggemma-300M-GGUF/resolve/main/embeddinggemma-300M-Q8_0.gguf",
@@ -37,17 +37,15 @@
     },
     {
       "id": "qwen35-9b",
-      "ausgemustert": true,
-      "ungetestet": true,
       "name": "Mittel",
       "modell": "Qwen 3.5 (9B)",
-      "beschreibung": "Braucht 16 GB Arbeitsspeicher oder eine Grafikkarte mit 8 GB.",
+      "beschreibung": "Nur mit Grafikkarte empfohlen (ab 8 GB). Mit 16 GB Arbeitsspeicher läuft es auch ohne Grafikkarte, die Antworten dauern dann aber sehr lange.",
       "datei": "Qwen3.5-9B-Q4_K_M.gguf",
       "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
       "bytes": 5680000000,
       "minRamGB": 16,
       "minVramGB": 8,
-      "cpuGeeignet": true,
+      "cpuGeeignet": false,
       "kontext": 12288
     },
     {

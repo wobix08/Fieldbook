@@ -77,7 +77,7 @@ const Kochen = (() => {
     const zutaten = eingabe();
     const ziel = $("#koch-ergebnis");
     ziel.innerHTML = "";
-    if (!zutaten.length) { ziel.append(el("p", { class: "hinweis" }, "Schreib auf, was du da hast, z. B. „Kartoffeln, Eier, Zwiebeln“.")); return; }
+    if (!zutaten.length) { ziel.append(el("p", { class: "hinweis koch-leer" }, "Schreib auf, was du da hast, z. B. „Kartoffeln, Eier, Zwiebeln“.")); return; }
     const buch = await rezeptBuch();
     if (!buch) return;
     beschaeftigt = true;
@@ -186,11 +186,12 @@ const Kochen = (() => {
   function zeigeRezepte(ziel, rezepte, zutaten, ohneOfen) {
     ziel.innerHTML = "";
     if (!rezepte.length) {
-      ziel.append(el("p", { class: "hinweis" }, "Kein passendes Rezept gefunden. Versuch es mit weniger oder anderen Zutaten, z. B. nur den wichtigsten."));
+      ziel.append(el("p", { class: "hinweis koch-leer" }, "Kein passendes Rezept gefunden. Versuch es mit weniger oder anderen Zutaten, z. B. nur den wichtigsten."));
       return;
     }
     // Immer 8 auf einmal, "Weitere Gerichte" hängt die nächsten 8 an
-    const liste = el("div", { class: "rezepte" });
+    // „ohne-ofen“: daran erkennt der Rundgang, dass ohne Backofen gesucht wurde
+    const liste = el("div", { class: "rezepte" + (ohneOfen ? " ohne-ofen" : "") });
     const weiter = el("button", { type: "button", class: "knopf", onclick: () => mehr() });
     const info = el("span", { class: "hinweis klein" });
     let gezeigt = 0;
@@ -210,7 +211,7 @@ const Kochen = (() => {
     const merkmale = el("div", { class: "rezept-merkmale" },
       r.fehlt.length ? el("span", { class: "merkmal fehlt" }, "Es fehlt: " + r.fehlt.join(", ")) : el("span", { class: "merkmal alles" }, "✓ Du hast alles"),
       el("span", { class: "merkmal" }, "Nutzt: " + r.genutzt.join(", ")));
-    if (r.ofen) merkmale.append(el("span", { class: "merkmal" + (ohneOfen ? " fehlt" : "") }, "braucht Backofen"));
+    if (r.ofen) merkmale.append(el("span", { class: "merkmal ofen" + (ohneOfen ? " fehlt" : "") }, "braucht Backofen"));
     const frage = "Wie koche ich „" + r.titel + "“? Ich habe: " + zutaten.join(", ") + "." +
       (ohneOfen ? " Ich habe keinen Backofen, nur eine Herdplatte, einen Gaskocher oder Feuer." : "") +
       (r.fehlt.length ? " Es fehlt mir: " + r.fehlt.join(", ") + ". Wie kann ich das ersetzen oder weglassen?" : "");
@@ -331,5 +332,18 @@ const Kochen = (() => {
     }
   }
 
-  return { zeigen };
+  // Für den Rundgang („Zurück“ nimmt die Aufgabe des Schritts zurück): Feld und Ergebnis leeren bzw. die
+  // Backofen-Auswahl zurückstellen und die Liste dazu neu suchen
+  function uebungLeeren() {
+    $("#koch-zutaten").value = "";
+    $("#koch-ergebnis").innerHTML = "";
+  }
+  async function uebungOfen(wert) {
+    const s = $("#koch-ofen");
+    if (s.value !== wert) { s.value = wert; s.dispatchEvent(new Event("change")); }
+    for (let i = 0; i < 100 && beschaeftigt; i++) await new Promise(r => setTimeout(r, 100));
+    if (eingabe().length) await suchen();
+  }
+
+  return { zeigen, uebungLeeren, uebungOfen };
 })();

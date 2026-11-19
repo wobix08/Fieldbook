@@ -253,7 +253,9 @@ const Sperrungen = (() => {
   function aufStrecke(punkt) {
     const k = karte();
     if (!k || !Routen.strecke || !k.getLayer("route-rand")) return false;
-    return k.queryRenderedFeatures(kasten(punkt, 4), { layers: ["route-rand"] }).length > 0;
+    // Im Rundgang zählt jeder Klick im markierten Kreis (sonst versetzte ein knapper Fehlklick das Ziel der Beispielroute)
+    const rand = typeof Rundgang !== "undefined" && Rundgang.aktiv() ? 16 : 4;
+    return k.queryRenderedFeatures(kasten(punkt, rand), { layers: ["route-rand"] }).length > 0;
   }
 
   // Nächste Stelle der Strecke zum Mauspunkt (in Bildschirm-Pixeln): Index des Abschnitts und Punkt darauf
@@ -606,5 +608,18 @@ const Sperrungen = (() => {
         onclick: (e) => { e.stopPropagation(); umschalten(s); } }, sym("eye-off")));
   }
 
-  return { zeigen, klick, verbinden, param, anzahl, ersteLage };
+  // Rundgang: Geht man zum Schritt „Ein Weg ist gesperrt“ zurück, wird die Übungs-Sperrung aufgehoben, damit man
+  // die Stelle neu sperren kann (in der Übung liegen Sperrungen nur im Speicher des Servers)
+  async function uebungLeeren() {
+    if (typeof Rundgang === "undefined" || !Rundgang.aktiv()) return;
+    await laden();
+    popupWeg();
+    entwurf = null;
+    if (!liste.length) { zeichneKarte(); return; }
+    liste = [];
+    await speichern();
+    Routen.neuBerechnen();
+  }
+
+  return { zeigen, klick, verbinden, param, anzahl, ersteLage, uebungLeeren };
 })();

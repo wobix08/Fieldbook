@@ -38,7 +38,7 @@ const KEIN_SATZENDE = /(?:(?:^|[\s(„"])[a-zäöü]|\b(?:ca|bzw|evtl|ggf|usw|et
 function zeilen(text) {
   const t = typeof Land !== "undefined" ? Land.einsetzen(text) : String(text);
   const teile = [];
-  for (const s of t.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„"(])/)) {
+  for (const s of t.split(/(?<=[.!?][“"]?)\s+(?=[A-ZÄÖÜ„"(])/)) {
     if (teile.length && KEIN_SATZENDE.test(teile[teile.length - 1])) teile[teile.length - 1] += " " + s;
     else teile.push(s);
   }
@@ -58,6 +58,34 @@ function fehlerBox(text, nochmal, knopfText, technisch) {
   if (nochmal) box.append(el("div", { style: "margin-top:8px" },
     el("button", { type: "button", class: "knopf knopf-klein", onclick: nochmal }, knopfText || "Erneut versuchen")));
   return box;
+}
+
+// Knopf „Kopieren“ unter KI-Antworten: legt Antwort und Quellen als schlichten Text in die Zwischenablage.
+// text: Funktion, die den Text liefert (erst beim Klick gelesen). Zeigt danach kurz „Kopiert“.
+function kopierKnopf(text) {
+  const knopf = el("button", { type: "button", class: "knopf knopf-klein kopier-knopf" }, sym("copy"), "Kopieren");
+  let zurueck = null;
+  knopf.onclick = async () => {
+    const t = text();
+    let ok = false;
+    try { await navigator.clipboard.writeText(t); ok = true; } catch {
+      // Ersatzweg, falls der Browser die Zwischenablage verweigert
+      const feld = el("textarea", { style: "position:fixed;opacity:0" });
+      feld.value = t;
+      document.body.append(feld);
+      feld.select();
+      try { ok = document.execCommand("copy"); } catch { ok = false; }
+      feld.remove();
+    }
+    knopf.replaceChildren(sym(ok ? "check" : "x"), ok ? "Kopiert" : "Ging nicht");
+    clearTimeout(zurueck);
+    zurueck = setTimeout(() => knopf.replaceChildren(sym("copy"), "Kopieren"), 2000);
+  };
+  return knopf;
+}
+// KI-Text ohne Formatierungszeichen (**fett**, # Überschrift) für die Zwischenablage
+function schlichterText(s) {
+  return String(s || "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
 }
 
 // Linien-Symbol aus symbole.svg (Lucide), färbt sich wie der Text: sym("map")
@@ -520,39 +548,42 @@ function aktualisierungBox(akt, sofort, opt) {
       el("label", { class: "schalter" },
         el("input", { type: "checkbox", checked: akt.an, onchange: (e) => setze({ an: e.target.checked }) }),
         el("b", {}, "Inhalte automatisch aktuell halten")),
-      el("p", { class: akt.an ? "hinweis klein" : "warnung klein", style: "margin:10px 0" },
+      el("p", { class: akt.an ? "hinweis klein" : "warnung klein", style: "margin:10px 0" }, zeilen(
         "Empfohlen: Wikipedia, Medizin-Wissen, Karten und Wegedaten werden laufend verbessert und korrigiert. " +
-        "Damit im Ernstfall aktuelle Informationen da sind, solltest du das einschalten. " +
         "Es läuft kein Programm dauerhaft im Hintergrund: Windows prüft einmal pro Woche kurz nach neuen Inhalten " +
-        "und lädt sie mit niedrigster Priorität, damit du normal weiterarbeiten kannst. Über Handy-Hotspots wird nie ohne Nachfrage geladen."));
-    if (akt.an) {
-      const wahl = (name, feld, wert, titel, text) => {
-        const i = el("input", { type: "radio", name, checked: akt[feld] === wert, onchange: () => setze({ [feld]: wert }) });
-        return el("label", { class: "wahl" + (akt[feld] === wert ? " gewaehlt" : "") }, i,
-          el("div", { class: "w-text" }, el("div", { class: "w-titel" }, titel), el("small", {}, text)));
-      };
-      if (!opt.eingebettet || opt.programm) box.append(
-        el("label", { class: "schalter", style: "margin:4px 0 6px" },
-          el("input", { type: "checkbox", checked: akt.programm !== false, onchange: (e) => setze({ programm: e.target.checked }) }),
-          el("span", {}, "Dabei auch neue Fieldbook-Versionen mitladen")));
-      box.append(
-        el("h3", {}, "Wenn es Neues gibt"),
-        wahl("akt-modus", "modus", "fragen", "Vorher fragen", "Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll."),
-        wahl("akt-modus", "modus", "auto", "Automatisch herunterladen", "Ohne Nachfrage, aber nie über getaktete Verbindungen wie Handy-Hotspots."),
-        el("h3", {}, "Wann herunterladen"),
-        wahl("akt-wann", "wann", "sofort", "Sofort, im Hintergrund", "Startet direkt mit niedrigster Priorität. Unterbrochene Downloads gehen beim nächsten Einschalten weiter."),
-        wahl("akt-wann", "wann", "leerlauf", "Nur wenn der Computer nicht benutzt wird", "Lädt erst, wenn der Computer etwa 10 Minuten unbenutzt am Strom hängt, und pausiert sofort, sobald du ihn benutzt."));
-    }
+        "und lädt sie mit niedrigster Priorität. Über Handy-Hotspots wird nie ohne Nachfrage geladen.")));
+    // Zeile mit Beschriftung links und Umschalter rechts; darunter steht nur die Erklärung der gewählten Stellung
+    const umschalter = (feld, titel, stellungen) => {
+      const gewaehlt = stellungen.find(s => s.id === akt[feld]) || stellungen[0];
+      return el("div", { class: "einst-zeile akt-zeile" },
+        el("div", {}, el("b", {}, titel), el("small", {}, zeilen(gewaehlt.erkl))),
+        stufenSchalter(stellungen, gewaehlt.id, (id) => setze({ [feld]: id }), titel));
+    };
+    if (akt.an) box.append(
+      umschalter("modus", "Wenn es Neues gibt", [
+        { id: "fragen", text: "Vorher fragen", erkl: "Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll." },
+        { id: "auto", text: "Automatisch", erkl: "Lädt ohne Nachfrage. Über getaktete Verbindungen wie Handy-Hotspots aber nie." }]),
+      umschalter("wann", "Wann herunterladen", [
+        { id: "sofort", text: "Sofort", erkl: "Startet direkt im Hintergrund mit niedrigster Priorität. Unterbrochene Downloads gehen beim nächsten Einschalten weiter." },
+        { id: "leerlauf", text: "In Pausen", erkl: "Lädt erst, wenn der Computer etwa 10 Minuten unbenutzt am Strom hängt. Sobald du ihn benutzt, pausiert der Download." }]));
     // Drosselung: auch für "Inhalte aktualisieren" in den Einstellungen
     if (akt.an || sofort) {
       const stufen = [0, 50, 20, 10, 5, 2];
       const sel = el("select", { style: "width:auto", onchange: (e) => setze({ mbit: +e.target.value }) },
         ...stufen.map(m => el("option", { value: m, selected: (akt.mbit || 0) === m }, m ? "höchstens " + m + " MBit/s" : "Unbegrenzt (volle Geschwindigkeit)")));
-      box.append(el("h3", {}, "Download-Geschwindigkeit"),
-        el("div", { class: "einst-zeile", style: "border:0;padding-top:0" },
-          el("div", {}, el("small", {}, "Begrenzt Aktualisierungen, damit Internet für andere im Haushalt flüssig bleibt (z. B. Videos, Telefonate). Gilt auch für „Inhalte aktualisieren“.")),
-          sel));
+      box.append(el("div", { class: "einst-zeile akt-zeile" },
+        el("div", {}, el("b", {}, "Download-Geschwindigkeit"),
+          el("small", {}, "Begrenzt Aktualisierungen, damit das Internet für andere im Haushalt flüssig bleibt.", el("br"), "Gilt auch für „Nach Updates suchen“.")),
+        sel));
     }
+    // Fieldbook selbst: deutlich getrennt von den Inhalten
+    if (akt.an && (!opt.eingebettet || opt.programm)) box.append(
+      el("div", { class: "akt-programm" },
+        el("h3", {}, "Fieldbook selbst"),
+        el("label", { class: "schalter" },
+          el("input", { type: "checkbox", checked: akt.programm !== false, onchange: (e) => setze({ programm: e.target.checked }) }),
+          el("span", {}, "Neue Fieldbook-Versionen zusammen mit den Inhalten laden")),
+        el("small", {}, "Es gelten dieselben Einstellungen wie oben.", el("br"), "Eingespielt wird die neue Version beim nächsten Start.")));
   };
   zeichne();
   return box;
@@ -943,11 +974,14 @@ window.addEventListener("unhandledrejection", (e) => {
 const KI = {
   bereit() { return OW.status && OW.status.ki && OW.status.ki.status === "bereit"; },
 
-  // Streaming-Chat. onText bekommt den bisher erzeugten Text.
+  // Streaming-Chat. onText (freiwillig) bekommt den bisher erzeugten Text.
+  // Immer gestreamt und mit Fortschrittsmeldungen beim Einlesen: Nur so merkt llama-server, wenn die Anfrage
+  // abgebrochen wird (Knopf „Anhalten“), und hört auf zu rechnen. Ohne Stream rechnete es bis zum Ende weiter
+  // und hielt die nächste Frage auf (getestet 18. Nov. 2026).
   async chat(nachrichten, optionen, onText) {
     const { signal, ...rest } = optionen || {};   // signal gehört an fetch, nicht in den Body
     const body = Object.assign({
-      messages: nachrichten, stream: !!onText, temperature: 0.3, top_p: 0.9,
+      messages: nachrichten, stream: true, return_progress: true, temperature: 0.3, top_p: 0.9,
       chat_template_kwargs: { enable_thinking: false },
     }, rest);
     const r = await fetch("/llm/v1/chat/completions", {
@@ -959,11 +993,7 @@ const KI = {
       try { const j = await r.json(); msg = (j.error && (j.error.message || j.error)) || msg; } catch { }
       throw new Error(msg);
     }
-    if (!onText) {
-      const j = await r.json();
-      Statistik.ki(j.timings);
-      return KI.ohneDenken(j.choices[0].message.content || "");
-    }
+    if (!onText) onText = () => { };
     const leser = r.body.getReader();
     const dec = new TextDecoder();
     let puffer = "", text = "", beendet = false;

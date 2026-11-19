@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- Vorlage der Beispieldatei „Stromerzeuger Bedienungsanleitung.pdf“ (Rundgang, Kapitel Eigene Unterlagen).
+     Erfundenes Gerät, Inhalt selbst geschrieben. PDF neu bauen:
+     msedge --headless --no-pdf-header-footer --print-to-pdf="Stromerzeuger Bedienungsanleitung.pdf" anleitung-vorlage.html
+     Ändert sich der Text, auch texte in daten.json und die Antwort in antworten.json prüfen. -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Stromerzeuger SE 2000 – Bedienungsanleitung</title>
+<style>
+  @page { size: A4; margin: 22mm 20mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #222; }
+  h1 { font-size: 22pt; margin: 0 0 4pt; }
+  h2 { font-size: 14pt; margin: 18pt 0 6pt; border-bottom: 1.5pt solid #444; padding-bottom: 3pt; }
+  .unter { color: #555; margin: 0 0 20pt; }
+  .seite { page-break-after: always; }
+  .seite:last-child { page-break-after: auto; }
+  .warnung { border: 1.5pt solid #b00; padding: 8pt 12pt; margin: 10pt 0; }
+  .warnung b { color: #b00; }
+  table { border-collapse: collapse; margin: 8pt 0; }
+  td, th { border: 1pt solid #999; padding: 4pt 10pt; text-align: left; }
+  .fuss { margin-top: 30pt; color: #777; font-size: 9pt; }
+</style>
+</head>
+<body>
+<div class="seite">
+  <h1>Stromerzeuger SE 2000</h1>
+  <p class="unter">Bedienungsanleitung · Inverter-Stromerzeuger 2000 W</p>
+  <h2>Sicherheit</h2>
+  <div class="warnung"><b>Lebensgefahr durch Abgase.</b><br>Betreibe den Stromerzeuger nur im Freien.<br>Nie in der Wohnung, im Keller, in der Garage oder im Zelt, auch nicht bei offener Tür.<br>Die Abgase enthalten Kohlenmonoxid. Es ist geruchlos und kann in wenigen Minuten tödlich sein.</div>
+  <p>Stelle das Gerät mindestens 1 Meter entfernt von Wänden und anderen Gegenständen auf.<br>Halte Abstand zu Fenstern und Türen, damit keine Abgase ins Haus ziehen.<br>Betreibe es nicht im Regen.</p>
+  <p>Tanke nur bei ausgeschaltetem und abgekühltem Motor.<br>Rauche nicht beim Tanken.</p>
+  <h2>Technische Daten</h2>
+  <table>
+    <tr><th>Dauerleistung</th><td>1800 W</td></tr>
+    <tr><th>Höchstleistung</th><td>2000 W</td></tr>
+    <tr><th>Tankinhalt</th><td>4 Liter</td></tr>
+    <tr><th>Kraftstoff</th><td>Normalbenzin (E5)</td></tr>
+    <tr><th>Motoröl</th><td>SAE 10W-30, 0,6 Liter</td></tr>
+    <tr><th>Gewicht</th><td>21 kg</td></tr>
+  </table>
+  <p class="fuss">Seite 1</p>
+</div>
+<div class="seite">
+  <h2>Betrieb</h2>
+  <p>Prüfe vor jedem Start den Ölstand.<br>Läuft der Motor mit zu wenig Öl, schaltet er sich zum Schutz ab.</p>
+  <p>So startest du den Stromerzeuger:</p>
+  <ol>
+    <li>Kraftstoffhahn öffnen.</li>
+    <li>Bei kaltem Motor den Choke schließen.</li>
+    <li>Schalter auf „Ein“ stellen.</li>
+    <li>Am Startergriff langsam ziehen, bis du einen Widerstand spürst, dann kräftig durchziehen.</li>
+    <li>Wenn der Motor läuft, den Choke langsam öffnen.</li>
+  </ol>
+  <p>Ein voller Tank reicht bei halber Last für etwa 8 Stunden.<br>Bei voller Last sind es etwa 4 Stunden.</p>
+  <h2>Was kann ich anschließen?</h2>
+  <p>Zusammen dürfen die Geräte höchstens 1800 W brauchen.<br>Ein Kühlschrank braucht etwa 150 W, beim Anlaufen kurz mehr.<br>Lampen, Handy-Ladegeräte und ein Router brauchen wenig.<br>Wasserkocher, Heizlüfter und Herdplatten brauchen sehr viel Strom.</p>
+  <p>Schließe die Geräte direkt am Stromerzeuger an.<br>Speise nie Strom in die Steckdosen des Hauses ein.<br>Das darf nur eine Elektrofachkraft mit einer eigenen Umschaltung einrichten.</p>
+  <p class="fuss">Seite 2</p>
+</div>
+<div class="seite">
+  <h2>Wartung</h2>
+  <p><b>Ölwechsel:</b> Wechsle das Motoröl zum ersten Mal nach 20 Betriebsstunden.<br>Danach wechselst du es alle 100 Betriebsstunden, spätestens einmal im Jahr.<br>Lass das alte Öl bei warmem Motor ab, dann fließt es besser.<br>Fülle 0,6 Liter Motoröl SAE 10W-30 ein.</p>
+  <p><b>Luftfilter:</b> Alle 50 Betriebsstunden reinigen, in staubiger Umgebung öfter.</p>
+  <p><b>Zündkerze:</b> Alle 100 Betriebsstunden prüfen.</p>
+  <h2>Lagern</h2>
+  <p>Benzin altert.<br>Läuft das Gerät länger als einen Monat nicht, lass den Motor bei geschlossenem Kraftstoffhahn laufen, bis er ausgeht.<br>Lagere das Gerät trocken und kühl.</p>
+  <p>Lass den Stromerzeuger alle drei Monate etwa 15 Minuten laufen.<br>So merkst du rechtzeitig, wenn etwas nicht stimmt.</p>
+  <p class="fuss">Seite 3</p>
+</div>
+</body>
+</html>

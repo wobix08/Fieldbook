@@ -407,6 +407,8 @@ const LeseFragen = (() => {
       zeige(text, antwort);
       schritte.remove();
       eintraege.push({ frage: art === "frage" ? frage : TITEL[art], antwort });
+      const artikelTitel = artikel.titel || a.titel;
+      box.append(el("div", { class: "antwort-knoepfe" }, kopierKnopf(() => schlichterText(antwort) + "\n\nQuelle: " + artikelTitel)));
       if (gekuerzt) box.append(el("p", { class: "hinweis klein" }, anfang
         ? ["Der Artikel ist lang.", el("br"), "Die KI kennt nur seinen Anfang."]
         : ["Der Artikel ist lang.", el("br"), "Die KI hat nur die passendsten Abschnitte gelesen."]));

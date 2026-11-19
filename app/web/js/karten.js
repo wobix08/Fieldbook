@@ -223,8 +223,10 @@ const Karten = (() => {
       return { data: data ? new Uint8Array(data) : new Uint8Array(0) };
     });
 
+    // Im Rundgang beginnt die Beispielkarte immer mit ihrem ganzen Ausschnitt, die eigene Ansicht bleibt unberührt
+    const uebung = typeof Rundgang !== "undefined" && Rundgang.aktiv();
     let gemerkt = null;
-    try { gemerkt = JSON.parse(localStorage.getItem("karteAnsicht") || "null"); } catch { }
+    try { if (!uebung) gemerkt = JSON.parse(localStorage.getItem("karteAnsicht") || "null"); } catch { }
     const start = kartenListe.find(k => k.id !== "welt") || kartenListe[0];
     const [w, sd, o, n] = start.bbox;
 
@@ -244,6 +246,8 @@ const Karten = (() => {
     karte.on("contextmenu", (e) => {
       if (e.originalEvent) e.originalEvent.preventDefault();
       clearTimeout(klickTimer);
+      // Beim Messen nimmt der Rechtsklick den letzten Messpunkt zurück
+      if (Messen.aktiv) { Messen.zurueck(); return; }
       markierungWeg();
     });
     karte.addControl(new maplibregl.NavigationControl(), "bottom-right");
@@ -261,7 +265,7 @@ const Karten = (() => {
     karte.on("moveend", () => {
       sprung = false;
       zoomGrenze();
-      try { localStorage.setItem("karteAnsicht", JSON.stringify({ center: karte.getCenter().toArray(), zoom: karte.getZoom() })); } catch { }
+      if (!uebung) try { localStorage.setItem("karteAnsicht", JSON.stringify({ center: karte.getCenter().toArray(), zoom: karte.getZoom() })); } catch { }
     });
     // Bei aktiver Umkreissuche nach dem Verschieben neu suchen
     karte.on("moveend", nachBewegung);
@@ -297,7 +301,56 @@ const Karten = (() => {
 
   let suchTimer = null;
   $("#ort-feld").addEventListener("input", () => { clearTimeout(suchTimer); suchTimer = setTimeout(() => sucheOrt($("#ort-feld").value), 250); });
-  $("#ort-suche").addEventListener("submit", (e) => { e.preventDefault(); sucheOrt($("#ort-feld").value); });
+  $("#ort-suche").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const k = liesKoordinaten($("#ort-feld").value);
+    if (k) zuKoordinaten(k); else sucheOrt($("#ort-feld").value);
+  });
+
+  // Koordinaten aus dem Suchfeld lesen (z. B. per SMS bekommen oder vom Rettungsdienst): 48.1374, 11.5755 ·
+  // 48,1374 11,5755 · 48,1374° N · 11,5755° O (wie Fieldbook sie anzeigt) · N 48.1374 E 11.5755 · 48°08'14.6"N 11°34'31.8"E.
+  // Ohne Himmelsrichtung kommt die Breite zuerst. Sonst null (dann ist es ein Ortsname).
+  function liesKoordinaten(q) {
+    let t = String(q || "").trim().toUpperCase().replace(/[″“”]|''/g, '"').replace(/[′’´`]/g, "'");
+    if (!/\d/.test(t) || !/^[\s\d.,;:°'"NSOEW+\-·]+$/.test(t)) return null;
+    // Mit Punkt als Dezimalzeichen sind Kommas Trenner, sonst ist das Komma zwischen Ziffern das Dezimalzeichen
+    t = t.includes(".") ? t.replace(/,/g, " ") : t.replace(/(\d),(\d)/g, "$1.$2").replace(/,/g, " ");
+    t = t.replace(/[;·:]/g, " ");
+    // Steht die Himmelsrichtung vorn („N 48.1 E 11.5“), gehört ein Buchstabe nach der Zahl schon zur nächsten
+    const vorn = /^[NSOEW]/.test(t.trim());
+    const teil = vorn ? /([NSOEW])\s*([+-]?\d+(?:\.\d+)?)\s*°?\s*(?:(\d+(?:\.\d+)?)\s*'\s*)?(?:(\d+(?:\.\d+)?)\s*"\s*)?()/g
+      : /()\s*([+-]?\d+(?:\.\d+)?)\s*°?\s*(?:(\d+(?:\.\d+)?)\s*'\s*)?(?:(\d+(?:\.\d+)?)\s*"\s*)?([NSOEW])?/g;
+    const teile = [];
+    let m, rest = t;
+    while ((m = teil.exec(t)) && teile.length < 3) {
+      if (!m[0].trim()) { teil.lastIndex++; continue; }
+      rest = rest.replace(m[0], "");
+      const richtung = m[1] || m[5] || "";
+      if (m[1] && m[5]) return null;
+      let wert = parseFloat(m[2]);
+      const neg = wert < 0 || m[2].startsWith("-");
+      wert = Math.abs(wert) + (m[3] ? parseFloat(m[3]) / 60 : 0) + (m[4] ? parseFloat(m[4]) / 3600 : 0);
+      if ((m[3] && parseFloat(m[3]) >= 60) || (m[4] && parseFloat(m[4]) >= 60)) return null;
+      if (neg) wert = -wert;
+      if (richtung === "S" || richtung === "W") wert = -Math.abs(wert);
+      teile.push({ wert, richtung });
+    }
+    if (teile.length !== 2 || rest.trim()) return null;
+    let [a, b] = teile;
+    const breite = (x) => x.richtung === "N" || x.richtung === "S";
+    const laenge = (x) => x.richtung === "O" || x.richtung === "E" || x.richtung === "W";
+    if (breite(b) || laenge(a)) [a, b] = [b, a];
+    if (breite(a) && breite(b)) return null;
+    if (laenge(a) && laenge(b)) return null;
+    if (Math.abs(a.wert) > 90 || Math.abs(b.wert) > 180) return null;
+    return { lat: a.wert, lon: b.wert };
+  }
+
+  function zuKoordinaten(k) {
+    $("#ort-treffer").innerHTML = "";
+    karte.flyTo({ center: [k.lon, k.lat], zoom: Math.max(karte.getZoom(), 14), speed: 1.6 });
+    punktZeigen(k.lat, k.lon);
+  }
 
   let ortLauf = 0;
   async function sucheOrt(q) {
@@ -306,6 +359,13 @@ const Karten = (() => {
     $("#ort-feld").value = q;
     const ziel = $("#ort-treffer");
     if (q.length < 2) { ziel.innerHTML = ""; return; }
+    // Koordinaten statt Ortsname: ein Treffer, der genau dorthin springt
+    const koord = liesKoordinaten(q);
+    if (koord) {
+      ziel.replaceChildren(el("button", { "data-ort": "koordinaten", onclick: () => zuKoordinaten(koord) },
+        el("b", {}, koordinaten(koord.lat, koord.lon)), " ", el("small", {}, "Koordinaten · Punkt zeigen")));
+      return;
+    }
     // Eigene Orte stehen ganz oben
     const klein = q.toLocaleLowerCase("de");
     const eigene = meineOrte.filter(o => (o.name + " " + (o.notiz || "") + " " + (o.kategorie || "")).toLocaleLowerCase("de").includes(klein)).slice(0, 5);
@@ -321,7 +381,7 @@ const Karten = (() => {
     if (!liste) { ziel.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar.")); return; }
     if (!liste.length && !eigene.length) { ziel.append(el("div", { class: "leer" }, "Nichts gefunden.")); return; }
     for (const o of liste.slice(0, 12)) {
-      ziel.append(el("button", { onclick: () => geheZu(o) },
+      ziel.append(el("button", { "data-ort": o.name + " · " + o.art, onclick: () => geheZu(o) },
         el("b", {}, o.name), " ", el("small", {}, o.art + " · " + o.land + (o.name !== o.original ? " · " + o.original : "") + (o.einwohner > 0 ? " · " + o.einwohner.toLocaleString("de-DE") + " Einw." : ""))));
     }
   }
@@ -344,7 +404,7 @@ const Karten = (() => {
   function markiere(lat, lon, text, popupInhalt, popupAuf, name) {
     if (markierung) markierung.remove();
     punktGesetzt = { lat, lon, text, name: name || "Punkt auf der Karte" };
-    markierung = new maplibregl.Marker({ color: "#b3261e" }).setLngLat([lon, lat])
+    markierung = new maplibregl.Marker({ color: "#b3261e", className: "ort-markierung" }).setLngLat([lon, lat])
       .setPopup(new maplibregl.Popup({ offset: 24, maxWidth: "340px" }).setDOMContent(popupInhalt)).addTo(karte);
     if (popupAuf) markierung.togglePopup();
     Sonne.neu();
@@ -383,7 +443,8 @@ const Karten = (() => {
         el("button", { type: "button", class: "punkt-weg", onclick: () => box.replaceChildren(ortFormular(
           { name: vorschlag || "", notiz: "" },
           (w) => { markierungWeg(); ortNeu(w, lat, lon); },
-          ansicht)) }, sym("bookmark"), "Ort merken")),
+          ansicht)) }, sym("bookmark"), "Ort merken"),
+        el("button", { type: "button", class: "punkt-weg punkt-messen", onclick: () => Messen.starten({ lat, lon }) }, sym("ruler"), "Entfernung messen")),
       // Entfernen per Rechtsklick in die Karte (statt eigenem Knopf)
       el("small", { class: "punkt-tipp" }, "Rechtsklick in die Karte entfernt die Markierung."));
     ansicht();
@@ -655,24 +716,28 @@ const Karten = (() => {
     if (Routen.offen) return;
     const ziel = e.originalEvent && e.originalEvent.target;
     if (ziel && ziel.closest && ziel.closest(".maplibregl-marker, .maplibregl-popup")) return;
+    if (Messen.klick(e)) return;
     // Sperrung einzeichnen oder anklicken (auch ohne Routenplanung, bei aufgeklappter Liste)
     if (Sperrungen.klick(e)) return;
     clearTimeout(klickTimer);
     const { lat, lng: lon } = e.lngLat;
-    klickTimer = setTimeout(async () => {
-      const nr = ++klickNr;
-      const nah = OW.status.orte ? await api("ortnah?lat=" + lat.toFixed(5) + "&lon=" + lon.toFixed(5)).catch(() => null) : null;
-      if (nr !== klickNr) return;
-      let titel = "Punkt auf der Karte", text = "am markierten Punkt", vorschlag = "";
-      if (nah && nah.name) {
-        vorschlag = (nah.km < 1 ? "" : "Bei ") + nah.name;
-        const km = nah.km.toLocaleString("de-DE", { maximumFractionDigits: nah.km < 10 ? 1 : 0 });
-        if (nah.km < 1) { titel = nah.name; text = "bei " + nah.name; }
-        else titel = text = km + " km " + nah.richtung + " von " + nah.name;
-      }
-      // Mit offenem „Sonne und Mond“ zeigt der Kasten den Ort, das Fenster an der Markierung bleibt zu
-      markiere(lat, lon, text, popupText(titel, lat, lon, nah && nah.stadt, vorschlag), !Sonne.offen, titel);
-    }, 250);
+    klickTimer = setTimeout(() => punktZeigen(lat, lon), 250);
+  }
+
+  // Markierung mit dem nächsten Ort als Namen („2 km südlich von …“): Klick in die Karte oder eingegebene Koordinaten
+  async function punktZeigen(lat, lon) {
+    const nr = ++klickNr;
+    const nah = OW.status.orte ? await api("ortnah?lat=" + lat.toFixed(5) + "&lon=" + lon.toFixed(5)).catch(() => null) : null;
+    if (nr !== klickNr) return;
+    let titel = "Punkt auf der Karte", text = "am markierten Punkt", vorschlag = "";
+    if (nah && nah.name) {
+      vorschlag = (nah.km < 1 ? "" : "Bei ") + nah.name;
+      const km = nah.km.toLocaleString("de-DE", { maximumFractionDigits: nah.km < 10 ? 1 : 0 });
+      if (nah.km < 1) { titel = nah.name; text = "bei " + nah.name; }
+      else titel = text = km + " km " + nah.richtung + " von " + nah.name;
+    }
+    // Mit offenem „Sonne und Mond“ zeigt der Kasten den Ort, das Fenster an der Markierung bleibt zu
+    markiere(lat, lon, text, popupText(titel, lat, lon, nah && nah.stadt, vorschlag), !Sonne.offen, titel);
   }
 
   // ------------------------------------------------ Zusätzliche Ortsnamen
@@ -854,7 +919,7 @@ const Karten = (() => {
       : [(anzahl > LISTE ? "Die " + LISTE + " nächsten von " + anzahl : String(anzahl)) + " im Ausschnitt" + (begrenzt ? "." : ""),
          begrenzt && el("br"), begrenzt && "Durchsucht sind die mittleren " + MAX_KM + " km und Gegenden, in denen die Karte schon war."]));
     for (const p of liste.slice(0, MARKER)) {
-      const m = new maplibregl.Marker({ color: "#1f6f6b", scale: 0.8 }).setLngLat([p.lon, p.lat]).setPopup(new maplibregl.Popup({ offset: 20 }).setText(p.name)).addTo(karte);
+      const m = new maplibregl.Marker({ color: "#1f6f6b", scale: 0.8, className: "poi-marker" }).setLngLat([p.lon, p.lat]).setPopup(new maplibregl.Popup({ offset: 20 }).setText(p.name)).addTo(karte);
       poiMarker.push(m);
       p.marker = m;
     }
@@ -1035,5 +1100,53 @@ const Karten = (() => {
   // (ohne Diff, sonst gehen die Routen-Ebenen verloren; style.load zeichnet die Route neu)
   function themaGeaendert() { if (karte) { karte.setStyle(stil(), { diff: false }); meineOrteZeichnen(); } }
 
-  return { zeigen, sucheOrt, themaGeaendert, punkt, punktFuerRoute, get karte() { return karte; } };
+  // Rundgang („Zurück“): Karte, gemerkter Ort und Route so, wie sie zu Beginn des Schritts waren (in der Übung liegen
+  // Orte und Sperrungen nur im Speicher). b: Beispiel aus rundgang.json { ort: Suchtreffer, ziel: { name, lat, lon } }
+  async function uebungZustand(name, b) {
+    for (let i = 0; i < 100 && !karte; i++) await new Promise(r => setTimeout(r, 100));
+    if (!karte) return;
+    const popupsZu = () => document.querySelectorAll(".maplibregl-popup .maplibregl-popup-close-button").forEach(x => x.click());
+    const ortPunkt = () => {
+      if (!meineOrte.length) { meineOrte.push({ id: Date.now().toString(36), name: b.ort.name, notiz: "", lat: b.ort.lat, lon: b.ort.lon }); meineOrteSpeichern(); }
+      const o = meineOrte[0];
+      return { lat: o.lat, lon: o.lon, name: o.name };
+    };
+    if (name === "popupsZu") { popupsZu(); return; }
+    const route = { routeOhneZiel: "fuss", route: "fuss", routeRad: "rad" }[name];
+    if (route) {
+      popupsZu();
+      Routen.uebungSetzen({ start: ortPunkt(), ziel: route && name !== "routeOhneZiel" ? b.ziel : null, profil: route });
+      return;
+    }
+    Routen.uebungSetzen(null);
+    popupsZu();
+    markierungWeg();
+    $("#ort-feld").value = "";
+    $("#ort-treffer").innerHTML = "";
+    if (name === "eigenerOrt") {
+      const p = ortPunkt();
+      karte.jumpTo({ center: [p.lon, p.lat], zoom: 13 });
+      const m = meineMarker[0];
+      if (m && !m.marker.getPopup().isOpen()) m.marker.togglePopup();
+      return;
+    }
+    // Alle anderen Zustände liegen vor dem Merken: kein eigener Ort
+    if (meineOrte.length) { meineOrte = []; listeAuf = false; meineOrteSpeichern(); }
+    if (name === "anfang") {
+      const k = OW.status && OW.status.karten && OW.status.karten[0];
+      if (k && k.bbox) karte.fitBounds([[k.bbox[0], k.bbox[1]], [k.bbox[2], k.bbox[3]]], { animate: false });
+      return;
+    }
+    if (name === "suche") return;
+    // markierung, popup, formular: der gesuchte Ort ist markiert
+    geheZu(b.ort);
+    if (name === "markierung") return;
+    markierung.togglePopup();
+    if (name === "formular") {
+      const k = $(".maplibregl-popup .punkt-popup button:has(use[href$='#bookmark'])");
+      if (k) k.click();
+    }
+  }
+
+  return { zeigen, sucheOrt, themaGeaendert, punkt, punktFuerRoute, markierungWeg, uebungZustand, get karte() { return karte; } };
 })();

@@ -291,7 +291,7 @@
             { "id": "wochen", "text": "Vorrat für mehrere Wochen" },
             { "id": "notration", "text": "Notrationen, die viele Jahre halten", "mehr": "Notkekse, Fertigmahlzeiten mit Selbsterhitzer, Notwasser in Dosen oder Beuteln.", "alt": ["vorraete/notration"] },
             { "id": "korn", "text": "Getreide als ganzes Korn und eine Handmühle", "mehr": "Ganzes Korn hält viele Jahre, Vollkornmehl nur wenige Monate." },
-            { "id": "einkochen", "text": "Selbst einkochen", "verweis": { "text": "Kochen: Einkochen, was sicher ist", "link": "#kochen?l=einkochen" } }
+            { "id": "einkochen", "text": "Selbst einkochen", "mehr": "Obst, Marmelade und sauer Eingelegtes gelingen im Einkochtopf. Fleisch, Wurst, Fisch, Gemüse und Suppen nur in einem Druckeinkochtopf bei 121 °C einkochen, sonst kann sich das Gift Botulinum bilden.", "verweis": { "text": "Kochen: Einkochen, was sicher ist", "link": "#kochen?l=einkochen" } }
           ]
         }
       ],
@@ -502,7 +502,7 @@
             "Vieles kostet nichts: wissen, wo man den Strom abstellt, und nichts Wichtiges auf dem Kellerboden lassen."
           ],
           "punkte": [
-            { "id": "sicherung", "frei": true, "text": "Wissen, wo der Sicherungskasten ist und wie man ihn bedient" },
+            { "id": "sicherung", "frei": true, "text": "Wissen, wo der Sicherungskasten ist und wie man ihn bedient", "mehr": "Er ist meist im Flur, im Keller oder in der Wohnung neben der Tür. So setzt man eine Sicherung zurück oder wechselt sie: Zuerst das Gerät ausstecken, das den Fehler gemacht hat, dann den Hebel des Sicherungsautomaten wieder nach oben drücken. Fliegt sie sofort wieder heraus, nicht weiter versuchen. Eine alte Schraubsicherung nur durch eine mit derselben Ampere-Zahl ersetzen, nie flicken oder überbrücken. Arbeiten an Leitungen und Steckdosen sind Sache einer Elektrofachkraft." },
             { "id": "kellerboden", "frei": true, "text": "Im Keller nichts Wichtiges direkt auf den Boden stellen" },
             { "id": "starkregen", "frei": true, "text": "Die Starkregenkarte der Gemeinde ansehen", "mehr": "Viele Gemeinden zeigen im Internet, wo bei Starkregen Wasser fließt und sich sammelt." },
             { "id": "versicherung", "frei": true, "text": "Prüfen, ob die Versicherung Hochwasser und Rückstau abdeckt", "mehr": "Das heißt meist Elementarschaden." }

@@ -119,6 +119,7 @@ try {
               </select>
             </label>
             <label class="schalter"><input type="checkbox" id="einfach"> <span>Einfach erklären (für Kinder)</span></label>
+            <label class="schalter" title="Lässt die gründliche Suche nach passenden Absätzen weg: etwas schneller, die Antworten sind aber oft schlechter"><input type="checkbox" id="schnell"> <span>Schnell (weniger gründlich)</span></label>
           </div>
           <button type="submit" id="frage-senden" class="knopf knopf-haupt">Fragen</button>
         </div>
@@ -227,6 +228,72 @@ try {
     <div id="dok-flaeche" class="dok-flaeche" tabindex="-1"></div>
   </section>
 
+  <!-- NOTIZEN (js/notizen.js): Titel = Dateiname, Text wird beim Tippen gespeichert -->
+  <section class="ansicht ansicht-voll" data-ansicht="notiz">
+    <!-- Kopf und Werkzeuge stehen mittig über dem Blatt, gleich breit wie es -->
+    <div class="notiz-kopf">
+      <div class="notiz-spalte">
+        <button class="knopf" id="notiz-zurueck">← Zurück</button>
+        <input type="text" id="notiz-titel" class="notiz-titel" maxlength="120" aria-label="Titel der Notiz" placeholder="Titel">
+        <span id="notiz-status" class="web-status notiz-status" aria-live="polite"></span>
+      </div>
+    </div>
+    <div class="notiz-werkzeuge"><div class="notiz-spalte" role="toolbar" aria-label="Formatierung">
+      <select id="notiz-groesse" class="eingabe" aria-label="Schriftgröße">
+        <option value="p">Normaler Text</option>
+        <option value="h1">Große Überschrift</option>
+        <option value="h2">Überschrift</option>
+        <option value="h3">Kleine Überschrift</option>
+        <option value="klein">Kleiner Text</option>
+      </select>
+      <button class="knopf knopf-symbol" id="notiz-fett" type="button" aria-pressed="false" title="Fett (Strg+B)" aria-label="Fett"><svg class="sym" aria-hidden="true"><use href="symbole.svg#bold"/></svg></button>
+      <button class="knopf knopf-symbol" id="notiz-kursiv" type="button" aria-pressed="false" title="Kursiv (Strg+I)" aria-label="Kursiv"><svg class="sym" aria-hidden="true"><use href="symbole.svg#italic"/></svg></button>
+      <button class="knopf knopf-symbol" id="notiz-liste" type="button" title="Aufzählung" aria-label="Aufzählung"><svg class="sym" aria-hidden="true"><use href="symbole.svg#list"/></svg></button>
+      <button class="knopf knopf-symbol" id="notiz-nummern" type="button" title="Nummerierte Liste" aria-label="Nummerierte Liste"><svg class="sym" aria-hidden="true"><use href="symbole.svg#list-ordered"/></svg></button>
+      <button class="knopf" id="notiz-tabelle" type="button" title="Tabelle einfügen"><svg class="sym" aria-hidden="true"><use href="symbole.svg#table"/></svg>Tabelle</button>
+      <span id="notiz-tabelle-knoepfe" class="notiz-tabelle-knoepfe" hidden>
+        <button class="knopf knopf-klein" type="button" data-art="zeile+">+ Zeile</button>
+        <button class="knopf knopf-klein" type="button" data-art="spalte+">+ Spalte</button>
+        <button class="knopf knopf-klein" type="button" data-art="zeile-">− Zeile</button>
+        <button class="knopf knopf-klein" type="button" data-art="spalte-">− Spalte</button>
+      </span>
+    </div></div>
+    <div class="dok-flaeche notiz-flaeche">
+      <article id="notiz-text" class="dok-text notiz-text" spellcheck="true" aria-label="Text der Notiz"></article>
+    </div>
+  </section>
+
+  <!-- WEBSEITEN SICHERN: kleiner Browser (js/webseiten.js). Der Rahmen führt nie Programmcode aus (sandbox ohne Skripte) -->
+  <section class="ansicht ansicht-voll" data-ansicht="web">
+    <div class="lese-leiste">
+      <div class="lese-links">
+        <button class="knopf" id="web-zurueck">← Zurück</button>
+      </div>
+      <div class="lese-mitte">
+        <form id="web-form" class="web-form" role="search">
+          <input type="text" id="web-adresse" inputmode="url" spellcheck="false" autocomplete="off" placeholder="Adresse der Webseite, z. B. www.bbk.bund.de" aria-label="Adresse der Webseite">
+          <button class="knopf" type="submit">Öffnen</button>
+        </form>
+      </div>
+      <div class="lese-rechts">
+        <span id="web-status" class="web-status" aria-live="polite"></span>
+        <button class="knopf" id="web-fenster-knopf" hidden title="Seite in einem normalen Browserfenster öffnen, z. B. wenn sie Fieldbook nicht hereinlässt"><svg class="sym" aria-hidden="true"><use href="symbole.svg#maximize-2"/></svg>Im Browserfenster</button>
+        <button class="knopf knopf-haupt" id="web-speichern" hidden></button>
+      </div>
+    </div>
+    <!-- Seiten, die im Browserfenster (Edge) offen sind, mit „Speichern“ -->
+    <div id="web-fensterleiste" class="web-fensterleiste" hidden aria-live="polite"></div>
+    <div id="web-leer" class="dok-flaeche web-leer" hidden>
+      <div class="dok-text">
+        <h2>Webseite sichern</h2>
+        <p>Gib oben die Adresse einer Webseite ein, solange es Internet gibt.<br>Mit „Speichern“ legt Fieldbook die Seite mit allen Bildern in deinen eigenen Unterlagen ab.<br>Danach kannst du sie auch ohne Internet lesen, und die Suche und die KI finden, was darauf steht.</p>
+        <p class="hinweis">Gut geeignet sind zum Beispiel die Notfall-Seiten deiner Stadt oder deines Landkreises, Anleitungen und Merkblätter.<br>Jede Unterseite wird einzeln gesichert.<br>Links zwischen gesicherten Seiten funktionieren auch ohne Internet.</p>
+        <p class="hinweis">Manche Seiten lassen Fieldbook nicht herein.<br>Dann öffnest du sie mit „Im Browserfenster“ in einem normalen Edge-Fenster und speicherst sie von dort.</p>
+      </div>
+    </div>
+    <iframe id="web-rahmen" class="web-rahmen" title="Webseite" sandbox="allow-same-origin" hidden></iframe>
+  </section>
+
   <!-- KARTEN -->
   <section class="ansicht ansicht-voll" data-ansicht="karten">
     <div id="karte-leer" class="spalte" hidden></div>
@@ -242,8 +309,9 @@ try {
         </div>
         <div id="routen-panel" class="routen-panel" hidden></div>
         <div id="sonne-panel" class="sonne-panel" hidden></div>
+        <div id="mess-panel" class="sonne-panel mess-panel" hidden></div>
         <form id="ort-suche" class="ort-suche">
-          <input type="search" id="ort-feld" aria-label="Ort suchen" placeholder="Ort suchen …" autocomplete="off">
+          <input type="search" id="ort-feld" aria-label="Ort oder Koordinaten suchen" placeholder="Ort oder Koordinaten suchen …" autocomplete="off">
         </form>
         <div id="ort-treffer" class="ort-treffer"></div>
         <div id="meine-orte" class="meine-orte" hidden></div>
@@ -344,6 +412,7 @@ try {
         </div>
       </div>
       <p id="inhalte-ordner" class="warnung" hidden></p>
+      <div id="inhalte-rundgang" hidden></div>
       <div id="inhalte-downloads" class="karte-box" style="margin-bottom:16px" hidden></div>
       <div id="inhalte-liste"></div>
     </div>
@@ -388,6 +457,8 @@ try {
 <script src="js/helfer.js"></script>
 <script src="js/pdftext.js"></script>
 <script src="js/eigene.js"></script>
+<script src="js/webseiten.js"></script>
+<script src="js/notizen.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/fragen.js"></script>
 <script src="js/uebersetzer.js"></script>
@@ -403,12 +474,14 @@ try {
 <script src="js/karten.js"></script>
 <script src="js/routen.js"></script>
 <script src="js/sperrungen.js"></script>
+<script src="js/messen.js"></script>
 <script src="vendor/suncalc.js"></script>
 <script src="js/sonne.js"></script>
 <script src="js/einstellungen.js"></script>
 <script src="js/inhalte.js"></script>
 <script src="js/merkliste.js"></script>
 <script src="js/werkzeuge.js"></script>
+<script src="js/rundgang.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -94,7 +94,7 @@ const Einstellungen = (() => {
           catch (err) { s.updateBeimStart = vorher; zurueckSetzen(box, vorher !== false); await zeigeFehler("Die Einstellung konnte nicht gespeichert werden.", err); }
           finally { statusUngueltig(); }
         } })),
-      el("h3", { style: "margin-top:14px" }, "Automatische Aktualisierung"),
+      el("h3", { class: "akt-inhalte-titel" }, "Inhalte: KI, Wissen, Karten, Sprachen"),
       aktualisierungBox(akt, true, { eingebettet: true, programm: true, geaendert: zeichneProgramm }));
     zeichneProgramm();
     // Keine GitHub-Abfrage beim Aufbau: programmNeu und programmBereit kommen aus dem Status (programmInfo oben).
@@ -184,6 +184,16 @@ const Einstellungen = (() => {
       el("div", { class: "einst-zeile" },
         el("div", {}, el("b", {}, "Einrichtung neu starten"), el("small", {}, "Alles noch einmal Schritt für Schritt auswählen, wie beim ersten Start.", el("br"), "Was schon installiert ist, bleibt.")),
         el("a", { class: "knopf knopf-klein", href: "#setup?schritt=0&neu=1" }, sym("rotate-ccw"), "Neu starten")));
+
+    // ---------------- Rundgang durch Fieldbook (js/rundgang.js), je Kapitel ein Knopf
+    const fu = kategorie("rundgang", "compass", "Rundgang durch Fieldbook", "Schritt für Schritt mit Beispielinhalten");
+    fu.innen.append(el("p", { class: "hinweis", style: "margin-top:0" }, "Der Rundgang zeigt alles mit Beispielinhalten.", el("br"),
+      "Deine eigenen Inhalte bleiben dabei unverändert."));
+    Rundgang.kapitelListe().then(liste => {
+      for (const k of liste) fu.innen.append(el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, k.titel), el("small", {}, ...zeilen(k.text || ""))),
+        el("button", { type: "button", class: "knopf knopf-klein", onclick: (e) => Rundgang.starten(k.id, e.currentTarget) }, "Ansehen")));
+    }).catch(() => fu.innen.append(fehlerBox("Der Rundgang konnte nicht geladen werden.")));
 
     // ---------------- Rückmeldung und Datenschutz (nur wenn in fieldbook.json ein Dienst eingetragen ist)
     // Reihenfolge fest, auch wenn die Antworten verschieden schnell kommen

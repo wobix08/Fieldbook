@@ -17,6 +17,8 @@ const Ansichten = {
   lesen: { zeigen: (p) => Bibliothek.lesen(p) },
   pdf: { zeigen: (p) => PdfLeser.zeigen(p) },
   dokument: { zeigen: (p) => Eigene.dokument(p) },
+  web: { zeigen: (p) => Webseiten.zeigen(p) },
+  notiz: { zeigen: (p) => Notizen.zeigen(p) },
   paketstart: { zeigen: (p) => Paketstart.zeigen(p) },
   kochen: { zeigen: (p) => Kochen.zeigen(p) },
   karten: { zeigen: (p) => Karten.zeigen(p) },
@@ -43,7 +45,7 @@ function navigiere() {
   // Erste Einrichtung: Menü oben ausblenden, bis der Assistent fertig ist (oder „Später einrichten“)
   document.documentElement.classList.toggle("einrichtung", ziel === "setup" && !!OW.status && !OW.status.setupFertig);
   // Paket-Startseiten, PDF-Bücher und eigene Unterlagen gehören zur Bibliothek
-  const menue = ziel === "paketstart" || ziel === "pdf" || ziel === "dokument" ? "bibliothek" : ziel;
+  const menue = ziel === "paketstart" || ziel === "pdf" || ziel === "dokument" || ziel === "web" || ziel === "notiz" ? "bibliothek" : ziel;
   $$("#hauptnav a").forEach(a => {
     const an = a.getAttribute("href") === "#" + menue;
     a.classList.toggle("aktiv", an);
@@ -300,7 +302,9 @@ function andereMenuesZu(liste) { MENUES.forEach(m => { if (m.liste !== liste) m.
   async function fuellen() {
     const s = OW.status || {};
     liste.replaceChildren(el("div", { class: "menue-titel" }, "KI wird geladen …"));
-    const kat = await api("katalog").catch(() => ({ modelle: [] }));
+    // Im Rundgang gibt es nur die Beispiel-KI (Übung in Server.cs)
+    const kat = s.modell === "beispiel" ? { modelle: [{ id: s.modell, name: "Beispiel-KI", modell: "nur im Rundgang", installiert: true }] }
+      : await api("katalog").catch(() => ({ modelle: [] }));
     // Installierte KIs und die gerade ausgewählte (auch wenn sie noch heruntergeladen wird)
     const modelle = kat.modelle.filter(m => m.installiert || m.id === s.modell);
     const teile = [];
@@ -458,6 +462,7 @@ window.addEventListener("hashchange", navigiere);
   document.documentElement.lang = "de";
   if (s && !s.setupFertig && s.wissen === 0 && !s.modell && !location.hash) location.hash = "#setup"; // löst hashchange und damit navigiere() aus
   else navigiere();
+  Rundgang.init();
   // Bei verstecktem Tab nur jede 4. Runde fragen, auf Akku jede 3. (alle 15 s)
   let runde = 0;
   statusTimer = setInterval(() => {

@@ -42,6 +42,25 @@
             "In sauberen, abgedeckten Gefäßen sammeln und innerhalb weniger Tage verbrauchen.",
             "Wasser vom Dach oder aus der Regenrinne vor dem Trinken immer abkochen oder mit SODIS behandeln. Direkt in einem sauberen Gefäß aufgefangener Regen ist frisch meist trinkbar, abgekocht ist er aber sicherer."
           ]
+        },
+        {
+          "titel": "Schnee und Eis",
+          "punkte": [
+            "Schnee und Eis nicht direkt essen, wenn man Durst hat. Das kühlt den Körper aus und löscht den Durst kaum.",
+            "Erst schmelzen, am besten in einem Topf über Feuer oder Kocher. Etwas Wasser zuerst in den Topf geben, sonst brennt der Schnee an. Aus einem Topf voll Schnee wird nur wenig Wasser.",
+            "Auch sauber aussehender Schnee und Eis können Keime und Schmutz enthalten. Geschmolzenes Wasser wie Bachwasser behandeln: abkochen oder entkeimen.",
+            "Keinen verfärbten Schnee nehmen und keinen vom Straßenrand. Eis aus Meerwasser ist zum Trinken zu salzig."
+          ]
+        },
+        {
+          "titel": "Entkeimungstabletten und Tropfen",
+          "punkte": [
+            "Mittel zum Entkeimen gibt es in Apotheke und Outdoor-Laden, meist mit Chlor oder Chlordioxid. Wie viel und wie lange, steht auf der Packung. Genau so verwenden, nicht schätzen.",
+            "Nur klares Wasser behandeln. Trübes Wasser vorher absetzen lassen und durch ein Tuch gießen, in trübem Wasser wirken die Mittel schlecht.",
+            "Die Einwirkzeit abwarten, je nach Mittel etwa 30 Minuten bis 2 Stunden. Bei kaltem Wasser dauert es länger.",
+            "Mittel nur mit Silber halten sauberes Wasser frisch, entkeimen aber langsam. Für Wasser aus Bach, Teich oder Regentonne ein Mittel mit Chlor oder Chlordioxid nehmen.",
+            "Chlor wirkt nicht gegen alle Keime und nicht gegen Chemikalien. Wenn man kochen kann, ist Abkochen sicherer."
+          ]
         }
       ]
     },
@@ -270,6 +289,50 @@
             "Schimmelkäse (Camembert, Blauschimmel): Der gewollte Edelschimmel ist essbar. Fremder Schimmel in anderer Farbe (z. B. grüne Flecken auf weißem Camembert): ganz wegwerfen.",
             "Nüsse, Getreide, Gewürze und Schmalz oder Öl im Glas: bei Schimmel alles wegwerfen. Gerade auf Nüssen bildet Schimmel sehr starke Gifte.",
             "Im Zweifel wegwerfen. Krank zu werden ist ohne Arzt und Apotheke schlimmer als ein verlorenes Essen."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wildpflanzen", "icon": "sprout", "titel": "Wildpflanzen, Beeren und Pilze: was sicher ist",
+      "abschnitte": [
+        {
+          "titel": "Die wichtigste Regel",
+          "punkte": [
+            "Nur essen, was man ganz sicher kennt. Beim kleinsten Zweifel nicht essen.",
+            "Viele giftige Pflanzen sehen essbaren sehr ähnlich, zum Beispiel Bärlauch und Maiglöckchen oder Herbstzeitlose, Wiesenkerbel und Gefleckter Schierling.",
+            "Schon kleine Mengen können tödlich sein, etwa von Eibe, Eisenhut, Tollkirsche oder Wasserschierling. Viele Gifte wirken erst nach Stunden."
+          ]
+        },
+        {
+          "titel": "Was nicht hilft",
+          "punkte": [
+            "Keine Probe auf der Haut, an den Lippen oder im Mund. Der „Essbarkeitstest“ aus Survival-Büchern ist gefährlich, weil bei uns sehr giftige Pflanzen wachsen, die schon in kleinsten Mengen schaden.",
+            "Kochen macht giftige Pflanzen, Beeren und Pilze nicht essbar. Ein paar essbare Pflanzen muss man zwar kochen (z. B. Holunderbeeren), giftige werden dadurch aber nicht sicher.",
+            "Farbe, Geschmack oder dass Vögel und andere Tiere etwas fressen, sagt nichts darüber, ob es für Menschen giftig ist."
+          ]
+        },
+        {
+          "titel": "Beeren",
+          "punkte": [
+            "Leicht zu erkennen und essbar sind Brombeere, Himbeere und Walderdbeere. Heidelbeeren nur, wenn man sie sicher kennt: Die giftige Tollkirsche hat ebenfalls schwarze, glänzende Beeren, aber einzeln an einer großen Staude.",
+            "Rote Beeren an Sträuchern in Garten, Park und Wald sind oft giftig oder haben giftige Samen, zum Beispiel Eibe, Seidelbast, Pfaffenhütchen, Maiglöckchen und Aronstab.",
+            "Beeren und Kräuter vom Boden gut waschen."
+          ]
+        },
+        {
+          "titel": "Pilze",
+          "punkte": [
+            "Pilze nur sammeln, wenn man die Art ganz sicher kennt. Der tödlich giftige Grüne Knollenblätterpilz wird mit Champignons und anderen Speisepilzen verwechselt.",
+            "Es gibt keine einfache Regel für giftig oder essbar. Weder Geruch noch ein Silberlöffel noch angefressene Stellen zeigen es.",
+            "Im Zweifel eine Pilzberatungsstelle fragen oder den Pilz stehen lassen. Wildpilze nicht roh essen."
+          ]
+        },
+        {
+          "titel": "Wenn jemand etwas Giftiges gegessen hat",
+          "punkte": [
+            "Sofort den Giftnotruf anrufen (die Nummer steht auf der Seite Erste Hilfe ganz oben), auch wenn es der Person noch gut geht. Bei Atemnot, Krämpfen oder Bewusstlosigkeit den Notruf (112).",
+            "Kein Erbrechen auslösen. Pflanzenteile, Pilzreste oder Erbrochenes aufheben und mitgeben."
           ]
         }
       ]

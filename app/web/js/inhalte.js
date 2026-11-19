@@ -9,6 +9,25 @@ const Inhalte = (() => {
   const auswahl = { modelle: new Set(), pakete: new Set(), karten: new Map(), routen: false, routenGroesse: null, sprachen: new Set(), stimmen: new Set() };
 
   let lauf = 0;
+  // Nach der ersten Einrichtung: Während der Download läuft, den Rundgang anbieten (bis man es wegklickt)
+  function rundgangAngebot() {
+    const box = $("#inhalte-rundgang");
+    let an = false;
+    try { an = sessionStorage.getItem("fb-rundgang-angebot") === "1"; } catch { }
+    box.hidden = !an || Rundgang.aktiv();
+    if (box.hidden) return;
+    const weg = () => { try { sessionStorage.removeItem("fb-rundgang-angebot"); } catch { } box.hidden = true; };
+    box.className = "karte-box rundgang-angebot";
+    box.replaceChildren(
+      el("span", { class: "rundgang-angebot-symbol" }, sym("compass")),
+      el("div", {}, el("b", {}, "Während das lädt: Fieldbook kennenlernen"),
+        el("small", {}, "Im Rundgang probierst du jeden Bereich mit Beispielinhalten aus.", el("br"),
+          "Der Download läuft dabei weiter.", el("br"),
+          "Alle Kapitel kannst du später in den Einstellungen unter „Rundgang durch Fieldbook“ erneut ansehen.")),
+      el("button", { type: "button", class: "knopf knopf-haupt knopf-klein", onclick: () => Rundgang.uebersicht() }, "Rundgang ansehen"),
+      el("button", { type: "button", class: "rundgang-angebot-zu", title: "Ausblenden", "aria-label": "Ausblenden", onclick: weg }, sym("x")));
+  }
+
   async function zeigen(params) {
     const nr = ++lauf; // zweites zeigen() während des Ladens: nur das letzte gilt
     clearInterval(timer);
@@ -27,6 +46,7 @@ const Inhalte = (() => {
     const ow = OW.status && OW.status.ordnerWarnung, owBox = $("#inhalte-ordner");
     owBox.hidden = !ow;
     owBox.replaceChildren(...(ow ? zeilen(ow) : []));
+    rundgangAngebot();
     // Vom Übersetzer aus den Bereich „Sprachen“ gleich aufgeklappt zeigen
     const zuUe = params && params.get("zu");
     // (nur dieser, es ist immer höchstens ein Abschnitt offen)
@@ -287,7 +307,7 @@ const Inhalte = (() => {
     const kiDa = kat.modelle.filter(m => m.installiert);
     const ki = abschnitt("ki", "message-circle", "KI-Assistent",
       kiDa.map(m => m.name + " · " + m.modell + (s.modell === m.id && kiDa.length > 1 ? " (aktiv)" : "")), auswahl.modelle.size, vonInst(kiDa.length, kat.modelle.length));
-    ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Im Moment bietet Fieldbook nur Qwen 3.5 (4B) an.", el("br"), "Es läuft auf jedem Laptop mit 8 GB Arbeitsspeicher.", el("br"), "Weitere KIs folgen, sobald sie getestet sind."));
+    ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Qwen 3.5 (4B) läuft auf jedem Laptop mit 8 GB Arbeitsspeicher.", el("br"), "Qwen 3.5 (9B) antwortet besser, braucht aber eine Grafikkarte mit 8 GB.", el("br"), "Ohne Grafikkarte läuft es erst ab 16 GB Arbeitsspeicher, die Antworten dauern dann sehr lange."));
     if (kat.modelle.length > 1) ki.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 12px" }, "Du kannst mehrere KIs laden und jederzeit mit „Benutzen“ zwischen ihnen wechseln.", el("br"), "Es läuft immer nur eine, die anderen belegen nur Platz auf der Festplatte.", el("br"), "Ein neuer Download ändert die aktive KI nicht."));
     // Rechenweg: Grafikkarte oder Prozessor. Fehlt das Grafikkarten-Programm, lädt Fieldbook es nach.
     const gpu = Setup.besteGpu(hw);

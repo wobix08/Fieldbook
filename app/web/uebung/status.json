@@ -1,0 +1,14 @@
+{
+  "_hinweis": "Übungsmodus des Rundgangs (js/rundgang.js): Diese Werte ersetzen im Status die echten, alles andere bleibt echt. karten: die Beispielkarte des Kapitels Karten (wird vor dem ersten Start nach daten/cache/uebung geladen, bbox = West,Süd,Ost,Nord, bestimmt auch den Ausschnitt beim Laden).",
+  "setupFertig": true,
+  "wissen": 4,
+  "bibliothek": true,
+  "bibliothekFehler": null,
+  "defektePakete": [],
+  "pdfTexte": {},
+  "downloadAktiv": false,
+  "karten": [ { "id": "beispiel-garmisch", "titel": "Beispielkarte Garmisch-Partenkirchen", "bbox": [11.04, 47.46, 11.17, 47.53], "routen": true } ],
+  "orte": true,
+  "routen": true,
+  "routenKacheln": ["E10_N45"]
+}

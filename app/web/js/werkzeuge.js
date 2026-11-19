@@ -1,6 +1,6 @@
-// Werkzeuge: kleine Helfer ohne Netz (Umrechnen, Orientierung, Sonne und Mond, Signale).
+// Werkzeuge: kleine Helfer ohne Netz (Umrechnen, Orientierung, Sonne und Mond, Signale, Gewitter).
 // Erreichbar über das Werkzeug-Symbol in der Kopfzeile und über die Suche (Werkzeuge.passend).
-// Adresse: #werkzeuge?w=umrechnen|orientierung|sonne|signale.
+// Adresse: #werkzeuge?w=umrechnen|orientierung|sonne|signale|gewitter.
 "use strict";
 
 const Werkzeuge = (() => {
@@ -13,6 +13,8 @@ const Werkzeuge = (() => {
       worte: /sonnenaufgang|sonnenuntergang|dämmerung|mondphase|vollmond|wann wird es dunkel|wann wird es hell/ },
     { id: "signale", titel: "Signale", text: "Morse und Notzeichen", symbol: "siren",
       worte: /morse|notsignal|notzeichen|\bsos\b|alpines notsignal|bodenzeichen|lichtzeichen|signalpfeife/ },
+    { id: "gewitter", titel: "Gewitter", text: "Wie weit, was tun", symbol: "cloud-lightning",
+      worte: /gewitter|blitz|donner|unwetter/ },
   ];
 
   const inhalt = $("#wz-inhalt");
@@ -39,6 +41,7 @@ const Werkzeuge = (() => {
     if (aktiv === "orientierung") return orientierung();
     if (aktiv === "signale") return signale();
     if (aktiv === "sonne") return sonne();
+    if (aktiv === "gewitter") return gewitter();
     return umrechnen();
   }
 
@@ -316,6 +319,9 @@ const Werkzeuge = (() => {
         "„Als Lichtzeichen zeigen“ lässt den ganzen Bildschirm im Morsetakt aufleuchten, nachts weit sichtbar."),
       feld, aus,
       el("div", { class: "knopfreihe" }, licht),
+      el("p", { class: "warnung wz-blink-warnung" }, sym("triangle-alert"),
+        el("span", {}, "Achtung: Beim Lichtzeichen blinkt der ganze Bildschirm hell und dunkel.", el("br"),
+          "Das kann bei Menschen mit Epilepsie einen Anfall auslösen.")),
       el("h3", {}, "Notsignale"),
       el("div", { class: "wz-karten" },
         el("div", { class: "wz-karte" }, el("h4", {}, "SOS"),
@@ -340,6 +346,83 @@ const Werkzeuge = (() => {
             el("li", {}, el("b", {}, "X"), " Ärztliche Hilfe gebraucht"),
             el("li", {}, el("b", {}, "Pfeil"), " In diese Richtung gegangen"),
             el("li", {}, el("b", {}, "Y"), " Ja, ", el("b", {}, "N"), " Nein")))));
+  }
+
+  // ---------- Gewitter ----------
+  // Stoppuhr zwischen Blitz und Donner; Schall braucht etwa 3 Sekunden für einen Kilometer.
+  // Die letzte Messung bleibt gemerkt, so sieht man, ob das Gewitter näher kommt.
+  let blitzZeit = null, uhr = null, letzteKm = null;
+  window.addEventListener("hashchange", () => { clearInterval(uhr); uhr = null; blitzZeit = null; });
+
+  function gewitter() {
+    const knopf = el("button", { type: "button", class: "knopf knopf-haupt wz-blitz-knopf" });
+    const anzeige = el("output", { class: "wz-ergebnis wz-blitz-zeit" }, "0,0 s");
+    const ergebnis = el("div", { class: "wz-blitz-ergebnis" });
+    const komma = (n, s) => n.toFixed(s).replace(".", ",");
+
+    function beschriften() {
+      knopf.replaceChildren(sym(blitzZeit ? "square" : "zap"), blitzZeit ? "Donner gehört" : "Blitz gesehen");
+    }
+    function bewerten(sek) {
+      const km = sek / 3;
+      const teile = [el("p", { class: "wz-ergebnis" }, "Etwa " + komma(km, km < 10 ? 1 : 0) + " km entfernt")];
+      if (sek < 10) teile.push(el("p", { class: "warnung" }, el("b", {}, "Sehr nah, höchste Gefahr."), el("br"),
+        "Sofort in ein Haus oder Auto.", el("br"), "Geht das nicht, Hockstellung wie unten beschrieben."));
+      else if (sek < 30) teile.push(el("p", { class: "warnung" }, el("b", {}, "Du bist in Reichweite der Blitze."), el("br"),
+        "Blitze können dem Gewitter weit vorauseilen, auch bei blauem Himmel über dir.", el("br"),
+        "Jetzt Schutz suchen, nicht abwarten."));
+      else teile.push(el("p", {}, "Noch etwas entfernt.", el("br"), "Miss beim nächsten Blitz noch einmal, dann siehst du, ob es näher kommt."));
+      if (letzteKm !== null && Math.abs(km - letzteKm) >= 0.5)
+        teile.push(el("p", {}, km < letzteKm ? "Es kommt näher (vorher " : "Es zieht ab (vorher ", komma(letzteKm, 1), " km)."));
+      letzteKm = km;
+      ergebnis.replaceChildren(...teile);
+    }
+    knopf.addEventListener("click", () => {
+      if (!blitzZeit) {
+        blitzZeit = performance.now();
+        uhr = setInterval(() => { anzeige.textContent = komma((performance.now() - blitzZeit) / 1000, 1) + " s"; }, 100);
+      } else {
+        const sek = (performance.now() - blitzZeit) / 1000;
+        clearInterval(uhr); uhr = null; blitzZeit = null;
+        anzeige.textContent = komma(sek, 1) + " s";
+        bewerten(sek);
+      }
+      beschriften();
+    });
+    beschriften();
+
+    return el("div", { class: "wz-panel" },
+      el("h3", {}, "Wie weit ist das Gewitter?"),
+      el("p", { class: "wz-klein" }, "Klicke beim Blitz auf „Blitz gesehen“ und beim Donner auf „Donner gehört“.", el("br"),
+        "Ohne Laptop: Sekunden zwischen Blitz und Donner zählen und durch 3 teilen, das sind die Kilometer."),
+      el("div", { class: "wz-oben" }, knopf, anzeige),
+      ergebnis,
+      el("h3", {}, "Was tun"),
+      el("div", { class: "wz-karten" },
+        el("div", { class: "wz-karte" }, el("h4", {}, "Wann Schutz suchen"),
+          el("p", {}, "Blitze schlagen nicht nur direkt unter der Gewitterwolke ein.", el("br"),
+            "Sie können dem Gewitter mehrere Kilometer vorauseilen, selten sogar bis zu 15 Kilometer.", el("br"),
+            "Deshalb sind ein, zwei oder drei Kilometer Abstand kein Schutz, auch wenn über dir noch blauer Himmel ist."),
+          el("p", {}, "Sind es weniger als 30 Sekunden zwischen Blitz und Donner, ist das Gewitter näher als 10 Kilometer.", el("br"),
+            "Dann bist du in Reichweite der Blitze und solltest gleich Schutz suchen.", el("br"),
+            "Zieht das Gewitter auf dich zu, bleibt dir oft nur wenig Zeit."),
+          el("p", {}, "Erst 30 Minuten nach dem letzten Donner wieder hinausgehen.")),
+        el("div", { class: "wz-karte" }, el("h4", {}, "Wo man sicher ist"),
+          el("p", {}, "In Häusern und in Autos mit Blechdach.", el("br"),
+            "Im Auto Fenster zu und nichts Metallisches anfassen."),
+          el("p", {}, "Kein Schutz sind Zelte, Hütten ohne Blitzableiter, Bushaltestellen und offene Unterstände.")),
+        el("div", { class: "wz-karte" }, el("h4", {}, "Draußen ohne Schutz"),
+          el("ul", {},
+            el("li", {}, "In eine Mulde gehen, weg von Gipfeln, Kämmen und freiem Feld."),
+            el("li", {}, "Abstand zu einzelnen Bäumen, Masten und Zäunen halten, mindestens 3 Meter vom Stamm und von den Ästen."),
+            el("li", {}, "Raus aus dem Wasser und weg vom Ufer."),
+            el("li", {}, "In die Hocke gehen, Füße eng zusammen, Kopf einziehen, nicht hinlegen."),
+            el("li", {}, "In der Gruppe einige Meter Abstand zueinander halten."))),
+        el("div", { class: "wz-karte" }, el("h4", {}, "Wenn jemand getroffen wurde"),
+          el("p", {}, "Man kann die Person gefahrlos anfassen, sie ist nicht geladen."),
+          el("p", {}, "Notruf 112 wählen.", el("br"),
+            "Atmet sie nicht normal, sofort mit der Wiederbelebung beginnen."),
+          el("p", {}, el("a", { href: "#erstehilfe" }, "Erste Hilfe öffnen")))));
   }
 
   return { zeigen, passend };

@@ -104,7 +104,7 @@ const Routen = (() => {
           treffer.innerHTML = "";
           if (!liste) treffer.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar."));
           else for (const o of liste.slice(0, 8)) {
-            treffer.append(el("button", { type: "button", onclick: () => { treffer.innerHTML = ""; waehle(o, false); } },
+            treffer.append(el("button", { type: "button", "data-ort": o.name + " · " + o.art, onclick: () => { treffer.innerHTML = ""; waehle(o, false); } },
               el("b", {}, o.name), " ", el("small", {}, o.art + " · " + o.land)));
           }
         }
@@ -714,7 +714,22 @@ const Routen = (() => {
     if (!ziel) { const f = document.querySelectorAll("#routen-panel .punkt input")[1]; if (f) f.focus(); }
   }
 
-  return { verbinden, zuZiel, vonHier, get offen() { return offen; },
+  // Rundgang („Zurück“): Routenplanung auf einen festen Stand setzen. stand: { start, ziel, profil } (Punkte oder null,
+  // Profil-ID), null = Routenplanung schließen
+  function uebungSetzen(stand) {
+    if (!stand) { if (offen) schliessen(); return; }
+    if (!offen) { Karten.punktFuerRoute(); oeffnen(); }
+    loeschen();
+    start = stand.start || null;
+    ziel = stand.ziel || null;
+    profil = PROFILE.find(p => p.id === stand.profil) || PROFILE[0];
+    wartetAuf = !start ? "start" : !ziel ? "ziel" : null;
+    zeichneMarker();
+    zeichnePanel();
+    if (start && ziel) berechnen();
+  }
+
+  return { verbinden, zuZiel, vonHier, uebungSetzen, get offen() { return offen; },
     // für sperrungen.js
     get strecke() { return offen && geojson ? geojson.features[0].geometry.coordinates : null; },
     get profilId() { return profil.id; },

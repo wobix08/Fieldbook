@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Lesefenster (Übung)</title>
+<!-- Ersatz für den Kiwix-Viewer im Übungsmodus der Führung: dieselben Namen (content_iframe, kiwixsearchbox,
+     gotoMainPageOfCurrentBook, gotoRandomPage, performSearch), die js/bibliothek.js benutzt -->
+<script>(function(){var t='dark';try{t=localStorage.getItem('thema')||'dark';}catch(e){}
+if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+document.documentElement.style.background=t==='light'?'#fff':'#161715';})();</script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  #content_iframe { display: block; width: 100%; height: 100%; border: 0; }
+  #kiwixsearchbox { display: none; }
+</style>
+</head>
+<body>
+<input id="kiwixsearchbox" type="search">
+<iframe id="content_iframe" title="Artikel"></iframe>
+<script>
+"use strict";
+const rahmen = document.getElementById("content_iframe");
+let artikel = {};
+const geladen = fetch("/uebung/kiwix/artikel.json").then(r => r.json()).then(d => { artikel = d; }).catch(() => { });
+
+function buch() { return decodeURIComponent((location.hash.slice(1).split("/")[0]) || ""); }
+function zeigeHash() {
+  const h = location.hash.slice(1);
+  if (!h) return;
+  const ziel = "/kiwix/content/" + (h.includes("/") ? h : h + "/");
+  if (rahmen.contentWindow && rahmen.contentWindow.location.pathname + rahmen.contentWindow.location.hash === ziel) return;
+  rahmen.src = ziel;
+}
+// Der Hash folgt dem Artikel im Rahmen (wie im echten Viewer)
+rahmen.addEventListener("load", () => {
+  try {
+    const m = rahmen.contentWindow.location.pathname.match(/^\/kiwix\/content\/(.+)$/);
+    if (m && "#" + m[1] !== location.hash) history.replaceState(null, "", "#" + m[1]);
+  } catch (e) { }
+});
+window.addEventListener("hashchange", zeigeHash);
+
+function gotoMainPageOfCurrentBook() { rahmen.src = "/kiwix/content/" + encodeURIComponent(buch()) + "/"; }
+async function gotoRandomPage() {
+  await geladen;
+  const b = artikel[buch()];
+  if (!b || !b.artikel.length) return;
+  const a = b.artikel[Math.floor(Math.random() * b.artikel.length)];
+  rahmen.src = "/kiwix/content/" + encodeURIComponent(buch()) + "/" + a.pfad;
+}
+function performSearch() {
+  const q = document.getElementById("kiwixsearchbox").value.trim();
+  if (q) rahmen.src = "/kiwix/search?books.name=" + encodeURIComponent(buch()) + "&pattern=" + encodeURIComponent(q);
+}
+// Erst nach dem Laden (wie der echte Viewer): Sonst ist der Artikel schon da, bevor js/bibliothek.js
+// auf ihn horcht, und Merken und „Zuletzt gelesen“ bekommen ihn nicht mit
+addEventListener("load", () => setTimeout(zeigeHash, 0));
+</script>
+</body>
+</html>

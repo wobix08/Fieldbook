@@ -688,5 +688,16 @@ const ErsteHilfe = (() => {
     return liste;
   }
 
-  return { zeigen };
+  // Rundgang („Zurück“): nimmt im Übungs-Lernstand abgeschlossene Lektionen („fertig“) bzw. abgehakte Übungen
+  // („geuebt“) zurück und zeichnet die Seite neu. Der Lernstand der Übung lebt nur im Browser (Server speichert nichts).
+  function uebungZurueck(was) {
+    if (!stand || !stand.lektionen) return;
+    for (const ls of Object.values(stand.lektionen)) {
+      if (was === "fertig") delete ls.fertig;
+      if (was === "geuebt") ls.geuebt = [];
+    }
+    if (location.hash.startsWith("#erstehilfe")) zeigen(new URLSearchParams(location.hash.split("?")[1] || ""));
+  }
+
+  return { zeigen, uebungZurueck };
 })();

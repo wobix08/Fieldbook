@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html class="html__responsive  html__fixed-top-bar">
+    <head>
+        <meta charset="utf-8">
+        <title>Highest Voted Questions - The Great Outdoors Stack Exchange</title>
+        <link rel="shortcut icon" href="./favicon.ico" />
+        <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+        <link rel="image_src" href="./apple-touch-icon.png" />
+        <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0" />
+        <meta name="to_root" content="./" />
+        <link rel="stylesheet" type="text/css" href="./static/css/stacks.css" />
+        <link id="primary_css" rel="stylesheet" type="text/css" href="./static/css/primary.css" />
+        <link id="secondary_css" rel="stylesheet" type="text/css" href="./static/css/secondary.css" />
+        <link rel="stylesheet" type="text/css" href="./static/css/sotoki.css" />
+        
+        <style type="text/css">
+            a.external-link { background-image: url('./static/img/external-link-ltr-icon.svg'); }
+        </style>
+        <script type="text/javascript" src="./static/js/jdenticon.min.js"></script>
+        <script type="text/javascript" src="./static/js/webp-hero.polyfill.js"></script>
+        <script type="text/javascript" src="./static/js/webp-hero.bundle.js"></script>
+        <script type="text/javascript" src="./static/js/webp-handler.js"></script>
+        <script type="text/javascript" src="./static/js/identicons.js"></script>
+        <script src="./static/js/moment.min.js"></script>
+        
+        
+    </head>
+    <body class="questions-page unified-theme">
+        <header data-is-here-when="sm" class="s-topbar ps-fixed t0 l0 js-top-bar">
+            <div class="s-topbar--container pl8">
+                <ol class="s-navigation fw-nowrap" role="presentation">
+                    <li><a class="s-navigation--item is-selected" href="./questions">Questions</a></li>
+                    <li><a class="s-navigation--item" href="./tags">Tags</a></li>
+                    <li><a class="s-navigation--item" href="./users">Users</a></li>
+                    <li><a class="s-navigation--item" href="./about">About</a></li>
+                </li>
+                </ol>
+            </div>
+        </header>
+        <header data-is-here-when="sm" class="kiwix-topbar-fill z-minus-1 s-topbar"></header>
+        <header class="site-header">
+<div class="site-header--container">
+<a class="site-header--link fs-headline1 fw-bold" href="./">
+The Great Outdoors            </a>
+</div>
+</header>
+
+        
+        <div class="container">
+            <div id="left-sidebar" data-is-here-when="md lg" class="left-sidebar js-pinned-left-sidebar ps-relative">
+                <div class="left-sidebar--sticky-container js-sticky-leftnav">
+                    <nav role="navigation">
+                        <ol class="nav-links">
+                            <li>
+                                <ol class="nav-links">
+                                    <li>
+                                        <a id="nav-home" href="./" class="pl8 js-gps-track nav-links--link -link__with-icon">
+                                            <img aria-hidden="true" class="svg-icon iconHome" src="./static/img/home.svg">
+                                            <span class="-link--channel-name pl8">Home</span>
+                                        </a>
+                                    </li>
+                                    <li class="youarehere">
+                                        <a id="nav-questions" href="./questions" class="pl8 js-gps-track nav-links--link -link__with-icon">
+                                            <img aria-hidden="true" class="svg-icon iconQuestion" src="./static/img/question.svg">
+                                            <span class="-link--channel-name pl8">Questions</span>
+                                        </a>
+                                    </li>
+                                    <li class="">
+                                        <a id="nav-tags" href="./tags" class="pl8 js-gps-track nav-links--link -link__with-icon">
+                                            <img aria-hidden="true" class="svg-icon iconTags" src="./static/img/tag.svg">
+                                            <span class="-link--channel-name pl8">Tags</span>
+                                        </a>
+                                    </li>
+                                    
+                                    <li class="">
+                                        <a href="./users" id="nav-users" class="pl8 js-gps-track nav-links--link -link__with-icon">
+                                            <img aria-hidden="true" class="svg-icon iconPeople" src="./static/img/people.svg">
+                                            <span class="-link--channel-name pl8">Users</span>
+                                        </a>
+                                    </li>
+                                    
+                                    <li class="">
+                                        <a href="./about" id="nav-about" class="pl8 js-gps-track nav-links--link -link__with-icon">
+                                            <img aria-hidden="true" class="svg-icon iconAnswer" src="./static/img/people.svg">
+                                            <span class="-link--channel-name pl8">About</span>
+                                        </a>
+                                    </li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+            <div id="content" class="">
+            
+        <div id="mainbar-full">
+            <div class="grid">
+                <h1 class="grid--cell fl1 fs-headline1">Most Popular</h1>
+            </div>
+            <div class="grid ai-end mb16 sm:fd-column">
+                <div class="grid--cell fl1 fs-body1 sm:mb16">
+                    
+                    <a href="./questions/tagged/hiking" class="post-tag no-tag-menu" title="Show questions relating to hiking" rel="tag">hiking</a>
+                    
+                    <a href="./questions/tagged/safety" class="post-tag no-tag-menu" title="Show questions relating to safety" rel="tag">safety</a>
+                    
+                    <a href="./questions/tagged/gear" class="post-tag no-tag-menu" title="Show questions relating to gear" rel="tag">gear</a>
+                    
+                    <a href="./questions/tagged/rock-climbing" class="post-tag no-tag-menu" title="Show questions relating to rock-climbing" rel="tag">rock-climbing</a>
+                    
+                    <a href="./questions/tagged/camping" class="post-tag no-tag-menu" title="Show questions relating to camping" rel="tag">camping</a>
+                    
+                    <a href="./questions/tagged/climbing" class="post-tag no-tag-menu" title="Show questions relating to climbing" rel="tag">climbing</a>
+                    
+                    <a href="./questions/tagged/backpacking" class="post-tag no-tag-menu" title="Show questions relating to backpacking" rel="tag">backpacking</a>
+                    
+                    <a href="./questions/tagged/united-states" class="post-tag no-tag-menu" title="Show questions relating to united-states" rel="tag">united-states</a>
+                    
+                    <a href="./questions/tagged/survival" class="post-tag no-tag-menu" title="Show questions relating to survival" rel="tag">survival</a>
+                    
+                    <a href="./questions/tagged/mountaineering" class="post-tag no-tag-menu" title="Show questions relating to mountaineering" rel="tag">mountaineering</a>
+                    
+                    <a class="more-tags" href="./tags">more&nbsp;tags</a>
+                </div>
+            </div>
+            <div>
+                <div class="grid ai-center jc-space-between mb12 sm:fd-column sm:ai-stretch">
+                    <div class="fs-body3 grid--cell fl1 mr12 sm:mr0 sm:mb12">1500 questions</div>
+                </div>
+            </div>
+            <div id="questions">
+                
+                    <div class="question-summary" id="question-summary-45">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>127</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status ">
+                <strong>19</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/45/what-is-the-most-efficient-food-to-take-a-for-a-12-15-day-hiking-trip" class="question-hyperlink">What is the most efficient food to take a for a 12-15 day hiking trip?</a></h3>
+        <div class="excerpt">Last summer I spent 15 days hiking with my boyfriend, in Sarek National Park , where there are no places to restock with more food. The food issue was a major part of the pre-planning, as weight was also of high importance. Looking back, I can…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/hiking" class="post-tag grid--cell" title="show questions tagged 'hiking'" rel="tag">hiking</a>
+                
+                <a href="./questions/tagged/backpacking" class="post-tag grid--cell" title="show questions tagged 'backpacking'" rel="tag">backpacking</a>
+                
+                <a href="./questions/tagged/food" class="post-tag grid--cell" title="show questions tagged 'food'" rel="tag">food</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jan 24 '12 at 20:46">asked Jan 24 '12 at 20:46</time>
+    <a href="./users/13/victoriah" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="victoriah" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/13/victoriah" class="s-user-card--link">victoriah</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">2,381</li>
+            <li class="s-award-bling s-award-bling__gold" title="4 gold badges">4</li>
+            <li class="s-award-bling s-award-bling__silver" title="19 silver badges">19</li>
+            <li class="s-award-bling s-award-bling__bronze" title="17 bronze badges">17</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-14916">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>107</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>5</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/14916/why-would-one-aim-off-when-navigating-with-a-map-and-compass" class="question-hyperlink">Why would one aim off when navigating with a map and compass?</a></h3>
+        <div class="excerpt">Sometimes while navigating with map and compass, the advice is to aim off i.e. to aim either to the left or right of the intended destination, as opposed to straight for it. Why and when would one want to do this?</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/navigation" class="post-tag grid--cell" title="show questions tagged 'navigation'" rel="tag">navigation</a>
+                
+                <a href="./questions/tagged/orienteering" class="post-tag grid--cell" title="show questions tagged 'orienteering'" rel="tag">orienteering</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jan 17 '17 at 01:29">asked Jan 17 '17 at 01:29</time>
+    <a href="./users/8794/charlie-brumbaugh" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Charlie Brumbaugh" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/8794/charlie-brumbaugh" class="s-user-card--link">Charlie Brumbaugh</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">69,741</li>
+            <li class="s-award-bling s-award-bling__gold" title="39 gold badges">39</li>
+            <li class="s-award-bling s-award-bling__silver" title="238 silver badges">238</li>
+            <li class="s-award-bling s-award-bling__bronze" title="451 bronze badges">451</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-645">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>104</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>13</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/645/is-it-warmer-to-sleep-naked-in-a-sleeping-bag" class="question-hyperlink">Is it warmer to sleep naked in a sleeping bag?</a></h3>
+        <div class="excerpt">When camping in cold weather, some people say it is actually warmer to sleep naked than to sleep with clothes on. Is that true, or is it better to leave warm clothes on while in the bag?</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/camping" class="post-tag grid--cell" title="show questions tagged 'camping'" rel="tag">camping</a>
+                
+                <a href="./questions/tagged/cold-weather" class="post-tag grid--cell" title="show questions tagged 'cold-weather'" rel="tag">cold-weather</a>
+                
+                <a href="./questions/tagged/sleeping-bags" class="post-tag grid--cell" title="show questions tagged 'sleeping-bags'" rel="tag">sleeping-bags</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jan 28 '12 at 14:36">asked Jan 28 '12 at 14:36</time>
+    <a href="./users/39/reverend-gonzo" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Reverend Gonzo" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/39/reverend-gonzo" class="s-user-card--link">Reverend Gonzo</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">8,278</li>
+            <li class="s-award-bling s-award-bling__gold" title="11 gold badges">11</li>
+            <li class="s-award-bling s-award-bling__silver" title="54 silver badges">54</li>
+            <li class="s-award-bling s-award-bling__bronze" title="81 bronze badges">81</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-18740">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>102</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>14</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/18740/my-car-broke-down-in-siberia-what-do-i-do-now" class="question-hyperlink">My car broke down in Siberia. What do I do now?</a></h3>
+        <div class="excerpt">Some time ago, while driving on a snowy road, someone told me a kind of horror story. It involved a guy who was driving alone with an old car on an overland road in Siberia during winter, so the temperature was supposedly well below freezing. The…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/survival" class="post-tag grid--cell" title="show questions tagged 'survival'" rel="tag">survival</a>
+                
+                <a href="./questions/tagged/winter" class="post-tag grid--cell" title="show questions tagged 'winter'" rel="tag">winter</a>
+                
+                <a href="./questions/tagged/cold-weather" class="post-tag grid--cell" title="show questions tagged 'cold-weather'" rel="tag">cold-weather</a>
+                
+                <a href="./questions/tagged/emergencies" class="post-tag grid--cell" title="show questions tagged 'emergencies'" rel="tag">emergencies</a>
+                
+                <a href="./questions/tagged/russia" class="post-tag grid--cell" title="show questions tagged 'russia'" rel="tag">russia</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Mar 17 '18 at 12:53">asked Mar 17 '18 at 12:53</time>
+    <a href="./users/12153/dk2ax" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="DK2AX" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/12153/dk2ax" class="s-user-card--link">DK2AX</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">1,111</li>
+            <li class="s-award-bling s-award-bling__gold" title="2 gold badges">2</li>
+            <li class="s-award-bling s-award-bling__silver" title="8 silver badges">8</li>
+            <li class="s-award-bling s-award-bling__bronze" title="9 bronze badges">9</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-4276">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>86</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>1</strong> answer
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/4276/commuting-by-canoe" class="question-hyperlink">Commuting by canoe</a></h3>
+        <div class="excerpt">I live at a lake with my company in sight just 2 km (~1.2 miles) away. To get to work I have to cross the city, which is not only expensive in terms of money, it also costs a lot of nerves. That&#x27;s why I think I should go to work in a canoe. What do…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/canoes" class="post-tag grid--cell" title="show questions tagged 'canoes'" rel="tag">canoes</a>
+                
+                <a href="./questions/tagged/water-sports" class="post-tag grid--cell" title="show questions tagged 'water-sports'" rel="tag">water-sports</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jul 08 '13 at 19:04">asked Jul 08 '13 at 19:04</time>
+    <a href="./users/2230/jeredepp" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Jeredepp" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/2230/jeredepp" class="s-user-card--link">Jeredepp</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">3,379</li>
+            
+            <li class="s-award-bling s-award-bling__silver" title="21 silver badges">21</li>
+            <li class="s-award-bling s-award-bling__bronze" title="19 bronze badges">19</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-19102">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>84</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>8</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/19102/is-it-actually-useful-to-ration-food" class="question-hyperlink">Is it actually useful to ration food?</a></h3>
+        <div class="excerpt">Is it actually useful to ration food? What is the difference between eating a little bit of food at an interval and eating enough to be full at once? I&#x27;m getting the same amount of calories/nutrition** regardless of when I consume it, so who cares?…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/survival" class="post-tag grid--cell" title="show questions tagged 'survival'" rel="tag">survival</a>
+                
+                <a href="./questions/tagged/food" class="post-tag grid--cell" title="show questions tagged 'food'" rel="tag">food</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Apr 17 '18 at 01:33">asked Apr 17 '18 at 01:33</time>
+    <a href="./users/15475/pushkin" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="pushkin" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/15475/pushkin" class="s-user-card--link">pushkin</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">903</li>
+            <li class="s-award-bling s-award-bling__gold" title="1 gold badge">1</li>
+            <li class="s-award-bling s-award-bling__silver" title="6 silver badge">6</li>
+            <li class="s-award-bling s-award-bling__bronze" title="10 bronze badge">10</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-16598">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>83</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>10</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/16598/what-s-wrong-with-swimming-out-far" class="question-hyperlink">What's wrong with swimming out far?</a></h3>
+        <div class="excerpt">I swim decently - no pro but I can do a couple of km, resting once in awhile. Many times, both in day and night, in the warm, summer, Mediterranean sea, friends have cautioned me to &quot;not swim so far out&quot;. This has happened both in day and at night;…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/safety" class="post-tag grid--cell" title="show questions tagged 'safety'" rel="tag">safety</a>
+                
+                <a href="./questions/tagged/swimming" class="post-tag grid--cell" title="show questions tagged 'swimming'" rel="tag">swimming</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jul 15 '17 at 17:50">asked Jul 15 '17 at 17:50</time>
+    <a href="./users/9206/ken-enough-about-monica" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Ken - Enough about Monica" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/9206/ken-enough-about-monica" class="s-user-card--link">Ken - Enough about Monica</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">1,353</li>
+            <li class="s-award-bling s-award-bling__gold" title="1 gold badge">1</li>
+            <li class="s-award-bling s-award-bling__silver" title="10 silver badge">10</li>
+            <li class="s-award-bling s-award-bling__bronze" title="13 bronze badge">13</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-9674">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>82</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>12</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/9674/should-i-run-if-i-see-wild-dogs" class="question-hyperlink">Should I run if I see wild dogs?</a></h3>
+        <div class="excerpt">Feral dogs appear to be dangerous. Should I be running if I come across one, or should I stand fast and defend myself? They are a social animal, so they will be in a pack almost all the times.</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/safety" class="post-tag grid--cell" title="show questions tagged 'safety'" rel="tag">safety</a>
+                
+                <a href="./questions/tagged/dogs" class="post-tag grid--cell" title="show questions tagged 'dogs'" rel="tag">dogs</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Oct 21 '15 at 05:10">asked Oct 21 '15 at 05:10</time>
+    <a href="./users/2378/josh" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Josh" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/2378/josh" class="s-user-card--link">Josh</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">1,173</li>
+            <li class="s-award-bling s-award-bling__gold" title="1 gold badge">1</li>
+            <li class="s-award-bling s-award-bling__silver" title="10 silver badge">10</li>
+            <li class="s-award-bling s-award-bling__bronze" title="16 bronze badge">16</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-96">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>80</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status ">
+                <strong>24</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/96/where-in-europe-is-wild-camping-permitted" class="question-hyperlink">Where in Europe is wild camping permitted?</a></h3>
+        <div class="excerpt">Is there any resource (website, book, etc) that lists all European countries, and the state of free camping? Specifically, I want to see in which European countries I&#x27;m not fined when I place my tent somewhere outside of an official camping ground.</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/camping" class="post-tag grid--cell" title="show questions tagged 'camping'" rel="tag">camping</a>
+                
+                <a href="./questions/tagged/europe" class="post-tag grid--cell" title="show questions tagged 'europe'" rel="tag">europe</a>
+                
+                <a href="./questions/tagged/access-rights" class="post-tag grid--cell" title="show questions tagged 'access-rights'" rel="tag">access-rights</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jan 24 '12 at 22:08">asked Jan 24 '12 at 22:08</time>
+    <a href="./users/67/roflcoptrexception" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="RoflcoptrException" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/67/roflcoptrexception" class="s-user-card--link">RoflcoptrException</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">3,259</li>
+            <li class="s-award-bling s-award-bling__gold" title="3 gold badges">3</li>
+            <li class="s-award-bling s-award-bling__silver" title="26 silver badges">26</li>
+            <li class="s-award-bling s-award-bling__bronze" title="28 bronze badges">28</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-22904">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>79</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>7</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/22904/sleeping-solo-in-a-double-sleeping-bag" class="question-hyperlink">Sleeping solo in a double sleeping bag</a></h3>
+        <div class="excerpt">I&#x27;m buying a double sleeping bag for travels with my girlfriend. Parameters (of the bag, not the girlfriend) : 1500g of goose down, 680 in³/oz (393 cm³/g), 90/10% down/feather, rated to -9...-15°C T-comf when two people are inside. Question one:…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/backpacking" class="post-tag grid--cell" title="show questions tagged 'backpacking'" rel="tag">backpacking</a>
+                
+                <a href="./questions/tagged/sleeping-bags" class="post-tag grid--cell" title="show questions tagged 'sleeping-bags'" rel="tag">sleeping-bags</a>
+                
+                <a href="./questions/tagged/sleeping" class="post-tag grid--cell" title="show questions tagged 'sleeping'" rel="tag">sleeping</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Aug 19 '19 at 16:35">asked Aug 19 '19 at 16:35</time>
+    <a href="./users/14952/alexander" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Alexander" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/14952/alexander" class="s-user-card--link">Alexander</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">1,820</li>
+            <li class="s-award-bling s-award-bling__gold" title="1 gold badge">1</li>
+            <li class="s-award-bling s-award-bling__silver" title="17 silver badge">17</li>
+            <li class="s-award-bling s-award-bling__bronze" title="29 bronze badge">29</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-492">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>76</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>18</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/492/which-will-keep-my-food-colder-longer-draining-the-melted-ice-water-or-leaving" class="question-hyperlink">Which will keep my food colder longer, draining the melted ice water, or leaving it in the cooler?</a></h3>
+        <div class="excerpt">Say you have a cooler of frozen food and ice to last for several days or weeks of river-trip / car camping. To keep things as a cold as possible for as long as possible, is it better to leave the cold melted ice-water in, or to drain it out on a…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/camping" class="post-tag grid--cell" title="show questions tagged 'camping'" rel="tag">camping</a>
+                
+                <a href="./questions/tagged/food" class="post-tag grid--cell" title="show questions tagged 'food'" rel="tag">food</a>
+                
+                <a href="./questions/tagged/ice" class="post-tag grid--cell" title="show questions tagged 'ice'" rel="tag">ice</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jan 26 '12 at 12:16">asked Jan 26 '12 at 12:16</time>
+    <a href="./users/86/lost" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Lost" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/86/lost" class="s-user-card--link">Lost</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">19,141</li>
+            <li class="s-award-bling s-award-bling__gold" title="11 gold badges">11</li>
+            <li class="s-award-bling s-award-bling__silver" title="70 silver badges">70</li>
+            <li class="s-award-bling s-award-bling__bronze" title="126 bronze badges">126</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-20703">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>74</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>9</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/20703/etiquette-of-playing-musical-instruments-on-popular-hikes" class="question-hyperlink">Etiquette of playing musical instruments on popular hikes</a></h3>
+        <div class="excerpt">I enjoy hiking, but I&#x27;m not very well-versed with the general expectations other people have about noise, especially serious hikers. I generally do trails that take between 3-6 hours, usually up hills/mountains (depending on your definition) on the…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/hiking" class="post-tag grid--cell" title="show questions tagged 'hiking'" rel="tag">hiking</a>
+                
+                <a href="./questions/tagged/united-states" class="post-tag grid--cell" title="show questions tagged 'united-states'" rel="tag">united-states</a>
+                
+                <a href="./questions/tagged/etiquette" class="post-tag grid--cell" title="show questions tagged 'etiquette'" rel="tag">etiquette</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Oct 09 '18 at 13:46">asked Oct 09 '18 at 13:46</time>
+    <a href="./users/15018/hammern-songs" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="HammerN'Songs" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/15018/hammern-songs" class="s-user-card--link">HammerN'Songs</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">851</li>
+            <li class="s-award-bling s-award-bling__gold" title="1 gold badge">1</li>
+            <li class="s-award-bling s-award-bling__silver" title="6 silver badge">6</li>
+            <li class="s-award-bling s-award-bling__bronze" title="9 bronze badge">9</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-15540">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>73</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>12</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/15540/i-ve-just-been-bitten-by-a-rattlesnake-how-exactly-do-i-keep-calm" class="question-hyperlink">I've just been bitten by a rattlesnake; how, exactly, do I "keep calm"?</a></h3>
+        <div class="excerpt">My question is prompted by the answer of @WedaPashi to this question, which is about rattlesnakes , specifically: • Remain calm and first move beyond the snake&#x27;s striking distance. • Keep calm, panic will make the adrenaline come in picture and the…</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/first-aid" class="post-tag grid--cell" title="show questions tagged 'first-aid'" rel="tag">first-aid</a>
+                
+                <a href="./questions/tagged/rattlesnakes" class="post-tag grid--cell" title="show questions tagged 'rattlesnakes'" rel="tag">rattlesnakes</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Mar 09 '17 at 14:31">asked Mar 09 '17 at 14:31</time>
+    <a href="./users/6411/ab2" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="ab2" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/6411/ab2" class="s-user-card--link">ab2</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">24,846</li>
+            <li class="s-award-bling s-award-bling__gold" title="9 gold badges">9</li>
+            <li class="s-award-bling s-award-bling__silver" title="73 silver badges">73</li>
+            <li class="s-award-bling s-award-bling__bronze" title="172 bronze badges">172</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-14640">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>72</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status answered-accepted">
+                <strong>11</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/14640/when-hiking-why-is-the-right-of-way-given-to-people-going-up" class="question-hyperlink">When hiking, why is the right of way given to people going up?</a></h3>
+        <div class="excerpt">When you&#x27;re in a path and you encounter another group going the other way, it is said that whoever is going down should stand aside to let those going up pass through. Why?</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/hiking" class="post-tag grid--cell" title="show questions tagged 'hiking'" rel="tag">hiking</a>
+                
+                <a href="./questions/tagged/etiquette" class="post-tag grid--cell" title="show questions tagged 'etiquette'" rel="tag">etiquette</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Dec 20 '16 at 21:58">asked Dec 20 '16 at 21:58</time>
+    <a href="./users/11705/user19652" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="user19652" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/11705/user19652" class="s-user-card--link">user19652</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">1,533</li>
+            <li class="s-award-bling s-award-bling__gold" title="2 gold badges">2</li>
+            <li class="s-award-bling s-award-bling__silver" title="11 silver badges">11</li>
+            <li class="s-award-bling s-award-bling__bronze" title="12 bronze badges">12</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                    <div class="question-summary" id="question-summary-32">
+    <div class="statscontainer">
+        <div class="stats">
+            <div class="vote">
+                <div class="votes">
+                    <span class="vote-count-post"><strong>70</strong></span>
+                    <div class="viewcount">votes</div>
+                </div>
+            </div>
+
+            <div class="status ">
+                <strong>8</strong> answers
+            </div>
+        </div>
+    </div>
+    <div class="summary">
+        
+        <h3><a href="./questions/32/what-are-essential-items-in-an-emergency-kit" class="question-hyperlink">What are essential items in an emergency kit?</a></h3>
+        <div class="excerpt">What are must-have items in an emergency kit for a multi-day hiking trip?</div>
+        <div class="grid ai-start jc-space-between fw-wrap">
+            <div class="grid gs4 fw-wrap tags ">
+                
+                <a href="./questions/tagged/survival" class="post-tag grid--cell" title="show questions tagged 'survival'" rel="tag">survival</a>
+                
+                <a href="./questions/tagged/first-aid" class="post-tag grid--cell" title="show questions tagged 'first-aid'" rel="tag">first-aid</a>
+                
+                <a href="./questions/tagged/emergencies" class="post-tag grid--cell" title="show questions tagged 'emergencies'" rel="tag">emergencies</a>
+                
+            </div>
+            <div class="started mt0">
+                
+                    
+<div class="s-user-card s-user-card">
+    <time class="s-user-card--time" datetime="asked Jan 24 '12 at 20:29">asked Jan 24 '12 at 20:29</time>
+    <a href="./users/10/pekka" class="s-avatar s-avatar__32 s-user-card--avatar">
+        <img class="s-avatar--image" data-jdenticon-width="32" data-jdenticon-height="32" data-jdenticon-value="Pekka" />
+    </a>
+    <div class="s-user-card--info">
+        <a href="./users/10/pekka" class="s-user-card--link">Pekka</a>
+        <ul class="s-user-card--awards">
+            <li class="s-user-card--rep" title="reputation score">1,451</li>
+            
+            <li class="s-award-bling s-award-bling__silver" title="15 silver badges">15</li>
+            <li class="s-award-bling s-award-bling__bronze" title="13 bronze badges">13</li>
+        </ul>
+    </div>
+</div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+                
+                
+<div class="s-pagination pager fr">
+    
+    
+        
+            <div class="s-pagination--item is-selected">1</div>
+        
+    
+        
+            
+                <a class="s-pagination--item" href="./questions_page=2" rel="" title="Go to page 2">2</a>
+            
+        
+    
+        
+            
+                <a class="s-pagination--item" href="./questions_page=3" rel="" title="Go to page 3">3</a>
+            
+        
+    
+        
+            
+                <div class="s-pagination--item s-pagination--item__clear">…</div>
+            
+        
+    
+        
+            
+                <a class="s-pagination--item" href="./questions_page=99" rel="" title="Go to page 99">99</a>
+            
+        
+    
+        
+            
+                <a class="s-pagination--item" href="./questions_page=100" rel="" title="Go to page 100">100</a>
+            
+        
+    
+    
+        <a class="s-pagination--item" href="./questions_page=2" rel="next" title="Go to page 2"> Next</a>
+    
+</div>
+
+            </div>
+        </div>
+
+            </div>
+        </div>
+        <script src="./static/js/stack-icons.js"></script>
+        <script src="./static/js/fromnow.js"></script>
+        
+    </body>
+</html>

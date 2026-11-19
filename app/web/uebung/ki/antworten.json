@@ -1,0 +1,55 @@
+{
+  "_hinweis": "Beispiel-KI im Rundgang, Kapitel KI (js/fragen.js, uebungSenden). Statt des Modells antwortet Fieldbook mit diesen vorbereiteten Antworten, Wort für Wort wie eine echte. erkennen: Muster (ohne Groß/Klein), die alle in der Frage vorkommen müssen. nach: so viele Fragen müssen im Chat schon gestellt sein (0 = erste Frage, 1 = Nachfrage). schritte: Zeilen über der Antwort wie bei der echten Suche. quellen: Artikel aus den Beispielpaketen (uebung/kiwix), [n] in der Antwort verweist darauf, stelle: Satz im Artikel, zu dem das Lesefenster springt (Rundgang-Schritt „Das ist deine Quelle“ zeigt auf seinen Absatz). Jede Aussage der Antwort steht in der angegebenen Quelle. Antwort Wort für Wort in etwa sekunden (je Antwort eigene sekunden möglich). vorschlagen: Frage steht nach der vorherigen Antwort zum Anklicken darunter.",
+  "sekunden": 9,
+  "antworten": [
+    {
+      "frage": "Wie mache ich Wasser im Notfall trinkbar?",
+      "nach": 0,
+      "erkennen": ["wasser", "trinkbar|sauber|keimfrei|aufbereit|abkoch|filter|sicher"],
+      "schritte": [
+        "Suchbegriffe: Trinkwasser · Abkochen · Wasserfilter · Notfall",
+        "Gefunden: 4 Artikel in Wikipedia, Outdoors",
+        "3 passende Artikel gelesen"
+      ],
+      "quellen": [
+        { "titel": "Abkochen", "url": "/kiwix/content/wikipedia_de_all_maxi_2026-10/Abkochen", "buch": { "titel": "Wikipedia", "name": "wikipedia_de_all_maxi_2026-10" }, "text": "Abkochen von Wasser ist das Erhitzen auf den Siedepunkt, um Keime und Mikroorganismen abzutöten.", "stelle": "Das Wasser sollte mindestens 3 Minuten sprudelnd kochen." },
+        { "titel": "Wasserfilter", "url": "/kiwix/content/wikipedia_de_all_maxi_2026-10/Wasserfilter", "buch": { "titel": "Wikipedia", "name": "wikipedia_de_all_maxi_2026-10" }, "text": "Ein Wasserfilter ist eine Vorrichtung zur Verbesserung der Wasserbeschaffenheit. Partikel wie Trübstoffe oder Mikroorganismen werden aus dem Wasser entfernt." },
+        { "titel": "Trinkwasser", "url": "/kiwix/content/wikipedia_de_all_maxi_2026-10/Trinkwasser", "buch": { "titel": "Wikipedia", "name": "wikipedia_de_all_maxi_2026-10" }, "text": "Trinkwasser ist Wasser für den menschlichen Bedarf. Trinkwasser ist das wichtigste Lebensmittel, es kann nicht ersetzt werden." }
+      ],
+      "antwort": "Am sichersten ist **Abkochen**: Bring das Wasser zum Kochen und lass es mindestens 3 Minuten sprudelnd kochen [1]. Dabei sterben fast alle Keime ab [1]. In den Bergen dauert es länger, als Richtwert 1 Minute mehr je 150 Höhenmeter [1].\n\nIst das Wasser trüb, hilft vorher ein **Wasserfilter**. Er hält vor allem Schmutz und Schwebteile zurück [2]. Wechsle die Kartusche rechtzeitig, sonst können sich im Filter selbst Keime vermehren [2].\n\nTrinkwasser ist das wichtigste Lebensmittel und lässt sich durch nichts ersetzen [3]. Deshalb lohnt es sich, im Notfall sorgfältig zu sein."
+    },
+    {
+      "frage": "Und Bachwasser nach starkem Regen?",
+      "nach": 1,
+      "erkennen": ["bach|fluss|regen|see|teich"],
+      "schritte": [
+        "Suchbegriffe: Bachwasser · Regen · Abkochen · rain water stream",
+        "Gefunden: 4 Artikel in Wikipedia, Outdoors",
+        "3 passende Artikel gelesen"
+      ],
+      "quellen": [
+        { "titel": "Is it safe to drink rain water from a stream after a long drought?", "url": "/kiwix/content/outdoors.stackexchange.com_en_all_2026-10/questions/19865/rain-water", "buch": { "titel": "Outdoors", "name": "outdoors.stackexchange.com_en_all_2026-10", "englisch": true }, "text": "I was hiking in Switzerland yesterday and came across a small river which holds very little water on most days and grows a lot after rainfall." },
+        { "titel": "Abkochen", "url": "/kiwix/content/wikipedia_de_all_maxi_2026-10/Abkochen", "buch": { "titel": "Wikipedia", "name": "wikipedia_de_all_maxi_2026-10" }, "text": "Abkochen von Wasser ist das Erhitzen auf den Siedepunkt, um Keime und Mikroorganismen abzutöten." },
+        { "titel": "Wasserfilter", "url": "/kiwix/content/wikipedia_de_all_maxi_2026-10/Wasserfilter", "buch": { "titel": "Wikipedia", "name": "wikipedia_de_all_maxi_2026-10" }, "text": "Ein Wasserfilter ist eine Vorrichtung zur Verbesserung der Wasserbeschaffenheit. Partikel wie Trübstoffe oder Mikroorganismen werden aus dem Wasser entfernt." }
+      ],
+      "antwort": "Bei Bachwasser nach starkem Regen ist Vorsicht nötig. Starker Regen fließt über den Boden ab und spült Schmutz in den Bach, auch Stoffe von Straßen in der Nähe [1].\n\nAbkochen tötet die Keime [2], hilft aber kaum gegen Öl, Reifenabrieb und andere Stoffe von der Straße [1]. Ein Filter hält Schmutz und Schwebteile zurück [3].\n\nNimm nach starkem Regen deshalb lieber Wasser aus einer anderen Quelle, zum Beispiel aus Flaschen. Im Forum heißt es sogar, Bachwasser in den Alpen sei beim Wandern wohl nie ganz sicher [1]."
+    },
+    {
+      "_hinweis": "Zum Anhalten im Rundgang (Schritt „Antwort anhalten“): steht nach der zweiten Antwort zum Anklicken darunter (vorschlagen) und schreibt langsam (sekunden), damit man Zeit für den Knopf hat.",
+      "frage": "Wie funktioniert ein Wasserfilter?",
+      "nach": 2,
+      "vorschlagen": true,
+      "sekunden": 150,
+      "erkennen": ["filter"],
+      "schritte": [
+        "Suchbegriffe: Wasserfilter · Aktivkohle · Filtration",
+        "Gefunden: 3 Artikel in Wikipedia",
+        "1 passender Artikel gelesen"
+      ],
+      "quellen": [
+        { "titel": "Wasserfilter", "url": "/kiwix/content/wikipedia_de_all_maxi_2026-10/Wasserfilter", "buch": { "titel": "Wikipedia", "name": "wikipedia_de_all_maxi_2026-10" }, "text": "Ein Wasserfilter ist eine Vorrichtung zur Verbesserung der Wasserbeschaffenheit. Partikel wie Trübstoffe oder Mikroorganismen werden aus dem Wasser entfernt." }
+      ],
+      "antwort": "Ein **Wasserfilter** verbessert das Wasser, indem er Teilchen wie Trübstoffe oder Mikroorganismen und unerwünschte gelöste Stoffe entfernt oder verringert [1].\n\nEs gibt zwei Arten. Mechanische Filter arbeiten wie ein Sieb: Kies, Sand, Stein oder Kunststoff halten alles zurück, was zu groß ist, um hindurchzupassen [1]. Dazu gehören auch die Ultra- und die Mikrofiltration [1].\n\nGelöste Stoffe hält ein Sieb nicht auf. Organische Stoffe bleiben an **Aktivkohle** hängen, Ionen wie Calcium oder Magnesium tauscht ein **Ionenaustauscher** aus [1].\n\nAm gründlichsten sind die feinen Membranen der Nanofiltration und Umkehrosmose. Sie entfernen einen Großteil der gelösten Stoffe und der Salze [1].\n\nIm Haushalt reicht es, nur das Wasser zu filtern, das du trinkst [1]. Dafür gibt es fest eingebaute Anlagen oder Kannenfilter, zum Beispiel mit Aktivkohle [1]."
+    }
+  ]
+}

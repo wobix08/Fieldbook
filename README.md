@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
 
-### **[Fieldbook 0.8.5 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.5/Fieldbook-0.8.5.zip)**
+### **[Fieldbook 0.8.6 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.6/Fieldbook-0.8.6.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -26,14 +26,14 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 | | Bereich | Was es kann |
 |---|---|---|
-| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design (hell oder dunkel):<br>• Wikipedia auf Deutsch, komplett mit Bildern (49&nbsp;GB), ohne Bilder (19&nbsp;GB) oder kompakt (5&nbsp;GB)<br>• Medizin: Wikipedia-Medizin, MDWiki, Medikamente A–Z (NHS), Reisegesundheit (CDC) und Handbücher für Notlagen<br>• Reparieren: über 56.000 Reparaturanleitungen von iFixit (die meisten auf Englisch, Fieldbook übersetzt sie auf Knopfdruck ins Deutsche)<br>• Draußen und Selbstversorgung: Wasser aufbereiten, Knoten, Einkochen, Gärtnern, Energie ohne Netz<br>• Wikivoyage (Reiseführer), Wikibooks (Lehrbücher), Klexikon (Kinderlexikon), Project Gutenberg (Literatur) und mehr<br>• Eigene Unterlagen: eigene PDFs, Word-Dateien, Bilder und Texte ablegen, etwa Bedienungsanleitungen oder einen Medikamentenplan.<br>Die Suche und die KI finden auch, was darin steht.<br>• Merkliste mit eigenen Ordnern für Artikel, Buchseiten, Erste-Hilfe- und Vorsorge-Themen und einzelne markierte Textstellen, damit man sie im Ernstfall sofort wiederfindet.<br>• Vorlesen: einen Abschnitt antippen oder Text markieren, Fieldbook liest ihn laut vor. |
-| <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe.<br>Beim Lesen fasst sie den offenen Artikel zusammen, erklärt ihn einfach oder beantwortet Fragen dazu. |
+| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design (hell oder dunkel):<br>• Wikipedia auf Deutsch, komplett mit Bildern (49&nbsp;GB), ohne Bilder (19&nbsp;GB) oder kompakt (5&nbsp;GB)<br>• Medizin: Wikipedia-Medizin, MDWiki, Medikamente A–Z (NHS), Reisegesundheit (CDC) und Handbücher für Notlagen<br>• Reparieren: über 56.000 Reparaturanleitungen von iFixit (die meisten auf Englisch, Fieldbook übersetzt sie auf Knopfdruck ins Deutsche)<br>• Draußen und Selbstversorgung: Wasser aufbereiten, Knoten, Einkochen, Gärtnern, Energie ohne Netz<br>• Wikivoyage (Reiseführer), Wikibooks (Lehrbücher), Klexikon (Kinderlexikon), Project Gutenberg (Literatur) und mehr<br>• Eigene Unterlagen: eigene PDFs, Word-Dateien, Bilder und Texte ablegen, etwa Bedienungsanleitungen oder einen Medikamentenplan.<br>Die Suche und die KI finden auch, was darin steht.<br>• Notizen: eigene Texte mit Überschriften, Fett, Listen und Tabellen, etwa Telefonnummern oder ein Familientreffpunkt.<br>Alles lässt sich in eigene Ordner sortieren.<br>• Webseiten sichern: solange es Internet gibt, eine Seite im eingebauten Browser öffnen und mit allen Bildern speichern, etwa die Notfall-Seiten des eigenen Landkreises.<br>Links zwischen gesicherten Seiten funktionieren auch ohne Internet.<br>• Merkliste mit eigenen Ordnern für Artikel, Buchseiten, Erste-Hilfe- und Vorsorge-Themen und einzelne markierte Textstellen, damit man sie im Ernstfall sofort wiederfindet.<br>• Vorlesen: einen Abschnitt antippen oder Text markieren, Fieldbook liest ihn laut vor. |
+| <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe.<br>Passt die Antwort nicht, hältst du sie mit einem Klick an.<br>Beim Lesen fasst sie den offenen Artikel zusammen, erklärt ihn einfach oder beantwortet Fragen dazu. |
 | <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und Einkochen |
-| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche, eigene Orte merken, Routenplanung mit Höhenprofil, flacheren Wegen, Ausweichstrecken und eigenen Sperrungen, Ärzte, Apotheken und Trinkwasser in der Nähe, Sonnenauf- und -untergang mit Mondphase |
+| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche (auch nach Koordinaten), Entfernungen messen, eigene Orte merken, Routenplanung mit Höhenprofil, flacheren Wegen, Ausweichstrecken und eigenen Sperrungen, Ärzte, Apotheken und Trinkwasser in der Nähe, Sonnenauf- und -untergang mit Mondphase |
 | <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
 | <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
 | <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Vorbereiten in drei Stufen (Vorräte, Hausapotheke, Licht, Dokumente …) und was zu tun ist, wenn Strom oder Wasser weg sind oder die Sirene heult (Sirenensignale und Warnungen für Deutschland, Österreich und die Schweiz) |
-| <img src=".github/icons/tools.svg" width="32" height="32" align="left" alt=""> | **Werkzeuge** | Kleine Helfer über das Werkzeug-Symbol oben rechts:<br>• Umrechnen: Temperatur, Länge, Gewicht, Volumen, Geschwindigkeit und Küchenmaße (Tasse, Löffel in Gramm)<br>• Orientierung ohne GPS: mit Uhr und Sonne, Schattenstab oder Polarstern<br>• Sonne und Mond: Faustregeln (mit den Fingern abschätzen, wie lange es noch hell ist, Polarnacht, Südhalbkugel) und genaue Zeiten für einen Ort auf der Karte<br>• Signale: Morse-Übersetzer mit Lichtzeichen über den ganzen Bildschirm, SOS, Alpines Notsignal, Zeichen für Hubschrauber und auf dem Boden |
+| <img src=".github/icons/tools.svg" width="32" height="32" align="left" alt=""> | **Werkzeuge** | Kleine Helfer über das Werkzeug-Symbol oben rechts:<br>• Umrechnen: Temperatur, Länge, Gewicht, Volumen, Geschwindigkeit und Küchenmaße (Tasse, Löffel in Gramm)<br>• Orientierung ohne GPS: mit Uhr und Sonne, Schattenstab oder Polarstern<br>• Sonne und Mond: Faustregeln (mit den Fingern abschätzen, wie lange es noch hell ist, Polarnacht, Südhalbkugel) und genaue Zeiten für einen Ort auf der Karte<br>• Signale: Morse-Übersetzer mit Lichtzeichen über den ganzen Bildschirm, SOS, Alpines Notsignal, Zeichen für Hubschrauber und auf dem Boden<br>• Gewitter: Stoppuhr zwischen Blitz und Donner zeigt die Entfernung und ob es näher kommt, dazu die wichtigsten Verhaltensregeln |
 
 | Karten | Übersetzer | Erste Hilfe |
 |---|---|---|
@@ -58,11 +58,13 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.5 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.5/Fieldbook-0.8.5.zip)** (ZIP-Datei, etwa 4 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.6 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.6/Fieldbook-0.8.6.zip)** (ZIP-Datei, etwa 7 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
-   Er erkennt die Hardware, schlägt eine passende KI vor und lädt die gewählten Inhalte herunter.
+   Er erkennt die Hardware, schlägt eine passende KI vor und lädt die gewählten Inhalte herunter.\
+   Während die Inhalte laden, kannst du den **Rundgang** machen.\
+   Er zeigt jeden Bereich mit Beispieldaten zum Mitmachen, später jederzeit wieder über die Einstellungen.
 4. Ab dann funktioniert alles offline.\
    Ob wirklich alles da ist (Downloads fertig, KI eingerichtet, Karte für dein Land), zeigt *Einstellungen → Bereit für offline?*.
 
@@ -141,7 +143,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.8.5.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.8.6.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -157,9 +159,11 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
 
 ## Die KI
 
-Im Moment bietet Fieldbook nur **Qwen 3.5 (4B)** an (2,7 GB Download).\
-Es läuft auf jedem Laptop mit 8 GB Arbeitsspeicher, auch ohne Grafikkarte.\
-Weitere KIs folgen, sobald sie mit den Testfragen geprüft sind.\
+Fieldbook bietet zwei KIs an.\
+**Qwen 3.5 (4B)** (2,7 GB Download) läuft auf jedem Laptop mit 8 GB Arbeitsspeicher, auch ohne Grafikkarte.\
+**Qwen 3.5 (9B)** (5,7 GB Download) antwortet besser, ist aber nur mit Grafikkarte (ab 8 GB) empfohlen.\
+Mit 16 GB Arbeitsspeicher läuft es auch ohne Grafikkarte, die Antworten dauern dann aber sehr lange.\
+Der Assistent wählt die passende KI für deinen Rechner vor.\
 Bei weniger als 8 GB Arbeitsspeicher schlägt der Assistent „Keine KI“ vor.\
 Bibliothek, Karten und Erste Hilfe laufen trotzdem.
 
@@ -172,6 +176,7 @@ Antwort mit Quellen [1] [2] ◄── KI liest die besten Abschnitte
 ```
 
 Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
+Ein Klick auf eine Quelle öffnet den Artikel an der passenden Stelle und hebt sie hervor, damit du die Antwort schnell prüfen kannst.\
 Bei Erste-Hilfe-Fragen und zur Hausapotheke antwortet sie aus dem eingebauten Erste-Hilfe-Kurs bzw. der Vorsorge-Liste, weil Artikel aus der Bibliothek dort oft anderen Regeln folgen (z. B. amerikanischen).\
 Die passenden Artikel stehen trotzdem zum Weiterlesen in der Quellenliste.\
 Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
@@ -219,8 +224,8 @@ Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
 Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen oben unter *Fieldbook und Updates*).\
 Möchtest du auch diese kurze Anfrage nicht, schaltest du sie dort bei *Beim Start nach neuer Fieldbook-Version fragen* aus.\
 Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach Updates suchen* klickst.\
-Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Haken *Dabei auch neue Fieldbook-Versionen mitladen*).\
-Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch herunterladen“ spielt es die neue Version beim nächsten Start ein.
+Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Haken *Neue Fieldbook-Versionen zusammen mit den Inhalten laden*).\
+Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch“ spielt es die neue Version beim nächsten Start ein.
 
 **Sicher bei Problemen**\
 Vor jedem Update sichert Fieldbook den bisherigen Programmteil.\
@@ -230,7 +235,7 @@ Deine Inhalte im Ordner `daten` bleiben dabei immer unverändert.
 ## Datenschutz
 
 Fieldbook läuft auf deinem Gerät.\
-Fragen an die KI, Chats, deine eigenen Unterlagen und alles, was du in Fieldbook einträgst, bleiben dort und werden nie übertragen.\
+Fragen an die KI, Chats, deine eigenen Unterlagen und gesicherten Webseiten und alles, was du in Fieldbook einträgst, bleiben dort und werden nie übertragen.\
 Aufnahmen der Spracheingabe werden auf deinem Gerät erkannt und gleich danach gelöscht.
 
 **Wann Fieldbook ins Internet geht**\
@@ -244,6 +249,10 @@ Nach der Einrichtung nur in diesen Fällen:
 - **Links ins Internet** in einem Artikel: Fieldbook fragt die Adresse kurz an, um zu sehen, ob es Internet gibt.\
   Mit Internet zeigt Fieldbook erst das Ziel und öffnet es auf Knopfdruck in einem neuen Tab.\
   Ohne Internet erscheint ein kurzer Hinweis statt einer Fehlerseite.
+- **Webseiten sichern**: Fieldbook ruft nur die Adressen auf, die du selbst eingibst oder anklickst, dazu die Bilder und Schriften dieser Seiten.\
+  Zum Speichern baut Edge (oder Chrome, falls Edge fehlt) die Seite unsichtbar auf, mit einem eigenen Profil im Fieldbook-Ordner, getrennt von deinem Browser.\
+  Lässt eine Seite Fieldbook nicht herein, öffnet **Im Browserfenster** sie in einem sichtbaren Edge-Fenster mit eigenem Profil.\
+  Fieldbook liest beim Speichern nur die Seite und ihre Bilder aus diesem Fenster aus, die Verbindung dafür ist nur auf deinem Gerät erreichbar.
 - **Rückmeldungen**, die du selbst abschickst.
 - **Fehlerberichte und Nutzungsstatistik**, aber nur, wenn du zugestimmt hast.
 

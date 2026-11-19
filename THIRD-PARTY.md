@@ -45,6 +45,27 @@ Die Quelle steht auch unter jedem Bild im Kurs.
 | Säugling beim Verschlucken, aus [Heimlich Infant.png](https://commons.wikimedia.org/wiki/File:Heimlich_Infant.png) (in zwei Bilder geteilt, Beschriftung entfernt) | BruceBlaus | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 | Armschlinge, 4 Schritte, aus [Sling-and-swathe.svg](https://commons.wikimedia.org/wiki/File:Sling-and-swathe.svg) (in Einzelbilder aufgeteilt) | Baedr-9439 | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
+## Beispielinhalte des Rundgangs (`app/web/uebung`)
+
+Der Rundgang zeigt Beispielpakete mit echten Seiten aus Kiwix-Paketen, jeweils mit Bildern und Stildateien.\
+Die Inhalte sind unverändert übernommen, nur die Dateinamen der Bilder sind gekürzt.
+
+| Inhalt | Urheber | Lizenz |
+|---|---|---|
+| Wikipedia: Startseite, „Trinkwasser“, „Wasserfilter“, „Abkochen“ | Autorinnen und Autoren der [Wikipedia](https://de.wikipedia.org/) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Medizin-Wikipedia: Startseite, „Hitzeschaden“ | Autorinnen und Autoren der [Wikipedia](https://de.wikipedia.org/) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Bilder in den Wikipedia-Seiten | Wikimedia Commons, Urheber auf der jeweiligen Dateiseite | jeweils auf der Dateiseite |
+| The Great Outdoors Stack Exchange: Fragenliste und zwei Fragen mit Antworten | Nutzerinnen und Nutzer von [outdoors.stackexchange.com](https://outdoors.stackexchange.com/) | [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Stildateien von Stack Exchange (Stacks) | Stack Exchange, Inc. | [MIT](https://github.com/StackExchange/Stacks/blob/develop/LICENSE.MD) |
+| Koch-Wiki: Startseite, „Fladenbrot auf arabische Art“ | Autorinnen und Autoren des [Koch-Wikis](https://www.kochwiki.org/) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| Kapitel Kochen (`uebung/kochen`): acht Rezepte aus dem Koch-Wiki (z. B. „Tortilla española“, „Kartoffelpuffer“) | Autorinnen und Autoren des [Koch-Wikis](https://www.kochwiki.org/) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| Kapitel Kochen (`uebung/kochen`): Wikipedia „Kochkiste“, „Hobokocher“, „Rocket Stove“, „Solarkocher“ | Autorinnen und Autoren der [Wikipedia](https://de.wikipedia.org/) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| Beispielroute Garmisch-Partenkirchen – Wank (`uebung/routen`), berechnet mit BRouter | © [OpenStreetMap](https://www.openstreetmap.org/copyright)-Mitwirkende | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) |
+| Orte für die Ortssuche im Beispiel (`uebung/api/orte.json`) | [GeoNames](https://www.geonames.org) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+
+Die Beispielkarte des Kapitels Karten ist nicht in der ZIP.\
+Fieldbook lädt sie vor dem ersten Start von build.protomaps.com, wie jede andere Karte (OpenStreetMap-Daten, ODbL 1.0).
+
 ## Vom Setup heruntergeladen
 
 | Baustein | Lizenz |
@@ -99,8 +120,7 @@ Stimmen mit Nicht-kommerziell-Lizenz oder unklarer Lizenz lädt Fieldbook nicht.
 
 | Modell | Lizenz |
 |---|---|
-| Qwen 3.5 (Alibaba) in der Größe 4B | Apache 2.0 |
+| Qwen 3.5 (Alibaba) in den Größen 4B und 9B | Apache 2.0 |
 | [EmbeddingGemma 300M](https://huggingface.co/google/embeddinggemma-300m) (Google), Suchhilfe für die KI | [Gemma Terms of Use](https://ai.google.dev/gemma/terms) |
 
-Weitere Modelle folgen, sobald sie getestet sind.\
 Die KI-Modelle werden in der GGUF-Fassung von [Unsloth](https://huggingface.co/unsloth) geladen, die Suchhilfe in der von [ggml-org](https://huggingface.co/ggml-org/embeddinggemma-300M-GGUF).

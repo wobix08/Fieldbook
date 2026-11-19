@@ -471,6 +471,8 @@ const Vorsorge = (() => {
       const f = el("input", { type: "number", min: "0", max: "30", step: "1", value: String(stand.personen[g.id] || 0), "aria-label": g.titel });
       f.addEventListener("input", () => {
         stand.personen[g.id] = Math.max(0, Math.min(30, parseInt(f.value, 10) || 0));
+        // Wert auch als Attribut, damit der Rundgang die Eingabe per CSS prüfen kann (input[value='2'])
+        f.setAttribute("value", String(stand.personen[g.id]));
         berechne();
         speichern();
       });

@@ -246,6 +246,11 @@ const MerkAnsicht = (() => {
   function stelleZeigen(root, stelle) {
     const r = stelleFinden(root, stelle);
     if (!r) return false;
+    bereichZeigen(root, r);
+    return true;
+  }
+
+  function bereichZeigen(root, r) {
     const doc = root.ownerDocument, win = doc.defaultView;
     if (win.CSS && win.CSS.highlights && win.Highlight) {
       if (!doc.getElementById("fb-merk-stil")) {
@@ -263,8 +268,39 @@ const MerkAnsicht = (() => {
       sel.addRange(r);
     }
     const el0 = r.startContainer.parentElement;
-    if (el0) el0.scrollIntoView({ block: "center" });
-    return true;
+    if (!el0) return;
+    el0.scrollIntoView({ block: "center" });
+    // Lädt danach noch etwas nach (Bilder, Seitengestaltung), verrutscht die Stelle: kurz darauf noch einmal
+    // hinscrollen, solange der Nutzer nicht selbst scrollt oder klickt
+    let selbst = false;
+    const merken = () => { selbst = true; };
+    for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) doc.addEventListener(ev, merken, { once: true, passive: true });
+    for (const ms of [700, 2000]) setTimeout(() => {
+      if (selbst || !el0.isConnected) return;
+      const oben = r.getBoundingClientRect().top;
+      if (oben < 0 || oben > win.innerHeight * 0.8) el0.scrollIntoView({ block: "center" });
+    }, ms);
+  }
+
+  // Stelle aus einer KI-Antwort im Lesefenster zeigen (Text statt Merklisten-Eintrag). Fehlt der genaue Satz
+  // (im Artikel stehen z. B. Fußnotenzeichen dazwischen), genügt sein Anfang: Dann wird der ganze Absatz hervorgehoben.
+  async function textZeigen(root, stelle, versuche) {
+    const woerter = glatt(stelle).split(" ");
+    for (let i = 0; i < (versuche || 1); i++) {
+      if (stelleZeigen(root, stelle)) return true;
+      for (const n of [8, 5]) {
+        if (woerter.length <= n) continue;
+        const r = stelleFinden(root, woerter.slice(0, n).join(" "));
+        if (!r) continue;
+        const start = r.startContainer.parentElement;
+        const absatz = start && (start.closest("p, li, dd, pre, blockquote") || start);
+        if (absatz) r.selectNodeContents(absatz);
+        bereichZeigen(root, r);
+        return true;
+      }
+      await new Promise(r => setTimeout(r, 300));
+    }
+    return false;
   }
 
   // Stelle des Eintrags id zeigen; bei Fieldbook-Seiten kommt der Inhalt evtl. erst nach, deshalb mehrmals versuchen
@@ -355,5 +391,5 @@ const MerkAnsicht = (() => {
   document.addEventListener("mousedown", (ev) => { if (!(ev.target.closest && ev.target.closest(".markfeld"))) feldWeg(); });
   window.addEventListener("hashchange", feldWeg);
 
-  return { zeigen, merkKnopf, springen, nachNavigation };
+  return { zeigen, merkKnopf, springen, textZeigen, nachNavigation };
 })();

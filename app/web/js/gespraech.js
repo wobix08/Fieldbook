@@ -10,6 +10,17 @@ const Gespraech = (() => {
   let zeichneVerlauf = () => { };
   const marken = {};   // Beschriftungen je Sprache, für das Gegenüber übersetzt („sv|Original“ → „Original:“)
 
+  // Rundgang (Übungsmodus, Cookie „fb-uebung=1“): Der Übersetzer ist nur gespielt, egal was installiert ist.
+  // Immer Deutsch und die Beispielsprache; Übersetzungen, Spracheingabe und Gespräch kommen aus
+  // uebung/sprachen/beispiel.json, Vorlesen bleibt stumm. Das Mikrofon geht nie an, nichts wird gemerkt.
+  // Einmal beim Laden bestimmt (Start und Ende des Rundgangs laden die Seite neu), damit das Mikrofon auch dann
+  // aus bleibt, wenn ein anderer Tab das Cookie zwischendurch ändert
+  const spielAn = /(?:^|;\s*)fb-uebung=1(?:;|$)/.test(document.cookie);
+  const spiel = () => spielAn;
+  let beispiel = null;
+  const warte = (ms) => new Promise(r => setTimeout(r, ms));
+  const mitSpracheingabe = () => spiel() || !!(OW.status && OW.status.spracheingabe);
+
   // Deutsche Beschriftung in der Sprache code, mit Doppelpunkt; leer, solange die Übersetzung noch läuft
   function marke(code, text) {
     text = text || "Zurückübersetzt";
@@ -26,7 +37,7 @@ const Gespraech = (() => {
   // Ansicht: "chat" (Nachrichten links/rechts) oder "buehne" (neueste Übersetzung groß, Verlauf klein darunter), gemerkt
   let ansicht = "buehne";
   let gezeigt = null;            // Bühne: angeklickte ältere Nachricht, null = die neueste
-  try { du = localStorage.getItem("fb-gespraech-du"); if (localStorage.getItem("fb-gespraech-ansicht") === "chat") ansicht = "chat"; } catch { }
+  if (!spiel()) try { du = localStorage.getItem("fb-gespraech-du"); if (localStorage.getItem("fb-gespraech-ansicht") === "chat") ansicht = "chat"; } catch { }
   // Seite verlassen: Mikrofon im Sprechmodus aus, Vorlesen anhalten
   window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#uebersetzen")) { if (aufnahme) aufnahme.abbrechen(); smStopp(); vorlesenStopp(); modus = "schreiben"; } });
 
@@ -36,12 +47,17 @@ const Gespraech = (() => {
       try { sprachen = (await ladeKonfig("sprachen")).sprachen || []; }
       catch (e) { c.innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
     }
+    if (spiel() && !beispiel) {
+      try { const r = await fetch("/uebung/sprachen/beispiel.json"); if (!r.ok) throw new Error("Fehler " + r.status); beispiel = await r.json(); }
+      catch (e) { c.innerHTML = '<div class="fehlerbox">Fehler: ' + esc(e.message) + "</div>"; return; }
+    }
     await aktualisiereStatus();
     zeichne();
   }
 
   // Deutsch plus alle geladenen Sprachen; ohne Englisch geht nichts, weil über Englisch übersetzt wird
   function verfuegbar() {
+    if (spiel()) return [DEUTSCH, ...sprachen.filter(s => s.code === beispiel.sprache)];
     const da = new Set((OW.status && OW.status.sprachen) || []);
     if (!da.has("en") || !(OW.status && OW.status.uebersetzer)) return [];
     return [DEUTSCH, ...sprachen.filter(s => da.has(s.code))];
@@ -52,7 +68,19 @@ const Gespraech = (() => {
   // Gemeinsame Warteschlange aus uebersetzer.js (ersetzt abgestürzte oder hängende Worker)
   async function uebersetze(von, nach, text) {
     if (von === nach || !text.trim()) return text;
+    if (spiel()) return spielUebersetzen(von, nach, text);
     return Uebersetzer.textUebersetzen(von, nach, text);
+  }
+
+  // Rundgang: nur die Beispielsätze, mit kurzer Wartezeit wie beim echten Übersetzen
+  const normal = (t) => String(t).toLowerCase().replace(/[¿?¡!.,:;…"„“»«]/g, "").replace(/\s+/g, " ").trim();
+  async function spielUebersetzen(von, nach, text) {
+    await warte(400 + Math.min(1200, text.length * 15));
+    const p = (beispiel.saetze || []).find(x => x[von] != null && normal(x[von]) === normal(text));
+    if (p && p[nach] != null) return p[nach];
+    const e = new Error(beispiel.unbekannt || "Im Rundgang kennt der Übersetzer nur die Beispielsätze.");
+    e.spiel = true;
+    throw e;
   }
 
   function zeichne() {
@@ -75,11 +103,11 @@ const Gespraech = (() => {
     const codes = liste.map(s => s.code);
     if (!codes.includes(ich)) ich = "de";
     if (!du || !codes.includes(du) || du === ich) du = (liste.find(s => s.code !== ich && s.code !== "en") || liste.find(s => s.code !== ich)).code;
-    const sprechbar = OW.status && OW.status.spracheingabe && info(ich).sprechen !== false && info(du).sprechen !== false;
+    const sprechbar = mitSpracheingabe() && info(ich).sprechen !== false && info(du).sprechen !== false;
     const sprechmodus = modus === "sprechen" && sprechbar;
 
     // Umschalter Schreiben | Sprechen (nur mit Spracheingabe)
-    if (OW.status && OW.status.spracheingabe) {
+    if (mitSpracheingabe()) {
       // Ein Schiebeschalter: der grüne Knopf gleitet zur gewählten Seite, danach wird neu gezeichnet
       const an = modus === "sprechen";
       const schalter = el("button", { class: "gs-modus" + (an ? " an" : ""), type: "button", role: "switch", "aria-checked": String(an),
@@ -101,7 +129,7 @@ const Gespraech = (() => {
         ...liste.map(x => el("option", { value: x.code, selected: x.code === wert }, x.code === "de" || x.name === x.eigen ? x.name : x.name + " · " + x.eigen)));
       return s;
     };
-    const setzeDu = (v) => { if (v === ich) ich = du; du = v; try { localStorage.setItem("fb-gespraech-du", du); } catch { } zeichne(); };
+    const setzeDu = (v) => { if (v === ich) ich = du; du = v; if (!spiel()) try { localStorage.setItem("fb-gespraech-du", du); } catch { } zeichne(); };
     const setzeIch = (v) => { if (v === du) du = ich; ich = v; zeichne(); };
 
     // Ansicht Chat | Bühne: zeichnet nur den Verlauf neu, damit ein laufender Sprechmodus weiterhört
@@ -112,7 +140,7 @@ const Gespraech = (() => {
       el("span", { class: "gs-modus-seite" }, sym("maximize-2"), "Groß"));
     ansichtSchalter.addEventListener("click", () => {
       ansicht = ansicht === "buehne" ? "chat" : "buehne";
-      try { localStorage.setItem("fb-gespraech-ansicht", ansicht); } catch { }
+      if (!spiel()) try { localStorage.setItem("fb-gespraech-ansicht", ansicht); } catch { }
       ansichtSchalter.classList.toggle("an", ansicht === "buehne");
       ansichtSchalter.setAttribute("aria-checked", String(ansicht === "buehne"));
       gezeigt = null;
@@ -146,7 +174,7 @@ const Gespraech = (() => {
     einpassen();
 
     // Spracheingabe: einrichten, oder Hinweis bei Sprachen, die oft falsch erkannt werden
-    if (!(OW.status && OW.status.spracheingabe)) {
+    if (!mitSpracheingabe()) {
       c.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 14px" }, "Sprechen statt tippen: ",
         el("a", { href: "#inhalte?zu=sprechen" }, "Spracheingabe unter „Inhalte“ laden"), " (ca. 990 MB)"));
     } else {
@@ -155,7 +183,7 @@ const Gespraech = (() => {
         schlecht.map(x => x.name).join(" und ") + (schlecht.length > 1 ? " werden" : " wird") + " beim Sprechen oft falsch erkannt. Prüfe den erkannten Text vor dem Übersetzen und danach die Rückübersetzung."));
     }
     // Sprache nur als Text geladen, obwohl es eine Stimme gäbe: kleiner Hinweis, wie man sie dazuholt
-    const ohneStimme = [ich, du].filter(x => x !== "de" && ((OW.status && OW.status.stimmenFehlen) || []).includes(x)).map(x => info(x).name);
+    const ohneStimme = spiel() ? [] : [ich, du].filter(x => x !== "de" && ((OW.status && OW.status.stimmenFehlen) || []).includes(x)).map(x => info(x).name);
     if (ohneStimme.length) c.append(el("p", { class: "hinweis klein", style: "margin:-6px 0 14px" }, "Übersetzungen vorlesen lassen: ",
       el("a", { href: "#inhalte?zu=sprachen" }, "Sprache für " + ohneStimme.join(" und ") + " dazuladen")));
 
@@ -242,6 +270,7 @@ const Gespraech = (() => {
       zeichneVerlauf();
       uebersetze(nach, von, m.uebers).then(z => { m.zurueck = z; zeichneVerlauf(); }).catch(() => { m.zurueck = "–"; zeichneVerlauf(); });
     } catch (e) {
+      if (e && e.spiel) { m.fehler = e.message; zeichneVerlauf(); return m; }
       m.fehler = "Die Übersetzung hat nicht geklappt (" + (e && e.message || e) + ").";
       Statistik.fehler("Übersetzen " + von + "→" + nach + ": " + (e && e.message || e));
       zeichneVerlauf();
@@ -269,7 +298,7 @@ const Gespraech = (() => {
     // Spracheingabe: Knopf „Sprechen“, wenn eingerichtet und die Sprache erkannt werden kann
     const meldung = el("p", { class: "hinweis klein gs-sprech-info", hidden: true });
     const pegel = el("div", { class: "gs-pegel", hidden: true }, el("span"));
-    const sprechen = OW.status && OW.status.spracheingabe && s.sprechen !== false
+    const sprechen = mitSpracheingabe() && s.sprechen !== false
       ? el("button", { class: "knopf", type: "button" }, sym("mic"), el("span", {}, wer === "ich" ? "Sprechen" : "…")) : null;
     if (sprechen) sprechen.addEventListener("click", () => aufnehmen({ wer, sprache, text, knopf: sprechen, pegel, meldung }));
 
@@ -303,6 +332,7 @@ const Gespraech = (() => {
     }
     zeigeMeldung(f, "");
     if (wiedergabe) { vorlesenStopp(); zeichneVerlauf(); }   // nicht gleichzeitig vorlesen und aufnehmen
+    if (spiel()) { spielAufnehmen(f); return; }
     let strom;
     startet = true;
     try {
@@ -374,6 +404,34 @@ const Gespraech = (() => {
     zeigeMeldung(f, f.wer === "ich" ? "Ich höre zu …" : "");
   }
 
+  // Rundgang: Aufnahme nur gespielt (Pegel bewegt sich, Mikrofon bleibt aus), „Fertig“ liefert den Beispielsatz
+  function spielAufnehmen(f) {
+    let ende = false;
+    const uhr = setInterval(() => { f.pegel.firstChild.style.width = Math.round(10 + Math.random() * 60) + "%"; }, 120);
+    const textVorher = f.knopf.lastChild.textContent;
+    const aufraeumen = () => {
+      ende = true;
+      clearInterval(uhr);
+      if (aufnahme === a) aufnahme = null;
+      f.knopf.classList.remove("gs-aufnahme");
+      f.knopf.lastChild.textContent = textVorher;
+      f.knopf.querySelector("use").setAttribute("href", "symbole.svg#mic");
+      f.pegel.hidden = true;
+    };
+    const a = {
+      f,
+      abbrechen: aufraeumen,
+      fertig: () => { if (ende) return; aufraeumen(); erkennen(f, null); }
+    };
+    aufnahme = a;
+    f.knopf.classList.add("gs-aufnahme");
+    f.knopf.lastChild.textContent = f.wer === "ich" ? "Fertig" : "…";
+    if (f.wer === "du") uebersetze("de", f.sprache, "Aufnahme beenden").then(t => { if (aufnahme === a) f.knopf.lastChild.textContent = t; }).catch(() => { });
+    f.knopf.querySelector("use").setAttribute("href", "symbole.svg#square");
+    f.pegel.hidden = false;
+    zeigeMeldung(f, f.wer === "ich" ? "Ich höre zu …" : "");
+  }
+
   // Aufnahme als WAV (16 Bit, mono); rechnet auf 16 kHz um, falls der Browser eine andere Rate liefert
   function wav(stuecke, laenge, rate) {
     const alle = new Float32Array(laenge);
@@ -398,9 +456,13 @@ const Gespraech = (() => {
     f.text.placeholder = "Wird erkannt …";
     zeigeMeldung(f, "");
     try {
-      const r = await fetch("/api/sprechen?sprache=" + encodeURIComponent(f.sprache), { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob, signal: AbortSignal.timeout(SPRECHEN_MS) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.fehler) throw new Error(j.fehler || ("Fehler " + r.status));
+      let j;
+      if (spiel()) { await warte(1200); j = { text: (beispiel.spracheingabe || {})[f.sprache] || "" }; }
+      else {
+        const r = await fetch("/api/sprechen?sprache=" + encodeURIComponent(f.sprache), { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob, signal: AbortSignal.timeout(SPRECHEN_MS) });
+        j = await r.json().catch(() => ({}));
+        if (!r.ok || j.fehler) throw new Error(j.fehler || ("Fehler " + r.status));
+      }
       if (!j.text) zeigeMeldung(f, "Es wurde kein Text erkannt. Bitte noch einmal deutlicher sprechen.");
       else f.text.value = (f.text.value.trim() ? f.text.value.trim() + " " : "") + j.text;
     } catch (e) {
@@ -455,7 +517,7 @@ const Gespraech = (() => {
       "aria-pressed": String(w === pauseWahl), title: (PAUSEN[w] / 1000).toLocaleString("de-DE") + " Sekunden Stille beenden einen Satz",
       onclick: () => {
         pauseWahl = w;
-        try { localStorage.setItem("fb-gespraech-pause", w); } catch { }
+        if (!spiel()) try { localStorage.setItem("fb-gespraech-pause", w); } catch { }
         knoepfe.forEach(k => { const an = k === knoepfe[Object.keys(PAUSEN).indexOf(w)]; k.classList.toggle("knopf-haupt", an); k.setAttribute("aria-pressed", String(an)); });
       } }, w));
     gruppe.append(...knoepfe);
@@ -504,6 +566,7 @@ const Gespraech = (() => {
   async function smStarten(s) {
     smStopp();
     sm = s;
+    if (spiel()) { smSpiel(s); return; }
     try {
       s.strom = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (e) {
@@ -564,6 +627,37 @@ const Gespraech = (() => {
       }
     };
     s.quelle.connect(s.proz); s.proz.connect(s.ctx.destination);
+  }
+
+  // Rundgang: gespieltes Gespräch aus beispiel.json (erst du, dann das Gegenüber), Mikrofon bleibt aus.
+  // Ist es schon gelaufen (Satz steht im Verlauf), hört Fieldbook nur noch zum Schein zu.
+  // Fertig: data-spiel="fertig" am Statusfeld (darauf wartet der Rundgang).
+  async function smSpiel(s) {
+    const balken = s.feld.querySelector(".gs-sm-pegel span");
+    const uhr = setInterval(() => {
+      if (sm !== s) { clearInterval(uhr); return; }
+      balken.style.width = Math.round(s.spricht ? 15 + Math.random() * 65 : Math.random() * 5) + "%";
+    }, 110);
+    const weiter = async (ms) => { await warte(ms); while (sm === s && s.pausiert) await warte(200); return sm === s; };
+    s.anzeigen();
+    const saetze = beispiel.gespraech || [];
+    if (!saetze.length || !verlauf.some(m => m.text === saetze[0].text)) {
+      for (const z of saetze) {
+        if (!(await weiter(1200))) return;
+        s.spricht = true; s.anzeigen();
+        if (!(await weiter(1600))) return;
+        s.spricht = false; s.schritt = "Wird erkannt …"; s.anzeigen();
+        if (!(await weiter(700))) return;
+        s.schritt = "Wird übersetzt …"; s.anzeigen();
+        const m = await neueNachricht(z.sprache === ich ? "ich" : "du", z.sprache, z.sprache === ich ? du : ich, z.text, true);
+        if (sm !== s) return;
+        s.schritt = ""; s.liest = true; s.anzeigen();
+        await vorlesen(m, () => zeichneVerlauf());
+        if (sm !== s) return;
+        s.liest = false; s.anzeigen();
+      }
+    }
+    s.feld.dataset.spiel = "fertig";
   }
 
   // Arbeitet die Aufnahmen der Reihe nach ab. Vorgelesen wird erst, wenn nichts mehr wartet und
@@ -712,7 +806,7 @@ const Gespraech = (() => {
   // Piper liest die Übersetzung in der Zielsprache vor, nur auf Knopfdruck. Ein zweiter Klick hält an.
 
   let wiedergabe = null;   // { m, audio } – audio fehlt, solange der Server noch rechnet
-  const kannVorlesen = (code) => ((OW.status && OW.status.stimmen) || []).includes(code);
+  const kannVorlesen = (code) => spiel() || ((OW.status && OW.status.stimmen) || []).includes(code);
 
   let stummBis = 0;        // Sprechmodus: kurz nach dem Vorlesen noch nicht zuhören (Nachhall)
 
@@ -735,6 +829,7 @@ const Gespraech = (() => {
     wiedergabe = w;
     m.vorlesenFehler = null;
     danach();
+    if (spiel()) { await spielVorlesen(w, m, danach); return; }
     // Frist 60 s zusätzlich zum Abbruch durch „Anhalten“: hängt Piper, bleibt der Sprechmodus nicht taub
     let zuLang = false;
     const uhr = setTimeout(() => { zuLang = true; w.abbruch.abort(); }, 60000);
@@ -762,6 +857,35 @@ const Gespraech = (() => {
       m.vorlesenFehler = "Vorlesen hat nicht geklappt (" + (e && e.message || e) + ").";
       danach();
     }
+  }
+
+  // Rundgang: Vorlesen nur gespielt und stumm (Knopf zeigt „Wird vorbereitet …“, dann „Anhalten“, so lange wie gesprochen)
+  async function spielVorlesen(w, m, danach) {
+    await warte(600);
+    if (wiedergabe !== w) return;
+    let uhr = 0;
+    w.audio = { src: "", volume: 1, pause: () => clearTimeout(uhr) };
+    const vorbei = new Promise(res => { w.ende = res; });
+    uhr = setTimeout(() => { if (wiedergabe === w) { vorlesenStopp(); danach(); } }, Math.max(2500, m.uebers.split(/\s+/).length * 450));
+    danach();
+    await vorbei;
+  }
+
+  // Rundgang, „Zurück“: Gespräch auf den Stand eines Schritts. verlauf: nur die ersten n Nachrichten bleiben;
+  // modus: "schreiben" | "sprechen"; getauscht: Beispielsprache links (true) oder rechts (false); feld: Text im linken Feld
+  function uebungZurueck(z) {
+    z = z || {};
+    if (aufnahme) aufnahme.abbrechen();
+    smStopp();
+    vorlesenStopp();
+    if (typeof z.verlauf === "number" && verlauf.length > z.verlauf) verlauf.length = z.verlauf;
+    gezeigt = null;
+    if (z.modus) modus = z.modus;
+    if (typeof z.getauscht === "boolean" && (ich !== "de") !== z.getauscht) [ich, du] = [du, ich];
+    if (!location.hash.startsWith("#uebersetzen") || !$("#gs-inhalt")) return;
+    zeichne();
+    const t = $(".gs-feld-ich textarea");
+    if (t && z.feld) t.value = z.feld;
   }
 
   // Lautstärke nur für Fieldbook (wie beim Vorlesen von Artikeln, derselbe gemerkte Wert), Windows bleibt unberührt
@@ -806,5 +930,5 @@ const Gespraech = (() => {
     hinter.querySelector(".gs-gross-zu").focus();
   }
 
-  return { zeigen };
+  return { zeigen, uebungZurueck };
 })();

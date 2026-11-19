@@ -11,10 +11,10 @@ $namen = @(
   'book-open', 'heart-pulse', 'wrench', 'tent', 'sprout', 'graduation-cap', 'puzzle', 'book-heart', 'package',
   'file-text', 'house', 'shuffle', 'languages',
   # Fragen
-  'plus', 'history', 'x',
+  'plus', 'history', 'x', 'copy', 'check',
   # Karten und Routen
   'compass', 'hospital', 'pill', 'droplet', 'shield', 'shopping-cart', 'fuel', 'footprints', 'bike', 'car', 'sunrise', 'sunset',
-  'chevron-left', 'chevron-right', 'bookmark', 'map-pin', 'chevron-down', 'arrow-up-down', 'eye-off', 'ban',
+  'chevron-left', 'chevron-right', 'bookmark', 'map-pin', 'chevron-down', 'arrow-up-down', 'eye-off', 'ban', 'ruler',
   # Erste Hilfe
   'phone', 'phone-off', 'siren', 'baby', 'triangle-alert', 'heart', 'wind', 'activity', 'brain', 'bug', 'circle-alert',
   'candy', 'bone', 'skull', 'thermometer', 'bed', 'grape', 'axe', 'speech', 'soup', 'zap-off', 'drama',
@@ -25,13 +25,17 @@ $namen = @(
   # Inhalte und Einstellungen
   'folder', 'usb', 'refresh-cw', 'rotate-ccw',
   # Eigene Unterlagen
-  'folder-open', 'upload', 'pencil', 'trash-2', 'image',
+  'folder-open', 'upload', 'pencil', 'trash-2', 'image', 'globe', 'save',
+  # Notizen
+  'notebook-pen', 'bold', 'italic', 'list', 'list-ordered', 'table',
   # Übersetzen
   'arrow-left-right', 'maximize-2', 'send', 'mic', 'square', 'volume-2', 'messages-square', 'expand', 'arrow-right',
   # Vorlesen im Lesefenster
   'pause', 'play', 'skip-forward', 'arrow-down',
   # Merkliste
-  'ellipsis-vertical', 'folder-plus', 'folder-input'
+  'ellipsis-vertical', 'folder-plus', 'folder-input',
+  # Werkzeuge
+  'cloud-lightning'
 )
 
 $js = [IO.File]::ReadAllText($Lucide)

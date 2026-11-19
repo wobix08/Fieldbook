@@ -1,0 +1,9 @@
+{
+  "_hinweis": "Rundgang, Kapitel Eigene Unterlagen (UebungEigene in Server.cs). datei: Beispieldatei, die „Datei hinzufügen“ im Rundgang anbietet. webseite: die einzige Seite, die der Browser in Fieldbook im Rundgang öffnet (erfundene Adresse, Inhalt in webseite.html). Alles, was man im Rundgang anlegt, liegt nur im Speicher des Servers.",
+  "datei": "Stromerzeuger Bedienungsanleitung.pdf",
+  "webseite": {
+    "url": "https://musterstadt.example/notstrom",
+    "anzeige": "musterstadt.example/notstrom",
+    "datei": "webseite.html"
+  }
+}

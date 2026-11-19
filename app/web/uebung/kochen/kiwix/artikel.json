@@ -1,0 +1,23 @@
+{
+  "_hinweis": "Beispielartikel für das Kapitel Kochen des Rundgangs. Der Server hängt sie an die Pakete aus uebung/kiwix/artikel.json an, die Seiten liegen in inhalt/<paket>. Echte Seiten aus dem Koch-Wiki (CC BY-SA 3.0) und der Wikipedia (CC BY-SA 4.0). 'stichwoerter' sind die Zutaten, damit die Rezeptsuche sie findet.",
+  "kochwiki.org_de_all_maxi_2026-10": {
+    "artikel": [
+      { "pfad": "Tortilla_espanola", "titel": "Tortilla española", "woerter": 380, "auszug": "Spanisches Kartoffelomelett aus der Pfanne mit Kartoffeln, Zwiebeln und Eiern.", "stichwoerter": "Kartoffeln Zwiebeln Eier Olivenöl Salz" },
+      { "pfad": "Dibbelabbes", "titel": "Dibbelabbes", "woerter": 300, "auszug": "Saarländischer Kartoffelkuchen aus geriebenen Kartoffeln, im Bräter im Backofen gegart.", "stichwoerter": "Kartoffeln Zwiebeln Eier Öl Salz Pfeffer" },
+      { "pfad": "Kartoffelpuffer", "titel": "Kartoffelpuffer", "woerter": 520, "auszug": "Geriebene rohe Kartoffeln mit Ei, in der Pfanne knusprig gebraten.", "stichwoerter": "Kartoffeln Zwiebeln Eier Öl Salz Pfeffer" },
+      { "pfad": "Bratkartoffeln", "titel": "Bratkartoffeln", "woerter": 430, "auszug": "Gekochte Kartoffeln in Scheiben, mit Zwiebeln und Speck in der Pfanne gebraten.", "stichwoerter": "Kartoffeln Zwiebeln Speck Öl Salz Pfeffer" },
+      { "pfad": "Zwiebelruehrei", "titel": "Zwiebelrührei", "woerter": 260, "auszug": "Rührei mit in Butter gedünsteten Zwiebeln.", "stichwoerter": "Eier Zwiebeln Butter Salz Pfeffer" },
+      { "pfad": "Bauernfruehstueck", "titel": "Bauernfrühstück", "woerter": 470, "auszug": "Bratkartoffeln mit Zwiebeln und Speck, zum Schluss mit Eiern gestockt.", "stichwoerter": "Kartoffeln Zwiebeln Eier Speck Butter Salz Pfeffer" },
+      { "pfad": "Kartoffelkuchen_aus_Lyon", "titel": "Kartoffelkuchen aus Lyon", "woerter": 340, "auszug": "Kartoffeln und Zwiebeln in Butter, im Backrohr gebacken.", "stichwoerter": "Kartoffeln Zwiebeln Butter Muskat Salz Pfeffer" },
+      { "pfad": "Ofenkartoffel_ganz", "titel": "Klassische Ofenkartoffel", "woerter": 410, "auszug": "Große mehlige Kartoffeln im Ganzen im Backofen gegart, mit Butter oder Kräuterquark.", "stichwoerter": "Kartoffeln Butter Quark Salz Öl" }
+    ]
+  },
+  "wikipedia_de_all_maxi_2026-10": {
+    "artikel": [
+      { "pfad": "Kochkiste", "titel": "Kochkiste", "woerter": 1400, "auszug": "Eine Kochkiste ist ein wärmeisolierter Behälter, in dem vorher aufgekochte Speisen ohne weitere Energiezufuhr fertig garen.", "stichwoerter": "Kochen ohne Strom Brennstoff sparen" },
+      { "pfad": "Hobokocher", "titel": "Hobo-Kocher", "woerter": 900, "auszug": "Ein Hobokocher ist ein kleiner Holzkocher, der mit Zweigen und Holzstücken betrieben wird.", "stichwoerter": "Hobokocher Holzkocher Kochen ohne Strom" },
+      { "pfad": "Rocket_Stove", "titel": "Raketenofen", "woerter": 800, "auszug": "Ein Rocket Stove ist ein Holzofen, der mit wenig Brennholz sehr heiß und sauber verbrennt.", "stichwoerter": "Rocket Stove Raketenofen Kochen ohne Strom" },
+      { "pfad": "Solarkocher", "titel": "Solarkocher", "woerter": 1600, "auszug": "Ein Solarkocher nutzt die Sonnenstrahlung zum Kochen, Backen oder Wasser abkochen.", "stichwoerter": "Kochen ohne Strom Sonne" }
+    ]
+  }
+}

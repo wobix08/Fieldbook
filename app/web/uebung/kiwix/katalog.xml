@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Beispiel-Bibliothek der Führung (Übungsmodus). Name und Variante wie in app/config/pakete.json, damit Titel und Kategorie stimmen. -->
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>uebung-1</id>
+    <title>Wikipedia</title>
+    <summary>Beispielpaket</summary>
+    <language>deu</language>
+    <name>wikipedia_de_all</name>
+    <flavour>maxi</flavour>
+    <tags>_ftindex:yes</tags>
+    <link rel="http://opds-spec.org/acquisition/open-access" type="text/html" href="/kiwix/content/wikipedia_de_all_maxi_2026-10"/>
+  </entry>
+  <entry>
+    <id>uebung-2</id>
+    <title>Medizin-Wikipedia</title>
+    <summary>Beispielpaket</summary>
+    <language>deu</language>
+    <name>wikipedia_de_medicine</name>
+    <flavour>maxi</flavour>
+    <tags>_ftindex:yes</tags>
+    <link rel="http://opds-spec.org/acquisition/open-access" type="text/html" href="/kiwix/content/wikipedia_de_medicine_maxi_2026-10"/>
+  </entry>
+  <entry>
+    <id>uebung-3</id>
+    <title>Outdoors</title>
+    <summary>Beispielpaket</summary>
+    <language>eng</language>
+    <name>outdoors.stackexchange.com_en_all</name>
+    <flavour></flavour>
+    <tags>_ftindex:yes</tags>
+    <link rel="http://opds-spec.org/acquisition/open-access" type="text/html" href="/kiwix/content/outdoors.stackexchange.com_en_all_2026-10"/>
+  </entry>
+  <entry>
+    <id>uebung-4</id>
+    <title>Koch-Wiki</title>
+    <summary>Beispielpaket</summary>
+    <language>deu</language>
+    <name>kochwiki.org_de_all</name>
+    <flavour>maxi</flavour>
+    <tags>_ftindex:yes</tags>
+    <link rel="http://opds-spec.org/acquisition/open-access" type="text/html" href="/kiwix/content/kochwiki.org_de_all_maxi_2026-10"/>
+  </entry>
+</feed>

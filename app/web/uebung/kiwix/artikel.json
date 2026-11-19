@@ -1,0 +1,34 @@
+{
+  "wikipedia_de_all_maxi_2026-10": {
+    "_hinweis": "Startseite und Artikel sind echte Seiten aus dem Paket (Wikipedia, CC BY-SA 4.0), kopiert mit allen Stildateien und Bildern.",
+    "start": "Hauptseite",
+    "buchTitel": "Wikipedia",
+    "artikel": [
+      { "pfad": "Trinkwasser", "titel": "Trinkwasser", "woerter": 6822, "auszug": "Trinkwasser ist Wasser für den menschlichen Bedarf. Trinkwasser ist das wichtigste Lebensmittel, es kann nicht ersetzt werden." },
+      { "pfad": "Wasserfilter", "titel": "Wasserfilter", "woerter": 2780, "auszug": "Ein Wasserfilter ist eine Vorrichtung zur Verbesserung der Wasserbeschaffenheit. Partikel wie Trübstoffe oder Mikroorganismen werden aus dem Wasser entfernt." },
+      { "pfad": "Abkochen", "titel": "Abkochen", "woerter": 230, "auszug": "Abkochen von Wasser ist das Erhitzen auf den Siedepunkt, um Keime und Mikroorganismen abzutöten.", "stichwoerter": "Trinkwasser" }
+    ]
+  },
+  "wikipedia_de_medicine_maxi_2026-10": {
+    "start": "Hauptseite",
+    "buchTitel": "Wikipedia",
+    "artikel": [
+      { "pfad": "Hitzeschaden", "titel": "Hitzeschaden", "woerter": 1842, "auszug": "Zu den Hitzeschäden gehören Sonnenstich, Hitzschlag, Hitzekollaps und Hitzeerschöpfung durch Wasserverlust oder Salzverlust.", "stichwoerter": "Sonnenstich Hitzschlag" }
+    ]
+  },
+  "outdoors.stackexchange.com_en_all_2026-10": {
+    "start": "Hauptseite",
+    "buchTitel": "The Great Outdoors Stack Exchange",
+    "artikel": [
+      { "pfad": "questions/19865/rain-water", "titel": "Is it safe to drink rain water from a stream after a long drought?", "auszug": "I was hiking in Switzerland yesterday and came across a small river which holds very little water on most days and grows a lot after rainfall." },
+      { "pfad": "questions/8615/dirt", "titel": "Is drinking water containing dirt harmful?", "auszug": "I noticed that if I collect water from a stream dense of small debris and thin mud, the water is cleaner close to the surface." }
+    ]
+  },
+  "kochwiki.org_de_all_maxi_2026-10": {
+    "start": "Hauptseite",
+    "buchTitel": "Koch-Wiki",
+    "artikel": [
+      { "pfad": "Fladenbrot_auf_arabische_Art", "titel": "Fladenbrot auf arabische Art", "woerter": 420, "auszug": "Zutaten: 100 ml Wasser, 30 g Hefe, 1 TL Zucker, 125 g Butter, 1 kg Mehl. Das lauwarme Wasser in eine Schüssel geben." }
+    ]
+  }
+}

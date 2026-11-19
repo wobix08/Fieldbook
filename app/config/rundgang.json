@@ -1,0 +1,1411 @@
+{
+  "_hinweis": "Rundgang durch Fieldbook (js/rundgang.js). Läuft im Übungsmodus mit Beispieldaten aus app/web/uebung. Je Schritt: seite (Adresse; geöffnet wird sie nur, wenn man in einer anderen Ansicht ist, mit springen immer), ziel (CSS-Auswahl des Elements, auf das gezeigt wird; ohne ziel steht das Kästchen in der Mitte), zielText (Muster: von den Treffern für ziel nur die mit passendem Text), optional (Schritt fällt weg, wenn das Ziel nicht zu sehen ist), wenn (stimme / ohneStimme / uebersetzer / ohneUebersetzer: Schritt nur mit bzw. ohne Vorlesestimme oder Übersetzer), rahmenZiel (Ziel im Artikel statt ziel), aktion (Aufgabe: Der Schritt geht erst weiter, wenn man sie selbst erledigt hat; klick, sichtbar, adresse, artikel, enthaelt, karte (Liste aus verschoben / gezoomt: Karte selbst bewegt), da (wie sichtbar, darf aber außerhalb des Fensters liegen), text ({ Auswahl: Muster }: Inhalt bzw. Wert passt), alle angegebenen müssen zutreffen; fehl: Bedingung für „falsch gemacht“, dann erscheint fehlhinweis), danach (ms bis zum nächsten Schritt nach erledigter Aufgabe), mit (weiteres Element gehört zur freien Stelle), kasten (rechts: Kästchen oben rechts), punkt ([lon, lat]: Ring auf der Karte, Ziel .fu-kartenpunkt, die Karte springt hin) mit zoom, aufraeumen (nur bei „Zurück“: nimmt zurück, was die Aufgabe des Schritts bewirkt hat; merkliste, merkstellen, vorlesen, uebersetzen, sperrungen, { klick, wenn }, { karte: Zustand aus Karten.uebungZustand } oder { eigene: datei / notiz / notizName / notizText / webseite }, auch als Liste; mit vorher: true vor dem Öffnen der Adresse; außerdem öffnet „Zurück“ die Adresse, auf der man im Schritt angekommen war), zurueckWeg (mit „Zurück“ übersprungen), betonen (CSS-Auswahl: zusätzlich Ringe um diese Elemente auf der Karte, z. B. .poi-marker), beispiel (Kapitel Karten: Beispielort und -ziel für uebungZustand), hinweis (was nach einem Klick daneben im Kästchen steht), ueberspringen (Beschriftung eines Knopfs, mit dem man die offene Aufgabe auslassen darf), warnung (gelb hervorgehoben unter dem Text), titel, text. Jeder Satz kommt automatisch in eine eigene Zeile.",
+  "kapitel": [
+    {
+      "id": "ki",
+      "titel": "KI",
+      "icon": "message-circle",
+      "text": "Fragen stellen, Quellen prüfen, KI ausschalten",
+      "ende": { "text": "KI einrichten", "seite": "#inhalte?zu=ki" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "titel": "Fragen an die KI",
+          "text": "Die KI beantwortet deine Fragen mit dem Wissen aus deiner Bibliothek, ganz ohne Internet. Im Rundgang antwortet eine Beispiel-KI mit vorbereiteten Antworten. So klappt es auch, wenn noch keine KI geladen ist. Sie ist auch schneller: Eine echte KI braucht auf einem Laptop ohne Grafikkarte etwa eine halbe Minute. Du probierst alles selbst aus."
+        },
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#fragen']",
+          "aktion": { "adresse": "^#fragen" },
+          "hinweis": "Klicke auf „Fragen“.",
+          "titel": "Zur KI",
+          "text": "Klicke auf „Fragen“."
+        },
+        {
+          "seite": "#fragen",
+          "ziel": "#frage-form .frage-optionen",
+          "titel": "Die Antwort anpassen",
+          "text": "Bei „Lage“ sagst du, wo du gerade bist, zum Beispiel im Stromausfall. Dann richtet die KI ihre Antwort danach aus. „Einfach erklären“ macht die Antwort verständlich für Kinder."
+        },
+        {
+          "seite": "#fragen",
+          "ziel": "#frage-form",
+          "mit": "#chat .beispielfragen",
+          "aktion": { "sichtbar": "#chat .frage-blase", "fehl": { "sichtbar": "#frage-form[data-uebung-fehl]" } },
+          "fehlhinweis": "Die Beispiel-KI kennt nur diese Frage: „Wie mache ich Wasser im Notfall trinkbar?“ Klicke auf die Frage über dem Feld.",
+          "hinweis": "Klicke auf die Frage „Wie mache ich Wasser im Notfall trinkbar?“ oder schreib sie ins Feld.",
+          "aufraeumen": { "ki": 0 },
+          "danach": 300,
+          "titel": "Eine Frage stellen",
+          "text": "Klicke auf die Beispielfrage „Wie mache ich Wasser im Notfall trinkbar?“. Du kannst sie auch selbst ins Feld schreiben und auf „Fragen“ klicken."
+        },
+        {
+          "ziel": "#chat .frage-blase + .antwort",
+          "aktion": { "da": "#chat .frage-blase + .antwort .antwort-knoepfe" },
+          "danach": 900,
+          "titel": "Die KI arbeitet",
+          "text": "Sie sucht passende Artikel und schreibt dann die Antwort."
+        },
+        {
+          "ziel": "#chat .frage-blase + .antwort .zitat",
+          "titel": "Antwort mit Quellen",
+          "text": "Die Zahl in eckigen Klammern sagt, aus welchem Artikel diese Aussage stammt. Unter der Antwort stehen alle Quellen. Auch eine KI kann sich irren. Bei wichtigen Dingen liest du deshalb in der Quelle nach."
+        },
+        {
+          "ziel": "#chat .frage-blase + .antwort .zitat",
+          "aktion": { "adresse": "^#lesen" },
+          "hinweis": "Klicke auf [1].",
+          "titel": "Eine Quelle öffnen",
+          "text": "Klicke auf [1], um den Artikel zu öffnen."
+        },
+        {
+          "rahmenZiel": "#mwEA",
+          "titel": "Das ist deine Quelle",
+          "text": "Das ist der Artikel, aus dem die KI ihre Antwort hat. Die Stelle, aus der die Antwort stammt, ist grün hervorgehoben. Hier prüfst du in Ruhe, ob sie alles richtig wiedergegeben hat."
+        },
+        {
+          "ziel": "#hauptnav a[href='#fragen']",
+          "aktion": { "adresse": "^#fragen" },
+          "hinweis": "Klicke oben auf „Fragen“.",
+          "titel": "Zurück zur KI",
+          "text": "Klicke oben auf „Fragen“. Die Antwort von eben wartet dort auf dich."
+        },
+        {
+          "seite": "#fragen",
+          "ziel": "#frage-form",
+          "aktion": { "sichtbar": "#chat .frage-blase ~ .frage-blase", "fehl": { "sichtbar": "#frage-form[data-uebung-fehl]" } },
+          "fehlhinweis": "Die Beispiel-KI kennt hier nur diese Nachfrage: „Und Bachwasser nach starkem Regen?“",
+          "hinweis": "Schreib „Und Bachwasser nach starkem Regen?“ ins Feld und klicke auf „Fragen“.",
+          "aufraeumen": { "ki": 1 },
+          "danach": 300,
+          "titel": "Nachfragen",
+          "text": "Im selben Chat kannst du nachfragen. Dabei weiß die KI noch, worum es eben ging. Schreib „Und Bachwasser nach starkem Regen?“ ins Feld und klicke auf „Fragen“."
+        },
+        {
+          "ziel": "#chat .frage-blase ~ .frage-blase + .antwort",
+          "aktion": { "da": "#chat .frage-blase ~ .frage-blase + .antwort .antwort-knoepfe" },
+          "danach": 900,
+          "titel": "Die KI antwortet",
+          "text": "Sie sucht wieder passende Artikel und schreibt die Antwort."
+        },
+        {
+          "ziel": "#chat .frage-blase ~ .frage-blase + .antwort .quellen li:first-child",
+          "titel": "Die KI erinnert sich",
+          "text": "Die KI hat verstanden, dass es weiter um Trinkwasser geht. Diese Quelle ist auf Englisch. Die KI liest auch englische Pakete und antwortet trotzdem auf Deutsch."
+        },
+        {
+          "ziel": "#chat .antwort .beispielfragen:not([hidden])",
+          "mit": "#frage-form",
+          "aktion": { "sichtbar": "#chat .frage-blase ~ .frage-blase ~ .frage-blase", "fehl": { "sichtbar": "#frage-form[data-uebung-fehl]" } },
+          "fehlhinweis": "Die Beispiel-KI kennt hier nur diese Frage: „Wie funktioniert ein Wasserfilter?“ Klicke auf die Frage unter der Antwort.",
+          "hinweis": "Klicke auf die Frage „Wie funktioniert ein Wasserfilter?“.",
+          "aufraeumen": { "ki": 2 },
+          "danach": 300,
+          "titel": "Noch eine Frage",
+          "text": "Manchmal merkst du schon nach den ersten Sätzen, dass die Antwort dir nicht weiterhilft. Dann musst du nicht warten, bis die KI fertig ist. Probier es aus: Klicke auf die Frage „Wie funktioniert ein Wasserfilter?“."
+        },
+        {
+          "ziel": "#frage-senden",
+          "zurueckWeg": true,
+          "aktion": { "sichtbar": "#chat .antwort-angehalten" },
+          "hinweis": "Klicke auf „Anhalten“.",
+          "ueberspringen": "Überspringen",
+          "danach": 600,
+          "titel": "Antwort anhalten",
+          "text": "Solange die KI sucht und schreibt, steht hier „Anhalten“ statt „Fragen“. Klicke darauf."
+        },
+        {
+          "ziel": "#chat .antwort-angehalten",
+          "optional": true,
+          "titel": "Angehalten",
+          "text": "Was die KI bis dahin geschrieben hat, bleibt stehen. Die Quellen darüber kannst du trotzdem öffnen. Gleich danach kannst du eine neue Frage stellen. Auf einem Laptop ohne Grafikkarte sparst du so bis zu zwei Minuten."
+        },
+        {
+          "ziel": "#neuer-chat, #verlauf-knopf",
+          "titel": "Ein neues Thema",
+          "text": "Für ein neues Thema klickst du auf „Neuer Chat“, im schmalen Fenster steht er unter „Verlauf“. Dann vergisst die KI das bisherige Gespräch. Deine früheren Chats lassen sich dort wieder öffnen. Im Rundgang wird nichts gespeichert."
+        },
+        {
+          "ziel": "#ki-pill",
+          "aktion": { "sichtbar": "#ki-liste:not([hidden])" },
+          "hinweis": "Klicke oben auf „KI bereit“.",
+          "aufraeumen": { "klick": "#ki-pill", "wenn": "#ki-liste:not([hidden])" },
+          "titel": "Die KI ausschalten",
+          "text": "Die KI braucht viel Arbeitsspeicher und Strom. Brauchst du sie gerade nicht, schaltest du sie aus. Klicke oben auf „KI bereit“."
+        },
+        {
+          "ziel": "#ki-liste button:has(use[href$='#zap'])",
+          "aktion": { "klick": "#ki-liste button:has(use[href$='#zap'])" },
+          "hinweis": "Klicke auf „KI ausschalten (Sparmodus)“.",
+          "aufraeumen": ["kiAn", { "klick": "#ki-pill", "wenn": "#ki-liste[hidden]" }],
+          "titel": "Sparmodus",
+          "text": "Klicke auf „KI ausschalten (Sparmodus)“."
+        },
+        {
+          "ziel": "#ki-pill",
+          "titel": "Geschafft",
+          "text": "Die KI ist jetzt aus. Fragen kannst du trotzdem, dann zeigt Fieldbook passende Artikel ohne Antwort. Über denselben Knopf oben schaltest du die KI wieder ein. Eine echte KI lädst du unter „Inhalte“."
+        }
+      ]
+    },
+    {
+      "id": "wissen",
+      "titel": "Wissen",
+      "icon": "library",
+      "text": "Bibliothek, Suche und Lesefenster",
+      "ende": { "text": "Pakete aussuchen", "seite": "#inhalte?zu=wissen" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "titel": "Willkommen",
+          "text": "Das ist die Startseite von Fieldbook. Von hier kommst du in alle Bereiche. In diesem Rundgang siehst du Beispielinhalte, deine eigenen Inhalte bleiben unverändert. Du probierst alles selbst aus."
+        },
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#bibliothek']",
+          "aktion": { "adresse": "^#bibliothek" },
+          "hinweis": "Klicke auf „Bibliothek“.",
+          "titel": "Zur Bibliothek",
+          "text": "Das Wissen ohne Internet liegt in der Bibliothek. Klicke auf „Bibliothek“."
+        },
+        {
+          "seite": "#bibliothek",
+          "titel": "Deine Bibliothek",
+          "text": "Hier liegt alles Wissen, das du in Fieldbook geladen hast: Lexika, Medizin, Anleitungen und Rezepte. Alles funktioniert ohne Internet. Gerade siehst du Beispielpakete."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .klapp-kat:has(use[href$='#book-open'])",
+          "aktion": { "sichtbar": "#regal .klapp-kat.auf:has(use[href$='#book-open'])" },
+          "hinweis": "Klicke auf „Grundwissen“.",
+          "aufraeumen": { "klick": "#regal .klapp-kat.auf:has(use[href$='#book-open']) > .klapp-kopf" },
+          "titel": "Nach Themen sortiert",
+          "text": "Die Pakete sind nach Themen geordnet, zum Beispiel Grundwissen, Gesundheit oder Kochen. Klicke auf „Grundwissen“, um das Thema aufzuklappen."
+        },
+        {
+          "seite": "#bibliothek?kat=grundwissen",
+          "ziel": "#regal .klapp-kat.auf .paket-zeile",
+          "aktion": { "adresse": "^#lesen" },
+          "hinweis": "Klicke auf „Wikipedia Deutsch, vollständig mit Bildern“.",
+          "titel": "Ein Paket öffnen",
+          "text": "Jede Zeile ist ein Paket, wie ein Buch im Regal. Klicke auf „Wikipedia Deutsch, vollständig mit Bildern“, um es zu öffnen."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23wikipedia_de_all_maxi_2026-10&titel=Wikipedia%20Deutsch%2C%20vollst%C3%A4ndig%20mit%20Bildern",
+          "ziel": "#lese-suche",
+          "aktion": { "artikel": "^/kiwix/search", "enthaelt": "a[href$='/Trinkwasser']", "fehl": { "artikel": "^/kiwix/search" } },
+          "fehlhinweis": "Dabei wurde „Trinkwasser“ nicht gefunden. Prüfe die Schreibweise und drücke noch einmal die Eingabetaste.",
+          "hinweis": "Schreib „Trinkwasser“ ins Suchfeld oben und drücke die Eingabetaste.",
+          "titel": "Die Startseite",
+          "text": "Jedes Paket beginnt mit seiner Startseite. Mit dem Suchfeld oben suchst du nur in diesem Paket. Schreib „Trinkwasser“ und drücke die Eingabetaste."
+        },
+        {
+          "ziel": ".lese-spalte",
+          "aktion": { "artikel": "/Trinkwasser$" },
+          "hinweis": "Klicke auf „Trinkwasser“.",
+          "titel": "Treffer im Paket",
+          "text": "Das sind die Treffer in diesem Paket. Links führen zu Artikeln, wie im Internet. Klicke auf „Trinkwasser“."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23wikipedia_de_all_maxi_2026-10%2FTrinkwasser&titel=Wikipedia%20Deutsch%2C%20vollst%C3%A4ndig%20mit%20Bildern",
+          "ziel": "#lese-lesezeichen",
+          "aktion": { "klick": "#lese-lesezeichen", "ereignis": "merkliste" },
+          "hinweis": "Klicke auf das Lesezeichen oben.",
+          "aufraeumen": "merkliste",
+          "titel": "Einen Artikel merken",
+          "text": "Willst du einen Artikel später wiederfinden, merkst du ihn dir. Klicke dazu auf das Lesezeichen oben."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23wikipedia_de_all_maxi_2026-10%2FTrinkwasser&titel=Wikipedia%20Deutsch%2C%20vollst%C3%A4ndig%20mit%20Bildern",
+          "ziel": ".lese-spalte",
+          "aktion": { "ereignis": "merkliste" },
+          "hinweis": "Markiere einen Satz im Artikel und klicke im kleinen Feld darunter auf „Merken“.",
+          "aufraeumen": "merkstellen",
+          "titel": "Eine Stelle merken",
+          "text": "Du kannst dir auch einen einzelnen Satz merken. Halte die Maustaste gedrückt und fahre über einen Satz im Artikel, so markierst du ihn. Darunter erscheint ein kleines Feld. Klicke dort auf „Merken“."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23wikipedia_de_all_maxi_2026-10%2FTrinkwasser&titel=Wikipedia%20Deutsch%2C%20vollst%C3%A4ndig%20mit%20Bildern",
+          "ziel": "#merk-kopf",
+          "aktion": { "adresse": "^#merkliste" },
+          "hinweis": "Klicke oben rechts auf das Lesezeichen.",
+          "titel": "Deine Merkliste",
+          "text": "Alles Gemerkte sammelt sich in der Merkliste. Klicke oben rechts auf das Lesezeichen, um sie zu öffnen."
+        },
+        {
+          "seite": "#merkliste",
+          "ziel": "#merk-inhalt",
+          "titel": "Artikel und Stellen",
+          "text": "Hier stehen der ganze Artikel und der Satz, den du markiert hast. Ein Klick auf die Stelle öffnet den Artikel genau dort. Mit „Neuer Ordner“ sortierst du deine Einträge, zum Beispiel nach Themen."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23wikipedia_de_all_maxi_2026-10%2FTrinkwasser&titel=Wikipedia%20Deutsch%2C%20vollst%C3%A4ndig%20mit%20Bildern",
+          "rahmenZiel": "h1 .fb-vl",
+          "wenn": "stimme",
+          "optional": true,
+          "aktion": { "sichtbar": ".vl-leiste" },
+          "hinweis": "Klicke auf den kleinen Lautsprecher neben der Überschrift „Trinkwasser“.",
+          "aufraeumen": "vorlesen",
+          "titel": "Vorlesen",
+          "text": "Fieldbook liest Artikel vor, auch ohne Internet. Neben den Überschriften steht ein kleiner Lautsprecher. Klicke auf den Lautsprecher neben „Trinkwasser“."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23wikipedia_de_all_maxi_2026-10%2FTrinkwasser&titel=Wikipedia%20Deutsch%2C%20vollst%C3%A4ndig%20mit%20Bildern",
+          "rahmenZiel": "h1",
+          "wenn": "ohneStimme",
+          "titel": "Vorlesen",
+          "text": "Fieldbook liest Artikel vor, auch ohne Internet. Neben den Überschriften steht dann ein kleiner Lautsprecher, ein Klick darauf liest ab dort vor. Auf diesem Laptop ist noch keine Vorlesestimme installiert. Normalerweise würdest du jetzt hier die Vorlesestimme hören. Eine Stimme bekommst du unter „Inhalte“ › „Sprachen“ mit „Text + Sprache“."
+        },
+        {
+          "ziel": ".vl-leiste",
+          "wenn": "stimme",
+          "optional": true,
+          "zurueckWeg": true,
+          "titel": "Die Vorlese-Leiste",
+          "text": "Unten siehst du, welcher Abschnitt gerade gelesen wird. Hier hältst du an, springst zum nächsten Absatz oder stellst die Lautstärke ein. Am Ende eines Abschnitts liest Fieldbook mit dem nächsten weiter. Markierten Text kannst du über „Vorlesen“ im kleinen Feld vorlesen lassen."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23wikipedia_de_all_maxi_2026-10%2FTrinkwasser&titel=Wikipedia%20Deutsch%2C%20vollst%C3%A4ndig%20mit%20Bildern",
+          "ziel": "#lese-zufall",
+          "aktion": { "klick": "#lese-zufall" },
+          "danach": 1500,
+          "hinweis": "Klicke auf „Zufall“.",
+          "aufraeumen": "vorlesen",
+          "titel": "Zufall",
+          "text": "„Zufall“ zeigt einen beliebigen Artikel aus diesem Paket, gut zum Stöbern. Probier es aus."
+        },
+        {
+          "ziel": "#hauptnav a[href='#bibliothek']",
+          "aktion": { "adresse": "^#bibliothek" },
+          "hinweis": "Klicke oben auf „Bibliothek“.",
+          "titel": "Zurück zur Bibliothek",
+          "text": "Klicke oben auf „Bibliothek“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#bib-suche",
+          "aktion": { "adresse": "^#bibliothek\\?q=.", "sichtbar": "#bib-treffer .treffer-gruppe a.treffer", "fehl": { "adresse": "^#bibliothek\\?q=." } },
+          "fehlhinweis": "Dazu gibt es keine Treffer. Prüfe die Schreibweise, zum Beispiel „Wasser“, und drücke noch einmal die Eingabetaste.",
+          "hinweis": "Schreib „Wasser“ ins Suchfeld und drücke die Eingabetaste.",
+          "titel": "In allem suchen",
+          "text": "Hier suchst du in allen Paketen gleichzeitig. Schreib „Wasser“ ins Feld und drücke die Eingabetaste."
+        },
+        {
+          "seite": "#bibliothek?q=Wasser",
+          "ziel": "#bib-treffer .treffer-gruppe",
+          "aktion": { "adresse": "^#lesen" },
+          "hinweis": "Klicke auf einen Treffer im hellen Bereich.",
+          "titel": "Treffer aus allen Paketen",
+          "text": "Die Treffer stehen nach Paketen sortiert, darunter folgen die anderen Pakete. Klicke auf einen Treffer, um ihn zu öffnen."
+        },
+        {
+          "ziel": ".lese-spalte",
+          "titel": "Gefunden",
+          "text": "Das ist dein Treffer. Als Nächstes öffnet der Rundgang einen englischen Artikel."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23outdoors.stackexchange.com_en_all_2026-10%2Fquestions%2F19865%2Frain-water&titel=Drau%C3%9Fen%20und%20%C3%9Cberleben%2C%20Fragen%20und%20Antworten",
+          "springen": true,
+          "ziel": "#uebersetzen-knopf",
+          "wenn": "uebersetzer",
+          "optional": true,
+          "aktion": { "klick": "#uebersetzen-knopf" },
+          "danach": 2500,
+          "hinweis": "Klicke auf „Auf Deutsch“.",
+          "aufraeumen": "uebersetzen",
+          "titel": "Englisch auf Deutsch",
+          "text": "Manche Pakete gibt es nur auf Englisch, so wie diesen Artikel. Klicke auf „Auf Deutsch“. Fieldbook übersetzt ihn dann direkt auf deinem Laptop, ohne Internet."
+        },
+        {
+          "ziel": "#uebersetzen-knopf",
+          "wenn": "uebersetzer",
+          "optional": true,
+          "titel": "Übersetzt",
+          "text": "Die Übersetzung ist nicht perfekt, aber gut genug zum Verstehen. Mit „Original“ kommt der englische Text zurück."
+        },
+        {
+          "seite": "#lesen?url=%2Fkiwix%2Fviewer%23outdoors.stackexchange.com_en_all_2026-10%2Fquestions%2F19865%2Frain-water&titel=Drau%C3%9Fen%20und%20%C3%9Cberleben%2C%20Fragen%20und%20Antworten",
+          "springen": true,
+          "ziel": ".lese-leiste",
+          "wenn": "ohneUebersetzer",
+          "titel": "Englisch auf Deutsch",
+          "text": "Manche Pakete gibt es nur auf Englisch, so wie diesen Artikel. Normalerweise steht hier oben der Knopf „Auf Deutsch“, und Fieldbook übersetzt den Artikel direkt auf deinem Laptop, ohne Internet. Auf diesem Laptop ist der Übersetzer noch nicht eingerichtet. Du bekommst ihn unter „Inhalte“ › „Sprachen“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .klapp:has(use[href$='#history'])",
+          "aktion": { "sichtbar": "#regal .klapp.auf:has(use[href$='#history'])" },
+          "hinweis": "Klicke auf „Zuletzt gelesen“.",
+          "aufraeumen": { "klick": "#regal .klapp.auf:has(use[href$='#history']) > .klapp-kopf" },
+          "titel": "Zuletzt gelesen",
+          "text": "Hier findest du wieder, was du zuletzt gelesen hast. Klicke darauf, um die Liste aufzuklappen."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .klapp:has(use[href$='#history'])",
+          "titel": "Deine Artikel von eben",
+          "text": "Da sind die Artikel, die du gerade geöffnet hast. Ein Klick bringt dich wieder hin."
+        },
+        {
+          "seite": "#bibliothek",
+          "titel": "Geschafft",
+          "text": "Echte Pakete suchst du dir unter „Inhalte“ aus. Danach stehen sie hier in der Bibliothek."
+        }
+      ]
+    },
+    {
+      "id": "eigene",
+      "titel": "Eigene Unterlagen",
+      "icon": "folder-open",
+      "text": "Eigene Dateien, Notizen und Webseiten",
+      "ende": { "text": "Eigene Unterlagen öffnen", "seite": "#bibliothek?kat=eigene" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#bibliothek']",
+          "aktion": { "adresse": "^#bibliothek" },
+          "hinweis": "Klicke auf „Bibliothek“.",
+          "titel": "Zur Bibliothek",
+          "text": "In Fieldbook kannst du auch eigene Unterlagen sammeln. Sie liegen in der Bibliothek. Klicke auf „Bibliothek“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .eigene-box > .klapp-kopf",
+          "aktion": { "sichtbar": "#regal .eigene-box.auf .eigene-hinzufuegen" },
+          "hinweis": "Klicke auf „Eigene Unterlagen“.",
+          "aufraeumen": { "klick": "#regal .eigene-box.auf > .klapp-kopf" },
+          "titel": "Deine eigenen Unterlagen",
+          "text": "Hier liegt, was du selbst hinzufügst: Bedienungsanleitungen, ein Medikamentenplan, Fotos wichtiger Papiere. Klicke auf „Eigene Unterlagen“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .eigene-hinzufuegen",
+          "mit": ".dialog",
+          "aktion": { "sichtbar": "#regal .eigene-zeile a[href*='Stromerzeuger']" },
+          "hinweis": "Klicke auf „Datei hinzufügen“ und dann auf „Hinzufügen“.",
+          "aufraeumen": [{ "eigene": "datei" }, { "klick": "#regal .eigene-box:not(.auf) > .klapp-kopf" }],
+          "titel": "Eine Datei hinzufügen",
+          "text": "Fieldbook zeigt PDF, Word, Bilder und Textdateien. Du kannst sie auch einfach in die Bibliothek ziehen. Klicke auf „Datei hinzufügen“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .eigene-zeile a[href*='Stromerzeuger']",
+          "aktion": { "adresse": "^#pdf" },
+          "hinweis": "Klicke auf „Stromerzeuger Bedienungsanleitung“.",
+          "aufraeumen": { "klick": "#regal .eigene-box:not(.auf) > .klapp-kopf" },
+          "titel": "Deine Datei",
+          "text": "Die Bedienungsanleitung liegt jetzt in deinen Unterlagen. Klicke darauf, um sie zu öffnen."
+        },
+        {
+          "ziel": "#pdf-zurueck",
+          "aktion": { "adresse": "^#bibliothek" },
+          "hinweis": "Klicke oben auf „Zurück“.",
+          "titel": "Das ist deine Datei",
+          "text": "So liest du deine Datei in Fieldbook, auch ohne Internet. Klicke oben auf „Zurück“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .eigene-knoepfe button:has(use[href$='#notebook-pen'])",
+          "aktion": { "adresse": "^#notiz" },
+          "hinweis": "Klicke auf „Neue Notiz“.",
+          "aufraeumen": [{ "eigene": "notiz" }, { "klick": "#regal .eigene-box:not(.auf) > .klapp-kopf" }],
+          "titel": "Eine Notiz schreiben",
+          "text": "Du kannst auch selbst etwas aufschreiben, zum Beispiel wichtige Telefonnummern oder euren Treffpunkt. Klicke auf „Neue Notiz“."
+        },
+        {
+          "ziel": "#notiz-titel",
+          "aktion": { "adresse": "^#notiz\\?datei=(?!Neue Notiz)" },
+          "hinweis": "Schreib oben einen Namen, zum Beispiel „Notfallplan“, und drücke die Eingabetaste.",
+          "aufraeumen": { "eigene": "notizName", "vorher": true },
+          "titel": "Ein Name",
+          "text": "Gib deiner Notiz zuerst einen Namen. Schreib zum Beispiel „Notfallplan“ und drücke die Eingabetaste."
+        },
+        {
+          "ziel": "#notiz-text",
+          "aktion": { "text": { "#notiz-text": "\\S\\S\\S", "#notiz-status": "^Gespeichert$" } },
+          "hinweis": "Klicke auf das Blatt und schreib einen Satz.",
+          "aufraeumen": { "eigene": "notizText" },
+          "titel": "Etwas aufschreiben",
+          "text": "Klicke auf das Blatt und schreib einen Satz, zum Beispiel „Der Benzinkanister steht in der Garage.“ Fieldbook speichert von selbst."
+        },
+        {
+          "ziel": ".notiz-werkzeuge .notiz-spalte",
+          "titel": "Gestalten",
+          "text": "Mit dieser Leiste machst du Überschriften, fetten Text, Listen und Tabellen."
+        },
+        {
+          "ziel": "#notiz-zurueck",
+          "aktion": { "adresse": "^#bibliothek" },
+          "hinweis": "Klicke oben auf „Zurück“.",
+          "titel": "Zurück zur Bibliothek",
+          "text": "Deine Notiz ist gespeichert. Klicke oben auf „Zurück“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .eigene-zeile a[href^='#notiz']",
+          "aufraeumen": { "klick": "#regal .eigene-box:not(.auf) > .klapp-kopf" },
+          "titel": "Das ist deine Notiz",
+          "text": "Deine Notiz steht jetzt bei deinen Unterlagen. Ein Klick öffnet sie wieder zum Lesen und Ändern."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .eigene-knoepfe a[href='#web']",
+          "aktion": { "adresse": "^#web" },
+          "hinweis": "Klicke auf „Webseite sichern“.",
+          "aufraeumen": { "klick": "#regal .eigene-box:not(.auf) > .klapp-kopf" },
+          "titel": "Eine Webseite sichern",
+          "text": "Wichtige Seiten aus dem Internet kannst du für später speichern, mit allen Bildern. Klicke auf „Webseite sichern“."
+        },
+        {
+          "ziel": "#web-form",
+          "aktion": { "adresse": "^#web\\?url=.*musterstadt\\.example/notstrom/?$", "sichtbar": "#web-speichern:not([hidden])", "fehl": { "adresse": "^#web\\?url=" } },
+          "fehlhinweis": "Diese Adresse gibt es im Rundgang nicht. Schreib „musterstadt.example/notstrom“ und drücke die Eingabetaste.",
+          "hinweis": "Schreib „musterstadt.example/notstrom“ oben in die Adresszeile und drücke die Eingabetaste.",
+          "titel": "Die Adresse",
+          "text": "Das ist ein kleiner Browser in Fieldbook. Schreib „musterstadt.example/notstrom“ in die Adresszeile und drücke die Eingabetaste. Im Rundgang kommt die Seite aus Fieldbook, nicht aus dem Internet."
+        },
+        {
+          "ziel": "#web-speichern",
+          "mit": ".dialog",
+          "aktion": { "adresse": "^#web\\?ordner=" },
+          "hinweis": "Klicke auf „Speichern“ und im Fenster noch einmal auf „Speichern“.",
+          "aufraeumen": { "eigene": "webseite", "vorher": true },
+          "titel": "Speichern",
+          "text": "Die Seite ist da. Klicke auf „Speichern“ und bestätige den Namen."
+        },
+        {
+          "ziel": "#web-speichern",
+          "titel": "Gesichert",
+          "text": "Die Seite liegt jetzt in deinen Unterlagen und geht auch ohne Internet. Hast du wieder Internet, holst du mit „Neu holen“ den neuesten Stand."
+        },
+        {
+          "ziel": "#hauptnav a[href='#bibliothek']",
+          "aktion": { "adresse": "^#bibliothek" },
+          "hinweis": "Klicke oben auf „Bibliothek“.",
+          "titel": "Zurück zur Bibliothek",
+          "text": "Klicke oben auf „Bibliothek“."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#regal .eigene-zeile .merk-menue-knopf",
+          "aufraeumen": { "klick": "#regal .eigene-box:not(.auf) > .klapp-kopf" },
+          "titel": "Alles beisammen",
+          "text": "Hier stehen jetzt deine Datei, deine Notiz und die Webseite. Über die drei Punkte rechts benennst du einen Eintrag um, legst ihn in einen Ordner oder löschst ihn."
+        },
+        {
+          "seite": "#bibliothek",
+          "ziel": "#bib-suche",
+          "aktion": { "adresse": "^#bibliothek\\?q=", "sichtbar": "a[href^='#pdf'][href*='Stromerzeuger']", "fehl": { "adresse": "^#bibliothek\\?q=" } },
+          "fehlhinweis": "Dabei wurde die Bedienungsanleitung nicht gefunden. Prüfe die Schreibweise von „Ölwechsel“ und drücke noch einmal die Eingabetaste.",
+          "hinweis": "Schreib „Ölwechsel“ ins Suchfeld und drücke die Eingabetaste.",
+          "titel": "Suchen",
+          "text": "Die Suche findet auch, was in deinen Unterlagen steht. Schreib „Ölwechsel“ ins Suchfeld und drücke die Eingabetaste."
+        },
+        {
+          "ziel": "a[href^='#pdf'][href*='Stromerzeuger']",
+          "aktion": { "adresse": "^#pdf" },
+          "hinweis": "Klicke auf den Treffer aus deiner Bedienungsanleitung.",
+          "titel": "Deine Unterlagen zuerst",
+          "text": "Treffer aus deinen eigenen Unterlagen stehen immer ganz oben. Klicke darauf."
+        },
+        {
+          "ziel": "#pdf-flaeche .pdf-kasten",
+          "zielText": "^Ölwechsel:",
+          "titel": "Das ist dein Treffer",
+          "text": "Die Anleitung öffnet sich gleich auf der Seite, auf der der Ölwechsel steht."
+        },
+        {
+          "ziel": "#hauptnav a[href='#fragen']",
+          "aktion": { "adresse": "^#fragen" },
+          "hinweis": "Klicke oben auf „Fragen“.",
+          "titel": "Die KI fragen",
+          "text": "Auch die KI liest in deinen Unterlagen. Klicke oben auf „Fragen“."
+        },
+        {
+          "seite": "#fragen",
+          "ziel": "#frage-form",
+          "aktion": { "sichtbar": "#chat .antwort-text:not(.cursor) a.zitat", "fehl": { "da": "#frage-form[data-uebung-fehl]" } },
+          "fehlhinweis": "Diese Frage kennt die Beispiel-KI nicht. Frag nach dem Ölwechsel beim Stromerzeuger.",
+          "hinweis": "Schreib „Wie oft muss ich beim Stromerzeuger das Öl wechseln?“ und drücke die Eingabetaste.",
+          "aufraeumen": { "ki": 0 },
+          "danach": 1200,
+          "titel": "Deine Frage",
+          "text": "Schreib „Wie oft muss ich beim Stromerzeuger das Öl wechseln?“ und drücke die Eingabetaste. Im Rundgang antwortet eine Beispiel-KI."
+        },
+        {
+          "ziel": "#chat .antwort .quellen li:first-child a",
+          "aktion": { "adresse": "^#pdf" },
+          "hinweis": "Klicke unter „Quellen“ auf deine Bedienungsanleitung.",
+          "titel": "Deine Quelle",
+          "text": "Die Antwort stammt aus deiner Bedienungsanleitung und der gesicherten Webseite. Klicke auf die Bedienungsanleitung, um nachzulesen."
+        },
+        {
+          "ziel": "#pdf-flaeche .pdf-kasten",
+          "zielText": "^Ölwechsel:",
+          "titel": "Das ist deine Quelle",
+          "text": "Hier steht, was die KI geantwortet hat. So kannst du jede Antwort selbst nachprüfen."
+        },
+        {
+          "titel": "Geschafft",
+          "text": "Lege deine wichtigen Unterlagen jetzt in Fieldbook ab. Dann hast du sie auch ohne Internet griffbereit."
+        }
+      ]
+    },
+    {
+      "id": "kochen",
+      "titel": "Kochen",
+      "icon": "cooking-pot",
+      "text": "Rezepte aus deinen Vorräten, Kochen ohne Strom",
+      "ende": { "text": "Zur Seite Kochen", "seite": "#kochen" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#kochen']",
+          "aktion": { "adresse": "^#kochen" },
+          "hinweis": "Klicke auf „Kochen“.",
+          "titel": "Zum Kochen",
+          "text": "Unter „Kochen“ findest du Rezepte zu dem, was du zu Hause hast, und Hilfe fürs Kochen ohne Strom. Klicke auf „Kochen“."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-form",
+          "aktion": { "da": "#koch-ergebnis .rezept", "fehl": { "da": "#koch-ergebnis .koch-leer" } },
+          "fehlhinweis": "Dazu gibt es im Beispiel kein Rezept. Schreib „Kartoffeln, Zwiebeln, Eier“ und klicke noch einmal auf „Rezepte finden“.",
+          "hinweis": "Schreib „Kartoffeln, Zwiebeln, Eier“ ins Feld und klicke auf „Rezepte finden“.",
+          "aufraeumen": "kochen",
+          "titel": "Was hast du da?",
+          "text": "Hier schreibst du auf, was du an Vorräten hast, getrennt mit Kommas. Schreib „Kartoffeln, Zwiebeln, Eier“ und klicke auf „Rezepte finden“."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-ergebnis .rezept:first-child",
+          "titel": "Passende Rezepte",
+          "text": "Die Rezepte kommen aus dem Koch-Wiki, ganz ohne KI. Oben stehen die, bei denen am wenigsten fehlt. Auf jeder Karte siehst du, was sie von deinen Sachen nutzt und was noch fehlt. Salz, Pfeffer, Öl und Wasser zählen immer als vorhanden."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-ergebnis .rezept:first-child a[href^='#lesen']",
+          "aktion": { "adresse": "^#lesen" },
+          "hinweis": "Klicke auf „Rezept lesen“.",
+          "titel": "Ein Rezept öffnen",
+          "text": "Klicke beim ersten Rezept auf „Rezept lesen“."
+        },
+        {
+          "ziel": ".lese-spalte",
+          "titel": "Dein Rezept",
+          "text": "Das ist dein Rezept. Oben stehen die Zutaten, darunter die Zubereitung Schritt für Schritt."
+        },
+        {
+          "ziel": "#hauptnav a[href='#kochen']",
+          "aktion": { "adresse": "^#kochen" },
+          "hinweis": "Klicke oben auf „Kochen“.",
+          "titel": "Zurück zu Kochen",
+          "text": "Klicke oben auf „Kochen“. Deine Rezepte von eben sind noch da."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-ofen",
+          "mit": "#koch-form button[type='submit']",
+          "aktion": { "da": "#koch-ergebnis .rezepte.ohne-ofen" },
+          "hinweis": "Wähle „Ohne Backofen“ und klicke auf „Rezepte finden“.",
+          "aufraeumen": { "ofen": "mit" },
+          "titel": "Ohne Backofen",
+          "text": "Bei Stromausfall kochst du vielleicht auf dem Gaskocher oder am Feuer. Wähle hier „Ohne Backofen“ und klicke noch einmal auf „Rezepte finden“."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-ergebnis .rezept:has(.merkmal.ofen)",
+          "titel": "Backofen nach unten",
+          "text": "Jetzt stehen oben die Rezepte für Herdplatte, Gaskocher oder Feuer. Rezepte mit Backofen rutschen nach unten, bei ihnen steht „braucht Backofen“ gelb dabei. Fieldbook merkt sich diese Auswahl für das nächste Mal."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-ergebnis .rezept:first-child a[href^='#fragen']",
+          "optional": true,
+          "titel": "Die KI fragen",
+          "text": "Hast du eine KI eingerichtet, steht bei jedem Rezept „Die KI fragen“. Die KI erklärt dir dann, wie das Gericht mit deinen Sachen gelingt, zum Beispiel ohne Backofen oder mit Ersatz für eine fehlende Zutat."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-nachlesen a[href*='Kochkiste']",
+          "aktion": { "adresse": "^#lesen.*Kochkiste" },
+          "hinweis": "Klicke unter „Nachlesen“ auf „Kochkiste“.",
+          "titel": "Kochen ohne Strom",
+          "text": "Unter „Nachlesen“ stehen Artikel aus deinen Paketen, zum Beispiel zum Kochen ohne Strom. Klicke auf „Kochkiste“."
+        },
+        {
+          "ziel": ".lese-spalte",
+          "titel": "Dein Artikel",
+          "text": "Das ist dein Artikel. In einer Kochkiste gart das Essen ohne Flamme weiter, das spart viel Brennstoff. Als Nächstes geht es zurück zu Kochen."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-l-brennstoff > summary",
+          "aktion": { "sichtbar": "#koch-l-brennstoff[open] h4" },
+          "hinweis": "Klicke auf „Brennstoff sparen“.",
+          "aufraeumen": { "klick": "#koch-l-brennstoff[open] > summary" },
+          "titel": "Der Leitfaden",
+          "text": "Weiter unten steht ein Leitfaden mit Faustregeln, zum Beispiel Wasser trinkbar machen oder wie lange etwas ohne Kühlschrank hält. Er funktioniert auch ganz ohne Pakete. Klicke auf „Brennstoff sparen“."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-l-brennstoff > summary",
+          "titel": "Geschafft",
+          "text": "Darunter stehen kurze Regeln, mit denen dein Brennstoff länger reicht. Unterstrichene Wörter wie „Kochkiste“ öffnen den passenden Artikel. Ganz unten geht es zur Vorsorge und zum Umrechnen von Tassen in Gramm."
+        }
+      ]
+    },
+    {
+      "id": "karten",
+      "titel": "Karten",
+      "icon": "map",
+      "text": "Ortssuche, Routen und was in der Nähe ist. Vor dem ersten Start lädt Fieldbook eine kleine Beispielkarte (etwa 4 MB).",
+      "beispiel": { "ort": { "name": "Garmisch-Partenkirchen", "original": "Garmisch-Partenkirchen", "land": "DE", "lat": 47.49209, "lon": 11.09576, "art": "Ort", "einwohner": 26022 }, "ziel": { "name": "Wank", "lat": 47.50872, "lon": 11.14296 } },
+      "laden": "beispielkarte",
+      "ladenFehler": "Die Beispielkarte konnte nicht geladen werden.",
+      "ende": { "text": "Karten aussuchen", "seite": "#inhalte?zu=karten" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#karten']",
+          "aktion": { "adresse": "^#karten" },
+          "hinweis": "Klicke auf „Karten“.",
+          "titel": "Zu den Karten",
+          "text": "In diesem Kapitel lernst du die Karten kennen. Sie funktionieren ganz ohne Internet. Du siehst eine Beispielkarte, deine eigenen Inhalte bleiben unverändert. Klicke auf „Karten“."
+        },
+        {
+          "seite": "#karten",
+          "ziel": "#karte",
+          "aktion": { "karte": ["verschoben", "gezoomt"] },
+          "danach": 1200,
+          "hinweis": "Verschiebe die Karte mit gedrückter Maustaste und zoome mit dem Mausrad.",
+          "aufraeumen": { "karte": "anfang" },
+          "titel": "Deine Karte",
+          "text": "Das ist eine Beispielkarte der Gegend um Garmisch-Partenkirchen. Echte Karten gibt es für ganze Länder. Probier es aus: Verschiebe die Karte mit gedrückter Maustaste. Zoome mit dem Mausrad hinein oder heraus."
+        },
+        {
+          "seite": "#karten",
+          "ziel": "#ort-suche",
+          "mit": "#ort-treffer",
+          "kasten": "rechts",
+          "aktion": { "klick": "#ort-treffer button[data-ort='Garmisch-Partenkirchen · Ort']", "fehl": { "sichtbar": "#ort-treffer .leer" } },
+          "fehlhinweis": "Dazu gibt es keinen Ort. Prüfe die Schreibweise.",
+          "hinweis": "Schreib „Garmisch“ ins Suchfeld und klicke auf „Garmisch-Partenkirchen“ (Ort).",
+          "aufraeumen": { "karte": "suche" },
+          "titel": "Einen Ort suchen",
+          "text": "Mit dem Suchfeld findest du Orte, Berge, Bahnhöfe und vieles mehr. Schreib „Garmisch“ und klicke auf „Garmisch-Partenkirchen“ (Ort)."
+        },
+        {
+          "ziel": ".ort-markierung",
+          "aktion": { "sichtbar": ".maplibregl-popup .punkt-popup" },
+          "hinweis": "Klicke auf die rote Markierung.",
+          "aufraeumen": { "karte": "markierung" },
+          "titel": "Gefunden",
+          "text": "Die rote Markierung zeigt den Ort. Klicke darauf."
+        },
+        {
+          "ziel": ".punkt-popup .punkt-messen",
+          "aufraeumen": { "karte": "popup" },
+          "titel": "Entfernung messen",
+          "text": "Mit „Entfernung messen“ siehst du, wie weit es von hier bis zu einer anderen Stelle ist, zum Beispiel bis zum nächsten Brunnen. Danach klickst du die Stelle einfach in der Karte an. Mit weiteren Klicks misst du auch eine Strecke über mehrere Punkte. Gemessen wird die Luftlinie."
+        },
+        {
+          "ziel": ".maplibregl-popup:has(.punkt-popup)",
+          "aktion": { "sichtbar": ".maplibregl-popup .ort-formular" },
+          "hinweis": "Klicke auf „Ort merken“.",
+          "aufraeumen": { "karte": "popup" },
+          "titel": "Ort und Koordinaten",
+          "text": "Das Fenster zeigt den Ort und seine Koordinaten. Die Koordinaten kannst du im Notfall am Telefon durchsagen. Wichtige Orte kannst du dir merken, zum Beispiel einen Treffpunkt für die Familie. Klicke auf „Ort merken“."
+        },
+        {
+          "ziel": ".maplibregl-popup:has(.ort-formular)",
+          "aktion": { "sichtbar": ".mein-ort" },
+          "hinweis": "Klicke auf „Speichern“.",
+          "aufraeumen": { "karte": "formular" },
+          "titel": "Einen Ort merken",
+          "text": "Der Name ist schon eingetragen. Du kannst ihn ändern, zum Beispiel in „Treffpunkt“. Kategorie, Notiz und Farbe sind freiwillig. Klicke dann auf „Speichern“."
+        },
+        {
+          "ziel": ".maplibregl-popup:has(.punkt-popup)",
+          "aktion": { "klick": ".punkt-popup button:has(use[href$='#map-pin'])" },
+          "hinweis": "Klicke auf „Route von hier“.",
+          "aufraeumen": { "karte": "eigenerOrt" },
+          "titel": "Dein Ort",
+          "text": "Die Stecknadel zeigt deinen gemerkten Ort. Er bleibt gespeichert, auch wenn du Fieldbook schließt. Hier kannst du ihn bearbeiten oder löschen. Jetzt soll es auf den Wank gehen, einen Berg in der Nähe. Klicke auf „Route von hier“."
+        },
+        {
+          "ziel": "#routen-panel .punkt[data-art='ziel']",
+          "mit": "#routen-panel .punkt[data-art='ziel'] .ort-treffer",
+          "kasten": "rechts",
+          "aktion": { "sichtbar": "#routen-ergebnis .routen-ergebnis" },
+          "hinweis": "Schreib „Wank“ ins Feld „Ziel“ und klicke auf den Vorschlag.",
+          "aufraeumen": { "karte": "routeOhneZiel" },
+          "titel": "Das Ziel",
+          "text": "Der Start steht schon fest. Schreib „Wank“ ins Feld „Ziel“ und klicke auf den Vorschlag „Wank“."
+        },
+        {
+          "ziel": "#routen-ergebnis .routen-ergebnis",
+          "titel": "Deine Route",
+          "text": "Die Route ist auf der Karte eingezeichnet. Hier steht, wie lang sie ist, wie lange du ungefähr brauchst und wie viele Höhenmeter es bergauf geht."
+        },
+        {
+          "ziel": "#routen-panel .punkt[data-art='start']",
+          "mit": "#routen-panel .punkt[data-art='ziel']",
+          "titel": "Start und Ziel per Klick",
+          "text": "Start und Ziel musst du nicht eintippen. Ein Klick in die Karte setzt das Feld, das grün hinterlegt ist. Klickst du vorher in das Feld „Start“, wird der Klick in die Karte zum neuen Start. Klickst du in das Feld „Ziel“, wird er zum neuen Ziel. Die Stecknadeln kannst du auch mit der Maus verschieben."
+        },
+        {
+          "ziel": "#routen-ergebnis .hoehenprofil",
+          "optional": true,
+          "titel": "Das Höhenprofil",
+          "text": "Das Höhenprofil zeigt, wo es steil wird. Wenn du später mit der Maus darüberfährst, zeigt die Karte die passende Stelle."
+        },
+        {
+          "ziel": "#routen-panel .profile",
+          "aktion": { "klick": "#routen-panel .profile button:has(use[href$='#bike'])", "sichtbar": "#routen-ergebnis .routen-ergebnis" },
+          "danach": 1500,
+          "hinweis": "Klicke auf „Rad“.",
+          "aufraeumen": { "karte": "route" },
+          "titel": "Zu Fuß, Rad oder Auto",
+          "text": "Die Route gibt es zu Fuß, mit dem Rad und mit dem Auto. Jedes Mal nimmt sie die passenden Wege. Klicke auf „Rad“."
+        },
+        {
+          "punkt": [11.111077, 47.500079],
+          "zoom": 15,
+          "aufraeumen": "sperrungen",
+          "ziel": ".fu-kartenpunkt",
+          "aktion": { "sichtbar": ".maplibregl-popup .punkt-popup button:has(use[href$='#ban'])" },
+          "hinweis": "Klicke in den Kreis auf die Route.",
+          "titel": "Ein Weg ist gesperrt",
+          "text": "Jetzt siehst du den Weg für das Rad. Manchmal ist ein Weg gesperrt, etwa wegen Bauarbeiten oder Hochwasser. Stell dir vor, im Kreis geht es nicht weiter. Klicke dort auf die Route."
+        },
+        {
+          "ziel": ".maplibregl-popup:has(.punkt-popup button use[href$='#ban'])",
+          "zurueckWeg": true,
+          "aktion": { "klick": ".punkt-popup button:has(use[href$='#ban'])" },
+          "danach": 2000,
+          "hinweis": "Klicke auf „Stelle sperren“.",
+          "titel": "Stelle sperren",
+          "text": "Fieldbook fragt nach, damit du nichts aus Versehen sperrst. Klicke auf „Stelle sperren“."
+        },
+        {
+          "punkt": [11.111077, 47.500079],
+          "zoom": 14,
+          "ziel": ".fu-kartenpunkt",
+          "titel": "Außen herum",
+          "text": "Im Kreis liegt deine Sperrung, rot markiert. Die Route nimmt jetzt einen anderen Weg. Ziehst du mit der Maus an der Route entlang, sperrst du einen ganzen Abschnitt."
+        },
+        {
+          "ziel": "#sperrungen",
+          "titel": "Deine Sperrungen",
+          "text": "Hier stehen alle Sperrungen. Sie gelten für jede Route, die dort entlangführt. Mit dem Auge schaltest du eine aus, wenn der Weg wieder frei ist. Mit dem Plus zeichnest du eine Sperrung selbst ein, auch ohne Route."
+        },
+        {
+          "ziel": "#routen-knopf",
+          "aktion": { "klick": "#routen-knopf" },
+          "hinweis": "Klicke auf „Route schließen“.",
+          "aufraeumen": { "karte": "routeRad" },
+          "titel": "Route schließen",
+          "text": "Klicke auf „Route schließen“, um zur Karte zurückzukehren."
+        },
+        {
+          "ziel": "#meine-orte",
+          "aktion": { "sichtbar": "#meine-orte .meine-liste" },
+          "hinweis": "Klicke auf „Meine Orte“.",
+          "aufraeumen": { "klick": "#meine-orte .meine-orte-kopf.auf" },
+          "titel": "Meine Orte",
+          "text": "Deinen gemerkten Ort findest du jederzeit wieder. Klicke auf „Meine Orte“."
+        },
+        {
+          "ziel": "#meine-orte",
+          "titel": "Alle deine Orte",
+          "text": "Ein Klick auf einen Ort zeigt ihn auf der Karte. Gibst du Orten eine Kategorie wie „Familie“, stehen sie hier in Gruppen. Auch die Ortssuche findet deine Orte."
+        },
+        {
+          "ziel": "#ort-suche",
+          "titel": "Koordinaten suchen",
+          "text": "Ins Suchfeld kannst du auch Koordinaten schreiben, zum Beispiel „47,4917 11,0955“. Das hilft, wenn dir jemand seinen Standort als Zahlen schickt. Die Karte zeigt dann genau diese Stelle."
+        },
+        {
+          "ziel": "#poi-chips",
+          "aktion": { "klick": "#poi-chips .chip[data-id='water']", "da": "#poi-treffer button" },
+          "hinweis": "Klicke auf „Trinkwasser“.",
+          "aufraeumen": { "klick": "#poi-chips .chip.aktiv" },
+          "titel": "Was ist in der Nähe?",
+          "text": "Diese Knöpfe zeigen, was in der Nähe ist: Ärzte, Apotheken, Trinkwasser, Unterkünfte und mehr. Das steht alles schon in der Karte. Klicke auf „Trinkwasser“."
+        },
+        {
+          "ziel": "#poi-treffer",
+          "betonen": ".poi-marker",
+          "aktion": { "klick": "#poi-treffer button" },
+          "danach": 1500,
+          "hinweis": "Klicke auf einen der Treffer.",
+          "aufraeumen": { "karte": "popupsZu" },
+          "titel": "Trinkwasser",
+          "text": "Das sind Brunnen und Quellen im sichtbaren Teil der Karte. Auf der Karte sind sie grün umkreist. Klicke auf einen Treffer, dann zeigt die Karte, wo er liegt."
+        },
+        {
+          "ziel": "#sonne-knopf",
+          "aktion": { "sichtbar": "#sonne-panel" },
+          "hinweis": "Klicke auf „Sonne und Mond“.",
+          "aufraeumen": { "klick": "#sonne-knopf", "wenn": "#sonne-panel:not([hidden])" },
+          "titel": "Sonne und Mond",
+          "text": "Draußen und bei Stromausfall ist wichtig, wie lange es hell ist. Klicke auf „Sonne und Mond“."
+        },
+        {
+          "ziel": "#sonne-panel",
+          "titel": "Hell und dunkel",
+          "text": "Hier stehen Sonnenaufgang, Sonnenuntergang und der Mond für die Mitte der Karte oder die markierte Stelle. Mit „Anderer Tag“ planst du im Voraus."
+        },
+        {
+          "seite": "#karten",
+          "titel": "Geschafft",
+          "text": "Echte Karten und die Routenplanung lädst du unter „Inhalte“, am besten für das Land, in dem du unterwegs bist."
+        }
+      ]
+    },
+    {
+      "id": "sprachen",
+      "titel": "Sprachen",
+      "icon": "languages",
+      "text": "Übersetzen, Spracheingabe, Vorlesen und Sprechmodus",
+      "ende": { "text": "Sprachen aussuchen", "seite": "#inhalte?zu=sprachen" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#uebersetzen']",
+          "aktion": { "adresse": "^#uebersetzen" },
+          "hinweis": "Klicke auf „Übersetzer“.",
+          "titel": "Zum Übersetzer",
+          "text": "Mit dem Übersetzer unterhältst du dich mit jemandem, der eine andere Sprache spricht, ganz ohne Internet. Im Rundgang ist alles nur gespielt, du probierst es trotzdem selbst aus. Klicke auf „Übersetzer“."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-kopf",
+          "titel": "Du links, dein Gegenüber rechts",
+          "text": "Links steht deine Sprache, rechts die deines Gegenübers. Im Rundgang ist das Spanisch. Dein Gegenüber kann rechts selbst in seiner Sprache schreiben."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-feld-ich",
+          "aktion": { "sichtbar": ".gs-buehne .gs-text[lang='es']", "fehl": { "sichtbar": ".gs-buehne .gs-fehler" } },
+          "danach": 1200,
+          "fehlhinweis": "Im Rundgang kennt der Übersetzer nur Beispielsätze. Schreib genau „Wo ist das nächste Krankenhaus?“ und drücke die Eingabetaste.",
+          "hinweis": "Schreib „Wo ist das nächste Krankenhaus?“ ins linke Feld und drücke die Eingabetaste.",
+          "aufraeumen": { "gespraech": { "verlauf": 0 } },
+          "titel": "Text übersetzen",
+          "text": "Schreib „Wo ist das nächste Krankenhaus?“ ins linke Feld und drücke die Eingabetaste."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-buehne",
+          "titel": "Groß zum Zeigen",
+          "text": "Die Übersetzung steht groß da, so kannst du sie deinem Gegenüber zeigen. Darunter steht klein, was du geschrieben hast, und die Rückübersetzung. Sie zeigt dir, ob der Sinn angekommen ist."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-buehne .gs-knoepfe .knopf[aria-pressed]",
+          "aktion": { "klick": ".gs-buehne .gs-knoepfe .knopf[aria-pressed]" },
+          "danach": 1500,
+          "hinweis": "Klicke bei der Übersetzung auf „Vorlesen“.",
+          "aufraeumen": { "gespraech": { "verlauf": 1 } },
+          "titel": "Vorlesen",
+          "text": "Fieldbook liest die Übersetzung laut vor, dann muss dein Gegenüber nicht lesen. Im Rundgang bleibt der Ton aus. Klicke auf „Vorlesen“."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-tauschen",
+          "aktion": { "klick": ".gs-tauschen" },
+          "danach": 600,
+          "hinweis": "Klicke auf „Tauschen“.",
+          "aufraeumen": { "gespraech": { "getauscht": false } },
+          "titel": "Sprachen tauschen",
+          "text": "Mit „Tauschen“ wechseln die beiden Sprachen die Seiten. Das hilft, wenn ihr andersherum sitzt. Klicke auf „Tauschen“."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-tauschen",
+          "aktion": { "klick": ".gs-tauschen" },
+          "danach": 600,
+          "hinweis": "Klicke noch einmal auf „Tauschen“.",
+          "aufraeumen": { "gespraech": { "getauscht": true } },
+          "titel": "Zurücktauschen",
+          "text": "Jetzt steht Spanisch links. Klicke noch einmal auf „Tauschen“, dann bist du wieder links."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-feld-ich .knopfreihe > .knopf:not(.knopf-haupt)",
+          "kasten": "rechts",
+          "aktion": { "sichtbar": ".gs-feld-ich textarea:not(:placeholder-shown)" },
+          "danach": 800,
+          "hinweis": "Klicke auf „Sprechen“, sag einen Satz und klicke dann auf „Fertig“.",
+          "aufraeumen": { "gespraech": { "verlauf": 1 } },
+          "titel": "Spracheingabe",
+          "text": "Statt zu tippen, kannst du auch sprechen. Klicke auf „Sprechen“, sag einen Satz und klicke dann auf „Fertig“. Im Rundgang hört Fieldbook nur zum Schein zu und schreibt einen Beispielsatz ins Feld."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-feld-ich .knopf-haupt",
+          "kasten": "rechts",
+          "aktion": { "sichtbar": ".gs-buehne .gs-text[lang='es']", "da": ".gs-chat:has(.gs-buehne .gs-text[lang='es']) ~ .gs-eingabe .gs-feld-ich textarea:placeholder-shown", "fehl": { "sichtbar": ".gs-buehne .gs-fehler" } },
+          "danach": 1200,
+          "fehlhinweis": "Diesen Satz kennt der Übersetzer im Rundgang nicht. Klicke auf „Zurück“ und versuch es noch einmal.",
+          "hinweis": "Klicke auf „Übersetzen“.",
+          "aufraeumen": { "gespraech": { "verlauf": 1, "feld": "Ich brauche Wasser." } },
+          "titel": "Erst prüfen, dann übersetzen",
+          "text": "Der erkannte Text steht im Feld, dort kannst du ihn noch prüfen und verbessern. Klicke dann auf „Übersetzen“."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": "#gs-modus-platz .gs-modus",
+          "aktion": { "sichtbar": ".gs-sprechmodus" },
+          "danach": 600,
+          "hinweis": "Stell den Schalter oben auf „Sprechen“.",
+          "aufraeumen": { "gespraech": { "modus": "schreiben", "verlauf": 2 } },
+          "titel": "Sprechmodus",
+          "text": "Im Sprechmodus müsst ihr gar nichts mehr klicken. Fieldbook hört zu, erkennt, wer gerade spricht, übersetzt und liest vor. Stell den Schalter oben auf „Sprechen“."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-sprechmodus",
+          "aktion": { "sichtbar": ".gs-sprechmodus[data-spiel='fertig']" },
+          "danach": 800,
+          "hinweis": "Schau zu, gleich geht es von selbst weiter.",
+          "aufraeumen": { "gespraech": { "modus": "sprechen", "verlauf": 2 } },
+          "titel": "Einfach reden",
+          "text": "Sprecht abwechselnd und macht nach jedem Satz eine kurze Pause. Im Rundgang ist das Gespräch gespielt, schau einfach zu."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-bisher",
+          "titel": "Das ganze Gespräch",
+          "text": "Fieldbook hat selbst erkannt, wer gesprochen hat. Unter „Bisher“ steht das ganze Gespräch, oben immer die neueste Übersetzung groß. Ein Klick auf eine Zeile zeigt sie oben noch einmal groß."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": ".gs-sm-knoepfe",
+          "titel": "Sprechpause",
+          "text": "Bei „Sprechpause“ stellst du ein, wie lange Fieldbook nach einem Satz wartet, bevor es übersetzt. Wer beim Reden oft nachdenkt, nimmt „lang“. Mit „Stop“ hört Fieldbook kurz nicht zu."
+        },
+        {
+          "seite": "#uebersetzen",
+          "ziel": "#gs-modus-platz .gs-modus",
+          "aktion": { "sichtbar": ".gs-feld-ich" },
+          "danach": 600,
+          "hinweis": "Stell den Schalter oben zurück auf „Schreiben“.",
+          "aufraeumen": { "gespraech": { "modus": "sprechen", "verlauf": 4 } },
+          "titel": "Mikrofon aus",
+          "text": "Seid ihr fertig, stellst du den Schalter zurück auf „Schreiben“. Dann ist das Mikrofon aus."
+        },
+        {
+          "seite": "#uebersetzen",
+          "titel": "Geschafft",
+          "text": "Echte Sprachen, Vorlesestimmen und die Spracheingabe lädst du unter „Inhalte“ › „Sprachen“. Dann funktioniert alles genauso, nur echt."
+        }
+      ]
+    },
+    {
+      "id": "erstehilfe",
+      "titel": "Erste Hilfe",
+      "icon": "briefcase-medical",
+      "text": "Kurs, Notrufnummern und Spickzettel",
+      "ende": { "text": "Zum Kurs", "seite": "#erstehilfe" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#erstehilfe']",
+          "aktion": { "adresse": "^#erstehilfe" },
+          "hinweis": "Klicke auf „Erste Hilfe“.",
+          "titel": "Zur Ersten Hilfe",
+          "text": "In diesem Kapitel lernst du den Erste-Hilfe-Kurs kennen. Was du hier lernst und abschließt, zählt nur im Rundgang, dein eigener Kursstand bleibt unverändert. Klicke auf „Erste Hilfe“."
+        },
+        {
+          "seite": "#erstehilfe",
+          "ziel": "#ernstfall-knoepfe",
+          "titel": "Im Ernstfall",
+          "text": "Ganz oben stehen Spickzettel für den Ernstfall, in drei Gruppen: Lebensgefahr, plötzlich krank, Unfall und Umwelt. Jeder zeigt das Wichtigste auf einen Blick, ohne langes Lesen."
+        },
+        {
+          "seite": "#erstehilfe",
+          "ziel": "#notruf",
+          "titel": "Die Notrufnummern",
+          "text": "Hier stehen die Notrufnummern, vorne groß die wichtigste. Daneben folgen weitere, zum Beispiel Polizei und Giftnotruf. Sie gelten für das Land, das du in den Einstellungen gewählt hast: Deutschland, Österreich oder die Schweiz."
+        },
+        {
+          "seite": "#erstehilfe",
+          "ziel": "#eh-inhalt .eh-weiter",
+          "aktion": { "adresse": "^#erstehilfe\\?l=" },
+          "hinweis": "Klicke auf „Kurs beginnen“.",
+          "titel": "Dein Kurs",
+          "text": "Darunter beginnt der Kurs. Am besten machst du ihn in Ruhe, bevor etwas passiert. Klicke auf „Kurs beginnen“."
+        },
+        {
+          "ziel": "#eh-inhalt .eh-lektion h2",
+          "titel": "Eine Lektion",
+          "text": "Jede Lektion hat vier Teile. Zuerst erklärt sie, worum es geht. Dann folgen die Handgriffe Schritt für Schritt, oft mit Bildern. Danach übst du, am besten mit einer zweiten Person. Am Ende steht ein kurzes Quiz."
+        },
+        {
+          "ziel": "#eh-inhalt .eh-ueben",
+          "aktion": { "da": "#eh-inhalt .eh-ueben input:checked" },
+          "danach": 800,
+          "hinweis": "Setze ein Häkchen bei einer Übung.",
+          "aufraeumen": "erstehilfe-geuebt",
+          "titel": "Üben",
+          "text": "Was du geübt hast, hakst du hier ab. Setze ein Häkchen bei einer Übung."
+        },
+        {
+          "ziel": "#eh-inhalt .eh-quiz",
+          "mit": "#eh-inhalt .eh-fertig",
+          "aktion": { "da": "#eh-inhalt .eh-fertig:not([hidden])" },
+          "danach": 1500,
+          "hinweis": "Beantworte alle Fragen im Quiz, zum Weiterlesen scrollen.",
+          "aufraeumen": "erstehilfe-fertig",
+          "titel": "Das Quiz",
+          "text": "Beantworte alle Fragen, bis die Lektion abgeschlossen ist. Falsche Antworten darfst du wiederholen."
+        },
+        {
+          "ziel": "#eh-inhalt .eh-lektion-kopf a[href='#erstehilfe']",
+          "aktion": { "adresse": "^#erstehilfe$" },
+          "hinweis": "Klicke oben auf „Zum Kurs“.",
+          "titel": "Zurück zum Kurs",
+          "text": "Klicke oben auf „Zum Kurs“."
+        },
+        {
+          "seite": "#erstehilfe",
+          "ziel": "#eh-inhalt .eh-fortschritt",
+          "mit": "#eh-inhalt .eh-lektionen li:first-child",
+          "titel": "Dein Fortschritt",
+          "text": "Das ist dein Fortschritt: eine Lektion ist abgeschlossen. Die Lektion hat jetzt ein Häkchen in der Liste. Mit „Weitermachen“ geht es beim nächsten Mal bei der nächsten Lektion weiter."
+        },
+        {
+          "seite": "#erstehilfe",
+          "ziel": "#ernstfall-knoepfe a[href='#erstehilfe?k=bewusstlos']",
+          "aktion": { "adresse": "^#erstehilfe\\?k=bewusstlos" },
+          "hinweis": "Klicke oben auf „Bewusstlos“.",
+          "titel": "Schnell wiederfinden",
+          "text": "Im Ernstfall suchst du nicht lange im Kurs. Die Spickzettel oben führen dich direkt zur passenden Lektion. Klicke auf „Bewusstlos“."
+        },
+        {
+          "ziel": "#eh-inhalt a.knopf[href='#erstehilfe?l=wiederbelebung']",
+          "aktion": { "adresse": "^#erstehilfe\\?l=wiederbelebung" },
+          "hinweis": "Klicke auf „Zur Lektion“.",
+          "titel": "Zur Lektion",
+          "text": "Der Spickzettel zeigt die Handgriffe auf einen Blick. Die ganze Lektion dazu öffnest du mit „Zur Lektion“."
+        },
+        {
+          "ziel": "#eh-inhalt .merk-h2 .lesezeichen-knopf",
+          "aktion": { "klick": "#eh-inhalt .merk-h2 .lesezeichen-knopf", "ereignis": "merkliste", "da": "#eh-inhalt .merk-h2 .lesezeichen-knopf[aria-pressed='true']" },
+          "hinweis": "Klicke auf das Lesezeichen neben der Überschrift.",
+          "aufraeumen": "merkliste",
+          "titel": "Eine Lektion merken",
+          "text": "Willst du eine Lektion später schnell wiederfinden, merkst du sie dir. Klicke auf das Lesezeichen neben der Überschrift."
+        },
+        {
+          "ziel": "#merk-kopf",
+          "aktion": { "adresse": "^#merkliste" },
+          "hinweis": "Klicke oben rechts auf das Lesezeichen.",
+          "titel": "Deine Merkliste",
+          "text": "Alles Gemerkte sammelt sich in der Merkliste. Klicke oben rechts auf das Lesezeichen, um sie zu öffnen."
+        },
+        {
+          "seite": "#merkliste",
+          "ziel": "#merk-inhalt a[href^='#erstehilfe?l=wiederbelebung']",
+          "aktion": { "adresse": "^#erstehilfe\\?l=wiederbelebung" },
+          "hinweis": "Klicke auf „Wiederbelebung“.",
+          "titel": "Wiedergefunden",
+          "text": "Hier steht die Lektion, die du dir gemerkt hast. Ein Klick öffnet sie wieder."
+        },
+        {
+          "titel": "Geschafft",
+          "text": "Jetzt kennst du den Kurs, die Spickzettel und die Notrufnummern. Dein eigener Kurs beginnt da, wo du zuletzt aufgehört hast. Er hilft beim Vorbereiten, ersetzt aber keinen echten Erste-Hilfe-Kurs."
+        }
+      ]
+    },
+    {
+      "id": "vorsorge",
+      "titel": "Vorsorge",
+      "icon": "shield-check",
+      "text": "Strom weg, Häkchen und Vorratsrechner",
+      "ende": { "text": "Zur Vorsorge", "seite": "#vorsorge" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "ziel": "[data-ansicht='start'] .kachel[href='#vorsorge']",
+          "aktion": { "adresse": "^#vorsorge" },
+          "hinweis": "Klicke auf „Vorsorge“.",
+          "titel": "Zur Vorsorge",
+          "text": "In diesem Kapitel lernst du die Vorsorge kennen. Was du hier abhakst, zählt nur im Rundgang, deine eigenen Listen bleiben unverändert. Klicke auf „Vorsorge“."
+        },
+        {
+          "seite": "#vorsorge",
+          "ziel": "[data-ansicht='vorsorge'] .vs-lagen",
+          "titel": "Zwei Teile",
+          "text": "Oben steht „Wenn es passiert“: kurze Schritte für den Ernstfall. Darunter steht „Vorbereiten“: alles, was du vorher tun und haben kannst, zum Abhaken."
+        },
+        {
+          "seite": "#vorsorge",
+          "ziel": ".vs-lage[href='#vorsorge?lage=strom']",
+          "aktion": { "adresse": "^#vorsorge\\?lage=strom" },
+          "hinweis": "Klicke auf „Strom weg“.",
+          "titel": "Wenn der Strom weg ist",
+          "text": "Stell dir vor, der Strom ist gerade ausgefallen. Klicke auf „Strom weg“."
+        },
+        {
+          "seite": "#vorsorge?lage=strom",
+          "ziel": ".vs-lageseite .vs-warnung",
+          "titel": "Zuerst die Warnungen",
+          "text": "Oben steht, was du auf keinen Fall tun solltest. Bei einem Stromausfall ist das vor allem Kohlenmonoxid aus Grill, Heizer oder Notstromaggregat in geschlossenen Räumen."
+        },
+        {
+          "seite": "#vorsorge?lage=strom",
+          "ziel": ".vs-lageseite .vs-schritte",
+          "titel": "Schritt für Schritt",
+          "text": "Darunter stehen kurze Schritte, zuerst für die erste Stunde, dann für die ersten Tage. Hier gibt es keine Häkchen, du arbeitest sie im Ernstfall einfach ab. Für nichts davon musst du etwas kaufen."
+        },
+        {
+          "seite": "#vorsorge?lage=strom",
+          "ziel": ".vs-lageseite a.knopf[href='#vorsorge?k=strom']",
+          "aktion": { "adresse": "^#vorsorge\\?k=strom$" },
+          "hinweis": "Klicke auf „Licht, Strom und Wärme“.",
+          "titel": "Vorher vorbereiten",
+          "text": "Unten steht, womit du dich auf diese Lage vorbereitest. Klicke auf „Licht, Strom und Wärme“."
+        },
+        {
+          "seite": "#vorsorge?k=strom",
+          "ziel": ".vs-warum",
+          "titel": "Zu Hause ohne Strom",
+          "text": "Jedes Thema erklärt zuerst, warum es wichtig ist. Hier geht es darum, zu Hause ohne Strom zurechtzukommen: Licht, Wärme und ein geladenes Handy."
+        },
+        {
+          "seite": "#vorsorge?k=strom",
+          "ziel": "#vs-s1 > .klapp-kopf",
+          "aktion": { "da": "#vs-s1.auf" },
+          "hinweis": "Klicke auf „Das Wichtigste“.",
+          "aufraeumen": { "klick": "#vs-s1.auf > .klapp-kopf" },
+          "titel": "In drei Stufen",
+          "text": "Die Punkte sind in drei Stufen geordnet: Das Wichtigste, Gut vorbereitet und Weiter vorsorgen. Klicke auf „Das Wichtigste“."
+        },
+        {
+          "seite": "#vorsorge?k=strom",
+          "ziel": "#vs-s1 li:has(input[data-punkt='lampe']) > label",
+          "aktion": { "da": "#vs-s1 input[data-punkt='lampe']:checked" },
+          "hinweis": "Setz ein Häkchen bei „Taschenlampe oder Stirnlampe“.",
+          "aufraeumen": [{ "klick": "#vs-s1:not(.auf) > .klapp-kopf" }, { "klick": "#vs-s1 input[data-punkt='lampe']:checked" }],
+          "titel": "Abhaken",
+          "text": "Hak ab, was du schon hast. Setz ein Häkchen bei „Taschenlampe oder Stirnlampe“."
+        },
+        {
+          "seite": "#vorsorge?k=strom",
+          "ziel": "#vs-s1 li:has(input[data-punkt='batterien']) a.vs-marke.kiste",
+          "aktion": { "adresse": "^#vorsorge\\?k=aufbewahren" },
+          "hinweis": "Klicke bei „Ersatzbatterien“ auf „Notfallkiste“.",
+          "aufraeumen": { "klick": "#vs-s1:not(.auf) > .klapp-kopf" },
+          "titel": "Die Notfallkiste",
+          "text": "Manche Punkte gehören in die Notfallkiste und sind so markiert. Klicke bei „Ersatzbatterien“ auf „Notfallkiste“."
+        },
+        {
+          "seite": "#vorsorge?k=aufbewahren&z=packliste",
+          "ziel": "#vs-packliste li:has(input[data-thema='strom'][data-punkt='lampe'])",
+          "titel": "Die Packliste",
+          "text": "Die Packliste sammelt alles für die Notfallkiste aus allen Themen. Die Taschenlampe ist hier schon abgehakt. Es sind dieselben Häkchen wie im Thema."
+        },
+        {
+          "seite": "#vorsorge?k=aufbewahren&z=packliste",
+          "ziel": ".eh-lektion-kopf a[href='#vorsorge']",
+          "aktion": { "adresse": "^#vorsorge$" },
+          "hinweis": "Klicke oben auf „Übersicht“.",
+          "titel": "Zurück zur Übersicht",
+          "text": "Klicke oben auf „Übersicht“."
+        },
+        {
+          "seite": "#vorsorge",
+          "ziel": ".vs-stand",
+          "titel": "Dein Stand",
+          "text": "Hier siehst du, wie weit du in jeder Stufe bist. Dein Häkchen zählt schon mit."
+        },
+        {
+          "seite": "#vorsorge",
+          "ziel": ".vs-r-thema[href='#vorsorge?k=essen']",
+          "aktion": { "adresse": "^#vorsorge\\?k=essen" },
+          "hinweis": "Klicke auf „Essen“.",
+          "titel": "Alle Themen auf einen Blick",
+          "text": "In dieser Tabelle steht jedes Thema mit seinen drei Stufen. Ein Klick auf ein Feld öffnet das Thema gleich bei dieser Stufe. Klicke links auf das Thema „Essen“."
+        },
+        {
+          "seite": "#vorsorge?k=essen",
+          "ziel": "#vs-rechner .vs-personen > label:first-child",
+          "aktion": { "da": "#vs-rechner input[aria-label='Jugendliche und Erwachsene'][value='2']" },
+          "hinweis": "Trag bei „Jugendliche und Erwachsene“ eine 2 ein.",
+          "aufraeumen": { "feld": "#vs-rechner input[aria-label='Jugendliche und Erwachsene']", "wert": 1 },
+          "titel": "Der Vorratsrechner",
+          "text": "Der Rechner zeigt, wie viel Vorrat dein Haushalt für 10 Tage braucht. Trag bei „Jugendliche und Erwachsene“ eine 2 ein."
+        },
+        {
+          "seite": "#vorsorge?k=essen",
+          "ziel": "#vs-rechner .vs-rechner-ergebnis table",
+          "titel": "Für zwei gerechnet",
+          "text": "Die Mengen sind jetzt für zwei Personen berechnet, zum Beispiel 40 Liter Getränke. Daneben steht, wie das im Regal aussehen könnte."
+        },
+        {
+          "seite": "#vorsorge?k=essen",
+          "ziel": ".eh-lektion-kopf a[href='#vorsorge']",
+          "aktion": { "adresse": "^#vorsorge$" },
+          "hinweis": "Klicke oben auf „Übersicht“.",
+          "titel": "Zurück zur Übersicht",
+          "text": "Klicke oben auf „Übersicht“."
+        },
+        {
+          "seite": "#vorsorge",
+          "ziel": ".vs-uebersicht > .vs-knoepfe",
+          "titel": "Zum Ausdrucken",
+          "text": "Hier druckst du deine Listen aus, zum Beispiel für die Notfallkiste. Auf Papier helfen sie auch, wenn der Laptop leer ist."
+        },
+        {
+          "titel": "Geschafft",
+          "text": "Jetzt kennst du die Vorsorge. Deine eigenen Häkchen findest du auf der echten Vorsorge-Seite. Fang am besten mit „Das Wichtigste“ an."
+        }
+      ]
+    },
+    {
+      "id": "werkzeuge",
+      "titel": "Werkzeuge",
+      "icon": "wrench",
+      "text": "Umrechnen, Norden finden, Morsezeichen",
+      "ende": { "text": "Zu den Werkzeugen", "seite": "#werkzeuge" },
+      "schritte": [
+        {
+          "seite": "#start",
+          "ziel": "#werkzeug-kopf",
+          "aktion": { "adresse": "^#werkzeuge" },
+          "hinweis": "Klicke oben rechts auf den Schraubenschlüssel.",
+          "titel": "Zu den Werkzeugen",
+          "text": "Fieldbook hat ein paar kleine Helfer, die ganz ohne Pakete funktionieren. Du erreichst sie über den Schraubenschlüssel oben rechts. Klicke darauf."
+        },
+        {
+          "seite": "#werkzeuge",
+          "ziel": ".wz-kacheln",
+          "titel": "Vier Werkzeuge",
+          "text": "Hier siehst du alle Werkzeuge: Umrechnen, Orientierung, Sonne und Mond, Signale und Gewitter. Ein Klick auf eine Kachel wechselt das Werkzeug. Gerade ist „Umrechnen“ offen."
+        },
+        {
+          "seite": "#werkzeuge",
+          "ziel": ".wz-flaeche .wz-zahl",
+          "aktion": { "text": { ".wz-flaeche p.wz-klein": "Fieber" }, "fehl": { "text": { ".wz-flaeche .wz-zahl": "^(?!(20|2|3|39|)$)" } } },
+          "fehlhinweis": "Lösche die Zahl im Feld und schreib „39“.",
+          "hinweis": "Schreib „39“ in das Feld.",
+          "aufraeumen": { "feld": ".wz-flaeche .wz-zahl", "wert": "20" },
+          "titel": "Temperatur umrechnen",
+          "text": "Das Thermometer zeigt Fahrenheit, oder du willst wissen, ob jemand Fieber hat? Lösche die 20 im Feld und schreib „39“."
+        },
+        {
+          "seite": "#werkzeuge",
+          "ziel": ".wz-flaeche .wz-gleich",
+          "mit": ".wz-flaeche p.wz-klein",
+          "titel": "Fieber",
+          "text": "39 °C sind etwa 102 °F. Darunter steht, dass das schon Fieber ist. Die Einheiten kannst du in den Feldern daneben wählen."
+        },
+        {
+          "seite": "#werkzeuge",
+          "ziel": ".wz-chips .chip:last-child",
+          "aktion": { "da": ".wz-flaeche .wz-text" },
+          "hinweis": "Klicke auf „Küche“.",
+          "aufraeumen": { "klick": ".wz-chips .chip:first-child" },
+          "titel": "Küchenmaße",
+          "text": "Rezepte aus Amerika rechnen in Tassen und Löffeln. Klicke auf „Küche“."
+        },
+        {
+          "seite": "#werkzeuge",
+          "ziel": ".wz-flaeche .wz-zeile:has(.wz-text) select",
+          "aktion": { "text": { ".wz-flaeche .wz-ergebnis": "200 g" } },
+          "hinweis": "Wähle bei „von“ den Eintrag „Zucker“.",
+          "aufraeumen": { "feld": ".wz-flaeche .wz-zeile:has(.wz-text) select", "wert": "1" },
+          "titel": "Eine Tasse Zucker",
+          "text": "Wie viel ist eine Tasse Zucker? Wähle bei „von“ den Eintrag „Zucker“."
+        },
+        {
+          "seite": "#werkzeuge",
+          "ziel": ".wz-flaeche .wz-gleich",
+          "titel": "In Gramm",
+          "text": "Eine Tasse Zucker sind etwa 200 Gramm. Ganz ohne Waage misst du das mit einer Tasse von 240 ml ab."
+        },
+        {
+          "seite": "#werkzeuge",
+          "ziel": ".wz-kachel[href$='orientierung']",
+          "aktion": { "adresse": "^#werkzeuge\\?w=orientierung" },
+          "hinweis": "Klicke auf „Orientierung“.",
+          "titel": "Norden finden",
+          "text": "Ohne Handy und Kompass verliert man draußen schnell die Richtung. Klicke auf „Orientierung“."
+        },
+        {
+          "seite": "#werkzeuge?w=orientierung",
+          "ziel": ".wz-flaeche .wz-karte:first-child",
+          "titel": "Mit Uhr und Sonne",
+          "text": "Hier stehen vier Wege, Norden zu finden, Schritt für Schritt. Zum Beispiel mit einer Uhr mit Zeigern und der Sonne. Darunter steht, warum Moos an Bäumen nicht hilft."
+        },
+        {
+          "seite": "#werkzeuge?w=orientierung",
+          "ziel": ".wz-kachel[href$='signale']",
+          "aktion": { "adresse": "^#werkzeuge\\?w=signale" },
+          "hinweis": "Klicke auf „Signale“.",
+          "titel": "Signale",
+          "text": "Klicke auf „Signale“."
+        },
+        {
+          "seite": "#werkzeuge?w=signale",
+          "ziel": ".wz-morse-feld",
+          "mit": ".wz-morse",
+          "aktion": { "text": { ".wz-morse": "^···· ·· ·−·· ··−· ·$" }, "fehl": { "text": { ".wz-morse-feld": "^(?![Hh][Ii][Ll][Ff][Ee]\\s*$).{5,}" } } },
+          "fehlhinweis": "Da stimmt etwas noch nicht. Lösche alles im Feld und schreib „Hilfe“.",
+          "hinweis": "Schreib „Hilfe“ in das Feld.",
+          "aufraeumen": { "feld": ".wz-morse-feld", "wert": "SOS" },
+          "titel": "Morsen",
+          "text": "Hier wird Text zu Morsezeichen und umgekehrt. Lösche das „SOS“ im Feld und schreib „Hilfe“."
+        },
+        {
+          "seite": "#werkzeuge?w=signale",
+          "ziel": ".wz-morse",
+          "titel": "In Morsezeichen",
+          "text": "Das ist „Hilfe“ in Morsezeichen. Ein Punkt ist kurz, ein Strich lang. Umgekehrt geht es auch: Tippst du Punkte und Striche, erscheinen die Buchstaben."
+        },
+        {
+          "seite": "#werkzeuge?w=signale",
+          "ziel": ".wz-flaeche .knopfreihe .knopf",
+          "aktion": { "klick": ".wz-flaeche .knopfreihe .knopf" },
+          "hinweis": "Klicke auf „Als Lichtzeichen zeigen“.",
+          "ueberspringen": "Überspringen",
+          "titel": "Als Lichtzeichen",
+          "text": "Fieldbook kann die Zeichen auch mit dem ganzen Bildschirm blinken, nachts ist das weit zu sehen. Klicke auf „Als Lichtzeichen zeigen“. Ein Klick irgendwohin beendet das Blinken.",
+          "warnung": "Achtung: Der Bildschirm blinkt hell und dunkel. Das kann bei Menschen mit Epilepsie einen Anfall auslösen. Dann klicke lieber auf „Überspringen“."
+        },
+        {
+          "seite": "#werkzeuge?w=signale",
+          "ziel": ".wz-flaeche .wz-karte h4",
+          "zielText": "Alpine",
+          "titel": "Notsignale",
+          "text": "Weiter unten stehen die wichtigsten Notsignale. Zum Beispiel das alpine Notsignal, mit dem du in den Bergen Hilfe rufst, und Zeichen für einen Hubschrauber."
+        },
+        {
+          "seite": "#werkzeuge?w=signale",
+          "ziel": ".wz-kachel[href$='sonne']",
+          "aktion": { "adresse": "^#werkzeuge\\?w=sonne" },
+          "hinweis": "Klicke oben auf „Sonne und Mond“.",
+          "titel": "Sonne und Mond",
+          "text": "Draußen ist wichtig, wie lange es noch hell ist. Klicke oben auf „Sonne und Mond“."
+        },
+        {
+          "seite": "#werkzeuge?w=sonne",
+          "ziel": ".wz-flaeche .wz-karte h3",
+          "zielText": "Wie lange es noch hell",
+          "titel": "Mit der Hand messen",
+          "text": "Hier stehen Faustregeln, die ohne Uhr und Handy gehen. Zum Beispiel: Halte die Hand mit ausgestrecktem Arm quer vor dich und zähle die Finger zwischen Horizont und Sonne. Jeder Finger ist etwa 10 bis 15 Minuten bis zum Sonnenuntergang, eine ganze Hand gut eine Stunde."
+        },
+        {
+          "seite": "#werkzeuge?w=sonne",
+          "ziel": ".wz-flaeche .wz-oben",
+          "titel": "Geschafft",
+          "text": "Weitere Regeln zeigen zum Beispiel, wann der Mond nachts Licht gibt. Die genauen Zeiten für Sonnenauf- und -untergang an deinem Ort zeigt die Karte. Die Werkzeuge findest du auch über die Suche, zum Beispiel mit „Morse“ oder „Fahrenheit“."
+        }
+      ]
+    }
+  ]
+}

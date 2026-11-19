@@ -59,7 +59,9 @@ Dann bitte abbrechen.
 
 Der Assistent führt in sechs Schritten durch die Einrichtung.\
 Solange du Fieldbook zum ersten Mal einrichtest, ist das Menü oben ausgeblendet.\
-Mit **Später einrichten** ganz unten kommst du trotzdem heraus; Erste Hilfe und Vorsorge funktionieren auch ohne Einrichtung.
+Mit **Später einrichten** ganz unten kommst du trotzdem heraus; Erste Hilfe und Vorsorge funktionieren auch ohne Einrichtung.\
+Vor der Einrichtung und während des ersten Downloads bietet Fieldbook den **Rundgang** an.\
+Er zeigt jeden Bereich mit Beispielinhalten zum Mitmachen.
 
 1. **Dein Gerät**\
    Das Programm prüft Prozessor, Arbeitsspeicher, Grafikkarte und freien Platz und zeigt in einer Zeile, wie stark dein Gerät ist (die Einzelheiten klappen auf).\
@@ -67,8 +69,9 @@ Mit **Später einrichten** ganz unten kommst du trotzdem heraus; Erste Hilfe und
    Ohne Internet kannst du hier Inhalte **Von USB-Stick übernehmen**.
 2. **KI-Assistent**\
    Die passende KI ist schon vorausgewählt („Empfohlen“).\
-   Im Moment gibt es nur Qwen 3.5 (4B), das auf jedem Laptop mit 8 GB Arbeitsspeicher läuft.\
-   Weitere KIs folgen, sobald sie getestet sind.\
+   Qwen 3.5 (4B) läuft auf jedem Laptop mit 8 GB Arbeitsspeicher.\
+   Qwen 3.5 (9B) antwortet besser, ist aber nur mit Grafikkarte (ab 8 GB) empfohlen.\
+   Mit 16 GB Arbeitsspeicher läuft es auch ohne Grafikkarte, die Antworten dauern dann aber sehr lange.\
    „Keine KI“ geht auch.
 3. **Wissen**\
    Wähle die Bibliotheken aus.\
@@ -108,10 +111,12 @@ Schreib eine Frage, zum Beispiel „Wie versorge ich eine Schnittwunde?“.\
 Die KI sucht passende Artikel und antwortet mit Quellennummern wie [1].\
 Eine kleine Suchhilfe, die mit der KI kommt, sortiert die Treffer dabei nach ihrer Bedeutung.\
 Klick auf eine Nummer öffnet den Artikel.\
+Er springt zu der Stelle, aus der die Antwort am ehesten stammt, und hebt sie grün hervor.\
 Bei Erste-Hilfe-Fragen und zur Hausapotheke antwortet die KI aus dem eingebauten Erste-Hilfe-Kurs bzw. der Vorsorge-Liste.\
 Schon während die KI noch arbeitet, erscheinen die ersten Treffer und danach die geprüften Quellen.\
 Wer lieber selbst liest, kann sie sofort öffnen.\
 Unter der Antwort stehen Suchbegriffe, mit denen du in der Bibliothek selbst weiterlesen kannst.\
+**Kopieren** legt die Antwort mit den Quellen in die Zwischenablage, zum Beispiel zum Weiterschicken.\
 Pakete aus PDF-Büchern (z. B. die Medizin-Handbücher) bereitet Fieldbook nach der Installation einmal für die KI vor.\
 Das dauert ein, zwei Minuten, solange Fieldbook offen ist; oben im Bereich steht dann ein Hinweis.
 
@@ -133,6 +138,9 @@ Das dauert ein, zwei Minuten, solange Fieldbook offen ist; oben im Bereich steht
 - Mit Grafikkarte kommt die Antwort nach wenigen Sekunden.\
   Auf Laptops ohne Grafikkarte dauert sie etwa ein bis zwei Minuten.\
   Die ersten gefundenen Artikel erscheinen schon nach etwa 20 Sekunden, die geprüften Quellen nach etwa 40 Sekunden.
+- **Anhalten:** Solange die KI sucht und schreibt, wird aus dem Knopf **Fragen** der Knopf **Anhalten**.\
+  Was sie bis dahin geschrieben hat, bleibt stehen, die Quellen auch.\
+  Danach kannst du sofort die nächste Frage stellen.
 
 ### Bibliothek
 Die Pakete sind nach Themen sortiert: Grundwissen, Gesundheit & Erste Hilfe, Reparieren & Technik, Draußen & Überleben, Selbstversorgung & Haushalt, Lernen & Kinder sowie Beschäftigung & Lesen.\
@@ -150,6 +158,30 @@ Die Dateien liegen im Fieldbook-Ordner unter `daten\eigene` und wandern mit, wen
 **Ordner öffnen** zeigt diesen Ordner im Explorer, dort kannst du Dateien auch direkt hineinlegen.\
 Die Suche und die KI finden auch, was in deinen Unterlagen steht.\
 Fieldbook liest den Text dafür einmal im Hintergrund aus, bei eingescannten PDFs ohne Text geht das nicht.\
+Mit **Neue Notiz** schreibst du selbst etwas auf, zum Beispiel wichtige Telefonnummern, wo die Medikamente liegen oder euren Treffpunkt.\
+Oben steht der Titel, darunter der Text, gespeichert wird beim Tippen von selbst.\
+Die Leiste darüber bietet Schriftgrößen (Überschriften, kleiner Text), **Fett**, *Kursiv*, Aufzählungen, nummerierte Listen und Tabellen.\
+Steht die Schreibmarke in einer Tabelle, fügst du mit den Knöpfen daneben Zeilen und Spalten hinzu oder entfernst sie, mit Tab springst du zur nächsten Zelle.\
+Notizen liegen als kleine HTML-Dateien bei deinen Unterlagen und öffnen sich auch ohne Fieldbook im Browser.\
+Mit **Webseite sichern** öffnet sich ein kleiner Browser in Fieldbook.\
+Dort gibst du oben eine Adresse ein, solange es Internet gibt, zum Beispiel die Notfall-Seite deines Landkreises.\
+**Speichern** legt die Seite mit allen Bildern und ihrer Gestaltung bei deinen Unterlagen ab, den Namen kannst du vorher ändern.\
+Jede Unterseite wird einzeln gesichert, in Ordnern wie die Website aufgebaut (`daten\eigene\webseiten`).\
+Links zwischen gesicherten Seiten funktionieren auch ohne Internet, auch wenn du die `index.html` direkt im Browser öffnest.\
+**Neu holen** ersetzt eine gesicherte Seite durch den aktuellen Stand.\
+Dateien und gesicherte Webseiten sortierst du in eigene Ordner, zum Beispiel „Wuppertal Notfall“.\
+Mit **Neuer Ordner** legst du einen an.\
+Über das Menü ⋮ an einem Eintrag legst du ihn hinein, benennst ihn um oder löschst ihn.\
+Beim Speichern einer Webseite kannst du den Ordner auch gleich auswählen.\
+Die Ordner gibt es nur in Fieldbook, auf der Festplatte bleibt alles, wo es ist.\
+Vorschaubilder, die auf der Webseite zum Vergrößern sind, speichert Fieldbook auch in groß mit.\
+Ein Klick zeigt das Bild über ganz Fieldbook, **Esc** oder ein Klick schließt es wieder.\
+Programmcode der Webseiten speichert Fieldbook nicht mit, Videos und interaktive Karten gehen offline deshalb nicht.\
+Manche Webseiten lassen nur Besucher im normalen Browser herein (Schutz vor automatischen Abrufen).\
+Dann klickst du auf **Im Browserfenster**, und Fieldbook öffnet die Seite in einem normalen Edge-Fenster.\
+Fragt die Seite dort nach einer Bestätigung, klickst du sie selbst an.\
+In Fieldbook erscheint die Seite dann unter der Adresszeile mit **Speichern**.\
+Auch weitere Seiten, die du im Edge-Fenster öffnest, erscheinen dort.\
 Das Klexikon öffnet eine eigene Startseite mit Themen, zwölf zufälligen Artikeln und allen Artikeln von A bis Z.\
 Beim ersten Öffnen stellt Fieldbook die Liste einmal zusammen, das dauert etwa eine Minute.\
 iFixit öffnet ebenfalls eine eigene Startseite: Dort suchst du nach Gerät oder Fehler oder klickst dich durch die Geräte (z. B. Haushaltsgeräte › Waschmaschine).\
@@ -258,6 +290,8 @@ Die Übersetzung macht ein Programm, keine Person: Bei kurzen Sätzen, Medikamen
 ### Karten
 Zoomen mit dem Mausrad, verschieben mit gedrückter Maustaste.\
 Oben links nach Orten suchen.\
+Ins Suchfeld kannst du auch Koordinaten schreiben, zum Beispiel `47.4917, 11.0955`, `47,4917 11,0955` oder `N 47° 29.5' E 11° 5.7'`.\
+Die Karte springt dann genau an diese Stelle, praktisch, wenn dir jemand seinen Standort als Zahlen schickt.\
 Alle installierten Länder sind zusammen zu sehen, mit **Springen zu …** kommst du schnell zu einem davon.\
 Am Rand der geladenen Karten hält die Karte an, und ein Hinweis sagt, wie es weitergeht.\
 Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.\
@@ -268,6 +302,8 @@ Beim nächsten Mal sind die Treffer dort sofort da.\
 Ein Klick in die Karte setzt eine Markierung.\
 Ein Rechtsklick irgendwo in die Karte entfernt sie wieder.\
 Daneben stehen die Stadt, der nächste Ort oder Stadtteil und die Koordinaten (praktisch, um beim Notruf den Standort durchzugeben).\
+**Entfernung messen** an der Markierung zeigt die Luftlinie bis zu jeder Stelle, die du danach in die Karte klickst.\
+Mit weiteren Klicks misst du eine Strecke über mehrere Punkte, ein Rechtsklick nimmt den letzten Punkt zurück.\
 Mit **Ort merken** speicherst du die Stelle mit Namen und auf Wunsch einer Notiz, zum Beispiel „Treffpunkt Familie“.\
 Eine Farbe für die Stecknadel und eine Kategorie (zum Beispiel „Familie“) kannst du dabei auch wählen.\
 In der Liste **Meine Orte** blendet das durchgestrichene Auge einen Ort oder eine ganze Kategorie auf der Karte aus und wieder ein.\
@@ -332,7 +368,11 @@ Unter **Küche** wird aus Tassen und Löffeln eine Angabe in Gramm, etwa für am
 Ein Knopf darunter öffnet die Karte mit den genauen Zeiten für einen Ort.\
 **Signale** übersetzt Text in Morsezeichen und zurück.\
 Mit **Als Lichtzeichen zeigen** blinkt der ganze Bildschirm im Morsetakt, ein Klick oder Esc beendet das.\
+Achtung: Das Blinken kann bei Menschen mit Epilepsie einen Anfall auslösen.\
 Darunter stehen die wichtigsten Notsignale: SOS, das Alpine Notsignal und Zeichen für Hubschrauber und auf dem Boden.\
+Bei **Gewitter** klickst du beim Blitz auf **Blitz gesehen** und beim Donner auf **Donner gehört**.\
+Fieldbook zeigt dann, wie weit das Gewitter weg ist und ob es näher kommt.\
+Darunter steht, wann und wo du Schutz suchst und was bei einem Blitzschlag zu tun ist.\
 Die Suche führt auch direkt hin, etwa bei „Morse“ oder „Fahrenheit“.
 
 ### Merkliste
@@ -368,21 +408,22 @@ Wird ein Ordner gelöscht, bleiben seine Einträge erhalten und stehen dann ohne
 
 Im ersten Schritt des Assistenten (oder später in den Einstellungen unter **Fieldbook und Updates**) kannst du **Inhalte automatisch aktuell halten** einschalten.\
 Dann sieht Windows einmal pro Woche nach, ob es neue Ausgaben deiner Wissenspakete, Karten oder Wegedaten gibt.\
-In den Einstellungen wählst du außerdem:
+In den Einstellungen stellst du außerdem mit zwei Umschaltern ein:
 
-- **Vorher fragen**\
-  Ein Fenster zeigt, was es Neues gibt, und fragt, ob es geladen werden soll.\
-  Mit **Immer automatisch** stellst du dort gleich auf „Automatisch herunterladen“ um.
-- **Automatisch herunterladen**\
-  Ohne Nachfrage, aber nie über getaktete Verbindungen wie einen Handy-Hotspot.
+- **Wenn es Neues gibt:** **Vorher fragen** oder **Automatisch**\
+  Bei „Vorher fragen“ zeigt ein Fenster, was es Neues gibt, und fragt, ob es geladen werden soll.\
+  Mit **Immer automatisch** stellst du dort gleich auf „Automatisch“ um.\
+  „Automatisch“ lädt ohne Nachfrage, aber nie über getaktete Verbindungen wie einen Handy-Hotspot.
+- **Wann herunterladen:** **Sofort** oder **In Pausen**\
+  „In Pausen“ lädt nur, wenn der Computer am Strom hängt und gerade nicht benutzt wird.
 
-Außerdem wählst du, ob sofort im Hintergrund geladen wird oder nur, wenn der Computer am Strom hängt und gerade nicht benutzt wird.\
+
 Geladen wird immer mit niedrigster Priorität, damit du normal weiterarbeiten kannst.\
 Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Einstellungen oder **Nach Aktualisierungen suchen** auf der Seite **Inhalte**.
 
 ## 7. Später erweitern oder ändern
 
-- Die **Einstellungen** (Zahnrad oben rechts) sind in Kategorien gegliedert, die per Klick aufklappen: **Bereit für offline?**, **Fieldbook und Updates**, **Darstellung und Land**, **KI-Assistent**, **Inhalte**, **Rückmeldung und Datenschutz** und **Erweitert**.\
+- Die **Einstellungen** (Zahnrad oben rechts) sind in Kategorien gegliedert, die per Klick aufklappen: **Bereit für offline?**, **Fieldbook und Updates**, **Darstellung und Land**, **KI-Assistent**, **Inhalte**, **Rundgang durch Fieldbook**, **Rückmeldung und Datenschutz** und **Erweitert**.\
   Zugeklappt steht unter jeder Kategorie, wie sie gerade eingestellt ist.
 - **Bereit für offline?** (ganz oben in den Einstellungen) zeigt auf einen Blick, ob du das Netz jetzt kappen könntest, zum Beispiel vor einer Reise oder einem angekündigten Stromausfall.\
   Geprüft werden Downloads, KI, Wissenspakete (beschädigt oder älter als ein Jahr), die Karte für dein Land mit Routenplanung, der Übersetzer und der Akku.\
@@ -396,13 +437,18 @@ Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Ein
   Neue Versionen werden markiert.
 - **Einrichtung neu starten** (in den Einstellungen unter **Inhalte**) führt noch einmal durch den ganzen Assistenten, zum Beispiel um die KI oder grundlegende Einstellungen zu ändern.\
   Bereits Installiertes bleibt erhalten und ist vorausgewählt.
+- **Rundgang durch Fieldbook** (in den Einstellungen) zeigt Schritt für Schritt, was die Knöpfe tun.\
+  Er läuft mit Beispielinhalten, deine eigenen Inhalte bleiben dabei unverändert.\
+  Jeder Bereich hat ein eigenes Kapitel, du suchst dir aus, welches du ansehen möchtest.\
+  Angeboten wird er auch auf der Willkommensseite des Assistenten (zum Umsehen vor dem Herunterladen) und auf der Seite **Inhalte**, während der erste Download läuft.\
+  Für das Kapitel **Karten** lädt Fieldbook vor dem ersten Start einmal eine kleine Beispielkarte (etwa 4 MB, braucht Internet).
 - **Fieldbook selbst aktualisieren**\
   In den Einstellungen oben unter **Fieldbook und Updates** stehen die Version und ob es eine neue gibt.\
   **Nach Updates suchen** sucht nach einer neuen Programmversion und nach neuen Inhalten zugleich.\
   Ein Klick lädt die neue Version, Fieldbook startet kurz neu.\
   Deine Inhalte und Einstellungen bleiben erhalten.\
   Fieldbook fragt beim Start kurz nach einer neuen Version; das lässt sich dort mit **Beim Start nach neuer Fieldbook-Version fragen** abschalten.\
-  Ist die automatische Aktualisierung der Inhalte eingeschaltet, kann sie neue Fieldbook-Versionen mitladen (Haken **Dabei auch neue Fieldbook-Versionen mitladen**).
+  Ist die automatische Aktualisierung der Inhalte eingeschaltet, kann sie neue Fieldbook-Versionen mitladen (Haken **Neue Fieldbook-Versionen zusammen mit den Inhalten laden** unter **Fieldbook selbst**).
 - **Rückmeldung geben**\
   In den Einstellungen unter **Rückmeldung und Datenschutz** kannst du über **Schreiben** dem Entwickler schreiben, was gut läuft, was nicht klappt oder was dir fehlt.\
   Eine Kontaktadresse ist freiwillig, gib sie an, wenn du eine Antwort möchtest.\
