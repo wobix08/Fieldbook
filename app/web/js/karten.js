@@ -346,6 +346,24 @@ const Karten = (() => {
     return { lat: a.wert, lon: b.wert };
   }
 
+  function sindKoordinatenVersuch(q) {
+    const t = String(q || "").trim().toUpperCase();
+    if (/^\d{1,5}$/.test(t)) return false;
+    return t.includes("°") || (/\d/.test(t) && /^[\s\d.,;:°'"′″’´`“”NSOEW+\-·]+$/.test(t));
+  }
+
+  function koordinatenHilfe() {
+    const beispiel = (s) => el("code", {}, s);
+    return el("div", { class: "leer koord-hilfe" },
+      el("b", {}, "Koordinaten nicht erkannt."), el("br"),
+      "Erst die Breite (Nord), dann die Länge (Ost), zum Beispiel:",
+      beispiel("48.1374, 11.5755"),
+      beispiel("48,1374 11,5755"),
+      beispiel("N 48.1374 E 11.5755"),
+      beispiel("48°08'14.6\"N 11°34'31.8\"E"),
+      "Die Breite ist höchstens 90, die Länge höchstens 180.");
+  }
+
   function zuKoordinaten(k) {
     $("#ort-treffer").innerHTML = "";
     karte.flyTo({ center: [k.lon, k.lat], zoom: Math.max(karte.getZoom(), 14), speed: 1.6 });
@@ -356,7 +374,10 @@ const Karten = (() => {
   async function sucheOrt(q) {
     q = (q || "").trim();
     const nr = ++ortLauf;
-    $("#ort-feld").value = q;
+    // Nur bei Aufruf von außen (z. B. aus der Bibliothek) ins Feld schreiben; beim Tippen nicht,
+    // sonst würde ein Leerzeichen am Ende sofort wieder gelöscht
+    const feld = $("#ort-feld");
+    if (feld.value.trim() !== q) feld.value = q;
     const ziel = $("#ort-treffer");
     if (q.length < 2) { ziel.innerHTML = ""; return; }
     // Koordinaten statt Ortsname: ein Treffer, der genau dorthin springt
@@ -366,6 +387,9 @@ const Karten = (() => {
         el("b", {}, koordinaten(koord.lat, koord.lon)), " ", el("small", {}, "Koordinaten · Punkt zeigen")));
       return;
     }
+    // Sieht nach Koordinaten aus, lässt sich aber nicht lesen: Hilfe zeigen, wie man sie eingibt.
+    // Reine Zahlen bis 5 Stellen sind Postleitzahlen.
+    if (sindKoordinatenVersuch(q)) { ziel.replaceChildren(koordinatenHilfe()); return; }
     // Eigene Orte stehen ganz oben
     const klein = q.toLocaleLowerCase("de");
     const eigene = meineOrte.filter(o => (o.name + " " + (o.notiz || "") + " " + (o.kategorie || "")).toLocaleLowerCase("de").includes(klein)).slice(0, 5);
@@ -393,7 +417,7 @@ const Karten = (() => {
       ziel.append(el("button", { "data-ort": o.name + " · " + o.art, onclick: () => geheZu(o) },
         el("b", {}, o.name), " ", el("small", {}, o.art + " · " + o.land + (o.name !== o.original ? " · " + o.original : "") + (o.einwohner > 0 ? " · " + o.einwohner.toLocaleString("de-DE") + " Einw." : ""))));
     }
-    if (kandidaten.length) strassenSuchen(kandidaten, nr, ziel);
+    if (kandidaten.length) strassenSuchen(kandidaten, nr, ziel, q);
   }
 
   // ------------------------------------------------ Straßensuche
@@ -480,6 +504,10 @@ const Karten = (() => {
     return lauf === ortLauf ? funde : null;
   }
 
+  // Reihenfolge: erst Straßen im eingetippten Ort, dann Nachbarorte (Regel des Nutzers, 20. Nov. 2026);
+  // darin genau gleicher Name, dann Namensanfang, dann der Rest, jeweils die nächste zuerst
+  const strassenReihenfolge = (a, b) => (b.imOrt ? 1 : 0) - (a.imOrt ? 1 : 0) || a.rang - b.rang || a.d - b.d;
+
   // Passende Straßen eines Orts. Gleichnamige Stücke, die nah beieinander liegen, sind eine Straße;
   // weit auseinander (Nachbardorf) zwei Treffer. Zu jeder die nächste Postleitzahl.
   function strassenTreffer(kd, funde) {
@@ -509,21 +537,33 @@ const Karten = (() => {
       let beste = null, bd = Infinity;
       for (const z of kd.plzNah || []) { const e = entfernung(g.lat, g.lon, z[2], z[3]); if (e < bd) { bd = e; beste = z; } }
       g.ort = beste ? (beste[0] ? beste[0] + " " : "") + beste[1] : (kd.plz ? kd.plz + " " : "") + kd.ort;
+      // Liegt im eingetippten Ort (bzw. in der eingetippten Postleitzahl)? Diese Straßen kommen immer zuerst.
+      g.imOrt = !beste || vergleich(beste[1]) === vergleich(kd.ort) || (!!kd.plz && beste[0] === kd.plz);
     }
-    return gruppen.sort((a, b) => a.rang - b.rang || a.d - b.d);
+    return gruppen.sort(strassenReihenfolge);
   }
 
-  async function strassenSuchen(kandidaten, lauf, ziel) {
+  // Ort bzw. Postleitzahl im Treffer: was davon eingegeben wurde, fett (Wortanfänge, „Schw“ macht „Schw“elm fett)
+  function ortFett(ort, q) {
+    const woerter = String(q || "").toLocaleLowerCase("de").split(/[\s,]+/).filter(w => w.length >= 2);
+    return ort.split(/(\s+)/).flatMap(teil => {
+      const klein = teil.toLocaleLowerCase("de");
+      const w = woerter.filter(w => klein.startsWith(w)).sort((a, b) => b.length - a.length)[0];
+      return w ? [el("b", {}, teil.slice(0, w.length)), teil.slice(w.length)] : [teil];
+    });
+  }
+
+  async function strassenSuchen(kandidaten, lauf, ziel, q) {
     const kasten = el("div", { class: "strassen-treffer" });
     const status = el("div", { class: "leer" }, "Straßen werden gesucht …");
     ziel.append(kasten, status);
     const alle = kandidaten.map(() => []);
     const zeigen = () => {
-      const treffer = alle.flat().sort((a, b) => a.rang - b.rang || a.d - b.d).slice(0, 15);
+      const treffer = alle.flat().sort(strassenReihenfolge).slice(0, 15);
       kasten.replaceChildren(...treffer.map(g => el("button", {
         "data-ort": g.name + " · " + g.ort,
         onclick: () => geheZu({ name: g.name + ", " + g.ort, art: "Straße", lat: g.lat, lon: g.lon }),
-      }, el("b", {}, g.name), " ", el("small", {}, "Straße · " + g.ort))));
+      }, el("b", {}, g.name), " ", el("small", {}, "Straße"), " · ", el("span", { class: "treffer-ort" }, ...ortFett(g.ort, q)), " ", el("small", {}, "Ort"))));
       return treffer.length;
     };
     for (let i = 0; i < kandidaten.length; i++) {

@@ -829,7 +829,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 /* Die Bildlaufleiste (8 px) hat ihren festen Platz rechts neben dem Inhalt (scrollbar-gutter), der Inhalt bleibt
    340 px breit wie früher (sonst rutschen „Route planen“ und „Sonne und Mond“ untereinander). */
 .karte-panel {
-  position: absolute; top: 6px; left: 4px; width: min(362px, calc(100% - 8px)); z-index: 5;
+  position: absolute; top: 6px; left: 4px; width: min(clamp(362px, 30vw, 500px), calc(100% - 8px)); z-index: 5;
+  /* wächst mit dem Fenster, damit „Straße Ort“ in eine Zeile passt */
   display: flex; flex-direction: column; gap: 8px; max-height: calc(100% - 12px);
   overflow-y: auto; padding: 6px 6px 10px 8px; box-sizing: border-box; scrollbar-gutter: stable;
 }
@@ -839,12 +840,25 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .karte-panel::-webkit-scrollbar-thumb:hover { background: var(--text2); }
 .karte-panel > * { box-shadow: var(--schatten); flex-shrink: 0; }
 .ort-suche input { border-radius: 12px; }
-.ort-treffer { background: var(--flaeche); border-radius: 12px; overflow: auto; max-height: 40vh; }
+/* Beim Tippen leicht hervorgehoben (wie Knöpfe beim Darüberfahren), grüner Rand statt Umriss */
+.ort-suche input:focus { outline: none; border-color: var(--akzent); background: var(--flaeche2); }
+/* Mit Treffern: Feld und Liste bilden einen gemeinsamen Kasten mit grünem Rand, darunter Abstand */
+.ort-suche:has(+ .ort-treffer:not(:empty)) input { border-color: var(--akzent); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.ort-treffer { background: var(--flaeche); border: 1px solid var(--akzent); border-top-color: var(--linie); border-radius: 0 0 12px 12px;
+  overflow: auto; max-height: 40vh; margin-top: -9px; /* Lücke der Leiste (gap 8px) und doppelten Rand schließen */ }
 .ort-treffer:empty { display: none; }
 .ort-treffer button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--linie); }
+.ort-treffer button:last-child { border-bottom: 0; }
 .ort-treffer button:hover { background: var(--flaeche2); }
 .ort-treffer small { color: var(--text2); }
+.ort-treffer .treffer-ort { color: var(--text2); }
+.ort-treffer .treffer-ort b { color: var(--text); }
 .ort-treffer .leer { padding: 8px 12px; color: var(--text2); }
+.koord-hilfe { line-height: 1.5; }
+.koord-hilfe b { color: var(--text); }
+.koord-hilfe code { display: block; margin: 3px 0; padding: 2px 8px; background: var(--flaeche2); border-radius: 6px; color: var(--text); width: fit-content; }
+.koord-hilfe code:first-of-type { margin-top: 6px; }
+.koord-hilfe code:last-of-type { margin-bottom: 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; box-shadow: none !important; }
 .chip { border: 1px solid var(--linie); background: var(--flaeche); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: .88rem; box-shadow: var(--schatten); }
 .chip.aktiv { background: var(--akzent); color: var(--akzent-text); border-color: var(--akzent); }

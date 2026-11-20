@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.7.1";
+        public const string Version = "0.8.7.2";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -9310,6 +9310,7 @@ namespace OfflineWissen
                 bool komma = abschnitt.Count > 0 && abschnitt[abschnitt.Count - 1] != abschnitt[0];
                 var genau = OrteGenau();
                 var gesehen = new HashSet<string>();
+                var hintenGenau = new HashSet<int>(); // Anfang von Ortsnamen hinten, die genau so existieren
                 for (int k = woerter.Count - 1; k >= 1 && kandidaten.Count < 8; k--)
                 {
                     foreach (bool vorne in new[] { true, false })
@@ -9320,6 +9321,7 @@ namespace OfflineWissen
                             || abschnitt[ov] != abschnitt[ob - 1] || abschnitt[sv] != abschnitt[sb - 1])) continue;
                         List<Ort> l;
                         if (!genau.TryGetValue(norm(ov, ob), out l)) continue;
+                        if (!vorne) hintenGenau.Add(ov);
                         string strasse = string.Join(" ", woerter.GetRange(sv, sb - sv));
                         if (!strasseOk(strasse)) continue;
                         // Gleichnamige Orte: die größten, nicht doppelt (Ort und Ortsteil an derselben Stelle)
@@ -9337,6 +9339,37 @@ namespace OfflineWissen
                                 { "ort", o.Name }, { "land", o.Land }, { "plz", "" }, { "lat", o.Lat }, { "lon", o.Lon }, { "km", OrtRadius(o) }, { "strasse", strasse } });
                         }
                     }
+                }
+                // Ort hinten noch nicht fertig getippt („Hauptstraße Bad Tö“): Orte, die so anfangen, die größten zuerst.
+                // Nur ab drei Buchstaben, nur die längste Wortfolge, zu der es solche Orte gibt, und nicht, wenn ein Ort
+                // genau so heißt (fertig getipptes „Bad Tölz“ soll nicht noch „Tölzkirchen“ bringen).
+                for (int k = woerter.Count - 1; k >= 1 && kandidaten.Count < 8; k--)
+                {
+                    int ov = woerter.Count - k;
+                    if (hintenGenau.Contains(ov)) break;
+                    if (komma && (abschnitt[ov] == abschnitt[ov - 1] || abschnitt[ov] != abschnitt[woerter.Count - 1])) continue;
+                    string anfang = norm(ov, woerter.Count);
+                    if (anfang.Replace(" ", "").Length < 3) continue;
+                    string strasse = string.Join(" ", woerter.GetRange(0, ov));
+                    if (!strasseOk(strasse)) continue;
+                    var passend = new List<Ort>();
+                    foreach (var kv in genau)
+                        if (kv.Key.Length > anfang.Length && kv.Key.StartsWith(anfang, StringComparison.Ordinal)) passend.AddRange(kv.Value);
+                    if (passend.Count == 0) continue;
+                    var gewaehlt = new List<Ort>();
+                    foreach (var o in passend.OrderByDescending(x => x.Pop).ThenBy(x => x.Code == "PPLX" ? 1 : 0))
+                    {
+                        if (gewaehlt.Count >= 3) break;
+                        if (gewaehlt.Any(g => Km(g.Lat, g.Lon, o.Lat, o.Lon) < 5)) continue;
+                        gewaehlt.Add(o);
+                    }
+                    foreach (var o in gewaehlt)
+                    {
+                        if (!gesehen.Add(o.Lat + "|" + o.Lon + "|" + strasse) || kandidaten.Count >= 8) continue;
+                        kandidaten.Add(new Dictionary<string, object> {
+                            { "ort", o.Name }, { "land", o.Land }, { "plz", "" }, { "lat", o.Lat }, { "lon", o.Lon }, { "km", OrtRadius(o) }, { "strasse", strasse } });
+                    }
+                    break;
                 }
             }
 
@@ -9385,6 +9418,19 @@ namespace OfflineWissen
                         if (t.StartsWith(" " + n + " ")) { rest = t.Substring(n.Length + 1); break; }
                         if (t.EndsWith(" " + n + " ")) { rest = t.Substring(0, t.Length - n.Length - 1); break; }
                     }
+                // Ort hinten noch nicht fertig getippt („Bahnhofstraße Garm“): wie AdresseSuchen ab drei Buchstaben,
+                // die längste passende Wortfolge zuerst
+                if (rest == null)
+                {
+                    var woerter = s.Trim().Split(' ');
+                    var namen = Arr(e, "namen").Select(x => Norm(Convert.ToString(x))).ToList();
+                    for (int k = woerter.Length - 1; k >= 1 && rest == null; k--)
+                    {
+                        string anfang = string.Join(" ", woerter, woerter.Length - k, k);
+                        if (anfang.Replace(" ", "").Length < 3 || !namen.Any(n => n.Length > anfang.Length && n.StartsWith(anfang, StringComparison.Ordinal))) continue;
+                        rest = " " + string.Join(" ", woerter, 0, woerter.Length - k) + " ";
+                    }
+                }
                 if (rest == null) continue;
                 string strasse = Regex.Replace(Regex.Replace(rest, @"\S*\d\S*", " "), @"\s+", " ").Trim();
                 double lat = Num(e, "lat"), lon = Num(e, "lon");

@@ -292,9 +292,12 @@ Zoomen mit dem Mausrad, verschieben mit gedrückter Maustaste.\
 Oben links nach Orten suchen.\
 Straßen findest du zusammen mit dem Ort oder der Postleitzahl, egal in welcher Reihenfolge, zum Beispiel `Hauptstraße Schwelm`, `Schwelm Haupt` oder `58332 Hauptstr`.\
 Ab drei Buchstaben der Straße erscheinen passende Straßen mit Postleitzahl.\
+Den Ort musst du nicht ganz ausschreiben, `Hauptstraße Schwel` reicht.\
+Straßen im eingegebenen Ort stehen oben, darunter folgen passende Straßen aus den Nachbarorten.\
 Hausnummern kennt die Karte nicht, du landest auf der Straße.\
 Ins Suchfeld kannst du auch Koordinaten schreiben, zum Beispiel `47.4917, 11.0955`, `47,4917 11,0955` oder `N 47° 29.5' E 11° 5.7'`.\
 Die Karte springt dann genau an diese Stelle, praktisch, wenn dir jemand seinen Standort als Zahlen schickt.\
+Erkennt Fieldbook die Koordinaten nicht, zeigt es Beispiele, wie man sie schreibt.\
 Alle installierten Länder sind zusammen zu sehen, mit **Springen zu …** kommst du schnell zu einem davon.\
 Am Rand der geladenen Karten hält die Karte an, und ein Hinweis sagt, wie es weitergeht.\
 Die Knöpfe wie „Arzt / Klinik“ oder „Apotheke“ zeigen Einrichtungen im sichtbaren Kartenausschnitt.\
