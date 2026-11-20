@@ -32,6 +32,7 @@ const Ansichten = {
   inhalte: { zeigen: (p) => Inhalte.zeigen(p) },
   merkliste: { zeigen: () => MerkAnsicht.zeigen() },
   werkzeuge: { zeigen: (p) => Werkzeuge.zeigen(p) },
+  neu: { zeigen: () => Neuigkeiten.zeigen() },
 };
 
 function navigiere() {
@@ -463,6 +464,13 @@ window.addEventListener("hashchange", navigiere);
   if (s && !s.setupFertig && s.wissen === 0 && !s.modell && !location.hash) location.hash = "#setup"; // löst hashchange und damit navigiere() aus
   else navigiere();
   Rundgang.init();
+  // Nach einem Update einmal „Was ist neu?“ zeigen. Nur von Seiten, auf denen man nach dem Neustart landet (frisch
+  // geöffnet, Einstellungen mit dem Update-Knopf, Inhalte), nicht mitten im Lesen und nicht während des Rundgangs.
+  const nachUpdate = () => ["", "#start", "#einstellungen", "#inhalte"].includes(location.hash);
+  let imRundgang = false;
+  try { imRundgang = !!sessionStorage.getItem("fb-rundgang"); } catch { }
+  if (s && s.setupFertig && !imRundgang && nachUpdate())
+    api("neuigkeiten?offen=1").then(n => { if (n.offen && n.notizen && nachUpdate()) location.hash = "#neu"; }).catch(() => { });
   // Bei verstecktem Tab nur jede 4. Runde fragen, auf Akku jede 3. (alle 15 s)
   let runde = 0;
   statusTimer = setInterval(() => {

@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.6";
+        public const string Version = "0.8.7";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -169,6 +169,7 @@ namespace OfflineWissen
 
             StartStatus("Browser wird geöffnet …");
             Log("Fieldbook " + Version + " läuft.");
+            try { NeuigkeitenBeimStart(); } catch (Exception e) { Log("Neuigkeiten: " + e.Message); }
 
             // Ungefangene Fehler beenden den Prozess trotzdem, aber die Ursache steht dann im Log
             AppDomain.CurrentDomain.UnhandledException += delegate (object s, UnhandledExceptionEventArgs e)
@@ -361,6 +362,8 @@ namespace OfflineWissen
                 string roh = ctx.Request.RawUrl ?? "";
                 // Nur Anfragen von diesem Rechner (nicht aus dem Netzwerk)
                 if (!ctx.Request.IsLocal) { SendeText(ctx, 403, "Zugriff nur von diesem Rechner aus."); return; }
+                // Fremde Webseiten dürfen Fieldbook nicht unsichtbar einbetten (sonst könnten sie zu Klicks verleiten)
+                ctx.Response.AddHeader("X-Frame-Options", "SAMEORIGIN");
                 // Fremde Webseiten dürfen weder die Schnittstelle noch die Dienste dahinter benutzen
                 bool geschuetzt = pfad.StartsWith("/api/") || pfad.StartsWith("/llm/") || pfad.StartsWith("/suchhilfe/") || pfad.StartsWith("/route/");
                 if (geschuetzt && FremdeHerkunft(ctx.Request)) { SendeText(ctx, 403, "Zugriff von einer fremden Webseite abgelehnt."); return; }
@@ -1192,6 +1195,8 @@ namespace OfflineWissen
             string typ;
             res.ContentType = Mime.TryGetValue(fi.Extension, out typ) ? typ : "application/octet-stream";
             res.AddHeader("Accept-Ranges", "bytes");
+            // Der Browser soll den Dateityp nicht erraten (z. B. eine Textdatei mit HTML darin nie als Webseite öffnen)
+            res.AddHeader("X-Content-Type-Options", "nosniff");
             // Immer nachfragen (no-cache), aber mit ETag/Last-Modified: unverändert gibt es nur ein kurzes 304.
             // Auch Karten (.pmtiles/.pbf): nach einem Karten-Update sonst alte Kacheln aus dem Browser-Cache.
             DateTime geaendert = fi.LastWriteTimeUtc;
@@ -3681,6 +3686,14 @@ namespace OfflineWissen
                 case "programmupdate/installieren":
                     SendeJson(ctx, ProgrammUpdateJetzt());
                     return;
+                case "neuigkeiten":
+                    // ?offen=1 (beim Öffnen der Oberfläche): nur etwas holen, wenn die Seite nach einem Update noch fällig ist
+                    SendeJson(ctx, Neuigkeiten(Q("offen") == "1"));
+                    return;
+                case "neuigkeiten/gesehen":
+                    lock (Lk) { if (einst.Remove("neuigkeitenOffen")) SpeichereEinst(); }
+                    SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
+                    return;
                 case "wiederholen":
                     lock (Lk)
                     {
@@ -5516,6 +5529,7 @@ namespace OfflineWissen
                         break;
                     case "datei":
                         Herunterladen(j, j.Url, j.Ziel);
+                        ModellPruefen(j);
                         neueKi = true;
                         // Fehler hier machen den fertigen Download nicht zum Fehler
                         if (!Bool(einst, "sparmodus")) try { NachKiDatei(j.Ziel); } catch (Exception e) { Log("KI: " + e.Message); }
@@ -6329,7 +6343,11 @@ namespace OfflineWissen
                 {
                     string ziel = SichererPfad(UebersetzerDir, Str(f, "ziel"));
                     if (ziel == null || File.Exists(ziel)) continue;
+                    // Die Bibliothek läuft in Fieldbook selbst: ohne passende Prüfsumme nicht übernehmen
+                    string soll = Str(f, "sha256");
+                    if (string.IsNullOrEmpty(soll)) throw new Exception("Zu " + Path.GetFileName(ziel) + " fehlt die Prüfsumme, es wird deshalb nicht geladen.");
                     TeilLaden(j, fertig, Str(f, "url"), ziel);
+                    if (Sha256Datei(ziel) != soll.ToLowerInvariant()) { File.Delete(ziel); throw new Exception("Die Prüfsumme von " + Path.GetFileName(ziel) + " stimmt nicht. Bitte erneut versuchen."); }
                 }
             }
             foreach (var d in dateien)
@@ -6365,7 +6383,11 @@ namespace OfflineWissen
         {
             string id = j.Ziel;
             string zip = Path.Combine(Prog, id + ".zip");
+            // Nur Programme mit eingetragener Prüfsumme starten: So läuft genau die geprüfte Version, auch wenn die Download-Quelle verändert wurde
+            string soll = Str(ProgrammInfo(id), "sha256");
+            if (string.IsNullOrEmpty(soll)) throw new Exception("Zu " + j.Titel + " fehlt die Prüfsumme, es wird deshalb nicht eingerichtet.");
             Herunterladen(j, j.Url, zip);
+            if (Sha256Datei(zip) != soll.ToLowerInvariant()) { File.Delete(zip); throw new Exception("Die Prüfsumme von " + j.Titel + " stimmt nicht. Bitte erneut versuchen."); }
             string tmp = Path.Combine(Prog, id + ".neu");
             if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
             ZipFile.ExtractToDirectory(zip, tmp);
@@ -7734,6 +7756,79 @@ namespace OfflineWissen
             try { if (Directory.Exists(tmp)) Directory.Delete(tmp, true); } catch { }
             try { File.Delete(zip); } catch { }
             AktLog("Fieldbook " + neu + " heruntergeladen und bereitgelegt.");
+            try { NeuigkeitenMerken(neu); } catch (Exception e) { AktLog("Neuigkeiten merken: " + e.Message); }
+        }
+
+        // ------------------------------------------------------------------ „Was ist neu?“ nach einem Update
+        // Beim ersten Start einer neuen Version zeigt die Oberfläche einmal die Seite #neu mit den Release-Notizen.
+        // Die Notizen werden beim Herunterladen gemerkt (das Einspielen geschieht oft erst beim nächsten Start, vielleicht
+        // ohne Internet). Fehlen sie (Update mit einer älteren Version geladen, von Hand ausgepackt), einmal bei GitHub fragen.
+        static string NeuigkeitenDatei { get { return Path.Combine(UpdateOrdner, "neuigkeiten.json"); } }
+        static Dictionary<string, object> neuigkeitenGeholt;
+        static bool neuigkeitenVersucht;
+
+        static void NeuigkeitenBeimStart()
+        {
+            lock (Lk)
+            {
+                string vorher = Str(einst, "versionZuletzt");
+                if (vorher == Version) return;
+                // Leere Einstellungen = frisch ausgepackt: nichts zeigen. Bis 0.8.6 gab es versionZuletzt noch nicht.
+                bool update = vorher != null ? VersionNeuer(Version, vorher) : einst.Count > 0;
+                einst["versionZuletzt"] = Version;
+                if (update) einst["neuigkeitenOffen"] = Version; else einst.Remove("neuigkeitenOffen");
+                SpeichereEinst();
+                if (update) Log("Update von " + (vorher ?? "einer älteren Version") + " auf " + Version + ": Seite „Was ist neu?“ wird einmal gezeigt.");
+            }
+        }
+
+        static void NeuigkeitenMerken(string neu)
+        {
+            Dictionary<string, object> rel;
+            lock (ProgUpdateLk) rel = progRelease;
+            if (rel == null || (Str(rel, "tag_name") ?? "").TrimStart('v', 'V') != neu || string.IsNullOrEmpty(Str(rel, "body"))) return;
+            SicherSchreiben(NeuigkeitenDatei, Json.Serialize(new Dictionary<string, object> {
+                { "version", neu }, { "titel", Str(rel, "name") ?? ("Fieldbook " + neu) }, { "notizen", Str(rel, "body") }, { "datum", Str(rel, "published_at") ?? "" } }));
+        }
+
+        static Dictionary<string, object> Neuigkeiten(bool nurOffen)
+        {
+            bool offen;
+            lock (Lk) offen = Str(einst, "neuigkeitenOffen") == Version;
+            var erg = new Dictionary<string, object> { { "version", Version }, { "offen", offen } };
+            if (nurOffen && !offen) return erg;
+            var n = LadeJson(NeuigkeitenDatei);
+            if (n == null || Str(n, "version") != Version) n = NeuigkeitenVonGitHub();
+            if (n != null && !string.IsNullOrEmpty(Str(n, "notizen")))
+            {
+                erg["titel"] = Str(n, "titel");
+                erg["notizen"] = Str(n, "notizen");
+                erg["datum"] = Str(n, "datum");
+            }
+            return erg;
+        }
+
+        static Dictionary<string, object> NeuigkeitenVonGitHub()
+        {
+            lock (ProgUpdateLk)
+            {
+                // Höchstens einmal je Programmstart (GitHub erlaubt ohne Anmeldung nur 60 Anfragen pro Stunde)
+                if (neuigkeitenVersucht) return neuigkeitenGeholt;
+                neuigkeitenVersucht = true;
+            }
+            string api = UpdateApi();
+            if (api == null || !api.EndsWith("/releases/latest", StringComparison.OrdinalIgnoreCase)) return null;
+            try
+            {
+                var rel = Json.DeserializeObject(HoleText(api.Substring(0, api.Length - "latest".Length) + "tags/v" + Version, 8000)) as Dictionary<string, object>;
+                if (rel == null || string.IsNullOrEmpty(Str(rel, "body"))) return null;
+                var n = new Dictionary<string, object> {
+                    { "version", Version }, { "titel", Str(rel, "name") ?? ("Fieldbook " + Version) }, { "notizen", Str(rel, "body") }, { "datum", Str(rel, "published_at") ?? "" } };
+                try { Directory.CreateDirectory(UpdateOrdner); SicherSchreiben(NeuigkeitenDatei, Json.Serialize(n)); } catch { }
+                lock (ProgUpdateLk) neuigkeitenGeholt = n;
+                return n;
+            }
+            catch (Exception e) { Log("Neuigkeiten bei GitHub: " + e.Message); return null; }
         }
 
         // Knopf "Jetzt aktualisieren" in den Einstellungen: laden, dann neu starten
@@ -8690,6 +8785,21 @@ namespace OfflineWissen
         {
             return Arr(LadeJson(Path.Combine(Config, "modelle.json")), "modelle").OfType<Dictionary<string, object>>()
                 .Any(m => File.Exists(Path.Combine(Daten, "modelle", Str(m, "datei"))));
+        }
+
+        // KI-Modell oder Suchhilfe nach dem Download mit der Prüfsumme aus modelle.json vergleichen (gefunden über den Dateinamen,
+        // damit auch ein nach dem Neustart fortgesetzter Download geprüft wird). Ohne Eintrag wird die Datei nicht benutzt.
+        static void ModellPruefen(Job j)
+        {
+            var konf = LadeJson(Path.Combine(Config, "modelle.json"));
+            string name = Path.GetFileName(j.Ziel);
+            var alle = Arr(konf, "modelle").OfType<Dictionary<string, object>>().ToList();
+            var s = konf != null && konf.ContainsKey("suchhilfe") ? konf["suchhilfe"] as Dictionary<string, object> : null;
+            if (s != null) alle.Add(s);
+            var m = alle.FirstOrDefault(x => string.Equals(Str(x, "datei"), name, StringComparison.OrdinalIgnoreCase));
+            string soll = m != null ? Str(m, "sha256") : null;
+            if (string.IsNullOrEmpty(soll)) { File.Delete(j.Ziel); throw new Exception("Zu " + name + " fehlt die Prüfsumme, die Datei wird deshalb nicht benutzt."); }
+            if (Sha256Datei(j.Ziel) != soll.ToLowerInvariant()) { File.Delete(j.Ziel); throw new Exception("Die Prüfsumme von " + name + " stimmt nicht. Bitte erneut versuchen."); }
         }
 
         static Job SuchhilfeJob()

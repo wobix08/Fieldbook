@@ -71,7 +71,7 @@ try {
         </div>
       </div>
       <form class="suche-gross" id="start-suche">
-        <input type="search" id="start-suche-feld" aria-label="Stichwort suchen oder Frage stellen" placeholder="Stichwort suchen oder Frage stellen, z. B. Wie mache ich Wasser ohne Strom trinkbar?" autocomplete="off">
+        <input type="search" id="start-suche-feld" aria-label="Stichwort suchen oder Frage stellen" placeholder="Suchen oder fragen, z. B. Wie mache ich Wasser trinkbar?" autocomplete="off">
         <button type="submit">Suchen</button>
       </form>
       <div class="kacheln-start">
@@ -427,6 +427,14 @@ try {
   </section>
 
   <!-- MERKLISTE (js/merkliste.js) -->
+  <!-- WAS IST NEU (js/neuigkeiten.js): nach einem Update einmal, sonst über die Einstellungen -->
+  <section class="ansicht" data-ansicht="neu">
+    <div class="spalte neu-spalte">
+      <h1 id="neu-titel">Was ist neu?</h1>
+      <div id="neu-inhalt"></div>
+    </div>
+  </section>
+
   <section class="ansicht" data-ansicht="merkliste">
     <div class="spalte">
       <div class="titel-zeile">
@@ -481,6 +489,7 @@ try {
 <script src="js/inhalte.js"></script>
 <script src="js/merkliste.js"></script>
 <script src="js/werkzeuge.js"></script>
+<script src="js/neuigkeiten.js"></script>
 <script src="js/rundgang.js"></script>
 <script src="js/app.js"></script>
 </body>

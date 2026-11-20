@@ -447,6 +447,7 @@ Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Ein
   **Nach Updates suchen** sucht nach einer neuen Programmversion und nach neuen Inhalten zugleich.\
   Ein Klick lädt die neue Version, Fieldbook startet kurz neu.\
   Deine Inhalte und Einstellungen bleiben erhalten.\
+  Nach dem Update zeigt Fieldbook einmal die Seite **Neu in Fieldbook** mit allen Neuerungen; später findest du sie dort unter **Was ist neu in Version …?**.\
   Fieldbook fragt beim Start kurz nach einer neuen Version; das lässt sich dort mit **Beim Start nach neuer Fieldbook-Version fragen** abschalten.\
   Ist die automatische Aktualisierung der Inhalte eingeschaltet, kann sie neue Fieldbook-Versionen mitladen (Haken **Neue Fieldbook-Versionen zusammen mit den Inhalten laden** unter **Fieldbook selbst**).
 - **Rückmeldung geben**\

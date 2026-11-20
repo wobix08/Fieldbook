@@ -1726,3 +1726,13 @@ a.vs-marke.kiste:hover { border-color: var(--gelb); }
 .akku-sparen .fu-kasten.fu-stups { animation: none; }
 /* Vorlesen lässt sich während des ganzen Rundgangs anhalten: Die Vorlese-Leiste liegt über Sperre und Abdunklung */
 html.uebung .vl-leiste { position: relative; z-index: 901; }
+
+/* Was ist neu (js/neuigkeiten.js) */
+.neu-spalte { max-width: 760px; }
+.neu-einleitung { color: var(--text2); margin: -.2em 0 1.2em; }
+.neu-notizen { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 6px 24px 14px; }
+.neu-notizen .neu-seit { color: var(--text2); font-family: var(--titel); font-size: 1.05rem; margin: 1em 0 0; }
+.neu-notizen h2 { font-size: 1.2rem; margin: 1em 0 .3em; color: var(--akzent); }
+.neu-liste { margin: 0 0 .4em; padding-left: 1.3em; }
+.neu-liste li { margin: .3em 0; line-height: 1.5; }
+.neu-spalte .knopfreihe { margin-top: 18px; }

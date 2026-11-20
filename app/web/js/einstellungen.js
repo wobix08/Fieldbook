@@ -66,7 +66,8 @@ const Einstellungen = (() => {
           else location.hash = "#inhalte";
         } }, u.bereit && !u.verfuegbar ? "⟳ Jetzt neu starten und einspielen" : "⟳ Auf Version " + u.neu + " aktualisieren")));
       }
-      const kurz = u.bereit ? "Version " + u.bereit + " wird beim nächsten Start eingespielt"
+      progExtra.append(el("p", { style: "margin:8px 0 0" }, el("a", { href: "#neu" }, "Was ist neu in Version " + s.version + "?")));
+      const kurz = u.bereit ?"Version " + u.bereit + " wird beim nächsten Start eingespielt"
         : u.verfuegbar ? "Neue Version " + u.neu + " verfügbar"
         : u.entwicklung ? "Entwicklungsordner" : u.neu ? "aktuell" : "";
       prog.unter("Version " + s.version + (kurz ? " · " + kurz : "") + " · Inhalte " + (akt.an ? "werden automatisch aktuell gehalten" : "nicht automatisch aktuell"));

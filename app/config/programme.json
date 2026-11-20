@@ -3,27 +3,32 @@
   "kiwix": {
     "titel": "Kiwix (Bibliothek)",
     "url": "https://download.kiwix.org/release/kiwix-tools/kiwix-tools_win-x86_64-3.8.1.zip",
+    "sha256": "fcd01ed2b93e9a68632c7863c83b9f66bf64406a66357be1df7b8b75596f3e45",
     "exe": "kiwix-serve.exe"
   },
   "llama-cpu": {
     "titel": "llama.cpp (KI, Prozessor)",
     "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12020/llama-b12020-bin-win-cpu-x64.zip",
+    "sha256": "07e81782f5a16c7ffef42403183808e02f271c9ece3aa2d64040b2620ae8d519",
     "exe": "llama-server.exe"
   },
   "llama-vulkan": {
     "titel": "llama.cpp (KI, Grafikkarte)",
     "url": "https://github.com/ggml-org/llama.cpp/releases/download/b12020/llama-b12020-bin-win-vulkan-x64.zip",
+    "sha256": "aa3452dfa16cdf7d902b44e5445e43e13023c64fb179ca7a13d60611d4371691",
     "exe": "llama-server.exe"
   },
   "whisper": {
     "titel": "whisper.cpp (Spracheingabe)",
     "url": "https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-x64.zip",
+    "sha256": "6ba69e3482d7826214f90a6a9c84ca07782aec1e1d0c6a7c30c994fd5d816ccb",
     "exe": "whisper-cli.exe"
   },
   "piper": {
     "_hinweis": "Altes Piper (bis Fieldbook 0.8.4). Wird nicht mehr geladen, liest aber weiter vor, bis piper-py da ist.",
     "titel": "Piper (Vorlesen, alt)",
     "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip",
+    "sha256": "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea",
     "exe": "piper.exe"
   },
   "piper-py": {
@@ -47,21 +52,25 @@
   "pmtiles": {
     "titel": "PMTiles (Karten-Werkzeug)",
     "url": "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Windows_x86_64.zip",
+    "sha256": "a658baa4d7e55020aef6ca17bd9ff9faa1582671266b36f58c52db0ac8e785a1",
     "exe": "pmtiles.exe"
   },
   "java": {
     "titel": "Java-Laufzeit (für die Routenplanung)",
     "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jre_x64_windows_hotspot_21.0.13_9.zip",
+    "sha256": "2332c0b4cff6bed722da3567c91d5e47568bcba863fa4945d0a8d6fc76158628",
     "exe": "java.exe"
   },
   "brouter": {
     "titel": "BRouter (Routenplanung)",
     "url": "https://github.com/abrensch/brouter/releases/download/v1.7.10/brouter-1.7.10.zip",
+    "sha256": "023fec3ba997758e8cd7ab9e1bae52e962af3f00b57683e3de86b84ffad01532",
     "exe": "brouter-1.7.10-all.jar"
   },
   "karten-assets": {
     "titel": "Kartenschriften und Symbole",
-    "url": "https://github.com/protomaps/basemaps-assets/archive/refs/heads/main.zip",
+    "url": "https://github.com/protomaps/basemaps-assets/archive/028c18f713baecad011301ff7a69acc39bcc2ae7.zip",
+    "sha256": "e942a417d94a12596842a20b53d6b785cbf6d47f2545e458538191ba6d74b305",
     "exe": "fonts"
   }
 }

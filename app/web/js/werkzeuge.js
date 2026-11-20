@@ -149,8 +149,9 @@ const Werkzeuge = (() => {
     const eingabe = el("input", { type: "text", inputmode: "decimal", class: "wz-zahl", value: w.wert, "aria-label": "Wert" });
     const von = auswahl(a.einheiten, w.von, neu), nach = auswahl(a.einheiten, w.nach, neu);
     const ergebnis = el("output", { class: "wz-ergebnis" });
-    const tausch = el("button", { type: "button", class: "knopf knopf-klein", title: "Tauschen", "aria-label": "Einheiten tauschen",
-      onclick: () => { const v = von.value; von.value = nach.value; nach.value = v; neu(); } }, sym("arrow-left-right"));
+    // Mit Wort, sonst sah der Knopf an dieser Stelle wie ein leeres Zahlenfeld aus
+    const tausch = el("button", { type: "button", class: "knopf knopf-klein", title: "Einheiten tauschen",
+      onclick: () => { const v = von.value; von.value = nach.value; nach.value = v; neu(); } }, sym("arrow-left-right"), "Tauschen");
     const hinweis = el("p", { class: "wz-klein" });
     eingabe.addEventListener("input", neu);
     function neu() {

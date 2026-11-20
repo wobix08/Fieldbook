@@ -3,10 +3,10 @@
   "titel": "Artikel übersetzen (Englisch → Deutsch)",
   "mb": 40,
   "dateien": [
-    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/translator.js", "ziel": "lib/translator.js" },
-    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/translator-worker.js", "ziel": "lib/worker/translator-worker.js" },
-    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/bergamot-translator-worker.js", "ziel": "lib/worker/bergamot-translator-worker.js" },
-    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/bergamot-translator-worker.wasm", "ziel": "lib/worker/bergamot-translator-worker.wasm" }
+    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/translator.js", "ziel": "lib/translator.js", "sha256": "b46f0ccf834392caf097cf4eed968d72e3ec8a855faaabe1b57bcc5f661994a5" },
+    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/translator-worker.js", "ziel": "lib/worker/translator-worker.js", "sha256": "90257af9ee0758983501bdce77ca7ec168cd7360d4689298c20a81b0251d6b62" },
+    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/bergamot-translator-worker.js", "ziel": "lib/worker/bergamot-translator-worker.js", "sha256": "748b2418418a2ffc6e70721aeb10098d8e6fb589ea156b91f4ae8bc3490d8f7a" },
+    { "url": "https://cdn.jsdelivr.net/npm/@browsermt/bergamot-translator@0.4.9/worker/bergamot-translator-worker.wasm", "ziel": "lib/worker/bergamot-translator-worker.wasm", "sha256": "95a2b58dd6773bf1b3f345d71f9149928b9f75f4ec9c9064c0b3e42c298671b2" }
   ],
   "modelle": [
     { "von": "en", "nach": "de", "version": "2.1", "schluessel": "ende" }

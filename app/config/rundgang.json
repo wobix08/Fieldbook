@@ -678,10 +678,10 @@
           "ziel": "#karte",
           "aktion": { "karte": ["verschoben", "gezoomt"] },
           "danach": 1200,
-          "hinweis": "Verschiebe die Karte mit gedrückter Maustaste und zoome mit dem Mausrad.",
+          "hinweis": "Verschiebe die Karte mit gedrückter Maustaste. Zoome mit dem Mausrad oder mit den Knöpfen + und − unten rechts.",
           "aufraeumen": { "karte": "anfang" },
           "titel": "Deine Karte",
-          "text": "Das ist eine Beispielkarte der Gegend um Garmisch-Partenkirchen. Echte Karten gibt es für ganze Länder. Probier es aus: Verschiebe die Karte mit gedrückter Maustaste. Zoome mit dem Mausrad hinein oder heraus."
+          "text": "Das ist eine Beispielkarte der Gegend um Garmisch-Partenkirchen. Echte Karten gibt es für ganze Länder. Probier es aus: Verschiebe die Karte mit gedrückter Maustaste. Zoome mit dem Mausrad hinein oder heraus. Ohne Mausrad gehen auch die Knöpfe + und − unten rechts."
         },
         {
           "seite": "#karten",

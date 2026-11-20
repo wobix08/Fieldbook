@@ -11,9 +11,9 @@ Eine KI beantwortet Fragen aus dieser Bibliothek, außerdem gibt es Offline-Kart
 Du lädst einmal herunter, was du brauchst, danach läuft alles offline: beim Stromausfall, auf Reisen oder draußen in der Natur.\
 Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
-[![Fieldbook mit einem Wikipedia-Artikel über Stromausfall, einer iFixit-Reparaturanleitung und der Übersicht der Bibliothek](.github/screenshots/bibliothek.png)](.github/screenshots/bibliothek.png)
+[![Startseite von Fieldbook mit allen Bereichen und ein Wikipedia-Artikel über Stromausfall](.github/screenshots/uebersicht.png)](.github/screenshots/uebersicht.png)
 
-### **[Fieldbook 0.8.6 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.6/Fieldbook-0.8.6.zip)**
+### **[Fieldbook 0.8.7 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.7/Fieldbook-0.8.7.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -26,18 +26,18 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 | | Bereich | Was es kann |
 |---|---|---|
-| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design (hell oder dunkel):<br>• Wikipedia auf Deutsch, komplett mit Bildern (49&nbsp;GB), ohne Bilder (19&nbsp;GB) oder kompakt (5&nbsp;GB)<br>• Medizin: Wikipedia-Medizin, MDWiki, Medikamente A–Z (NHS), Reisegesundheit (CDC) und Handbücher für Notlagen<br>• Reparieren: über 56.000 Reparaturanleitungen von iFixit (die meisten auf Englisch, Fieldbook übersetzt sie auf Knopfdruck ins Deutsche)<br>• Draußen und Selbstversorgung: Wasser aufbereiten, Knoten, Einkochen, Gärtnern, Energie ohne Netz<br>• Wikivoyage (Reiseführer), Wikibooks (Lehrbücher), Klexikon (Kinderlexikon), Project Gutenberg (Literatur) und mehr<br>• Eigene Unterlagen: eigene PDFs, Word-Dateien, Bilder und Texte ablegen, etwa Bedienungsanleitungen oder einen Medikamentenplan.<br>Die Suche und die KI finden auch, was darin steht.<br>• Notizen: eigene Texte mit Überschriften, Fett, Listen und Tabellen, etwa Telefonnummern oder ein Familientreffpunkt.<br>Alles lässt sich in eigene Ordner sortieren.<br>• Webseiten sichern: solange es Internet gibt, eine Seite im eingebauten Browser öffnen und mit allen Bildern speichern, etwa die Notfall-Seiten des eigenen Landkreises.<br>Links zwischen gesicherten Seiten funktionieren auch ohne Internet.<br>• Merkliste mit eigenen Ordnern für Artikel, Buchseiten, Erste-Hilfe- und Vorsorge-Themen und einzelne markierte Textstellen, damit man sie im Ernstfall sofort wiederfindet.<br>• Vorlesen: einen Abschnitt antippen oder Text markieren, Fieldbook liest ihn laut vor. |
-| <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen anhand der Offline-Bibliothek, mit Quellenangabe.<br>Passt die Antwort nicht, hältst du sie mit einem Klick an.<br>Beim Lesen fasst sie den offenen Artikel zusammen, erklärt ihn einfach oder beantwortet Fragen dazu. |
-| <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | Rezepte zu dem, was du da hast, Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und Einkochen |
-| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline, Länder einzeln laden und nahtlos zusammen ansehen, Ortssuche (auch nach Koordinaten), Entfernungen messen, eigene Orte merken, Routenplanung mit Höhenprofil, flacheren Wegen, Ausweichstrecken und eigenen Sperrungen, Ärzte, Apotheken und Trinkwasser in der Nähe, Sonnenauf- und -untergang mit Mondphase |
-| <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen: abwechselnd schreiben oder einfach sprechen (Sprechmodus erkennt, wer spricht), offline übersetzt und vorgelesen, 52 Sprachen zum Nachladen |
-| <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | Ein Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen, dazu Spickzettel für den Ernstfall |
-| <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | Vorbereiten in drei Stufen (Vorräte, Hausapotheke, Licht, Dokumente …) und was zu tun ist, wenn Strom oder Wasser weg sind oder die Sirene heult (Sirenensignale und Warnungen für Deutschland, Österreich und die Schweiz) |
+| <img src=".github/icons/library.svg" width="32" height="32" align="left" alt=""> | **Bibliothek** | Rund 40 Wissenspakete zum Auswählen, alles im Fieldbook-Design:<br>• Wikipedia auf Deutsch, auf Wunsch komplett mit Bildern<br>• Medizin, Reparaturanleitungen von iFixit (auf Knopfdruck auf Deutsch), Draußen und Selbstversorgung<br>• Reiseführer, Lehrbücher, Kinderlexikon und Literatur<br>• Eigene Unterlagen: PDFs, Notizen und gesicherte Webseiten, auch für die KI durchsuchbar<br>• Merkliste und Vorlesen |
+| <img src=".github/icons/ask.svg" width="32" height="32" align="left" alt=""> | **Fragen** | Eine lokale KI beantwortet Fragen aus der Offline-Bibliothek:<br>• Antworten mit Quellenangabe<br>• Passt die Antwort nicht, hältst du sie mit einem Klick an<br>• Beim Lesen fasst sie den offenen Artikel zusammen, erklärt ihn einfach oder beantwortet Fragen dazu |
+| <img src=".github/icons/cooking.svg" width="32" height="32" align="left" alt=""> | **Kochen** | • Rezepte zu dem, was du da hast<br>• Rezepte aus dem Vorrat<br>• Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und Einkochen |
+| <img src=".github/icons/maps.svg" width="32" height="32" align="left" alt=""> | **Karten** | OpenStreetMap-Karten offline:<br>• Länder einzeln laden und nahtlos zusammen ansehen<br>• Ortssuche, auch nach Koordinaten<br>• Entfernungen messen und eigene Orte merken<br>• Routenplanung mit Höhenprofil, flacheren Wegen und Ausweichstrecken<br>• Eigene Sperrungen, um die die Route herumführt<br>• Ärzte, Apotheken und Trinkwasser in der Nähe<br>• Sonnenauf- und -untergang mit Mondphase |
+| <img src=".github/icons/translate.svg" width="32" height="32" align="left" alt=""> | **Übersetzer** | Gespräche in zwei Sprachen:<br>• Abwechselnd schreiben oder einfach sprechen<br>• Der Sprechmodus erkennt, wer gerade spricht<br>• Offline übersetzt und vorgelesen<br>• 52 Sprachen zum Nachladen |
+| <img src=".github/icons/first-aid.svg" width="32" height="32" align="left" alt=""> | **Erste&nbsp;Hilfe** | • Kurs zum Vorbereiten mit Lektionen, Quiz und Fallbeispielen<br>• Spickzettel für den Ernstfall<br>• Notrufnummern für Deutschland, Österreich und die Schweiz |
+| <img src=".github/icons/preparedness.svg" width="32" height="32" align="left" alt=""> | **Vorsorge** | • Vorbereiten in drei Stufen: Vorräte, Hausapotheke, Licht, Dokumente …<br>• Abhaken, was du schon hast, und als Liste ausdrucken<br>• Was zu tun ist, wenn Strom oder Wasser weg sind oder die Sirene heult<br>• Sirenensignale und Warnungen für Deutschland, Österreich und die Schweiz |
 | <img src=".github/icons/tools.svg" width="32" height="32" align="left" alt=""> | **Werkzeuge** | Kleine Helfer über das Werkzeug-Symbol oben rechts:<br>• Umrechnen: Temperatur, Länge, Gewicht, Volumen, Geschwindigkeit und Küchenmaße (Tasse, Löffel in Gramm)<br>• Orientierung ohne GPS: mit Uhr und Sonne, Schattenstab oder Polarstern<br>• Sonne und Mond: Faustregeln (mit den Fingern abschätzen, wie lange es noch hell ist, Polarnacht, Südhalbkugel) und genaue Zeiten für einen Ort auf der Karte<br>• Signale: Morse-Übersetzer mit Lichtzeichen über den ganzen Bildschirm, SOS, Alpines Notsignal, Zeichen für Hubschrauber und auf dem Boden<br>• Gewitter: Stoppuhr zwischen Blitz und Donner zeigt die Entfernung und ob es näher kommt, dazu die wichtigsten Verhaltensregeln |
 
 | Karten | Übersetzer | Erste Hilfe |
 |---|---|---|
-| [![Offline-Karte von Freiburg mit allen Apotheken in der Nähe](.github/screenshots/karten.png)](.github/screenshots/karten.png) | [![Übersetzer mit einem Gespräch auf Deutsch und Schwedisch](.github/screenshots/uebersetzer.png)](.github/screenshots/uebersetzer.png) | [![Erste-Hilfe-Seite mit Notrufnummern, Spickzetteln und dem Kurs](.github/screenshots/erste-hilfe.png)](.github/screenshots/erste-hilfe.png) |
+| [![Offline-Karte von Freiburg mit einer Fahrradroute, die eine Baustelle umfährt, und Höhenprofil](.github/screenshots/karten.png)](.github/screenshots/karten.png) | [![Übersetzer mit einem Gespräch auf Deutsch und Schwedisch](.github/screenshots/uebersetzer.png)](.github/screenshots/uebersetzer.png) | [![Erste-Hilfe-Seite mit Notrufnummern, Spickzetteln und dem Kurs](.github/screenshots/erste-hilfe.png)](.github/screenshots/erste-hilfe.png) |
 
 > [!WARNING]
 > Der Erste-Hilfe-Kurs folgt gängigen Erste-Hilfe-Regeln, ersetzt aber keinen echten Erste-Hilfe-Kurs und keine ärztliche Hilfe.\
@@ -58,7 +58,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.6 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.6/Fieldbook-0.8.6.zip)** (ZIP-Datei, etwa 7 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.7 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.7/Fieldbook-0.8.7.zip)** (ZIP-Datei, etwa 7 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -123,13 +123,15 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Rückmeldungen, Fehlerberichte und Nutzungsstatistik verschickt Fieldbook nur, wenn du das ausdrücklich willst.\
   Was genau wann übertragen wird, steht unter [Datenschutz](#datenschutz).
 - **Downloads nur aus offiziellen Quellen**\
-  Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien:
+  Alle stehen in [`app/config/programme.json`](app/config/programme.json) und den anderen Konfigurationsdateien.\
+  Programme, KI-Modelle, Stimmen und der Übersetzer haben feste Versionen mit eingetragener Prüfsumme.\
+  Fieldbook vergleicht sie nach jedem Download und verwirft Dateien, die nicht genau der geprüften Version entsprechen:
 
   | Was | Woher |
   |---|---|
   | Wissenspakete, kiwix-serve | download.kiwix.org (Kiwix / Wikimedia) |
   | KI-Modelle, Modelle für die Spracheingabe, Stimmen zum Vorlesen | huggingface.co |
-  | llama.cpp, whisper.cpp, BRouter, PMTiles, Java (Eclipse Temurin) | github.com (offizielle Releases der Projekte) |
+  | llama.cpp, whisper.cpp, BRouter, PMTiles, Java (Eclipse Temurin), Kartenschriften und -symbole (Protomaps) | github.com (offizielle Releases der Projekte) |
   | Python (portabel, ohne Installation) fürs Vorlesen | python.org |
   | Piper (Vorlesen) und seine Python-Bausteine | files.pythonhosted.org (offizielles Python-Paketverzeichnis PyPI, feste Versionen mit Prüfsumme) |
   | Karten | build.protomaps.com (OpenStreetMap-Daten) |
@@ -143,7 +145,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.8.6.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.8.7.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.
@@ -225,7 +227,8 @@ Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und 
 Möchtest du auch diese kurze Anfrage nicht, schaltest du sie dort bei *Beim Start nach neuer Fieldbook-Version fragen* aus.\
 Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach Updates suchen* klickst.\
 Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Haken *Neue Fieldbook-Versionen zusammen mit den Inhalten laden*).\
-Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch“ spielt es die neue Version beim nächsten Start ein.
+Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch“ spielt es die neue Version beim nächsten Start ein.\
+Nach dem Update zeigt Fieldbook einmal, was neu ist.
 
 **Sicher bei Problemen**\
 Vor jedem Update sichert Fieldbook den bisherigen Programmteil.\
@@ -337,7 +340,7 @@ Diese Adressen müssen erreichbar sein (zum Freigeben in Firewall oder Werbebloc
 | Wissenspakete | `library.kiwix.org`, `download.kiwix.org` und dessen Spiegelserver (z. B. `ftp.fau.de`, `mirror.download.kiwix.org`) |
 | Karten | `build-metadata.protomaps.dev`, `build.protomaps.com` |
 | KI-Modelle, Spracheingabe und Stimmen | `huggingface.co`, `*.hf.co` (Download-Server von Hugging Face) |
-| Hilfsprogramme und Updates | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `objects.githubusercontent.com` |
+| Hilfsprogramme und Updates | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `objects.githubusercontent.com`, `codeload.github.com` |
 | Vorleseprogramm (Python und Piper) | `www.python.org`, `files.pythonhosted.org` |
 | Übersetzer | `cdn.jsdelivr.net`, `firefox.settings.services.mozilla.com`, `firefox-settings-attachments.cdn.mozilla.net` |
 | Ortsnamen | `download.geonames.org` |
