@@ -374,16 +374,168 @@ const Karten = (() => {
       if (!eigene.length) ziel.innerHTML = '<div class="leer">Ortsliste nicht installiert.</div>';
       return;
     }
-    const liste = await api("orte?q=" + encodeURIComponent(q)).catch(() => null);
+    // Orte und (für die Straßensuche) die Zerlegung in Ort/Postleitzahl und Straße gleichzeitig holen
+    const [liste, adresse] = await Promise.all([
+      api("orte?q=" + encodeURIComponent(q)).catch(() => null),
+      api("adresse?q=" + encodeURIComponent(q)).catch(() => null),
+    ]);
     if (nr !== ortLauf) return; // inzwischen neu gesucht
     ziel.replaceChildren(...eigene.map(meinTreffer));
     if (!liste && eigene.length) return;
     if (!liste) { ziel.append(el("div", { class: "leer" }, "Die Ortssuche ist gerade nicht erreichbar.")); return; }
-    if (!liste.length && !eigene.length) { ziel.append(el("div", { class: "leer" }, "Nichts gefunden.")); return; }
-    for (const o of liste.slice(0, 12)) {
+    const plz = adresse ? adresse.plz : [], kandidaten = adresse ? adresse.kandidaten : [];
+    if (!liste.length && !eigene.length && !plz.length && !kandidaten.length) { ziel.append(el("div", { class: "leer nichts" }, "Nichts gefunden.")); return; }
+    for (const p of plz.slice(0, 5)) {
+      ziel.append(el("button", { "data-ort": p.plz + " " + p.ort, onclick: () => geheZu({ name: p.ort, art: "Ort", lat: p.lat, lon: p.lon }) },
+        el("b", {}, p.plz + " " + p.ort), " ", el("small", {}, "Postleitzahl · " + p.land)));
+    }
+    for (const o of liste.slice(0, kandidaten.length ? 5 : 12)) {
       ziel.append(el("button", { "data-ort": o.name + " · " + o.art, onclick: () => geheZu(o) },
         el("b", {}, o.name), " ", el("small", {}, o.art + " · " + o.land + (o.name !== o.original ? " · " + o.original : "") + (o.einwohner > 0 ? " · " + o.einwohner.toLocaleString("de-DE") + " Einw." : ""))));
     }
+    if (kandidaten.length) strassenSuchen(kandidaten, nr, ziel);
+  }
+
+  // ------------------------------------------------ Straßensuche
+  // „Hauptstraße Schwelm“, „Schwelm, Haupt“, „58332 Hauptstr“: Der Server erkennt Ort bzw. Postleitzahl (/api/adresse),
+  // hier werden die Kacheln rund um den Ort gelesen und die Straßennamen verglichen (Ebene "roads").
+  // Alle Straßennamen gelesener Kacheln bleiben gespeichert (/api/strassen), dieselbe Gegend geht danach sofort.
+  // STRASSEN_V erhöhen, wenn sich ändert, was je Kachel gespeichert wird.
+  const strassenSpeicher = new Map(), STRASSEN_V = 1;
+  let strassenGeladen = null, strassenZuSenden = [], strassenTimer = null;
+
+  // Für den Vergleich: klein, ß = ss, ohne Akzente und Sonderbuchstaben (Gävle = Gavle), ohne Leer- und Satzzeichen
+  const vergleich = (s) => String(s || "").toLocaleLowerCase("de").replace(/ß/g, "ss").replace(/ø/g, "o").replace(/æ/g, "ae").replace(/ł/g, "l")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\p{L}\p{N}]/gu, "");
+
+  function ladeStrassen() {
+    const stand = kartenStand;
+    if (strassenGeladen && strassenGeladen.stand === stand) return strassenGeladen.p;
+    const p = (async () => {
+      let text = "";
+      try { const r = await fetch("/api/strassen?v=" + STRASSEN_V); if (r.ok) text = await r.text(); } catch (e) { return; }
+      if (stand !== kartenStand) return;
+      for (const zeile of text.split("\n")) {
+        if (!zeile) continue;
+        const tab = zeile.indexOf("\t");
+        if (tab < 0) { strassenSpeicher.set(stand + "/" + zeile, LEER); continue; }
+        try { strassenSpeicher.set(stand + "/" + zeile.slice(0, tab), JSON.parse(zeile.slice(tab + 1))); }
+        catch (e) { /* kaputte Zeile: Kachel wird neu gelesen */ }
+      }
+    })();
+    strassenGeladen = { stand, p };
+    return p;
+  }
+
+  function merkeStrassen(zxy, liste) {
+    strassenZuSenden.push(liste.length ? zxy + "\t" + JSON.stringify(liste) : zxy);
+    clearTimeout(strassenTimer);
+    strassenTimer = setTimeout(sendeStrassen, 1500);
+  }
+  function sendeStrassen() {
+    clearTimeout(strassenTimer);
+    if (!strassenZuSenden.length) return;
+    const text = strassenZuSenden.join("\n");
+    strassenZuSenden = [];
+    fetch("/api/strassen?v=" + STRASSEN_V, { method: "POST", body: text }).catch(() => { });
+  }
+  addEventListener("pagehide", () => { if (strassenZuSenden.length) navigator.sendBeacon("/api/strassen?v=" + STRASSEN_V, strassenZuSenden.join("\n")); strassenZuSenden = []; });
+
+  // Alle Straßen (Name, Länge, Breite) aus den Kacheln im Umkreis des Orts, von der Mitte nach außen.
+  // melde() bekommt zwischendurch den bisherigen Stand, damit in Großstädten die ersten Treffer früh erscheinen.
+  // null, wenn inzwischen neu gesucht wurde.
+  async function strassenUm(kd, lauf, melde) {
+    await ladeStrassen();
+    const z = Math.min(14, maxZoom), anzahl = 2 ** z, rad = Math.PI / 180;
+    const kx = (l) => Math.floor((l + 180) / 360 * anzahl);
+    const ky = (b) => Math.floor((1 - Math.log(Math.tan(b * rad) + 1 / Math.cos(b * rad)) / Math.PI) / 2 * anzahl);
+    const dLat = kd.km / 111, dLon = kd.km / (111 * Math.cos(kd.lat * rad));
+    const cx = kx(kd.lon), cy = ky(kd.lat), kacheln = [];
+    for (let x = kx(kd.lon - dLon); x <= kx(kd.lon + dLon); x++)
+      for (let y = ky(kd.lat + dLat); y <= ky(kd.lat - dLat); y++) kacheln.push([x, y]);
+    kacheln.sort((a, b) => (a[0] - cx) ** 2 + (a[1] - cy) ** 2 - (b[0] - cx) ** 2 - (b[1] - cy) ** 2);
+    const funde = [], fehlend = [];
+    for (const [x, y] of kacheln) {
+      const key = kartenStand + "/" + z + "/" + x + "/" + y;
+      if (strassenSpeicher.has(key)) funde.push(...strassenSpeicher.get(key));
+      else fehlend.push([x, y, key]);
+    }
+    for (let i = 0; i < fehlend.length; i += 12) {
+      if (lauf !== ortLauf) return null;
+      if (i && i % 48 === 0) melde(funde);
+      await Promise.all(fehlend.slice(i, i + 12).map(async ([x, y, key]) => {
+        const data = await holeKachel(z, x, y).catch(() => null);
+        // je Kachel jeden Namen nur einmal; Bahnstrecken, Fähren und Bahnsteige („S+U Frankfurter Allee“) sind keine Straßen
+        const namen = new Map();
+        if (data) for (const s of kachelLesen(new Uint8Array(data), z, x, y, "roads"))
+          if (!namen.has(s.name) && s.kind !== "rail" && s.kind !== "ferry" && s.kind !== "aerialway" && s.detail !== "platform")
+            namen.set(s.name, [s.name, +s.lon.toFixed(5), +s.lat.toFixed(5)]);
+        const liste = namen.size ? [...namen.values()] : LEER;
+        if (!key.startsWith(kartenStand + "/")) return; // Karten inzwischen geändert
+        strassenSpeicher.set(key, liste);
+        merkeStrassen(z + "/" + x + "/" + y, liste);
+        funde.push(...liste);
+      }));
+    }
+    return lauf === ortLauf ? funde : null;
+  }
+
+  // Passende Straßen eines Orts. Gleichnamige Stücke, die nah beieinander liegen, sind eine Straße;
+  // weit auseinander (Nachbardorf) zwei Treffer. Zu jeder die nächste Postleitzahl.
+  function strassenTreffer(kd, funde) {
+    const q = vergleich(kd.strasse), gruppen = [];
+    for (const [name, lon, lat] of funde) {
+      const v = vergleich(name), stelle = v.indexOf(q);
+      if (stelle < 0) continue;
+      const d = entfernung(kd.lat, kd.lon, lat, lon);
+      if (d > kd.km * 1.2) continue;
+      gruppen.push({ name, rang: v === q ? 0 : stelle === 0 ? 1 : 2, punkte: [[lon, lat, d]] });
+    }
+    // Je Kachel gibt es nur einen Punkt pro Straße, bei langen Straßen liegen die bis gut 2 km auseinander.
+    // Darum zusammenfassen, solange zwei gleichnamige Gruppen Punkte unter 2,5 km Abstand haben.
+    for (let i = 0; i < gruppen.length; i++)
+      for (let j = i + 1; j < gruppen.length; j++) {
+        const a = gruppen[i], b = gruppen[j];
+        if (a.name !== b.name || !a.punkte.some(p => b.punkte.some(r => entfernung(p[1], p[0], r[1], r[0]) < 2.5))) continue;
+        a.punkte.push(...b.punkte);
+        gruppen.splice(j, 1);
+        j = i; // a ist gewachsen: alle übrigen noch einmal prüfen
+      }
+    for (const g of gruppen) {
+      // Punkt: das Stück nahe der Mitte der Straße
+      const mx = g.punkte.reduce((s, p) => s + p[0], 0) / g.punkte.length, my = g.punkte.reduce((s, p) => s + p[1], 0) / g.punkte.length;
+      const p = g.punkte.reduce((a, b) => entfernung(b[1], b[0], my, mx) < entfernung(a[1], a[0], my, mx) ? b : a);
+      g.lon = p[0]; g.lat = p[1]; g.d = p[2];
+      let beste = null, bd = Infinity;
+      for (const z of kd.plzNah || []) { const e = entfernung(g.lat, g.lon, z[2], z[3]); if (e < bd) { bd = e; beste = z; } }
+      g.ort = beste ? (beste[0] ? beste[0] + " " : "") + beste[1] : (kd.plz ? kd.plz + " " : "") + kd.ort;
+    }
+    return gruppen.sort((a, b) => a.rang - b.rang || a.d - b.d);
+  }
+
+  async function strassenSuchen(kandidaten, lauf, ziel) {
+    const kasten = el("div", { class: "strassen-treffer" });
+    const status = el("div", { class: "leer" }, "Straßen werden gesucht …");
+    ziel.append(kasten, status);
+    const alle = kandidaten.map(() => []);
+    const zeigen = () => {
+      const treffer = alle.flat().sort((a, b) => a.rang - b.rang || a.d - b.d).slice(0, 15);
+      kasten.replaceChildren(...treffer.map(g => el("button", {
+        "data-ort": g.name + " · " + g.ort,
+        onclick: () => geheZu({ name: g.name + ", " + g.ort, art: "Straße", lat: g.lat, lon: g.lon }),
+      }, el("b", {}, g.name), " ", el("small", {}, "Straße · " + g.ort))));
+      return treffer.length;
+    };
+    for (let i = 0; i < kandidaten.length; i++) {
+      const kd = kandidaten[i];
+      const funde = await strassenUm(kd, lauf, (f) => { alle[i] = strassenTreffer(kd, f); zeigen(); });
+      if (!funde) return; // neu gesucht
+      alle[i] = strassenTreffer(kd, funde);
+      zeigen();
+    }
+    if (lauf !== ortLauf) return;
+    if (zeigen()) status.remove();
+    else { status.textContent = "Keine passende Straße gefunden."; status.classList.add("nichts"); }
   }
 
   // Markierter Punkt: gesuchter Ort oder Klick in die Karte. Sonne und Mond rechnet mit ihm, solange er
@@ -419,7 +571,7 @@ const Karten = (() => {
 
   function geheZu(o) {
     $("#ort-treffer").innerHTML = "";
-    const zoom = o.art === "Hauptstadt" || o.art === "Stadt" ? 11 : o.art === "Ort" ? 13 : 14;
+    const zoom = o.art === "Hauptstadt" || o.art === "Stadt" ? 11 : o.art === "Ort" ? 13 : o.art === "Straße" ? 16 : 14;
     karte.flyTo({ center: [o.lon, o.lat], zoom, speed: 1.6 });
     markiere(o.lat, o.lon, "bei " + o.name, popupText(o.name + " (" + o.art + ")", o.lat, o.lon, null, o.name), false, o.name);
   }
@@ -1024,9 +1176,11 @@ const Karten = (() => {
     return pois;
   }
 
-  // Minimaler Leser für Vektorkacheln (Mapbox Vector Tile, Protobuf): nur Punkte der Ebene "pois"
+  // Minimaler Leser für Vektorkacheln (Mapbox Vector Tile, Protobuf): Punkte der Ebene "pois",
+  // bei "roads" Linien (davon der mittlere Punkt) mit dem Namen vor Ort
   const dekoder = new TextDecoder();
-  function kachelPois(buf, z, tx, ty) {
+  function kachelPois(buf, z, tx, ty) { return kachelLesen(buf, z, tx, ty, "pois"); }
+  function kachelLesen(buf, z, tx, ty, ebene) {
     let pos = 0;
     const varint = () => { let v = 0, s = 1, b; do { b = buf[pos++]; v += (b & 127) * s; s *= 128; } while (b >= 128); return v; };
     const ueberspringe = (typ) => { if (typ === 0) varint(); else if (typ === 1) pos += 8; else if (typ === 2) pos += varint(); else if (typ === 5) pos += 4; };
@@ -1044,7 +1198,7 @@ const Karten = (() => {
         const k = varint(), f = k >> 3, t = k & 7;
         if (f === 1 && t === 2) {
           const e = varint() + pos; name = text(e); pos = e;
-          if (name !== "pois") { pos = ende; break; } // andere Ebene: Rest nicht decodieren
+          if (name !== ebene) { pos = ende; break; } // andere Ebene: Rest nicht decodieren
         }
         else if (f === 3 && t === 2) { const e = varint() + pos; keys.push(text(e)); pos = e; }
         else if (f === 5 && t === 0) extent = varint();
@@ -1061,7 +1215,8 @@ const Karten = (() => {
         }
         else ueberspringe(t);
       }
-      if (name !== "pois") { pos = ende; continue; }
+      if (name !== ebene) { pos = ende; continue; }
+      const linien = ebene === "roads";
       for (const [fa, fe] of features) {
         pos = fa;
         let tags = [], geom = [], art = 0;
@@ -1072,14 +1227,29 @@ const Karten = (() => {
           else if (f === 3 && t === 0) art = varint();
           else ueberspringe(t);
         }
-        if (art !== 1 || geom.length < 3) continue; // nur Punkte
+        if (art !== (linien ? 2 : 1) || geom.length < 3) continue; // nur Punkte bzw. nur Linien
         const p = {};
         for (let i = 0; i + 1 < tags.length; i += 2) p[keys[tags[i]]] = werte[tags[i + 1]];
+        if (linien && !p.name) continue;
         const zz = (v) => (v >>> 1) ^ -(v & 1);
-        const px = tx + zz(geom[1]) / extent, py = ty + zz(geom[2]) / extent;
+        let gx = zz(geom[1]), gy = zz(geom[2]);
+        if (linien) {
+          // Befehle MoveTo/LineTo mit relativen Koordinaten: alle Punkte ablaufen, den mittleren nehmen
+          const punkte = [];
+          let cx = 0, cy = 0;
+          for (let i = 0; i < geom.length;) {
+            const bef = geom[i] & 7, anz = geom[i] >> 3;
+            i++;
+            if (bef === 7) continue;
+            for (let j = 0; j < anz && i + 1 < geom.length; j++, i += 2) { cx += zz(geom[i]); cy += zz(geom[i + 1]); punkte.push([cx, cy]); }
+          }
+          if (!punkte.length) continue;
+          [gx, gy] = punkte[punkte.length >> 1];
+        }
+        const px = tx + gx / extent, py = ty + gy / extent;
         const n = 2 ** z;
         ergebnis.push({
-          kind: p.kind, name: p["name:de"] || p.name,
+          kind: p.kind, detail: p.kind_detail, name: linien ? p.name : p["name:de"] || p.name,
           lon: px / n * 360 - 180,
           lat: Math.atan(Math.sinh(Math.PI * (1 - 2 * py / n))) * 180 / Math.PI,
         });
@@ -1128,6 +1298,11 @@ const Karten = (() => {
       karte.jumpTo({ center: [p.lon, p.lat], zoom: 13 });
       const m = meineMarker[0];
       if (m && !m.marker.getPopup().isOpen()) m.marker.togglePopup();
+      return;
+    }
+    // Nach der Straßensuche zurück: Markierung weg, der gemerkte Ort bleibt
+    if (name === "strasse") {
+      if (meineOrte.length) karte.jumpTo({ center: [meineOrte[0].lon, meineOrte[0].lat], zoom: 13 });
       return;
     }
     // Alle anderen Zustände liegen vor dem Merken: kein eigener Ort

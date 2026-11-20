@@ -1,0 +1,17 @@
+{
+  "_hinweis": "Straßensuche im Rundgang: Orte der Beispielkarte mit Postleitzahl (GeoNames, CC BY 4.0). Steht einer der Namen vorne oder hinten bzw. die Postleitzahl im Suchtext, ist der Rest die Straße. Die Straßen selbst liest die Karte aus der Beispielkarte. plzNah: Postleitzahlen der Umgebung, damit Straßen in Nachbarorten (Bahnhofstraße in Farchant) richtig beschriftet sind.",
+  "orte": [
+    {
+      "namen": ["Garmisch-Partenkirchen", "Garmisch Partenkirchen", "Garmisch", "Partenkirchen"], "ort": "Garmisch-Partenkirchen", "plz": "82467", "lat": 47.49209, "lon": 11.09576, "km": 4,
+      "plzNah": [
+        ["82467", "Garmisch-Partenkirchen", 47.4921, 11.0958],
+        ["82490", "Farchant", 47.5304, 11.1115],
+        ["82491", "Grainau", 47.4761, 11.0241],
+        ["82496", "Oberau", 47.5598, 11.1392],
+        ["82488", "Ettal", 47.5667, 11.1],
+        ["82481", "Mittenwald", 47.4422, 11.2619],
+        ["82494", "Krün", 47.5052, 11.2792]
+      ]
+    }
+  ]
+}

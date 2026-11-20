@@ -290,6 +290,9 @@ Die Übersetzung macht ein Programm, keine Person: Bei kurzen Sätzen, Medikamen
 ### Karten
 Zoomen mit dem Mausrad, verschieben mit gedrückter Maustaste.\
 Oben links nach Orten suchen.\
+Straßen findest du zusammen mit dem Ort oder der Postleitzahl, egal in welcher Reihenfolge, zum Beispiel `Hauptstraße Schwelm`, `Schwelm Haupt` oder `58332 Hauptstr`.\
+Ab drei Buchstaben der Straße erscheinen passende Straßen mit Postleitzahl.\
+Hausnummern kennt die Karte nicht, du landest auf der Straße.\
 Ins Suchfeld kannst du auch Koordinaten schreiben, zum Beispiel `47.4917, 11.0955`, `47,4917 11,0955` oder `N 47° 29.5' E 11° 5.7'`.\
 Die Karte springt dann genau an diese Stelle, praktisch, wenn dir jemand seinen Standort als Zahlen schickt.\
 Alle installierten Länder sind zusammen zu sehen, mit **Springen zu …** kommst du schnell zu einem davon.\

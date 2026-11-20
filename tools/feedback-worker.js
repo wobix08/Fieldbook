@@ -236,7 +236,9 @@ async function statistik(request, d, groesse, env) {
     modell: str(k.modell, 60), backend: str(k.backend, 20), antwortTokenProSek: zahl(k.antwortTokenProSek, 10000),
     leseTokenProSek: zahl(k.leseTokenProSek, 100000), ladeSek: zahl(k.ladeSek, 100000), antworten: zahl(k.antworten, 100000) }));
   const fehler = Array.isArray(d.fehler) ? d.fehler.slice(0, 30).filter(f => f && typeof f === "object")
-    .map(f => ({ art: str(f.art, 30), text: str(f.text, 300), anzahl: Math.max(1, zahl(f.anzahl, 100000)) })).filter(f => f.art && f.text) : [];
+    .map(f => ({ art: str(f.art, 30), text: str(f.text, 300), anzahl: Math.max(1, zahl(f.anzahl, 100000)),
+      // Version, in der der Fehler auftrat (ältere Fieldbook-Versionen senden sie nicht: dann die des Pakets)
+      version: /^\d+\.\d+\.\d+(\.\d+)?$/.test(str(f.version, 30)) ? str(f.version, 30) : version })).filter(f => f.art && f.text) : [];
   if (d.fehler) p.fehler = fehler.length;
   if (d.bereiche && typeof d.bereiche === "object") { p.bereiche = {}; for (const b of BEREICHE) if (d.bereiche[b]) p.bereiche[b] = zahl(d.bereiche[b], 100000); }
   if (d.land !== undefined) p.land = str(d.land, 2).toUpperCase();
@@ -265,14 +267,14 @@ async function statistik(request, d, groesse, env) {
     const z = await env.DB.prepare(
       "INSERT INTO fehlertypen (schluessel, art, text, anzahl, meldungen, zuerst, zuletzt, version) VALUES (?, ?, ?, ?, 1, ?, ?, ?) " +
       "ON CONFLICT(schluessel) DO UPDATE SET anzahl = anzahl + excluded.anzahl, meldungen = meldungen + 1, zuletzt = excluded.zuletzt, version = excluded.version " +
-      "RETURNING meldungen, issue").bind(schluessel, f.art, f.text, f.anzahl, tag, tag, version).first();
+      "RETURNING meldungen, issue").bind(schluessel, f.art, f.text, f.anzahl, tag, tag, f.version).first();
     if (z && z.meldungen === 1) typenAnzahl++;
     // Noch kein Eintrag im Repository (neu, oder GitHub war beim ersten Mal nicht erreichbar):
     // bei den ersten fünf Meldungen versuchen, danach nicht mehr
     if (!z || z.issue || z.meldungen > 5) continue;
     const neu = await env.DB.prepare("SELECT COUNT(*) AS n FROM fehlertypen WHERE zuerst = ? AND issue IS NOT NULL").bind(tag).first();
     if (neu && neu.n >= NEUE_FEHLER_JE_TAG) continue;
-    const body = zitat(f.text) + "\n\n| | |\n|---|---|\n| Bereich | " + zelle(f.art) + " |\n| Fieldbook | " + zelle(version) + " |\n| Windows | " + zelle(p.windows) + " |\n" +
+    const body = zitat(f.text) + "\n\n| | |\n|---|---|\n| Bereich | " + zelle(f.art) + " |\n| Fieldbook | " + zelle(f.version) + " |\n| Windows | " + zelle(p.windows) + " |\n" +
       (p.geraet ? "| Gerät | " + zelle(p.geraet.cpu) + ", " + p.geraet.ramGB + " GB |\n" : "") +
       "\nAutomatischer Fehlerbericht. Wie oft der Fehler vorkommt, steht in der Auswertung.";
     const issue = await github(env, "/issues", { title: "Fehlerbericht (" + f.art + "): " + kurz(f.text.replace(/@/g, "@​"), 70), body, labels: ["fehlerbericht"] });

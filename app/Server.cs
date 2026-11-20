@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.7";
+        public const string Version = "0.8.7.1";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -933,8 +933,14 @@ namespace OfflineWissen
                     SendeJson(ctx, treffer);
                     return true;
                 }
-                // Einrichtungen (Apotheke, Trinkwasser …) liest die Karte selbst aus den Kacheln; nichts davon speichern
-                if (was == "einrichtungen")
+                // Straßensuche: Orte und Postleitzahl der Beispielkarte aus uebung/api/adresse.json
+                if (was == "adresse")
+                {
+                    SendeJson(ctx, UebungAdresse(q.ContainsKey("q") ? q["q"] : "", UebungJson(Path.Combine(ordner, "api", "adresse.json"))));
+                    return true;
+                }
+                // Einrichtungen (Apotheke, Trinkwasser …) und Straßen liest die Karte selbst aus den Kacheln; nichts davon speichern
+                if (was == "einrichtungen" || was == "strassen")
                 {
                     if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
                     else SendeText(ctx, 200, "");
@@ -3601,6 +3607,11 @@ namespace OfflineWissen
                     if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, EinrichtungenMerken(ctx, Q("v")));
                     else SendeText(ctx, 200, EinrichtungenLesen(Q("v")));
                     return;
+                case "adresse": SendeJson(ctx, AdresseSuchen(Q("q"))); return;
+                case "strassen":
+                    if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, KachelnMerken(ctx, StrassenDatei(Q("v"))));
+                    else SendeText(ctx, 200, KachelnLesen(StrassenDatei(Q("v"))));
+                    return;
                 // Rundgang, Kapitel Karten: Beispielkarte da? (GET) bzw. jetzt laden (POST, dauert einige Sekunden)
                 case "uebung/beispielkarte":
                     if (ctx.Request.HttpMethod == "POST") SendeJson(ctx, BeispielKarteLaden());
@@ -4574,6 +4585,8 @@ namespace OfflineWissen
                     e["art"] = art;
                     e["text"] = t;
                     e["anzahl"] = (int)Num(e, "anzahl") + 1;
+                    // Gesendet wird oft erst Tage später: die Version merken, in der der Fehler zuletzt auftrat
+                    e["version"] = Version;
                     StatSpeichern();
                 }
             }
@@ -5367,6 +5380,10 @@ namespace OfflineWissen
                     string ziel = Path.Combine(Daten, "orte", cc + ".txt");
                     if (!File.Exists(ziel))
                         plan.Add(new Job { Art = "orte", Titel = "Ortsnamen: " + cc, Url = "https://download.geonames.org/export/dump/" + cc + ".zip", Ziel = ziel });
+                    // Postleitzahlen für die Straßensuche (nur Länder, nicht die Weltliste cities…)
+                    string plzZiel = Path.Combine(Daten, "orte", "plz", cc + ".txt");
+                    if (Regex.IsMatch(cc, "^[A-Z]{2}$") && !File.Exists(plzZiel))
+                        plan.Add(new Job { Art = "plz", Titel = "Postleitzahlen: " + cc, Url = "https://download.geonames.org/export/zip/" + cc + ".zip", Ziel = plzZiel });
                 }
                 // Kleine Downloads zuerst (Hilfsprogramme ganz vorne, die brauchen andere Schritte;
                 // pmtiles als allererstes, ohne es kann keine Karte laden)
@@ -5561,6 +5578,19 @@ namespace OfflineWissen
                         break;
                     case "stimme":
                         StimmeLaden(j);
+                        break;
+                    case "plz":
+                        // Nicht jedes Land hat eine Postleitzahlen-Liste (z. B. Irland). Die Straßensuche geht auch
+                        // ohne, darum kein Fehler; beim nächsten Kartendownload wird es erneut versucht.
+                        Directory.CreateDirectory(Path.GetDirectoryName(j.Ziel));
+                        try { OrteLaden(j); }
+                        catch (Exception pe)
+                        {
+                            if (abbrechen || beenden) throw;
+                            Log("Postleitzahlen " + Path.GetFileNameWithoutExtension(j.Ziel) + " nicht geladen: " + pe.Message);
+                            try { File.Delete(j.Ziel + ".zip.part"); File.Delete(j.Ziel + ".zip"); } catch { }
+                        }
+                        lock (PlzLk) plzListe = null;
                         break;
                     case "orte":
                         OrteLaden(j);
@@ -8708,8 +8738,19 @@ namespace OfflineWissen
                         continue;
                     }
                     llmStatus = "fehler";
-                    var zeilen = log.Split('\n').Where(z => z.Trim().Length > 0).ToArray();
-                    llmFehler = "KI konnte nicht starten. " + string.Join(" ", zeilen.Skip(Math.Max(0, zeilen.Length - 3))).Trim();
+                    // Der Fehlerbericht wird nach 300 Zeichen gekürzt: Code und Grund zuerst, Startzeilen ohne Aussage weglassen
+                    var zeilen = log.Split('\n').Where(z => z.Trim().Length > 0 && !Regex.IsMatch(z, "common_params_print_info|no API key is set|llama_server: initializing")).ToArray();
+                    var wichtig = zeilen.Where(z => Regex.IsMatch(z, @"error|fail|unable|cannot|out of memory|exception|abort", RegexOptions.IgnoreCase)).ToArray();
+                    if (wichtig.Length > 0) zeilen = wichtig;
+                    string code = "";
+                    try { code = "0x" + ((uint)l.ExitCode).ToString("X8"); } catch { }
+                    string grund = "";
+                    if (code == "0xC0000017" || code == "0xC000012D") grund = " Zu wenig freier Arbeitsspeicher.";
+                    else if (code == "0xC000001D") grund = " Der Prozessor kann das KI-Programm nicht ausführen.";
+                    else if (code == "0xC0000135" || code == "0xC000007B") grund = " Eine Programmdatei fehlt oder ist beschädigt.";
+                    else if (code == "0xC0000005") grund = " Das KI-Programm ist abgestürzt (oft zu wenig Arbeitsspeicher).";
+                    llmFehler = "KI konnte nicht starten" + (code.Length > 0 ? " (Code " + code + ")" : "") + "." + grund + " " +
+                        string.Join(" ", zeilen.Skip(Math.Max(0, zeilen.Length - 3))).Trim();
                     Log(llmFehler);
                     StatFehler("ki", llmFehler);
                     return;
@@ -9064,6 +9105,299 @@ namespace OfflineWissen
             return erg;
         }
 
+        // ------------------------------------------------------------------ Straßensuche („Hauptstraße Schwelm“)
+        // Der Server zerlegt die Eingabe nur: Welcher Teil ist der Ort bzw. die Postleitzahl, welcher die Straße?
+        // Die Straßen selbst liest die Oberfläche aus den Kartenkacheln rund um den Ort (karten.js).
+        // Postleitzahlen kommen aus der GeoNames-Liste daten/orte/plz/<Land>.txt (je Postleitzahl Ort und Mittelpunkt).
+
+        class Plz { public string Code, Anzeige, Ort, Land; public double Lat, Lon; }
+        static List<Plz> plzListe;
+        static Dictionary<string, List<Ort>> orteGenau;
+        static List<Ort> orteGenauVon;
+        static readonly object PlzLk = new object();
+
+        static string PlzNorm(string s) { return Regex.Replace((s ?? "").ToUpperInvariant(), @"[\s\-]", ""); }
+
+        // Wer die Ortslisten schon vor der Straßensuche hatte, bekommt die kleinen Postleitzahlen-Listen
+        // (je Land höchstens 2 MB) bei der ersten Straßensuche still nachgeladen. Ohne Internet bleibt es ohne.
+        static bool plzNachgeholt;
+        static void PlzNachholen()
+        {
+            lock (PlzLk) { if (plzNachgeholt) return; plzNachgeholt = true; }
+            var fehlend = new List<string>();
+            try
+            {
+                foreach (var f in Directory.GetFiles(Path.Combine(Daten, "orte"), "*.txt"))
+                {
+                    string cc = Path.GetFileNameWithoutExtension(f);
+                    if (Regex.IsMatch(cc, "^[A-Z]{2}$") && !File.Exists(Path.Combine(Daten, "orte", "plz", cc + ".txt"))) fehlend.Add(cc);
+                }
+            }
+            catch { return; }
+            if (fehlend.Count == 0) return;
+            new Thread(() =>
+            {
+                foreach (var cc in fehlend)
+                {
+                    if (beenden) return;
+                    var j = new Job { Art = "plz", Titel = "Postleitzahlen: " + cc, Url = "https://download.geonames.org/export/zip/" + cc + ".zip", Ziel = Path.Combine(Daten, "orte", "plz", cc + ".txt") };
+                    try
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(j.Ziel));
+                        OrteLaden(j);
+                        lock (PlzLk) plzListe = null;
+                    }
+                    catch (Exception e)
+                    {
+                        Log("Postleitzahlen " + cc + " nicht geladen: " + e.Message);
+                        try { File.Delete(j.Ziel + ".zip.part"); File.Delete(j.Ziel + ".zip"); } catch { }
+                    }
+                }
+            }) { IsBackground = true }.Start();
+        }
+
+        static List<Plz> LadePlz()
+        {
+            lock (PlzLk)
+            {
+                if (plzListe != null) return plzListe;
+                var liste = new List<Plz>();
+                // In Deutschland haben auch Firmen und Behörden eigene Postleitzahlen („akf Bank GmbH“). Die passen
+                // zu keiner Straße: nur Einträge, deren Name (oder sein Anfang, z. B. „Hamburg Klostertor“) ein Ort ist.
+                // Nur Hauptnamen: unter den anderen Schreibweisen stecken viele Allerweltswörter („First“)
+                var namen = new HashSet<string>();
+                foreach (var o in LadeOrte()) if (o.Klasse == 'P') namen.Add(o.NormName);
+                Func<string, bool> istOrt = name =>
+                {
+                    string n = Norm(name);
+                    if (namen.Contains(n)) return true;
+                    int t = n.IndexOfAny(new[] { ' ', '/', ',', '(' });
+                    return t > 0 && namen.Contains(n.Substring(0, t));
+                };
+                string ordner = Path.Combine(Daten, "orte", "plz");
+                if (Directory.Exists(ordner))
+                    foreach (var f in Directory.GetFiles(ordner, "*.txt"))
+                    {
+                        try
+                        {
+                            foreach (var zeile in File.ReadLines(f, Encoding.UTF8))
+                            {
+                                var c = zeile.Split('\t');
+                                if (c.Length < 11 || c[1].Length == 0) continue;
+                                double lat, lon;
+                                if (!double.TryParse(c[9], NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
+                                    || !double.TryParse(c[10], NumberStyles.Float, CultureInfo.InvariantCulture, out lon)) continue;
+                                if (!istOrt(c[2])) continue;
+                                liste.Add(new Plz { Code = PlzNorm(c[1]), Anzeige = c[1], Ort = c[2], Land = c[0], Lat = lat, Lon = lon });
+                            }
+                        }
+                        catch { }
+                    }
+                plzListe = liste;
+                return liste;
+            }
+        }
+
+        // Bewohnte Orte nach genauem (vereinfachtem) Namen, auch andere Schreibweisen
+        static Dictionary<string, List<Ort>> OrteGenau()
+        {
+            var liste = LadeOrte();
+            lock (PlzLk)
+            {
+                if (orteGenau != null && orteGenauVon == liste) return orteGenau;
+                var d = new Dictionary<string, List<Ort>>();
+                Action<string, Ort> dazu = (n, o) =>
+                {
+                    if (string.IsNullOrEmpty(n)) return;
+                    List<Ort> l;
+                    if (!d.TryGetValue(n, out l)) d[n] = l = new List<Ort>();
+                    if (!l.Contains(o)) l.Add(o);
+                };
+                foreach (var o in liste)
+                {
+                    if (o.Klasse != 'P') continue;
+                    dazu(o.NormName, o);
+                    if (o.NormAlt != null) foreach (var a in o.NormAlt) dazu(a, o);
+                }
+                orteGenau = d; orteGenauVon = liste;
+                return d;
+            }
+        }
+
+        static double Km(double lat1, double lon1, double lat2, double lon2)
+        {
+            double rad = Math.PI / 180, dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) + Math.Cos(lat1 * rad) * Math.Cos(lat2 * rad) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            return 2 * 6371 * Math.Asin(Math.Sqrt(a));
+        }
+
+        // Suchradius um den Ort: Großstädte brauchen mehr Kacheln
+        static double OrtRadius(Ort o)
+        {
+            if (o.Code == "PPLX") return 2.5;
+            return o.Pop >= 1000000 ? 15 : o.Pop >= 300000 ? 10 : o.Pop >= 100000 ? 7 : o.Pop >= 20000 ? 5 : 3;
+        }
+
+        static Dictionary<string, object> AdresseSuchen(string q)
+        {
+            var kandidaten = new List<Dictionary<string, object>>();
+            var plzTreffer = new List<object>();
+            var erg = new Dictionary<string, object> { { "kandidaten", kandidaten }, { "plz", plzTreffer } };
+            q = (q ?? "").Trim();
+            if (q.Length < 2 || q.Length > 200) return erg;
+            PlzNachholen();
+            var plz = LadePlz();
+            var plzIndex = new Dictionary<string, List<Plz>>();
+            foreach (var p in plz) { List<Plz> l; if (!plzIndex.TryGetValue(p.Code, out l)) plzIndex[p.Code] = l = new List<Plz>(); l.Add(p); }
+
+            // Wörter mit Abschnitt (Komma trennt Abschnitte); Punkte wie in „Hauptstr.“ weg
+            var woerter = new List<string>();
+            var abschnitt = new List<int>();
+            var teile = q.Split(',');
+            for (int i = 0; i < teile.Length; i++)
+                foreach (var w in teile[i].Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string t = w.Trim('.', ';', ':', '(', ')');
+                    if (t.Length > 0) { woerter.Add(t); abschnitt.Add(i); }
+                }
+
+            // Postleitzahl: auch aus zwei Wörtern („802 50“, „SW1A 1AA“ → nur „SW1A“ steht in der Liste)
+            List<Plz> gefunden = null;
+            for (int i = 0; i < woerter.Count && gefunden == null; i++)
+            {
+                if (!Regex.IsMatch(woerter[i], @"\d")) continue;
+                List<Plz> l;
+                if (i + 1 < woerter.Count && Regex.IsMatch(woerter[i + 1], @"^\w{2,4}$") && Regex.IsMatch(woerter[i + 1], @"\d")
+                    && plzIndex.TryGetValue(PlzNorm(woerter[i] + woerter[i + 1]), out l))
+                { gefunden = l; woerter.RemoveRange(i, 2); abschnitt.RemoveRange(i, 2); }
+                else if (Regex.IsMatch(woerter[i], @"^[A-Za-z0-9\-]{3,8}$") && plzIndex.TryGetValue(PlzNorm(woerter[i]), out l))
+                { gefunden = l; woerter.RemoveAt(i); abschnitt.RemoveAt(i); }
+            }
+            // Hausnummern (5, 12a, 3-5) und Reste britischer Postleitzahlen weglassen: alles mit Ziffern
+            for (int i = woerter.Count - 1; i >= 0; i--)
+                if (Regex.IsMatch(woerter[i], @"\d")) { woerter.RemoveAt(i); abschnitt.RemoveAt(i); }
+
+            Func<int, int, string> norm = (von, bis) => Norm(string.Join(" ", woerter.GetRange(von, bis - von)));
+            Func<string, bool> strasseOk = s => Regex.Replace(s, @"[^\p{L}\p{N}]", "").Length >= 3;
+
+            if (gefunden != null)
+            {
+                // Je Ort nur ein Eintrag (eine Postleitzahl kann mehrere Orte haben)
+                var orteDerPlz = new List<Plz>();
+                foreach (var p in gefunden) if (!orteDerPlz.Any(x => Norm(x.Ort) == Norm(p.Ort))) orteDerPlz.Add(p);
+                foreach (var p in orteDerPlz)
+                {
+                    // Ortsname zusätzlich eingegeben („58332 Schwelm Hauptstraße“): aus der Straße herausnehmen
+                    string ortN = Norm(p.Ort);
+                    int von = 0, bis = woerter.Count;
+                    for (int k = woerter.Count; k >= 1; k--)
+                    {
+                        if (norm(0, k) == ortN) { von = k; break; }
+                        if (norm(woerter.Count - k, woerter.Count) == ortN) { bis = woerter.Count - k; break; }
+                    }
+                    string strasse = bis > von ? string.Join(" ", woerter.GetRange(von, bis - von)) : "";
+                    if (strasseOk(strasse))
+                        kandidaten.Add(new Dictionary<string, object> {
+                            { "ort", p.Ort }, { "land", p.Land }, { "plz", p.Anzeige }, { "lat", p.Lat }, { "lon", p.Lon }, { "km", 3.0 }, { "strasse", strasse } });
+                    else
+                        plzTreffer.Add(new Dictionary<string, object> { { "plz", p.Anzeige }, { "ort", p.Ort }, { "land", p.Land }, { "lat", p.Lat }, { "lon", p.Lon } });
+                }
+            }
+            else if (woerter.Count >= 2)
+            {
+                // Ort vorne oder hinten, aus einem oder mehreren Wörtern; längere Ortsnamen zuerst.
+                // Mit Komma muss der Ort ein ganzer Abschnitt sein.
+                bool komma = abschnitt.Count > 0 && abschnitt[abschnitt.Count - 1] != abschnitt[0];
+                var genau = OrteGenau();
+                var gesehen = new HashSet<string>();
+                for (int k = woerter.Count - 1; k >= 1 && kandidaten.Count < 8; k--)
+                {
+                    foreach (bool vorne in new[] { true, false })
+                    {
+                        int ov = vorne ? 0 : woerter.Count - k, ob = vorne ? k : woerter.Count;
+                        int sv = vorne ? k : 0, sb = vorne ? woerter.Count : woerter.Count - k;
+                        if (komma && (abschnitt[ov] == abschnitt[sv] || abschnitt[ob - 1] == abschnitt[sb - 1]
+                            || abschnitt[ov] != abschnitt[ob - 1] || abschnitt[sv] != abschnitt[sb - 1])) continue;
+                        List<Ort> l;
+                        if (!genau.TryGetValue(norm(ov, ob), out l)) continue;
+                        string strasse = string.Join(" ", woerter.GetRange(sv, sb - sv));
+                        if (!strasseOk(strasse)) continue;
+                        // Gleichnamige Orte: die größten, nicht doppelt (Ort und Ortsteil an derselben Stelle)
+                        var gewaehlt = new List<Ort>();
+                        foreach (var o in l.OrderByDescending(x => x.Pop).ThenBy(x => x.Code == "PPLX" ? 1 : 0))
+                        {
+                            if (gewaehlt.Count >= 4) break;
+                            if (gewaehlt.Any(g => Km(g.Lat, g.Lon, o.Lat, o.Lon) < 5)) continue;
+                            gewaehlt.Add(o);
+                        }
+                        foreach (var o in gewaehlt)
+                        {
+                            if (!gesehen.Add(o.Lat + "|" + o.Lon + "|" + strasse)) continue;
+                            kandidaten.Add(new Dictionary<string, object> {
+                                { "ort", o.Name }, { "land", o.Land }, { "plz", "" }, { "lat", o.Lat }, { "lon", o.Lon }, { "km", OrtRadius(o) }, { "strasse", strasse } });
+                        }
+                    }
+                }
+            }
+
+            // Postleitzahlen in der Nähe jedes Orts, damit die Oberfläche zu jeder Straße die nächste zeigen kann
+            foreach (var kd in kandidaten)
+            {
+                double lat = (double)kd["lat"], lon = (double)kd["lon"], km = (double)kd["km"] + 3;
+                // Mehrere Postleitzahlen am selben Punkt (in Schweden oft alle einer Stadt): welche zu einer Straße
+                // gehört, lässt sich nicht sagen, dann nur der Ort
+                var nah = new List<object>();
+                var amPunkt = new Dictionary<string, object[]>();
+                foreach (var p in plz)
+                {
+                    if (Math.Abs(p.Lat - lat) >= km / 100 || Km(lat, lon, p.Lat, p.Lon) > km) continue;
+                    string punkt = p.Lat.ToString(CultureInfo.InvariantCulture) + "|" + p.Lon.ToString(CultureInfo.InvariantCulture);
+                    object[] da;
+                    if (amPunkt.TryGetValue(punkt, out da)) { if ((string)da[0] != p.Anzeige) da[0] = ""; continue; }
+                    da = new object[] { p.Anzeige, p.Ort, p.Lat, p.Lon };
+                    amPunkt[punkt] = da;
+                    nah.Add(da);
+                }
+                kd["plzNah"] = nah;
+            }
+            return erg;
+        }
+
+        // Rundgang: einfache Zerlegung nur für die Orte der Beispielkarte (Ortsname vorne oder hinten bzw.
+        // Postleitzahl, der Rest ist die Straße), Antwort wie AdresseSuchen
+        static Dictionary<string, object> UebungAdresse(string q, Dictionary<string, object> info)
+        {
+            var kandidaten = new List<object>();
+            var plzTreffer = new List<object>();
+            var erg = new Dictionary<string, object> { { "kandidaten", kandidaten }, { "plz", plzTreffer } };
+            string s = " " + Regex.Replace(Norm(q ?? ""), @"[,.;:]", " ").Trim() + " ";
+            s = Regex.Replace(s, @"\s+", " ");
+            if (info == null || s.Trim().Length < 2) return erg;
+            foreach (var e in Arr(info, "orte").OfType<Dictionary<string, object>>())
+            {
+                string plz = Str(e, "plz") ?? "", rest = null;
+                bool perPlz = plz.Length > 0 && s.Contains(" " + plz + " ");
+                if (perPlz) rest = s.Replace(" " + plz + " ", " ");
+                if (rest == null || perPlz)
+                    foreach (var n in Arr(e, "namen").Select(x => Norm(Convert.ToString(x))).OrderByDescending(x => x.Length))
+                    {
+                        string t = rest ?? s;
+                        if (t.StartsWith(" " + n + " ")) { rest = t.Substring(n.Length + 1); break; }
+                        if (t.EndsWith(" " + n + " ")) { rest = t.Substring(0, t.Length - n.Length - 1); break; }
+                    }
+                if (rest == null) continue;
+                string strasse = Regex.Replace(Regex.Replace(rest, @"\S*\d\S*", " "), @"\s+", " ").Trim();
+                double lat = Num(e, "lat"), lon = Num(e, "lon");
+                object nah = e.ContainsKey("plzNah") ? e["plzNah"] : new object[] { new object[] { plz, Str(e, "ort"), lat, lon } };
+                if (Regex.Replace(strasse, @"[^\p{L}\p{N}]", "").Length >= 3)
+                    kandidaten.Add(new Dictionary<string, object> {
+                        { "ort", Str(e, "ort") }, { "land", "DE" }, { "plz", plz }, { "lat", lat }, { "lon", lon }, { "km", Num(e, "km") }, { "strasse", strasse }, { "plzNah", nah } });
+                else if (perPlz && strasse.Length == 0)
+                    plzTreffer.Add(new Dictionary<string, object> { { "plz", plz }, { "ort", Str(e, "ort") }, { "land", "DE" }, { "lat", lat }, { "lon", lon } });
+            }
+            return erg;
+        }
+
         // Zusätzliche Ortsnamen für die Karte: In dünn besiedelten Gegenden (z. B. Nordschweden) enthalten die
         // Kartendaten bei mittlerem Zoom kaum Orte. Die Welt wird in ein festes Raster geteilt (2^stufe Felder je
         // Richtung, in Mercator wie die Kartenkacheln), je Feld kommt der wichtigste Ort zurück. Weil das Raster
@@ -9077,7 +9411,11 @@ namespace OfflineWissen
         static readonly object EinrichtungenLk = new object();
         static readonly Regex EinrichtungsZeile = new Regex(@"^\d{1,2}/\d{1,7}/\d{1,7}(\t\[.*\])?$");
 
-        static string EinrichtungsDatei(string version)
+        // Straßennamen je gelesener Kachel (Straßensuche), gleiche Form wie bei den Einrichtungen
+        static string EinrichtungsDatei(string version) { return KachelDatei(version, "einrichtungen"); }
+        static string StrassenDatei(string version) { return KachelDatei(version, "strassen"); }
+
+        static string KachelDatei(string version, string art)
         {
             var sb = new StringBuilder("v" + (version ?? "1"));
             var ordner = Path.Combine(Daten, "karten");
@@ -9091,12 +9429,13 @@ namespace OfflineWissen
             string kennung;
             using (var h = System.Security.Cryptography.SHA256.Create())
                 kennung = BitConverter.ToString(h.ComputeHash(Utf8.GetBytes(sb.ToString())), 0, 8).Replace("-", "").ToLowerInvariant();
-            return Path.Combine(Daten, "cache", "einrichtungen", kennung + ".txt");
+            return Path.Combine(Daten, "cache", art, kennung + ".txt");
         }
 
-        static string EinrichtungenLesen(string version)
+        static string EinrichtungenLesen(string version) { return KachelnLesen(EinrichtungsDatei(version)); }
+
+        static string KachelnLesen(string datei)
         {
-            string datei = EinrichtungsDatei(version);
             lock (EinrichtungenLk)
             {
                 try { return File.Exists(datei) ? File.ReadAllText(datei, Utf8) : ""; }
@@ -9104,7 +9443,9 @@ namespace OfflineWissen
             }
         }
 
-        static Dictionary<string, object> EinrichtungenMerken(HttpListenerContext ctx, string version)
+        static Dictionary<string, object> EinrichtungenMerken(HttpListenerContext ctx, string version) { return KachelnMerken(ctx, EinrichtungsDatei(version)); }
+
+        static Dictionary<string, object> KachelnMerken(HttpListenerContext ctx, string datei)
         {
             string text;
             using (var r = new StreamReader(ctx.Request.InputStream, Encoding.UTF8)) text = r.ReadToEnd();
@@ -9119,7 +9460,6 @@ namespace OfflineWissen
                 n++;
             }
             if (n == 0) return new Dictionary<string, object> { { "ok", true }, { "zeilen", 0 } };
-            string datei = EinrichtungsDatei(version);
             lock (EinrichtungenLk)
             {
                 try

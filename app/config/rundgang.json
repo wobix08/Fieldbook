@@ -823,6 +823,17 @@
         },
         {
           "ziel": "#ort-suche",
+          "mit": "#ort-treffer",
+          "kasten": "rechts",
+          "aktion": { "klick": "#ort-treffer .strassen-treffer button", "fehl": { "sichtbar": "#ort-treffer .nichts" } },
+          "fehlhinweis": "Dazu gibt es keine Straße. Prüfe die Schreibweise.",
+          "hinweis": "Schreib „Bahnhofstraße Garmisch“ ins Suchfeld und klicke auf die Straße.",
+          "aufraeumen": { "karte": "strasse" },
+          "titel": "Eine Straße suchen",
+          "text": "Straßen findest du zusammen mit dem Ort oder der Postleitzahl. Die Reihenfolge ist egal, eine Hausnummer darf dabei stehen. Schreib „Bahnhofstraße Garmisch“ und klicke auf die Straße."
+        },
+        {
+          "ziel": "#ort-suche",
           "titel": "Koordinaten suchen",
           "text": "Ins Suchfeld kannst du auch Koordinaten schreiben, zum Beispiel „47,4917 11,0955“. Das hilft, wenn dir jemand seinen Standort als Zahlen schickt. Die Karte zeigt dann genau diese Stelle."
         },

@@ -61,7 +61,7 @@ Die Inhalte sind unverändert übernommen, nur die Dateinamen der Bilder sind ge
 | Kapitel Kochen (`uebung/kochen`): acht Rezepte aus dem Koch-Wiki (z. B. „Tortilla española“, „Kartoffelpuffer“) | Autorinnen und Autoren des [Koch-Wikis](https://www.kochwiki.org/) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
 | Kapitel Kochen (`uebung/kochen`): Wikipedia „Kochkiste“, „Hobokocher“, „Rocket Stove“, „Solarkocher“ | Autorinnen und Autoren der [Wikipedia](https://de.wikipedia.org/) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 | Beispielroute Garmisch-Partenkirchen – Wank (`uebung/routen`), berechnet mit BRouter | © [OpenStreetMap](https://www.openstreetmap.org/copyright)-Mitwirkende | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) |
-| Orte für die Ortssuche im Beispiel (`uebung/api/orte.json`) | [GeoNames](https://www.geonames.org) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Orte und Postleitzahlen für die Suche im Beispiel (`uebung/api/orte.json`, `uebung/api/adresse.json`) | [GeoNames](https://www.geonames.org) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
 Die Beispielkarte des Kapitels Karten ist nicht in der ZIP.\
 Fieldbook lädt sie vor dem ersten Start von build.protomaps.com, wie jede andere Karte (OpenStreetMap-Daten, ODbL 1.0).
@@ -113,7 +113,7 @@ Stimmen mit Nicht-kommerziell-Lizenz oder unklarer Lizenz lädt Fieldbook nicht.
 | weitere Kiwix-Pakete | siehe jeweilige Paketbeschreibung auf [library.kiwix.org](https://library.kiwix.org) |
 | Kartendaten © [OpenStreetMap](https://www.openstreetmap.org/copyright)-Mitwirkende | ODbL 1.0 |
 | Kartenkacheln über [Protomaps](https://protomaps.com) | ODbL 1.0 |
-| Ortsnamen von [GeoNames](https://www.geonames.org) | CC BY 4.0 |
+| Ortsnamen und Postleitzahlen von [GeoNames](https://www.geonames.org) | CC BY 4.0 |
 | Wegedaten für die Routenplanung von [brouter.de](https://brouter.de) (aus OpenStreetMap) | ODbL 1.0 |
 
 ## KI-Modelle

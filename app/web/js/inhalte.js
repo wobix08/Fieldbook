@@ -172,6 +172,8 @@ const Inhalte = (() => {
     }
     updateLief = f.jobs.some(j => j.art === "programm-update");
     const box = $("#inhalte-downloads");
+    // Nach „Fieldbook beenden“ ist die Seite ersetzt, eine letzte Antwort kann trotzdem noch kommen
+    if (!box) { clearInterval(timer); return; }
     if (!f.jobs.length) { box.hidden = true; box.dataset.sig = ""; } else { box.hidden = false; zeichneFortschritt(box, f); }
     const laufend = f.aktiv ? f.jobs.filter(j => j.status === "wartet" || j.status === "laeuft") : [];
     const sig = laufend.map(j => j.titel).join("|");
