@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anderer Tab – Fieldbook</title>
+<!-- Ein Fieldbook-Tab, das an ein neueres abgegeben hat, wechselt hierher (app.js, doppelteTabs).
+     Absichtlich winzig: keine Skripte, Bilder, Schriften oder Stylesheets von Fieldbook, damit der Tab so wenig
+     Speicher wie möglich braucht. Der Titel beginnt nicht mit „Fieldbook“, damit der Server diesen Tab beim
+     nächsten Start nicht nach vorne holt. Nach dem # steht die Adresse, auf der das Tab vorher war. -->
+<style>
+  /* Farben wie in app.css: Dunkel ist Standard, Hell bei „light“ oder bei „system“ mit hellem Windows */
+  :root { color-scheme: dark; --bg: #161715; --text: #f7f5f1; --text2: #e6e2dc; --akzent: #9fb78f; --akzent-text: #121412; }
+  :root[data-theme="light"] { color-scheme: light; --bg: #f6f5f3; --text: #1c1e1b; --text2: #585d55; --akzent: #3b4d34; --akzent-text: #ffffff; }
+  @media (prefers-color-scheme: light) { :root[data-theme="system"] { color-scheme: light; --bg: #f6f5f3; --text: #1c1e1b; --text2: #585d55; --akzent: #3b4d34; --akzent-text: #ffffff; } }
+  body { margin: 0; padding: 40px 16px; background: var(--bg); color: var(--text); font: 17px/1.55 "Segoe UI", system-ui, sans-serif; text-align: center; }
+  h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 .5em; }
+  p { color: var(--text2); margin: 0; }
+  .knopf { display: inline-block; margin-top: 24px; font: inherit; padding: 9px 18px; border-radius: 10px; border: 1px solid var(--akzent); background: var(--akzent); color: var(--akzent-text); cursor: pointer; text-decoration: none; }
+  [hidden] { display: none !important; }
+</style>
+<script>
+  // Hell/Dunkel wie im Hauptfenster (index.html)
+  try { var t = localStorage.getItem("thema"); if (t === "light" || t === "system") document.documentElement.setAttribute("data-theme", t); } catch (e) { }
+</script>
+</head>
+<body>
+<h1>Fieldbook ist in einem anderen Tab geöffnet.</h1>
+<p>Du kannst diesen Tab schließen.</p>
+<button type="button" class="knopf" id="weiter">Fieldbook hier weiter benutzen</button>
+<!-- fieldbook:// trägt Fieldbook mit der Einstellung „Start aus dem Browser“ in Windows ein (Server.BrowserStart);
+     Fieldbook.exe öffnet dann keinen neuen Tab -->
+<a class="knopf" id="starten" href="fieldbook://start" hidden>Fieldbook starten</a>
+<script>
+(function () {
+  // Vorherige Adresse, nur innerhalb von Fieldbook (kein „//andere-seite“)
+  var ziel = "/";
+  try { var z = decodeURIComponent(location.hash.slice(1)); if (z.charAt(0) === "/" && z.charAt(1) !== "/" && z.charAt(1) !== "\\") ziel = z; } catch (e) { }
+  var kanal = "BroadcastChannel" in window ? new BroadcastChannel("fieldbook-tabs") : null;
+  var timer = null, weg = false;
+
+  // Zurück zu Fieldbook. Erst prüfen, ob Fieldbook läuft (diese kleine Datei, ohne Nebenwirkungen beim Server),
+  // sonst käme die Fehlerseite des Browsers. replace: kein Eintrag im Verlauf, „Zurück“ führt nicht wieder hierher.
+  // melden: die anderen Tabs geben ab. Nur beim Knopf; die Rückkehr von selbst geschieht nur, wenn kein anderes Tab
+  // geantwortet hat. Sie meldet nichts, sonst schicken sich zwei Tabs, die gerade laden, gegenseitig hin und her.
+  var h1 = document.querySelector("h1"), p = document.querySelector("p");
+  var weiterKnopf = document.getElementById("weiter"), startKnopf = document.getElementById("starten");
+  function laeuft() {
+    var abbruch = "AbortController" in window ? new AbortController() : null;
+    if (abbruch) setTimeout(function () { abbruch.abort(); }, 3000);
+    return fetch(location.pathname, { method: "HEAD", cache: "no-store", signal: abbruch ? abbruch.signal : undefined })
+      .then(function (r) { return r.ok; }, function () { return false; });
+  }
+  function hin(melden) {
+    if (kanal) { if (melden) kanal.postMessage({ art: "uebernehmen", t: Date.now() }); kanal.close(); }
+    location.replace(ziel);
+  }
+  function zurueck(melden) {
+    if (weg) return;
+    weg = true;
+    laeuft().then(function (ok) {
+      if (ok) return hin(melden);
+      weg = false;
+      if (startWarten) return;
+      // Knopf nur mit der Einstellung „Start aus dem Browser“ (app.js merkt sie in localStorage), sonst wirkt er nicht
+      var startGeht = false;
+      try { startGeht = localStorage.getItem("fbBrowserStart") === "1"; } catch (e) { }
+      h1.textContent = "Fieldbook läuft gerade nicht.";
+      p.textContent = startGeht ? "Du kannst es hier starten. Danach geht es in diesem Tab weiter." : "Starte Fieldbook, dann geht es hier weiter.";
+      weiterKnopf.hidden = startGeht;
+      startKnopf.hidden = !startGeht;
+    });
+  }
+  weiterKnopf.addEventListener("click", function () { zurueck(true); });
+
+  // „Fieldbook starten“: Der Browser fragt, ob er Fieldbook öffnen darf. Danach alle 1,5 s nachsehen, ob es läuft,
+  // höchstens 3 Minuten (der erste Start mit KI dauert etwas). Läuft es, zurück zur alten Adresse.
+  var startWarten = null;
+  startKnopf.addEventListener("click", function () {
+    if (startWarten) return;
+    h1.textContent = "Fieldbook startet …";
+    p.textContent = "Falls der Browser fragt, ob er Fieldbook öffnen darf: bitte erlauben.";
+    var ende = Date.now() + 180000, frage = false;
+    startWarten = setInterval(function () {
+      if (frage) return;
+      if (Date.now() > ende) {
+        clearInterval(startWarten); startWarten = null;
+        h1.textContent = "Fieldbook ist nicht gestartet.";
+        p.textContent = "Starte es über das Fieldbook-Symbol, dann geht es hier weiter.";
+        return;
+      }
+      frage = true;
+      laeuft().then(function (ok) { frage = false; if (ok && !weg) { weg = true; clearInterval(startWarten); hin(false); } });
+    }, 1500);
+  });
+  if (!kanal) return;
+
+  // Arbeitet noch ein anderes Fieldbook-Tab? Ein arbeitendes Tab antwortet mit „aktiv“. Keine Antwort (z. B. weil man
+  // das neue Tab geschlossen hat): von selbst zurück. Gefragt wird erst, wenn man dieses Tab wieder anschaut, nicht
+  // schon beim Laden: Hierher kommt ein Tab ja nur, weil gerade ein anderes übernommen hat. Sonst ruht es.
+  function fragen() {
+    if (document.hidden || timer || weg) return;
+    timer = setTimeout(function () { timer = null; if (!document.hidden) zurueck(false); }, 1000);
+    kanal.postMessage({ art: "frage" });
+  }
+  kanal.onmessage = function (e) {
+    if (e.data && e.data.art === "aktiv" && timer) { clearTimeout(timer); timer = null; }
+  };
+  document.addEventListener("visibilitychange", fragen);
+})();
+</script>
+</body>
+</html>

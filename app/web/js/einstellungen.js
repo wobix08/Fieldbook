@@ -127,7 +127,19 @@ const Einstellungen = (() => {
         if (r.fehler) { zurueckSetzen(box, !!r.vorhanden); await zeigeFehler("Das Desktop-Symbol konnte nicht geändert werden.", { message: r.fehler }); return; }
         s.desktopSymbol = box.checked;
         darUnter();
-      } })));
+      } })),
+      // Trägt „fieldbook://“ in Windows ein (Server.BrowserStart); darum aus, bis man es einschaltet
+      zeileMitSchalter("Start aus dem Browser", "Läuft Fieldbook nicht, kann ein offener Fieldbook-Tab es starten. Dafür trägt Fieldbook die Adresse „fieldbook://“ in Windows ein.",
+        el("input", { type: "checkbox", checked: !!s.browserStart, onchange: async (e) => {
+          const box = e.target;
+          let r;
+          try { r = await api("browserstart", { an: box.checked }); }
+          catch (err) { zurueckSetzen(box, !!s.browserStart); await zeigeFehler("Der Start aus dem Browser konnte nicht geändert werden.", err); return; }
+          if (r.fehler) { zurueckSetzen(box, !!s.browserStart); await zeigeFehler("Der Start aus dem Browser konnte nicht geändert werden.", { message: r.fehler }); return; }
+          s.browserStart = box.checked;
+          if (OW.status) OW.status.browserStart = box.checked;
+          browserStartMerken(box.checked);
+        } })));
     darUnter();
 
     // ---------------- KI-Assistent

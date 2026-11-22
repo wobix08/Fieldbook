@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.8";
+        public const string Version = "0.8.8.1";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -179,12 +179,26 @@ namespace OfflineWissen
                 try { File.AppendAllText(Path.Combine(Logs, "absturz.log"), DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + text + Environment.NewLine, Utf8); } catch { }
             };
 
+            // Die KI startet erst nach Bibliothek und Routenplanung. Bis dahin soll oben nicht „KI aus“ stehen, sondern
+            // „KI lädt …“, wenn eine KI eingerichtet und der Sparmodus aus ist. StarteKi setzt danach den echten Stand.
+            try
+            {
+                var km = Bool(einst, "sparmodus") ? null : AktuellesModell();
+                if (km != null && File.Exists(Path.Combine(Daten, "modelle", Str(km, "datei"))))
+                {
+                    llmModell = Str(km, "name") + " (" + Str(km, "modell") + ")";
+                    llmStatus = "laedt";
+                }
+            }
+            catch { }
+
             // Jeder Schritt einzeln abgesichert: scheitert einer, laufen die anderen trotzdem
             new Thread(delegate ()
             {
                 try { Aufraeumen(true); } catch (Exception e) { Log("Aufräumen: " + e.Message); }
                 try { AufgabenPfadPruefen(); } catch (Exception e) { Log("Aufgabenplanung: " + e.Message); }
                 try { DesktopSymbolPruefen(); } catch { }
+                try { ProtokollPruefen(); } catch (Exception e) { Log("Adresse fieldbook://: " + e.Message); }
                 StarteKiwix();
                 StarteRouting();
                 if (!Bool(einst, "sparmodus")) StarteKi();
@@ -3723,6 +3737,9 @@ namespace OfflineWissen
                 case "desktopsymbol":
                     SendeJson(ctx, DesktopSymbol(Bool(LeseBody(ctx), "an")));
                     return;
+                case "browserstart":
+                    SendeJson(ctx, BrowserStart(Bool(LeseBody(ctx), "an")));
+                    return;
                 case "programmupdate/neustart":
                     SendeJson(ctx, new Dictionary<string, object> { { "ok", true } });
                     Neustart();
@@ -3992,6 +4009,7 @@ namespace OfflineWissen
                 {"bibliothekFehler", kiwixFehler},
                 {"ordnerWarnung", OrdnerWarnung()},
                 {"desktopSymbol", t["desktopSymbol"]},
+                {"browserStart", Bool(einst, "browserStart")},
                 {"proxy", Str(einst, "proxy") ?? ""},
                 {"unterbrochen", unterbrochen},
                 {"uebersetzer", t["uebersetzer"]},
@@ -7642,6 +7660,48 @@ namespace OfflineWissen
         static void DesktopSymbolPruefen()
         {
             if (Bool(einst, "desktopSymbol") && (Str(einst, "desktopPfad") != Root || !File.Exists(DesktopLnk()))) DesktopSymbol(true);
+        }
+
+        // „Start aus dem Browser“ (Einstellungen, aus bis man es einschaltet): trägt die Adresse fieldbook://start für Windows
+        // ein (nur für diesen Benutzer, ohne Administratorrechte). Damit startet ein offener Fieldbook-Tab Fieldbook, wenn es
+        // nicht läuft (Knopf „Fieldbook starten“; der Browser fragt vorher). Fieldbook.exe startet dann ohne neuen Tab.
+        // Ausschalten entfernt den Eintrag wieder. Die README verspricht, dass Fieldbook sonst nichts an Windows ändert.
+        const string ProtokollSchluessel = @"Software\Classes\fieldbook";
+        static string ProtokollBefehl() { return "\"" + Path.Combine(Root, "Fieldbook.exe") + "\" \"%1\""; }
+        static string ProtokollEingetragen()
+        {
+            using (var k = Registry.CurrentUser.OpenSubKey(ProtokollSchluessel + @"\shell\open\command"))
+                return k == null ? null : k.GetValue("") as string;
+        }
+
+        static Dictionary<string, object> BrowserStart(bool an)
+        {
+            try
+            {
+                string exe = Path.Combine(Root, "Fieldbook.exe");
+                if (an)
+                {
+                    if (!File.Exists(exe)) return new Dictionary<string, object> { { "fehler", "Fieldbook.exe fehlt im Fieldbook-Ordner." } };
+                    using (var k = Registry.CurrentUser.CreateSubKey(ProtokollSchluessel))
+                    {
+                        k.SetValue("", "URL:Fieldbook");
+                        k.SetValue("URL Protocol", "");
+                        using (var s = k.CreateSubKey("DefaultIcon")) s.SetValue("", "\"" + exe + "\",0");
+                        using (var c = k.CreateSubKey(@"shell\open\command")) c.SetValue("", ProtokollBefehl());
+                    }
+                }
+                // Nur den eigenen Eintrag entfernen, nicht den eines anderen Fieldbook-Ordners
+                else if (ProtokollEingetragen() == ProtokollBefehl()) Registry.CurrentUser.DeleteSubKeyTree(ProtokollSchluessel, false);
+                lock (Lk) { einst["browserStart"] = an; SpeichereEinst(); }
+                return new Dictionary<string, object> { { "ok", true }, { "an", an } };
+            }
+            catch (Exception e) { return new Dictionary<string, object> { { "fehler", e.Message } }; }
+        }
+
+        // Eingeschaltet, aber der Ordner wurde verschoben (oder ein anderes Fieldbook hat sich eingetragen): neu eintragen
+        static void ProtokollPruefen()
+        {
+            if (Bool(einst, "browserStart") && ProtokollEingetragen() != ProtokollBefehl()) BrowserStart(true);
         }
 
         // ------------------------------------------------------------------ Programm-Update (Fieldbook selbst)

@@ -78,6 +78,8 @@ async function ansichtFehler(ziel, e) {
   const text = OW.nichtErreichbar ? NICHT_ERREICHBAR : "Diese Seite konnte nicht geladen werden. Bitte versuche es noch einmal.";
   // Kommt Fieldbook wieder, baut aktualisiereStatus die Seite selbst neu auf; sonst hier
   const box = fehlerBox(text, async () => { const weg = OW.nichtErreichbar; await aktualisiereStatus(); if (!weg || OW.nichtErreichbar) navigiere(); }, null, e && e.message);
+  // Ohne Symbol: Läuft Fieldbook nicht, lädt auch symbole.svg nicht (es bliebe eine Lücke)
+  if (OW.nichtErreichbar && startAusBrowser()) box.lastChild.append(el("button", { type: "button", class: "knopf knopf-klein", style: "margin-left:8px", onclick: fieldbookStarten }, "Fieldbook starten"));
   box.classList.add("ansicht-fehler");
   // Gleiche Breite wie der Seiteninhalt (.spalte)
   box.style.maxWidth = "1100px";
@@ -114,6 +116,7 @@ async function holeStatus() {
     if (vorher && vorher.start && s.start && vorher.start !== s.start && !document.querySelector(".dialog-hinter[data-neustart]")) { location.reload(); return s; }
     OW.status = s;
     OW.statusZeit = Date.now();
+    browserStartMerken(!!s.browserStart);
     if (vorher && vorher.bibliothek !== s.bibliothek) OW.buecher = null;
     zeigeKopfStatus(s);
     statistikNachfragen(s);
@@ -126,7 +129,7 @@ async function holeStatus() {
     if (++statusFehler < 2) { setTimeout(aktualisiereStatus, 1500); return null; }
     OW.nichtErreichbar = true;
     const p = $("#ki-pill");
-    if (p) pillSetzen(p, "weg", () => { p.textContent = "Fieldbook antwortet nicht"; p.className = "pill fehler"; });
+    if (p) pillSetzen(p, "weg", () => { p.textContent = "Fieldbook antwortet nicht"; p.className = "pill fehler"; p.title = startAusBrowser() ? "Klicken, um Fieldbook zu starten" : ""; });
     return null;
   }
 }
@@ -164,7 +167,7 @@ function zeigeKopfStatus(s) {
     else if (ki.status === "bereit") { p.textContent = "KI bereit"; p.className = "pill ok"; p.title = ki.modell + " – klicken für Sparmodus"; }
     else if (ki.status === "laedt") { p.textContent = "KI lädt …"; p.className = "pill warn"; p.title = ki.modell; }
     else if (ki.status === "fehler") { p.textContent = "KI-Fehler"; p.className = "pill fehler"; p.title = ki.fehler; }
-    else { p.textContent = "KI aus"; p.className = "pill"; }
+    else { p.textContent = "KI aus"; p.className = "pill"; p.title = "KI wechseln oder einschalten"; }
   });
 
   // Laufende Downloads: kleiner Hinweis in der Kopfzeile, Klick führt zu "Inhalte"
@@ -331,6 +334,8 @@ function andereMenuesZu(liste) { MENUES.forEach(m => { if (m.liste !== liste) m.
     liste.replaceChildren(...teile);
   }
   knopf.addEventListener("click", () => {
+    // „Fieldbook antwortet nicht“: Klick startet Fieldbook; der Tab findet es danach von selbst wieder
+    if (OW.nichtErreichbar) { if (startAusBrowser()) fieldbookStarten(); return; }
     if (!OW.status) return;
     liste.hidden = !liste.hidden;
     if (!liste.hidden) andereMenuesZu(liste);
@@ -421,9 +426,35 @@ async function programmBeenden() {
   await api("beenden", {}).catch(() => { });
   // Keine Statusabfragen mehr, sonst Fehler jede Sekunde
   statusBeendet = true;
+  tabZustand = "beendet"; // ein beendeter Tab meldet sich bei neuen Tabs nicht mehr
   clearInterval(statusTimer);
   clearInterval(schnellTimer);
-  document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:Segoe UI,sans-serif"><h1>Fieldbook wurde beendet.</h1><p>Du kannst dieses Fenster schließen.</p></div>';
+  document.body.innerHTML = '<div style="padding:40px 16px;text-align:center"><h1>Fieldbook wurde beendet.</h1><p>Du kannst dieses Fenster schließen.</p>' +
+    (startAusBrowser() ? '<p style="margin-top:20px"><button type="button" class="knopf" id="wieder-starten">Fieldbook wieder starten</button></p>' : '') + '</div>';
+  const wieder = document.getElementById("wieder-starten");
+  if (wieder) wieder.addEventListener("click", () => {
+    fieldbookStarten();
+    // Statusabfragen sind abgeschaltet: selbst nachsehen und neu laden, sobald Fieldbook antwortet (höchstens 3 Minuten)
+    const ende = Date.now() + 180000;
+    const t = setInterval(() => {
+      if (Date.now() > ende) { clearInterval(t); return; }
+      fetch("/anderer-tab.html", { method: "HEAD", cache: "no-store" }).then(r => { if (r.ok) { clearInterval(t); location.reload(); } }, () => { });
+    }, 1500);
+  });
+}
+
+// Einstellung „Start aus dem Browser“ (aus, bis man sie einschaltet). Auch in localStorage gemerkt: anderer-tab.html
+// liest sie dort, denn ohne laufendes Fieldbook gibt es keinen Status.
+function startAusBrowser() { return !!(OW.status && OW.status.browserStart); }
+function browserStartMerken(an) { try { if (an) localStorage.setItem("fbBrowserStart", "1"); else localStorage.removeItem("fbBrowserStart"); } catch { } }
+
+// Startet Fieldbook über die Adresse fieldbook://start (trägt Server.BrowserStart in Windows ein). Der Browser fragt
+// vorher, ob er Fieldbook öffnen darf; Fieldbook.exe öffnet dann keinen neuen Tab, dieser Tab findet es selbst wieder.
+function fieldbookStarten() {
+  const p = $("#ki-pill");
+  // sig bleibt „weg“: Weitere Fehlschläge beim Nachfragen überschreiben „startet“ nicht, erst die erste Antwort
+  if (p && OW.nichtErreichbar) { p.textContent = "Fieldbook startet …"; p.className = "pill warn"; p.dataset.sig = "weg"; }
+  location.href = "fieldbook://start";
 }
 
 // Sieht die Eingabe wie eine Frage aus? Fragezeichen ist nicht nötig.
@@ -437,23 +468,83 @@ function istFrage(t) {
 
 window.addEventListener("hashchange", navigiere);
 
-// Doppelte Tabs vermeiden: Öffnet Fieldbook beim Start einen neuen Tab, obwohl schon einer offen ist
-// (z. B. weil der Browser seine alten Tabs wiederhergestellt hat), schließt sich der neue wieder.
-// Nur ein frisch von Fieldbook geöffneter Tab (Startseite, ohne Verlauf) tut das, nie ein Tab, in dem man schon war.
+// Kopfzeile: so wenig eng wie möglich, so eng wie nötig. Stufen eng1 bis eng4 (app.css) werden der Reihe nach
+// ausprobiert, bis alles in die Zeile passt. Neu gemessen wird, wenn sich die Breite oder der Inhalt rechts ändert
+// (Akku-Restzeit, Sparmodus, Downloads), bei der ersten Einrichtung und nach dem Laden der Schriften.
+(function kopfAnpassen() {
+  const kopf = $(".kopf"), status = $(".kopf-status");
+  if (!kopf) return;
+  const passt = () => {
+    const r = kopf.getBoundingClientRect(), cs = getComputedStyle(kopf);
+    const links = r.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft) - 1;
+    const rechts = r.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight) + 1;
+    for (const c of kopf.children) {
+      const b = c.getBoundingClientRect();
+      if (b.width && (b.left < links || b.right > rechts)) return false;
+    }
+    return true;
+  };
+  let laeuft = false;
+  const anpassen = () => {
+    if (laeuft) return;
+    laeuft = true;
+    try {
+      for (let n = 0; n <= 4; n++) {
+        for (let i = 1; i <= 4; i++) kopf.classList.toggle("eng" + i, i <= n);
+        if (n === 4 || passt()) break;
+      }
+    } finally { laeuft = false; }
+  };
+  let geplant = false;
+  const spaeter = () => { if (!geplant) { geplant = true; requestAnimationFrame(() => { geplant = false; anpassen(); }); } };
+  if ("ResizeObserver" in window) new ResizeObserver(spaeter).observe(kopf);
+  else window.addEventListener("resize", spaeter);
+  new MutationObserver(spaeter).observe(status, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["hidden", "class"] });
+  new MutationObserver(spaeter).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(spaeter);
+  anpassen();
+})();
+
+// Doppelte Tabs vermeiden: Öffnet Fieldbook beim Start einen neuen Tab, obwohl schon einer offen ist (z. B. weil
+// der Browser seine alten Tabs wiederhergestellt hat oder der alte im Hintergrund lag), bleibt der neue Tab offen:
+// Er liegt vorne, dort arbeitet man weiter. Die alten Tabs wechseln auf die winzige Seite anderer-tab.html.
+// (Früher schloss sich der neue Tab; danach zeigte der Browser aber irgendeinen Nachbar-Tab, nie den alten.)
+// Nur ein frisch von Fieldbook geöffneter, sichtbarer Tab (Startseite, ohne Verlauf) löst das aus. Selbst geöffnete
+// zweite Tabs (z. B. Mittelklick auf einen Link) haben eine Adresse mit # und stören niemanden.
+let tabZustand = "aktiv"; // "aktiv", "abgegeben" (anderer Tab arbeitet) oder "beendet" (Fieldbook über das Menü beendet)
 (function doppelteTabs() {
   if (!("BroadcastChannel" in window)) return;
   const kanal = new BroadcastChannel("fieldbook-tabs");
   const ich = { t: performance.timeOrigin || Date.now() };
   // Frisch: gerade erst geöffnet (höchstens 15 s), noch auf der Startseite und ohne Verlauf
   const frisch = () => Date.now() - ich.t < 15000 && location.pathname === "/" && !location.hash && history.length === 1;
+
+  // Diesen Tab stilllegen. Nicht nur den Inhalt austauschen: Erst das Verlassen der Seite gibt den ganzen Speicher frei
+  // (Skripte, Karte samt Grafikspeicher, PDF-Leser, Zwischenspeicher). Ungespeicherte Notizen sichert notizen.js
+  // dabei wie beim Schließen. replace: kein Eintrag im Verlauf, darum hält der Browser die alte Seite auch nicht
+  // für „Zurück“ im Speicher. Die Seite dort fragt beim Anschauen nach und kehrt zur alten Adresse zurück.
+  function abgeben() {
+    if (tabZustand !== "aktiv") return;
+    tabZustand = "abgegeben";
+    statusBeendet = true;
+    clearInterval(statusTimer);
+    clearInterval(schnellTimer);
+    kanal.close();
+    location.replace("/anderer-tab.html#" + encodeURIComponent(location.pathname + location.search + location.hash));
+  }
+
   kanal.onmessage = (e) => {
     const d = e.data || {};
-    if (d.art === "hallo") kanal.postMessage({ art: "da", t: ich.t, frisch: frisch() });
-    // Ein anderer Tab ist da (egal, ob er vor oder nach diesem geladen hat): der frische Tab geht,
-    // sind beide frisch, der jüngere
-    if (frisch() && !ich.weg && (!d.frisch || d.t < ich.t)) { ich.weg = true; window.close(); }
+    if (tabZustand !== "aktiv") return;
+    // Ein frisch geöffneter Tab oder einer, der übernimmt (Knopf auf anderer-tab.html): dieser Tab gibt ab
+    // (sind beide frisch, gibt der ältere ab; der neue liegt vorne)
+    if ((d.art === "hallo" && (!frisch() || d.t > ich.t)) || d.art === "uebernehmen") abgeben();
+    // Ein abgegebener Tab fragt, ob noch ein Tab arbeitet
+    else if (d.art === "frage") kanal.postMessage({ art: "aktiv" });
   };
-  kanal.postMessage({ art: "hallo", t: ich.t, frisch: frisch() });
+
+  // Nur ein sichtbarer Tab meldet sich: vom Browser im Hintergrund wiederhergestellte Tabs sollen den neuen nicht stilllegen
+  if (frisch() && !document.hidden) kanal.postMessage({ art: "hallo", t: ich.t });
 })();
 
 (async function init() {

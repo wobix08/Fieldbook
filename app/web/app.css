@@ -142,36 +142,31 @@ button.zahnrad { border: 0; background: none; cursor: pointer; line-height: 1; }
 .einrichtung #thema-knopf { display: inline-grid; }
 .einrichtung .kopf-status { grid-column: 3; }
 .einrichtung .marke { pointer-events: none; }
-/* Schmale Fenster: Das Menü zeigt nur noch Text (nie nur Symbole), alles rückt enger */
-@media (max-width: 1400px) {
-  .kopf-status .pill .sym { display: none; }
-  .pill .lang { display: none; } .pill .kurz { display: inline; }
-}
-@media (max-width: 1250px) {
-  .kopf { gap: 10px; padding: 10px 12px; }
-  .hauptnav { gap: 2px; }
-  .hauptnav a { padding: 8px 10px; }
-  .hauptnav .sym { display: none; }
-}
-@media (max-width: 1000px) {
-  .marke span { display: none; }
-  .kopf { gap: 6px; padding: 8px 8px; }
-  .hauptnav a { padding: 6px 7px; font-size: .92rem; }
-  .kopf-status { gap: 4px; }
-  .kopf-status .pill { padding: 3px 8px; font-size: .8rem; }
-  .zahnrad { padding: 2px 3px; }
-}
-/* Halbe Bildschirmbreite: Menü in einer eigenen zweiten Zeile, in der Mitte und gut lesbar,
-   statt seitlich abgeschnitten. Oben links wieder Logo und Name, rechts die Knöpfe. */
-@media (max-width: 760px) {
-  .kopf { grid-template-columns: auto 1fr; row-gap: 4px; padding: 6px 10px 4px; }
-  .marke { justify-self: start; font-size: 1.15rem; }
-  .marke span { display: inline; }
-  .marke .logo { width: 24px; height: 24px; }
-  .hauptnav { grid-column: 1 / -1; grid-row: 2; justify-content: center; flex-wrap: wrap; gap: 0 2px; }
-  .hauptnav a { padding: 5px 9px; font-size: .95rem; }
-  .einrichtung .kopf-status { grid-column: 2; }
-}
+/* Zu wenig Platz: Die Kopfzeile rückt stufenweise enger. Welche Stufe gilt, misst app.js (kopfAnpassen) am
+   tatsächlichen Inhalt, nicht an der Fensterbreite: Akku-Restzeit, Sparmodus, Downloads und Bildschirm-Skalierung
+   brauchen unterschiedlich viel Platz. Das Menü zeigt nie nur Symbole, höchstens nur Text. */
+.kopf.eng1 .kopf-status .pill .sym { display: none; }
+.kopf.eng1 .pill .lang { display: none; }
+.kopf.eng1 .pill .kurz { display: inline; }
+.kopf.eng2 { gap: 10px; padding: 10px 12px; }
+.kopf.eng2 .hauptnav { gap: 2px; }
+.kopf.eng2 .hauptnav a { padding: 8px 10px; }
+.kopf.eng2 .hauptnav .sym { display: none; }
+.kopf.eng3 .marke span { display: none; }
+.kopf.eng3 { gap: 6px; padding: 8px 8px; }
+.kopf.eng3 .hauptnav a { padding: 6px 7px; font-size: .92rem; }
+.kopf.eng3 .kopf-status { gap: 4px; }
+.kopf.eng3 .kopf-status .pill { padding: 3px 8px; font-size: .8rem; }
+.kopf.eng3 .zahnrad { padding: 2px 3px; }
+/* Letzte Stufe: Menü in einer eigenen zweiten Zeile, in der Mitte und gut lesbar, statt seitlich abgeschnitten.
+   Oben links wieder Logo und Name, rechts die Knöpfe. */
+.kopf.eng4 { grid-template-columns: auto 1fr; row-gap: 4px; padding: 6px 10px 4px; }
+.kopf.eng4 .marke { justify-self: start; font-size: 1.15rem; }
+.kopf.eng4 .marke span { display: inline; }
+.kopf.eng4 .marke .logo { width: 24px; height: 24px; }
+.kopf.eng4 .hauptnav { grid-column: 1 / -1; grid-row: 2; justify-content: center; flex-wrap: wrap; gap: 0 2px; }
+.kopf.eng4 .hauptnav a { padding: 5px 9px; font-size: .95rem; }
+.einrichtung .kopf.eng4 .kopf-status { grid-column: 2; }
 
 .banner { padding: 10px 18px; background: var(--gelb-hell); color: var(--gelb); border-bottom: 1px solid var(--linie); }
 .banner button { margin-left: 10px; }

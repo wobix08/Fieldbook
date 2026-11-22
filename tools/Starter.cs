@@ -32,8 +32,13 @@ static class Starter
                 "Fieldbook", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return 1;
         }
+        // Aufruf ueber fieldbook://start (Knopf in einem offenen Fieldbook-Tab; eingetragen von Server.BrowserStart, nur mit
+        // der Einstellung "Start aus dem Browser"):
+        // Fieldbook starten, aber keinen neuen Tab oeffnen, der alte Tab kehrt von selbst zurueck. Der Rest der Adresse
+        // wird nie ausgewertet (jede Webseite kann sie aufrufen).
+        bool ausTab = args.Length >= 1 && args[0].StartsWith("fieldbook:", StringComparison.OrdinalIgnoreCase);
         // Konsolenfenster minimiert starten; bei Fehlern holt start.ps1 es selbst nach vorne
-        var psi = new ProcessStartInfo("cmd.exe", "/c \"\"" + bat + "\"\"")
+        var psi = new ProcessStartInfo("cmd.exe", ausTab ? "/c \"set OW_KEIN_BROWSER=1&& \"" + bat + "\"\"" : "/c \"\"" + bat + "\"\"")
         {
             WorkingDirectory = Path.Combine(ordner, "app"),
             UseShellExecute = true,

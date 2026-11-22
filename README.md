@@ -113,9 +113,11 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Das hilft auch, wenn ein Virenschutz die .exe blockiert (mehr dazu unter [Downloads in Firmen- und Schulnetzen](#downloads-in-firmen--und-schulnetzen)).
 - **Keine Installation, keine Administratorrechte**\
   Fieldbook verändert nichts an Windows und schreibt nur in seinen eigenen Ordner.\
-  Einzige Ausnahme: Die *optionale* automatische Aktualisierung legt zwei Aufgaben in der Windows-Aufgabenplanung an.\
+  Zwei Ausnahmen, beide *optional* und aus, bis du sie einschaltest:\
+  Die automatische Aktualisierung legt zwei Aufgaben in der Windows-Aufgabenplanung an.\
+  Der „Start aus dem Browser“ trägt die Adresse `fieldbook://` für deinen Benutzer in Windows ein. Damit kann ein offener Fieldbook-Tab Fieldbook starten, wenn es nicht läuft.\
   Zum Entfernen genügt es, den Ordner zu löschen.\
-  Hast du die automatische Aktualisierung eingeschaltet, schalte sie vorher in den Einstellungen aus, dann verschwinden auch die beiden Aufgaben.
+  Hast du eine der beiden Funktionen eingeschaltet, schalte sie vorher in den Einstellungen aus, dann verschwinden auch ihre Einträge in Windows.
 - **Deine Daten bleiben bei dir**\
   Kein Konto, keine Werbung.\
   Alles läuft auf `localhost`, also nur auf deinem Gerät.\
