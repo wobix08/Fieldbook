@@ -113,6 +113,7 @@ Eine kleine Suchhilfe, die mit der KI kommt, sortiert die Treffer dabei nach ihr
 Klick auf eine Nummer öffnet den Artikel.\
 Er springt zu der Stelle, aus der die Antwort am ehesten stammt, und hebt sie grün hervor.\
 Bei Erste-Hilfe-Fragen und zur Hausapotheke antwortet die KI aus dem eingebauten Erste-Hilfe-Kurs bzw. der Vorsorge-Liste.\
+Auch die übrigen eingebauten Inhalte nutzt sie, z. B. was bei Sirene, Stromausfall oder Hochwasser zu tun ist, und die Werkzeuge (Norden finden, Notsignale, Gewitter).\
 Schon während die KI noch arbeitet, erscheinen die ersten Treffer und danach die geprüften Quellen.\
 Wer lieber selbst liest, kann sie sofort öffnen.\
 Unter der Antwort stehen Suchbegriffe, mit denen du in der Bibliothek selbst weiterlesen kannst.\

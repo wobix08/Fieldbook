@@ -470,7 +470,7 @@ window.addEventListener("hashchange", navigiere);
   let imRundgang = false;
   try { imRundgang = !!sessionStorage.getItem("fb-rundgang"); } catch { }
   if (s && s.setupFertig && !imRundgang && nachUpdate())
-    api("neuigkeiten?offen=1").then(n => { if (n.offen && n.notizen && nachUpdate()) location.hash = "#neu"; }).catch(() => { });
+    api("neuigkeiten?offen=1").then(n => { if (n.offen && n.versionen && n.versionen.length && nachUpdate()) location.hash = "#neu"; }).catch(() => { });
   // Bei verstecktem Tab nur jede 4. Runde fragen, auf Akku jede 3. (alle 15 s)
   let runde = 0;
   statusTimer = setInterval(() => {

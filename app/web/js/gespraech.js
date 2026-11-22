@@ -39,7 +39,20 @@ const Gespraech = (() => {
   let gezeigt = null;            // Bühne: angeklickte ältere Nachricht, null = die neueste
   if (!spiel()) try { du = localStorage.getItem("fb-gespraech-du"); if (localStorage.getItem("fb-gespraech-ansicht") === "chat") ansicht = "chat"; } catch { }
   // Seite verlassen: Mikrofon im Sprechmodus aus, Vorlesen anhalten
-  window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#uebersetzen")) { if (aufnahme) aufnahme.abbrechen(); smStopp(); vorlesenStopp(); modus = "schreiben"; } });
+  window.addEventListener("hashchange", () => { if (!location.hash.startsWith("#uebersetzen")) { if (aufnahme) aufnahme.abbrechen(); smStopp(); vorlesenStopp(); modus = "schreiben"; sprechDienst(false); } });
+
+  // Sprech-Dienst: Solange der Sprechmodus offen ist, hält der Server Parakeet geladen (je Satz etwa 0,9 s schneller).
+  // Lebenszeichen alle 30 s; bleibt es aus (Browser zu), beendet der Server ihn nach 90 s von selbst.
+  let dienstTakt = null;
+  function sprechDienst(an) {
+    if (an === !!dienstTakt) return;
+    clearInterval(dienstTakt);
+    dienstTakt = null;
+    const melden = (x) => fetch("/api/sprechen/dienst?an=" + x, { method: "POST" }).catch(() => { });
+    if (an) { melden(1); dienstTakt = setInterval(() => melden(1), 30000); }
+    else melden(0);
+  }
+  window.addEventListener("pagehide", () => { if (dienstTakt) navigator.sendBeacon("/api/sprechen/dienst?an=0"); });
 
   async function zeigen() {
     const c = $("#gs-inhalt");
@@ -105,6 +118,7 @@ const Gespraech = (() => {
     if (!du || !codes.includes(du) || du === ich) du = (liste.find(s => s.code !== ich && s.code !== "en") || liste.find(s => s.code !== ich)).code;
     const sprechbar = mitSpracheingabe() && info(ich).sprechen !== false && info(du).sprechen !== false;
     const sprechmodus = modus === "sprechen" && sprechbar;
+    sprechDienst(sprechmodus && !spiel());
 
     // Umschalter Schreiben | Sprechen (nur mit Spracheingabe)
     if (mitSpracheingabe()) {

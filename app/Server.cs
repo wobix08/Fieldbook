@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.7.2";
+        public const string Version = "0.8.8";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -3822,6 +3822,7 @@ namespace OfflineWissen
                 case "routengroesse": SendeJson(ctx, RoutenGroesse((Q("ids") ?? "").Split(','))); return;
                 case "installieren": SendeJson(ctx, Installieren(LeseBody(ctx))); return;
                 case "sprechen": Sprechen(ctx, Q("sprache"), Q("paar"), Q("erwartet")); return;
+                case "sprechen/dienst": SendeJson(ctx, SprechDienstSchalten(Q("an") == "1")); return;
                 case "vorlesen": Vorlesen(ctx); return;
                 case "downloads/aufraeumen":
                     // Fertige Downloads aus der Liste nehmen (die Inhalte bleiben installiert); geht auch während Downloads laufen.
@@ -6671,6 +6672,7 @@ namespace OfflineWissen
                 {
                     lock (sprechenLk)
                     {
+                        SprechDienstStoppen();   // hält sonst Modelle und DLLs fest
                         foreach (var m in SprachModelle()) if (File.Exists(SprachModellPfad(m))) File.Delete(SprachModellPfad(m));
                         string d = Path.Combine(Prog, "whisper");
                         if (Directory.Exists(d)) Directory.Delete(d, true);
@@ -7794,7 +7796,7 @@ namespace OfflineWissen
         // Die Notizen werden beim Herunterladen gemerkt (das Einspielen geschieht oft erst beim nächsten Start, vielleicht
         // ohne Internet). Fehlen sie (Update mit einer älteren Version geladen, von Hand ausgepackt), einmal bei GitHub fragen.
         static string NeuigkeitenDatei { get { return Path.Combine(UpdateOrdner, "neuigkeiten.json"); } }
-        static Dictionary<string, object> neuigkeitenGeholt;
+        static List<Dictionary<string, object>> neuigkeitenGeholt;
         static bool neuigkeitenVersucht;
 
         static void NeuigkeitenBeimStart()
@@ -7807,38 +7809,94 @@ namespace OfflineWissen
                 bool update = vorher != null ? VersionNeuer(Version, vorher) : einst.Count > 0;
                 einst["versionZuletzt"] = Version;
                 if (update) einst["neuigkeitenOffen"] = Version; else einst.Remove("neuigkeitenOffen");
+                // Von welcher Version aus aktualisiert wurde: bei einem Sprung zeigt „Was ist neu?“ alle Versionen seitdem
+                if (update && vorher != null) einst["versionVorher"] = vorher; else einst.Remove("versionVorher");
                 SpeichereEinst();
                 if (update) Log("Update von " + (vorher ?? "einer älteren Version") + " auf " + Version + ": Seite „Was ist neu?“ wird einmal gezeigt.");
             }
         }
 
+        // Ein Eintrag je Version: { version, titel, notizen, datum }
+        static Dictionary<string, object> NeuigkeitAusRelease(Dictionary<string, object> rel)
+        {
+            string v = (Str(rel, "tag_name") ?? "").TrimStart('v', 'V');
+            if (v == "" || string.IsNullOrEmpty(Str(rel, "body")) || Bool(rel, "draft") || Bool(rel, "prerelease")) return null;
+            return new Dictionary<string, object> {
+                { "version", v }, { "titel", Str(rel, "name") ?? ("Fieldbook " + v) }, { "notizen", Str(rel, "body") }, { "datum", Str(rel, "published_at") ?? "" } };
+        }
+
+        // Alle Releases von GitHub (die neuesten 30), um übersprungene Versionen mitzunehmen
+        static List<Dictionary<string, object>> NeuigkeitenListeVonGitHub()
+        {
+            string api = UpdateApi();
+            if (api == null || !api.EndsWith("/releases/latest", StringComparison.OrdinalIgnoreCase)) return null;
+            var liste = Json.DeserializeObject(HoleText(api.Substring(0, api.Length - "/latest".Length) + "?per_page=30", 15000)) as object[];
+            if (liste == null) return null;
+            return liste.OfType<Dictionary<string, object>>().Select(NeuigkeitAusRelease).Where(n => n != null).ToList();
+        }
+
+        // Gemerkte Notizen lesen (bis 0.8.7 lag dort nur eine einzelne Version)
+        // „von“: Die Liste enthält alle Versionen nach dieser (beim Herunterladen die damals laufende)
+        static List<Dictionary<string, object>> NeuigkeitenGemerkt(out string von)
+        {
+            von = null;
+            var n = LadeJson(NeuigkeitenDatei);
+            if (n == null) return new List<Dictionary<string, object>>();
+            if (n.ContainsKey("versionen")) { von = Str(n, "von"); return Arr(n, "versionen").OfType<Dictionary<string, object>>().ToList(); }
+            return string.IsNullOrEmpty(Str(n, "version")) ? new List<Dictionary<string, object>>() : new List<Dictionary<string, object>> { n };
+        }
+
+        static void NeuigkeitenSpeichern(List<Dictionary<string, object>> liste, string von)
+        {
+            Directory.CreateDirectory(UpdateOrdner);
+            SicherSchreiben(NeuigkeitenDatei, Json.Serialize(new Dictionary<string, object> { { "von", von }, { "versionen", liste.ToArray() } }));
+        }
+
+        // Beim Herunterladen: Notizen aller Versionen nach der laufenden bis zur neuen merken
+        // (das Einspielen geschieht vielleicht erst beim nächsten Start ohne Internet)
         static void NeuigkeitenMerken(string neu)
         {
-            Dictionary<string, object> rel;
-            lock (ProgUpdateLk) rel = progRelease;
-            if (rel == null || (Str(rel, "tag_name") ?? "").TrimStart('v', 'V') != neu || string.IsNullOrEmpty(Str(rel, "body"))) return;
-            SicherSchreiben(NeuigkeitenDatei, Json.Serialize(new Dictionary<string, object> {
-                { "version", neu }, { "titel", Str(rel, "name") ?? ("Fieldbook " + neu) }, { "notizen", Str(rel, "body") }, { "datum", Str(rel, "published_at") ?? "" } }));
+            List<Dictionary<string, object>> liste = null;
+            try { liste = NeuigkeitenListeVonGitHub(); } catch (Exception e) { AktLog("Neuigkeiten-Liste: " + e.Message); }
+            if (liste == null)
+            {
+                Dictionary<string, object> rel;
+                lock (ProgUpdateLk) rel = progRelease;
+                var n = rel != null ? NeuigkeitAusRelease(rel) : null;
+                liste = n != null ? new List<Dictionary<string, object>> { n } : new List<Dictionary<string, object>>();
+            }
+            liste = liste.Where(n => VersionNeuer(Str(n, "version"), Version) && !VersionNeuer(Str(n, "version"), neu)).ToList();
+            if (liste.Count > 0) NeuigkeitenSpeichern(liste, Version);
         }
 
         static Dictionary<string, object> Neuigkeiten(bool nurOffen)
         {
             bool offen;
-            lock (Lk) offen = Str(einst, "neuigkeitenOffen") == Version;
+            string vorher;
+            lock (Lk) { offen = Str(einst, "neuigkeitenOffen") == Version; vorher = Str(einst, "versionVorher"); }
             var erg = new Dictionary<string, object> { { "version", Version }, { "offen", offen } };
             if (nurOffen && !offen) return erg;
-            var n = LadeJson(NeuigkeitenDatei);
-            if (n == null || Str(n, "version") != Version) n = NeuigkeitenVonGitHub();
-            if (n != null && !string.IsNullOrEmpty(Str(n, "notizen")))
+            // Gezeigt werden alle Versionen nach der, von der aktualisiert wurde (unbekannt: nur die laufende)
+            Func<List<Dictionary<string, object>>, List<Dictionary<string, object>>> passend = l => l
+                .Where(n => !VersionNeuer(Str(n, "version"), Version) && (vorher != null ? VersionNeuer(Str(n, "version"), vorher) : Str(n, "version") == Version))
+                .OrderByDescending(n => { System.Version v; return System.Version.TryParse(Str(n, "version"), out v) ? v : new System.Version(0, 0); })
+                .ToList();
+            string von;
+            var auswahl = passend(NeuigkeitenGemerkt(out von));
+            // Fehlt die laufende Version (Update mit 0.8.6 oder älter geladen, von Hand ausgepackt) oder reicht die Liste
+            // nicht bis zur vorigen Version zurück, einmal bei GitHub fragen
+            bool vollstaendig = vorher == null || (von != null && !VersionNeuer(von, vorher));
+            if (!auswahl.Any(n => Str(n, "version") == Version) || !vollstaendig)
             {
-                erg["titel"] = Str(n, "titel");
-                erg["notizen"] = Str(n, "notizen");
-                erg["datum"] = Str(n, "datum");
+                var geholt = NeuigkeitenVonGitHub();
+                if (geholt != null) auswahl = passend(geholt);
             }
+            erg["vorher"] = vorher;
+            erg["versionen"] = auswahl.ToArray();
             return erg;
         }
 
-        static Dictionary<string, object> NeuigkeitenVonGitHub()
+        static List<Dictionary<string, object>> NeuigkeitenVonGitHub()
         {
             lock (ProgUpdateLk)
             {
@@ -7846,17 +7904,13 @@ namespace OfflineWissen
                 if (neuigkeitenVersucht) return neuigkeitenGeholt;
                 neuigkeitenVersucht = true;
             }
-            string api = UpdateApi();
-            if (api == null || !api.EndsWith("/releases/latest", StringComparison.OrdinalIgnoreCase)) return null;
             try
             {
-                var rel = Json.DeserializeObject(HoleText(api.Substring(0, api.Length - "latest".Length) + "tags/v" + Version, 8000)) as Dictionary<string, object>;
-                if (rel == null || string.IsNullOrEmpty(Str(rel, "body"))) return null;
-                var n = new Dictionary<string, object> {
-                    { "version", Version }, { "titel", Str(rel, "name") ?? ("Fieldbook " + Version) }, { "notizen", Str(rel, "body") }, { "datum", Str(rel, "published_at") ?? "" } };
-                try { Directory.CreateDirectory(UpdateOrdner); SicherSchreiben(NeuigkeitenDatei, Json.Serialize(n)); } catch { }
-                lock (ProgUpdateLk) neuigkeitenGeholt = n;
-                return n;
+                var liste = NeuigkeitenListeVonGitHub();
+                if (liste == null || liste.Count == 0) return null;
+                try { NeuigkeitenSpeichern(liste.Where(n => !VersionNeuer(Str(n, "version"), Version)).ToList(), "0.0"); } catch { }
+                lock (ProgUpdateLk) neuigkeitenGeholt = liste;
+                return liste;
             }
             catch (Exception e) { Log("Neuigkeiten bei GitHub: " + e.Message); return null; }
         }
@@ -8007,6 +8061,7 @@ namespace OfflineWissen
 
         // Sprechen statt Tippen im Übersetzer: Parakeet für europäische Sprachen, Whisper small für den Rest.
         // Beide laufen pro Aufnahme als eigenes Programm (laden in unter einer Sekunde, danach ist der Speicher frei).
+        // Ausnahme Sprechmodus: dort hält der Sprech-Dienst Parakeet und das Klang-Modell geladen (siehe SprechDienstSchalten).
         static readonly object sprechenLk = new object();
 
         static Dictionary<string, object> SpracheingabeKonfig() { return LadeJson(Path.Combine(Config, "spracheingabe.json")); }
@@ -8128,6 +8183,11 @@ namespace OfflineWissen
         static string SpracheErkennen(string wav, string sprache, double sekunden, Dictionary<string, object> konf)
         {
             bool para = sprache == null || IstParakeet(sprache, konf);
+            if (para)
+            {
+                var d = SprechDienstFragen("text\t" + wav);
+                if (d != null) return d.Length > 0 ? d[0] : "";
+            }
             var modell = SprachModelle().First(m => Str(m, "id") == (para ? "parakeet" : "whisper"));
             var args = new List<string> { "-m", SprachModellPfad(modell), "-f", wav };
             if (!para)
@@ -8197,6 +8257,17 @@ namespace OfflineWissen
             Func<string, string> wc = c => codes != null && codes.ContainsKey(c) ? Convert.ToString(codes[c]) : c;
             try
             {
+                string[] d = sprechKlangModell == SprachModellPfad(modell) ? SprechDienstFragen("klang\t" + wav + "\t" + wc(zwei[0]) + "," + wc(zwei[1])) : null;
+                if (d != null)
+                {
+                    var wd = d.Select(z => z.Trim().Split(' ')).Where(t => t.Length == 2)
+                        .Select(t => double.Parse(t[1], System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+                    if (wd.Length == 2)
+                    {
+                        gehoert = wd[0] >= wd[1] ? zwei[0] : zwei[1];
+                        return Math.Max(-WertungMax, Math.Min(WertungMax, Math.Log((wd[0] + 1e-4) / (wd[1] + 1e-4))));
+                    }
+                }
                 string exe = SprachHelferExe();
                 string whisperOrdner = Path.GetDirectoryName(ProgrammPfad("whisper"));
                 int threads = Math.Max(2, Math.Min(8, Environment.ProcessorCount / 2));
@@ -8250,6 +8321,111 @@ namespace OfflineWissen
                 File.Move(tmp, exe);
                 foreach (var alt in Directory.GetFiles(ordner)) if (alt != exe) try { File.Delete(alt); } catch { }
                 return exe;
+            }
+        }
+
+        // Sprech-Dienst (Nutzer, 22. Nov. 2026): Im Sprechmodus kommt es beim Hin und Her auf jede Sekunde an. Solange er offen
+        // ist, hält SprachHelfer.exe Parakeet (etwa 700 MB) und das Klang-Modell geladen; das spart je Satz etwa 0,9 s.
+        // Die Oberfläche schaltet ihn beim Umschalten ein und aus und meldet sich alle 30 s; ohne Lebenszeichen endet er
+        // nach 90 s (Browser einfach zugemacht). Im Schreiben-Fenster wird er nie gestartet. Geht er nicht, läuft alles
+        // wie vorher über die Einzelprogramme. Alle Sprech-Dienst-Aufrufe nur unter sprechenLk.
+        static Process sprechDienst;
+        static StreamWriter sprechEin;
+        static StreamReader sprechAus;
+        static DateTime sprechZuletzt;
+        static string sprechKlangModell;
+        const int SprechDienstSekunden = 90;
+
+        static Dictionary<string, object> SprechDienstSchalten(bool an)
+        {
+            lock (sprechenLk)
+            {
+                if (!an) { SprechDienstStoppen(); return new Dictionary<string, object> { { "ok", true } }; }
+                sprechZuletzt = DateTime.Now;
+                if (sprechDienst != null && !sprechDienst.HasExited) return new Dictionary<string, object> { { "ok", true } };
+                if (!SpracheingabeBereit()) return new Dictionary<string, object> { { "ok", false } };
+                try { SprechDienstStarten(); return new Dictionary<string, object> { { "ok", true } }; }
+                catch (Exception e)
+                {
+                    Log("Sprech-Dienst startet nicht: " + e.Message);
+                    SprechDienstStoppen();
+                    return new Dictionary<string, object> { { "ok", false } };
+                }
+            }
+        }
+
+        static void SprechDienstStoppen()
+        {
+            var p = sprechDienst;
+            sprechDienst = null; sprechEin = null; sprechAus = null; sprechKlangModell = null;
+            if (p == null) return;
+            try { if (!p.HasExited) p.Kill(); } catch { }
+            try { p.Dispose(); } catch { }
+        }
+
+        static void SprechDienstStarten()
+        {
+            var modelle = SprachModelle();
+            var tiny = modelle.FirstOrDefault(m => Str(m, "id") == "tiny");
+            var klang = tiny != null && File.Exists(SprachModellPfad(tiny)) ? tiny : modelle.First(m => Str(m, "id") == "whisper");
+            string parakeet = SprachModellPfad(modelle.First(m => Str(m, "id") == "parakeet"));
+            string whisperOrdner = Path.GetDirectoryName(ProgrammPfad("whisper"));
+            int threads = Math.Max(2, Math.Min(8, Environment.ProcessorCount / 2));
+            var psi = new ProcessStartInfo(SprachHelferExe(), "dienst \"" + whisperOrdner + "\" \"" + parakeet + "\" \"" + SprachModellPfad(klang) + "\" " + threads)
+            {
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                StandardOutputEncoding = new UTF8Encoding(false), WorkingDirectory = whisperOrdner
+            };
+            var p = new Process { StartInfo = psi };
+            p.ErrorDataReceived += (o, e) => { };   // Ladeprotokoll von whisper.dll nur abholen, sonst läuft der Puffer voll
+            p.Start();
+            ChildJob.Add(p);
+            p.BeginErrorReadLine();
+            sprechDienst = p;
+            sprechEin = new StreamWriter(p.StandardInput.BaseStream, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" };
+            sprechAus = p.StandardOutput;
+            var erste = sprechAus.ReadLineAsync();
+            if (!erste.Wait(30000) || erste.Result != "bereit") throw new Exception(erste.IsCompleted ? (erste.Result ?? "beendet") : "zu langsam");
+            sprechKlangModell = SprachModellPfad(klang);
+            var w = new Thread(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(10000);
+                    lock (sprechenLk)
+                    {
+                        if (sprechDienst != p) return;
+                        if (p.HasExited || (DateTime.Now - sprechZuletzt).TotalSeconds >= SprechDienstSekunden) { SprechDienstStoppen(); return; }
+                    }
+                }
+            }) { IsBackground = true };
+            w.Start();
+        }
+
+        // Anfrage an den laufenden Dienst; Antwortfelder nach "ok", oder null (Dienst aus oder Fehler, dann Einzelprogramm)
+        static string[] SprechDienstFragen(string zeile)
+        {
+            if (sprechDienst == null) return null;
+            try
+            {
+                if (sprechDienst.HasExited) throw new Exception("beendet");
+                sprechZuletzt = DateTime.Now;
+                sprechEin.WriteLine(zeile);
+                var lesen = sprechAus.ReadLineAsync();
+                if (!lesen.Wait(60000)) throw new Exception("zu langsam");
+                string a = lesen.Result;
+                if (a == null) throw new Exception("beendet");
+                sprechZuletzt = DateTime.Now;
+                var t = a.Split('\t');
+                if (t[0] != "ok") { Log("Sprech-Dienst: " + a); return null; }
+                return t.Skip(1).ToArray();
+            }
+            catch (Exception e)
+            {
+                Log("Sprech-Dienst: " + e.Message);
+                SprechDienstStoppen();
+                return null;
             }
         }
 

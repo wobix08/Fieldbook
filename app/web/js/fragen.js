@@ -582,7 +582,12 @@ const Fragen = (() => {
           // Sicherheitsfrage, Fieldbook allein: nur weitere Fieldbook-Absätze dazu. Sonst kam über die Mischform genau
           // der Bibliothekssatz zurück, den das Allein-Schreiben fernhalten soll (Regenwasser: Kinderlexikon, Beeren: Esstest)
           const nurFb = kurs.length && sicherheitsFrage(suchFrage);
-          anKi = await mischen(anKi, nurFb ? abs.filter(p => p.art === "fieldbook") : abs, suchFrage, budget());
+          // Nur im Test (window.__mischBeide = {}): dieselben Artikel auch nach dem alten Verfahren mischen (Vergleich)
+          if (window.__mischBeide) window.__mischBeide.anKi = await mischen(anKi.map(q => Object.assign({}, q)), nurFb ? abs.filter(p => p.art === "fieldbook") : abs, suchFrage, budget(), true);
+          // Auszug ohne Füllstoff vorerst nur fürs 4B (Nutzer, 22. Nov. 2026: beim 9B erst getrennt prüfen, dort waren die
+          // Antworten schon besser). Test fürs 9B: window.__auszugNeu = true (mit __mischBeide = {} gegen das alte Verfahren)
+          const auszugAlt = !(OW.status && OW.status.modell === "qwen35-4b") && !window.__auszugNeu;
+          anKi = await mischen(anKi, nurFb ? abs.filter(p => p.art === "fieldbook") : abs, suchFrage, budget(), auszugAlt);
           fertig(s3c, anKi.filter(q => q.absatz).length + " passende Absätze dazu");
         } catch (e) { halt(); fertig(s3c, "Absatzsuche hat nicht geklappt.", true); }
       }
@@ -600,6 +605,10 @@ const Fragen = (() => {
       // Mit Kurs-Lektion schreibt die KI nur aus dem Kurs; die Bibliotheksartikel stehen zum Selberlesen in der Liste.
       // Test 13. Nov. 2026: Die restlichen Fehler kamen aus ihnen („bei Wirbelsäulenverdacht keine Seitenlage“, andere Handgriffe)
       const antwort = await antworten(suchFrage, anKi, einfach, kontext, lage, (t) => zeigeGedrosselt(t, quellen));
+      // Testwerkzeug (wie __sortierTest): mit window.__mischBeide = {} antwortet die KI auch auf die alte Mischung
+      const mb = window.__mischBeide, kennung = (l) => JSON.stringify(l.map(q => [q.titel, q.text]));
+      if (mb && mb.anKi && (mb.gleich = kennung(mb.anKi) === kennung(anKi)) === false)
+        window.__mischBeide.antwort = await antworten(suchFrage, window.__mischBeide.anKi.map((q, i) => Object.assign({}, q, { nr: i + 1 })), einfach, kontext, lage, () => {});
       text.classList.remove("cursor");
       stopGedrosselt();
       stellenSuchen(antwort, quellen);
@@ -688,7 +697,7 @@ const Fragen = (() => {
       ". Nenne andere: Oberbegriffe, Fachbegriffe oder Namen von Verfahren und Geräten, die als Titel eines Lexikonartikels vorkommen.\n";
     const sys = "Du erzeugst Suchbegriffe für eine Offline-Bibliothek (Wikipedia, Lehrbücher, Reparatur- und Selbsthilfe-Anleitungen). " +
       "Benenne zuerst unter \"thema\" in zwei bis vier Wörtern, worum es im Kern geht: das Sachgebiet und was der Nutzer erreichen will " +
-      "(z. B. bei einer Frage nach einem verstauchten Fuß: \"Verstauchung Erste Hilfe\"). Leite die Suchbegriffe aus diesem Thema ab, nicht aus einzelnen Wörtern der Frage. " +
+      "(z. B. bei einer Frage nach einem verstauchten Fuß: \"Verstauchung Erste Hilfe\"). " +
       "Gib dann 1 bis 3 kurze deutsche Suchbegriffe zurück, die wie Artikeltitel klingen (Substantive, z. B. \"Schnittwunde\", \"Radioempfänger\", \"Wundversorgung\"). " +
       "Jeder Begriff ist ein Wort oder höchstens zwei, ohne Verb und ohne \"ohne\", so wie ein Lexikonartikel heißt. " +
       // Test 15. Nov. 2026 (120 Testfragen): Ohne diesen Satz erfand das 4B-Modell oft Wörter wie „Kartoffelkühlung“,
@@ -706,6 +715,11 @@ const Fragen = (() => {
       "(z. B. \"Kühlschrank kühlt nicht\" → \"Kompressor\", \"Kältemaschine\"; englisch \"refrigerator not cooling\"). Modellnummern sucht das Programm selbst. " +
       LAGEN[lage || "normal"] + " " +
       (englisch ? "Gib zusätzlich 1 bis 2 englische Suchbegriffe für englische Quellen zurück. " : "") +
+      // 22. Nov. 2026: Vorher hieß es oben „nicht aus einzelnen Wörtern der Frage“; so gingen Knopf, Splitter, Kerzen verloren.
+      // An 21 Suche-Fragen: Zielartikel im Pool 11 statt 6, in den Quellen 5 statt 2. Steht absichtlich am Ende: weiter oben
+      // veränderte der Satz auch die englischen Begriffe (Heizung, Nottoilette verloren ihre Quellen). ki-versuche.md
+      "Einer der deutschen Suchbegriffe ist immer der wichtigste Gegenstand der Frage, als einzelnes Wort so wie in der Frage, in der Einzahl " +
+      "(z. B. bei \"Wie öle ich eine quietschende Tür?\": \"Tür\"). " +
       "Antworte nur mit JSON.";
     const schema = {
       type: "object",
@@ -719,8 +733,9 @@ const Fragen = (() => {
     };
     // Ohne Zufall (temperature 0): Dieselbe Frage findet immer dieselben Artikel (Nutzer, 18. Nov. 2026; mit 0.1 schwankten
     // die Quellen von Lauf zu Lauf). Nur der zweite Versuch nach erfolgloser Suche probiert mit Zufall andere Wörter.
+    // Testwerkzeug: window.__suchSys = (sys) => geänderte Anweisung (Varianten der Suchbegriffe vergleichen)
     const roh = await mitFrist(60000, (signal) => KI.chat([
-      { role: "system", content: sys },
+      { role: "system", content: window.__suchSys ? window.__suchSys(sys) : sys },
       { role: "user", content: kontext + "Frage: " + frage },
     ], { max_tokens: 120, temperature: ohneErfolg ? 0.7 : 0, response_format: { type: "json_schema", json_schema: { name: "suche", schema } }, signal }));
     let j;
@@ -1057,20 +1072,38 @@ const Fragen = (() => {
     return [...new Set(wahl)].map(n => pr[n - 1]);
   }
 
-  // Quellen an die KI (ganze Artikel) und geprüfte Absätze nach Bedeutung ins Budget füllen.
-  // Absätze aus Artikeln, die schon ganz dabei sind, entfallen. Zu große Blöcke werden auf den Rest gekürzt.
-  async function mischen(quellen, absaetze, frage, budgetZeichen) {
+  // Quellen an die KI (ganze Artikel) und geprüfte Absätze nach Bedeutung ins Budget füllen. Zu große Blöcke werden auf
+  // den Rest gekürzt.
+  // Absätze aus einem Artikel, der schon als Block dabei ist, entfallen nur, wenn ihr Text schon im Block steht
+  // (22. Nov. 2026: Bis dahin entfielen sie immer. Beim Palstek kam so die Geschichte statt „Knüpfen“, bei Kopfschmerzen
+  // fehlte „Therapie“, bei Sturm die Warnstufen; 7 von 26 Problemfragen bekamen gar keinen Absatz dazu).
+  const flach = (s) => String(s || "").replace(/\s+/g, " ").trim();
+  // alt (nur im Vergleichstest): Verhalten vor dem 22. Nov. 2026
+  async function mischen(quellen, absaetze, frage, budgetZeichen, alt) {
     const schonDa = new Set(quellen.map(q => String(q.titel).toLowerCase()));
+    const imBlock = alt ? (p) => schonDa.has(String(p.titel).toLowerCase())
+      : (p) => quellen.some(q => String(q.titel).toLowerCase() === String(p.titel).toLowerCase() && flach(q.text).includes(flach(p.text).slice(0, 80)));
     const bloecke = quellen.map(q => ({ q, kopf: q.titel, text: q.text, fb: !!q.intern }))
-      .concat(absaetze.filter(p => !schonDa.has(String(p.titel).toLowerCase())).map(p => ({ p, kopf: p.titel + (p.ueb ? " – " + p.ueb : ""), text: p.text, fb: p.art === "fieldbook" })));
+      .concat(absaetze.filter(p => !imBlock(p)).map(p => ({ p, kopf: p.titel + (p.ueb ? " – " + p.ueb : ""), text: p.text, fb: p.art === "fieldbook" })));
     if (bloecke.length <= quellen.length) return quellen;
     const v = await mischVektoren(["task: question answering | query: " + frage].concat(bloecke.map(b => "title: " + b.kopf + " | text: " + b.text.slice(0, 1500))));
     bloecke.forEach((b, i) => { b.wert = aehnlich(v[0], v[i + 1]) + (b.fb ? 0.05 : 0); });
     bloecke.sort((a, b) => b.wert - a.wert);
+    // Nur im Test: window.__mischLog = [] zeigt alle Blöcke mit Wert (auch verworfene Absätze aus schon vorhandenen Artikeln)
+    if (window.__mischLog) window.__mischLog.push({ frage, bloecke: bloecke.map(b => ({ kopf: b.kopf, wert: +b.wert.toFixed(3), laenge: b.text.length, art: b.q ? "artikel" : "absatz" })),
+      verworfen: absaetze.filter(p => imBlock(p)).map(p => ({ kopf: p.titel + (p.ueb ? " – " + p.ueb : ""), text: p.text.slice(0, 200) })),
+      ausArtikel: absaetze.filter(p => schonDa.has(String(p.titel).toLowerCase()) && !imBlock(p)).length });
     let rest = budgetZeichen;
     const aus = [];
+    // Kein Füllstoff: Sind 1.500 Zeichen beisammen, kommt nichts mehr dazu, was deutlich schlechter passt als die beste
+    // Quelle (22. Nov. 2026: Ungarisch-Lesebuch bei Dokumenten, Notruf beim Verlaufen, Zelt-Schnallen beim Zeltloch lagen
+    // alle mehr als 0,10 darunter; die KI mischte sie in die Antwort).
+    // Verworfen (22. Nov. 2026): die Grenze erst ab 2 Quellen anwenden. Bringt nichts (14 saubere Paare: besser 6 zu 6,
+    // gleiche Noten, themenfremd 5 statt 2; 12 weitere Paare liefen während eines Bibliotheksabsturzes und zählen nicht).
+    const best = bloecke[0].wert;
     for (const b of bloecke) {
       if (rest < 300) break;
+      if (!alt && budgetZeichen - rest >= 1500 && b.wert < best - 0.10) break;
       let t = b.text;
       if (t.length > rest) { if (rest < 600) continue; t = t.slice(0, rest) + " …"; }
       rest -= t.length;
@@ -1119,7 +1152,19 @@ const Fragen = (() => {
     if (mitPruefung && gueltig.length > 1) {
       try {
         // Passt nichts, bleibt die Liste leer: Dann lieber ehrlich „nichts gefunden“ als eine Antwort aus unpassenden Artikeln
-        auswahl = (await quellenPruefen(frage, gueltig, begriffe.thema)).map(i => gueltig[i]);
+        // TEST (21. Nov. 2026, nur mit window.__sortierTest): Sortiermodell (Reranker) statt Prüfung durch die KI
+        // Mit __sortierTest.vergleich: alle Sortiermodelle (urls) und die KI-Prüfung mitschreiben, Auswahl der KI behalten
+        const st = window.__sortierTest;
+        if (st && st.vergleich) {
+          const ki = await quellenPruefen(frage, gueltig, begriffe.thema);
+          const rr = {};
+          for (const u of st.urls) rr[u] = await sortierPruefen(frage, gueltig, Object.assign({}, st, { url: u }));
+          (window.__vergleichLog = window.__vergleichLog || []).push({ frage, kandidaten: gueltig.map(x => (x.a.titel || x.t.titel) + " · " + x.t.buch.titel),
+            ki, sortier: rr, werte: window.__sortierLog.slice(-st.urls.length) });
+          auswahl = ki.map(i => gueltig[i]);
+        } else
+        auswahl = (st ? await sortierPruefen(frage, gueltig, st)
+          : await quellenPruefen(frage, gueltig, begriffe.thema)).map(i => gueltig[i]);
       } catch { /* Prüfung fehlgeschlagen: alle behalten */ }
     }
     // Sicherheitsfragen: Fieldbook-Inhalte unter den Treffern bleiben und kommen nach vorn (beim Sonnenstich verwarf die
@@ -1208,6 +1253,24 @@ const Fragen = (() => {
   // Getestet (Nov. 2026): Herkunft und Sprache dazu brachte mehr deutsche Quellen und etwas bessere Antworten.
   // Eine Regel „deutsche zuerst“ wirkte zu stark (allgemeine deutsche Artikel statt Anleitungen), eine zusätzliche
   // „passende Stelle“ je Artikel verwirrte das kleine Modell.
+  // TEST (21. Nov. 2026): Sortiermodell bewertet Frage und Text gemeinsam. o = { url, schwelle, zeichen }
+  // Ergebnis wie quellenPruefen: Nummern der passenden Einträge, bester zuerst; alle Werte in window.__sortierLog
+  async function sortierPruefen(frage, eintraege, o) {
+    const docs = eintraege.map(({ t, a }) => {
+      const kapitel = [...new Set(a.abschnitte.map(s => s.ueberschrift).filter(Boolean))].slice(0, 10).join(", ");
+      const text = a.abschnitte.map(s => s.text).join(" ").replace(/\s+/g, " ").slice(0, o.zeichen || 1200);
+      return (a.titel || t.titel || "") + (kapitel ? "\nAbschnitte: " + kapitel : "") + "\n" + text;
+    });
+    const uhr = performance.now();
+    const r = await fetch(o.url + "/v1/rerank", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: frage, documents: docs, top_n: docs.length }) });
+    const j = await r.json();
+    const werte = (j.results || []).map(x => ({ i: x.index, w: x.relevance_score })).sort((a, b) => b.w - a.w);
+    (window.__sortierLog = window.__sortierLog || []).push({ frage, ms: Math.round(performance.now() - uhr),
+      werte: werte.map(x => ({ titel: eintraege[x.i].a.titel || eintraege[x.i].t.titel, w: +x.w.toFixed(3) })) });
+    return werte.filter(x => x.w >= (o.schwelle == null ? -1e9 : o.schwelle)).map(x => x.i);
+  }
+
   async function quellenPruefen(frage, eintraege, thema) {
     const artikel = eintraege.map(x => x.a);
     const liste = eintraege.map(({ t, a }, i) => {
@@ -1310,7 +1373,18 @@ const Fragen = (() => {
       }
     } catch { /* ohne Kurs weiter */ }
     try {
-      const konf = await ladeKonfigSprache("vorsorge");
+      // Texte des gewählten Landes übernehmen (wie fuerLand() in vorsorge.js): Bis 22. Nov. 2026 fehlten der KI alle
+      // Angaben, die nur unter „land“ stehen, z. B. was die Sirenensignale in DE, AT und CH bedeuten
+      const code = (Land.aktuell() || {}).code || "DE";
+      const fuerLand = (x) => {
+        if (Array.isArray(x)) return x.map(fuerLand).filter(y => !(y && y.weg));
+        if (!x || typeof x !== "object") return x;
+        const o = {};
+        for (const k in x) if (k !== "land") o[k] = fuerLand(x[k]);
+        if (x.land && x.land[code]) Object.assign(o, fuerLand(x.land[code]));
+        return o;
+      };
+      const konf = fuerLand(await ladeKonfigSprache("vorsorge"));
       const stufen = ["Das Wichtigste", "Gut vorbereitet", "Weiter vorsorgen"];
       for (const t of (konf.themen || []).filter(x => x.stufen)) {
         const text = [t.warum].concat(t.stufen.map((s, i) => "[" + (stufen[i] || "Stufe " + (i + 1)) + "] " +
@@ -1318,13 +1392,56 @@ const Fragen = (() => {
         doks.push({ art: "vorsorge", titel: "Vorsorge: " + t.titel, url: "#vorsorge?k=" + t.id, text, suchtext: t.titel + ". " + text.replace(/\n/g, " "),
           abschnitte: [{ ueberschrift: "", text: z(t.warum || "") }].concat(...t.stufen.map(s => (s.punkte || []).map(p => ({ ueberschrift: z(p.text), text: z(p.mehr || p.text) })))) });
       }
+      // Lagen („Wenn es passiert“: Sirene, Strom weg, Hochwasser …) mit ihren Schritten. Bis 22. Nov. 2026 nicht
+      // durchsuchbar: Bei Hochwasser riet die KI, die Sicherung zurückzusetzen, während die Lage sagt „Strom für den
+      // Keller abschalten, aber nur, wenn man trocken an den Sicherungskasten kommt“
+      const zeile = (p) => "- " + p.text + (p.mehr ? ": " + p.mehr : "");
+      // Testwerkzeug: __ohneLagen (auch im Test-Rahmen über window.parent) lässt die Lagen weg (Vergleich alt/neu)
+      const ohneLagen = window.__ohneLagen || (window.parent !== window && window.parent.__ohneLagen);
+      for (const l of (ohneLagen ? [] : konf.lagen || []).filter(x => x.schritte)) {
+        const text = [(l.warnung || []).join(" ")].concat(l.schritte.map(s => "[" + s.titel + "] " + (s.punkte || []).map(zeile).join(" ")))
+          .filter(Boolean).map(z).join("\n");
+        doks.push({ art: "vorsorge", titel: "Vorsorge: " + l.titel, url: "#vorsorge?lage=" + l.id, text, suchtext: l.titel + ". " + text.replace(/\n/g, " "),
+          abschnitte: [{ ueberschrift: "", text: z((l.warnung || []).join(" ")) }]
+            .concat(...l.schritte.map(s => (s.punkte || []).map(p => ({ ueberschrift: z(s.titel + ": " + p.text), text: z(p.mehr || p.text) })))) });
+      }
+      // Vorratsrechner (Mengen je Person für 10 Tage), seit 22. Nov. 2026. Testwerkzeug: __ohneRechner (auch über window.parent)
+      const r = konf.rechner, ohneRechner = window.__ohneRechner || (window.parent !== window && window.parent.__ohneRechner);
+      if (r && (r.lebensmittel || []).length && !ohneRechner) {
+        const zahl = (n) => String(n).replace(".", ","), tage = r.tage || 10;
+        const abschnitte = [
+          { ueberschrift: "Mengen für einen Erwachsenen und " + tage + " Tage", text: r.lebensmittel.map(m => "- " + m.titel + ": " + zahl(m.menge) + " " +
+            (m.einheit === "l" ? "Liter" : "kg") + ((m.beispiele || []).length ? " (z. B. " + m.beispiele.map(b => b.name).join(", ") + ")" : "")).join(" ") },
+          // Wasser zuerst und getrennt vom Anteil am Essen: „75 % davon, 1 Liter Wasser“ las das 4B als „75 %, also 2 Liter“
+          { ueberschrift: "Kinder und Wasser pro Tag", text: (r.gruppen || []).filter(g => g.anteil > 0).map(g => "- " + g.titel + " (" + g.alter + "): " +
+            "Wasser zum Trinken und Kochen " + zahl(g.wasser) + " Liter pro Tag. Vom Essen " +
+            (g.anteil === 1 ? "die volle Menge." : "etwa " + Math.round(g.anteil * 100) + " % der Menge für Erwachsene.")).join(" ") },
+          { ueberschrift: "Säuglinge", text: r.saeugling || "" },
+          { ueberschrift: "Woher die Zahlen kommen", text: r.quelle || "" },
+        ].filter(a => a.text).map(a => ({ ueberschrift: z(a.ueberschrift), text: z(a.text) }));
+        const text = abschnitte.map(a => "[" + a.ueberschrift + "] " + a.text).join("\n");
+        doks.push({ art: "vorsorge", titel: "Vorsorge: Vorratsrechner (Mengen für " + tage + " Tage)", url: "#vorsorge?k=essen", text, suchtext: "Vorrat, wie viel. " + text.replace(/\n/g, " "), abschnitte });
+      }
     } catch { /* ohne Vorsorge weiter */ }
+    // Werkzeuge (Orientierung, Sonne und Mond, Signale, Gewitter), seit 22. Nov. 2026 (werkzeuge.js texte()).
+    // Testwerkzeug: __ohneWerkzeuge (auch über window.parent) lässt sie weg
+    try {
+      const ohneWz = window.__ohneWerkzeuge || (window.parent !== window && window.parent.__ohneWerkzeuge);
+      for (const w of (ohneWz || typeof Werkzeuge === "undefined" || !Werkzeuge.texte ? [] : Werkzeuge.texte())) {
+        const abschnitte = w.abschnitte.map(a => ({ ueberschrift: z(a.ueberschrift), text: z(a.text) }));
+        const text = abschnitte.map(a => "[" + a.ueberschrift + "] " + a.text).join("\n");
+        doks.push({ art: "werkzeug", titel: "Werkzeuge: " + w.titel, url: w.url, text, suchtext: w.titel + ". " + text.replace(/\n/g, " "), abschnitte });
+      }
+    } catch { /* ohne Werkzeuge weiter */ }
     // Faustregeln der Seite Kochen (kochen.json „leitfaden“): Wasser trinkbar machen, Einkochen, Haltbarkeit, Verdorben,
     // Wildpflanzen. Seit 19. Nov. 2026 durchsuchbar: Dort steht z. B. „Fleisch nur im Druckeinkochtopf“, während die
     // Bibliothek bei Haltbarmachen-Fragen das Wasserbad-Einkochen lieferte.
+    // Seit 22. Nov. 2026 auch „Rezepte aus dem Vorrat“ (z. B. Pfannenbrot ohne Hefe; bei „Brot ohne Backofen“ kam sonst ein
+    // Frühstücksrezept aus der Bibliothek). Testwerkzeug: __ohneRezepte (auch über window.parent) lässt sie weg
+    const ohneRezepte = window.__ohneRezepte || (window.parent !== window && window.parent.__ohneRezepte);
     try {
       const konf = await ladeKonfigSprache("kochen");
-      for (const t of (konf.leitfaden || []).filter(x => x.id !== "rezepte" && (x.abschnitte || []).length)) {
+      for (const t of (konf.leitfaden || []).filter(x => !(ohneRezepte && x.id === "rezepte") && (x.abschnitte || []).length)) {
         const abschnitte = t.abschnitte.map(a => ({ ueberschrift: z(a.titel), text: z((a.punkte || []).join(" ")) }));
         const text = abschnitte.map(a => "[" + a.ueberschrift + "] " + a.text).join("\n");
         doks.push({ art: "kochen", titel: "Kochen: " + t.titel, url: "#kochen?l=" + t.id, text, suchtext: t.titel + ". " + text.replace(/\n/g, " "), abschnitte });
@@ -1441,7 +1558,10 @@ const Fragen = (() => {
     const nachrichten = [{ role: "system", content: sys }];
     if (vorher) nachrichten.push({ role: "user", content: vorher.frage }, { role: "assistant", content: vorher.antwort.slice(0, 800) });
     nachrichten.push({ role: "user", content: "QUELLEN:\n" + block + "\n\nFRAGE: " + frage +
-      (vorher ? "\n\n(Beantworte nur diese FRAGE mit diesen QUELLEN. Ist es ein neues Thema, erwähne das vorherige Gespräch nicht.)" : "") });
+      (vorher ? "\n\n(Beantworte nur diese FRAGE mit diesen QUELLEN. Ist es ein neues Thema, erwähne das vorherige Gespräch nicht.)" : "") +
+      // 21. Nov. 2026: Bei langen Fieldbook-Texten als [1] vergaß das 4B die Quellennummern oft ganz (Verbrennung:
+      // ohne Zahlen in 3 von 10 Läufen, mit dieser Erinnerung hinter der Frage 0 von 7; Fahrrad-Frage unverändert).
+      "\n\nSetze hinter jede Aussage die Nummer ihrer Quelle in eckigen Klammern, z. B. [1] oder [2]." });
     // Frist: bis zum ersten Token 180 s, danach nur Abbruch, wenn 60 s lang nichts Neues kommt; bei Seitenwechsel wird nicht abgebrochen
     // window.__tempTest nur im Test (Vergleich mit anderer Temperatur)
     const temperatur = typeof window.__tempTest === "number" ? window.__tempTest : 0.3;

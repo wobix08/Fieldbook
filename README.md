@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Startseite von Fieldbook mit allen Bereichen und ein Wikipedia-Artikel über Stromausfall](.github/screenshots/uebersicht.png)](.github/screenshots/uebersicht.png)
 
-### **[Fieldbook 0.8.7 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.7/Fieldbook-0.8.7.zip)**
+### **[Fieldbook 0.8.8 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.8/Fieldbook-0.8.8.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -58,7 +58,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.7 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.7/Fieldbook-0.8.7.zip)** (ZIP-Datei, etwa 7 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.8.8 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.8/Fieldbook-0.8.8.zip)** (ZIP-Datei, etwa 7 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -181,6 +181,7 @@ Die KI antwortet nur anhand der gefundenen Artikel und nennt die Quellen.\
 Ein Klick auf eine Quelle öffnet den Artikel an der passenden Stelle und hebt sie hervor, damit du die Antwort schnell prüfen kannst.\
 Bei Erste-Hilfe-Fragen und zur Hausapotheke antwortet sie aus dem eingebauten Erste-Hilfe-Kurs bzw. der Vorsorge-Liste, weil Artikel aus der Bibliothek dort oft anderen Regeln folgen (z. B. amerikanischen).\
 Die passenden Artikel stehen trotzdem zum Weiterlesen in der Quellenliste.\
+Auch die übrigen eingebauten Inhalte nutzt sie als Quelle, z. B. was bei Sirene, Stromausfall oder Hochwasser zu tun ist, die Faustregeln aus Kochen und die Werkzeuge (Norden finden, Notsignale, Gewitter).\
 Englische Quellen (z. B. medizinische Handbücher) übersetzt sie sinngemäß ins Deutsche.\
 Auch Pakete aus PDF-Büchern durchsucht sie: Fieldbook liest deren Text nach der Installation einmal im Hintergrund aus (auf Akku erst wieder am Stromnetz).\
 Eingescannte Bücher ohne Text bleiben dabei außen vor.\

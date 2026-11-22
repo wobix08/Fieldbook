@@ -426,5 +426,31 @@ const Werkzeuge = (() => {
           el("p", {}, el("a", { href: "#erstehilfe" }, "Erste Hilfe öffnen")))));
   }
 
-  return { zeigen, passend };
+  // Texte für die KI (fragen.js, Fieldbook-Dokumente): die Karten von Orientierung, Sonne und Mond, Signale und Gewitter,
+  // aus denselben Bausteinen wie die Seite gelesen, damit nichts doppelt gepflegt wird. Bis 22. Nov. 2026 kannte die KI sie
+  // nicht: Bei „Norden ohne Kompass“ vertauschte sie mit Bibliothekstexten Nord und Süd (11 von 12 Antworten).
+  function texte() {
+    const text = (k) => {
+      const c = k.cloneNode(true);
+      c.querySelectorAll("h3, h4").forEach(h => h.remove());
+      c.querySelectorAll("br").forEach(b => b.replaceWith(" "));
+      c.querySelectorAll("li").forEach((li, i) => li.prepend(li.parentNode.tagName === "OL" ? " " + (i + 1) + ". " : " - "));
+      return c.textContent.replace(/\s+/g, " ").trim();
+    };
+    return [["orientierung", orientierung], ["sonne", sonne], ["signale", signale], ["gewitter", gewitter]].map(([id, bau]) => {
+      const w = LISTE.find(x => x.id === id), wurzel = bau();
+      const abschnitte = [...wurzel.querySelectorAll(".wz-karte")].map(k => {
+        const h = k.querySelector("h3, h4");
+        return { ueberschrift: h ? h.textContent.trim() : "", text: text(k) };
+      });
+      // Hinweise außerhalb der Karten (z. B. „Moos zeigt nicht zuverlässig nach Norden“), ohne die Epilepsie-Warnung
+      wurzel.querySelectorAll(".warnung:not(.wz-blink-warnung)").forEach(p => { if (!p.closest(".wz-karte")) abschnitte.push({ ueberschrift: "Hinweis", text: text(p) }); });
+      // Gewitter: die Faustregel zur Entfernung steht über der Stoppuhr (nur der Satz ohne Bedienung des Knopfs)
+      if (id === "gewitter") { const m = text(wurzel.querySelector(".wz-klein")).match(/Ohne Laptop: (.*)$/);
+        if (m) abschnitte.unshift({ ueberschrift: "Wie weit ist das Gewitter?", text: m[1] }); }
+      return { id, titel: w.titel + " (" + w.text + ")", url: "#werkzeuge?w=" + id, abschnitte };
+    });
+  }
+
+  return { zeigen, passend, texte };
 })();
