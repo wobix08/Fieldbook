@@ -509,15 +509,15 @@ window.addEventListener("hashchange", navigiere);
 // der Browser seine alten Tabs wiederhergestellt hat oder der alte im Hintergrund lag), bleibt der neue Tab offen:
 // Er liegt vorne, dort arbeitet man weiter. Die alten Tabs wechseln auf die winzige Seite anderer-tab.html.
 // (Früher schloss sich der neue Tab; danach zeigte der Browser aber irgendeinen Nachbar-Tab, nie den alten.)
-// Nur ein frisch von Fieldbook geöffneter, sichtbarer Tab (Startseite, ohne Verlauf) löst das aus. Selbst geöffnete
-// zweite Tabs (z. B. Mittelklick auf einen Link) haben eine Adresse mit # und stören niemanden.
+// Welcher Tab Vorrang hat, entscheidet index.html (Teil 1, läuft vor allem anderen): der Tab, den Fieldbook gerade
+// geöffnet hat (Marke vom Server), oder einer, der über den Knopf auf anderer-tab.html übernommen hat.
 let tabZustand = "aktiv"; // "aktiv", "abgegeben" (anderer Tab arbeitet) oder "beendet" (Fieldbook über das Menü beendet)
 (function doppelteTabs() {
   if (!("BroadcastChannel" in window)) return;
   const kanal = new BroadcastChannel("fieldbook-tabs");
   const ich = { t: performance.timeOrigin || Date.now() };
-  // Frisch: gerade erst geöffnet (höchstens 15 s), noch auf der Startseite und ohne Verlauf
-  const frisch = () => Date.now() - ich.t < 15000 && location.pathname === "/" && !location.hash && history.length === 1;
+  // Von Fieldbook geöffnet (Marke vom Server, index.html): Dieser Tab hat Vorrang vor allen anderen
+  ich.vonFieldbook = false;
 
   // Diesen Tab stilllegen. Nicht nur den Inhalt austauschen: Erst das Verlassen der Seite gibt den ganzen Speicher frei
   // (Skripte, Karte samt Grafikspeicher, PDF-Leser, Zwischenspeicher). Ungespeicherte Notizen sichert notizen.js
@@ -536,15 +536,18 @@ let tabZustand = "aktiv"; // "aktiv", "abgegeben" (anderer Tab arbeitet) oder "b
   kanal.onmessage = (e) => {
     const d = e.data || {};
     if (tabZustand !== "aktiv") return;
-    // Ein frisch geöffneter Tab oder einer, der übernimmt (Knopf auf anderer-tab.html): dieser Tab gibt ab
-    // (sind beide frisch, gibt der ältere ab; der neue liegt vorne)
-    if ((d.art === "hallo" && (!frisch() || d.t > ich.t)) || d.art === "uebernehmen") abgeben();
-    // Ein abgegebener Tab fragt, ob noch ein Tab arbeitet
-    else if (d.art === "frage") kanal.postMessage({ art: "aktiv" });
+    // Der von Fieldbook geöffnete Tab meldet sich, oder einer übernimmt (Knopf auf anderer-tab.html): dieser Tab gibt ab
+    if ((d.art === "hallo" && !ich.vonFieldbook) || d.art === "uebernehmen") abgeben();
+    // Ein abgegebener oder gerade geladener Tab (index.html) fragt, ob noch ein Tab arbeitet
+    else if (d.art === "frage") kanal.postMessage({ art: "aktiv", vonFieldbook: ich.vonFieldbook });
   };
 
-  // Nur ein sichtbarer Tab meldet sich: vom Browser im Hintergrund wiederhergestellte Tabs sollen den neuen nicht stilllegen
-  if (frisch() && !document.hidden) kanal.postMessage({ art: "hallo", t: ich.t });
+  // Der Tab mit Marke meldet sich, damit schon geladene alte Tabs abgeben. Später geladene (wiederhergestellte Tabs lädt
+  // der Browser oft erst beim Hinwechseln) fragen selbst nach (index.html).
+  (window.FB_TAB ? FB_TAB.fertig : Promise.resolve()).then(() => {
+    ich.vonFieldbook = !!(window.FB_TAB && FB_TAB.vonFieldbook);
+    if (ich.vonFieldbook && tabZustand === "aktiv") kanal.postMessage({ art: "hallo", t: ich.t });
+  });
 })();
 
 (async function init() {

@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fieldbook</title>
 <link rel="icon" href="icon.svg?v=fieldbook" type="image/svg+xml">
-<link rel="stylesheet" href="app.css">
+<!-- Das Skript steht vor app.css: Skripte hinter einem Stylesheet warten, bis es geladen ist (134 KB, etwa 120 ms).
+     So kann ein Tab, der abgeben muss, schon vorher wechseln (siehe unten). -->
 <script>
 // Gewähltes Farbschema vor dem ersten Zeichnen setzen (sonst blitzt bei „Hell“ kurz Dunkel auf).
 // Werte wie in wendeThemaAn (einstellungen.js): "dark", "light" oder "system" (dann kein data-theme).
@@ -14,7 +15,45 @@ try {
   if (t === "system") document.documentElement.removeAttribute("data-theme");
   else if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
 } catch (e) { }
+
+// Doppelte Tabs, Teil 1 (Teil 2: doppelteTabs in app.js). Läuft vor allem anderen, damit ein Tab, der abgeben muss,
+// gar nicht erst Fieldbook aufbaut (sonst blitzt es). Bis die Antwort da ist, zeigt die Seite nur ihre Hintergrundfarbe.
+// - Frischer Tab (Startseite, ohne Verlauf): holt sich beim Server die Marke „von Fieldbook geöffnet“ (gibt es nur
+//   einmal je Öffnen). Ein vom Browser wiederhergestellter alter Tab sieht genauso aus, bekommt sie aber nicht mehr.
+// - Ohne Marke und nicht von einer Fieldbook-Seite aus geöffnet (wiederhergestellt, neu geladen, Lesezeichen): fragt, ob
+//   ein Tab mit Marke arbeitet, und wechselt dann auf anderer-tab.html. Selbst geöffnete zweite Tabs (Mittelklick,
+//   Rückkehr aus anderer-tab.html) haben eine Fieldbook-Seite als Herkunft und bleiben unberührt.
+window.FB_TAB = { vonFieldbook: false, fertig: Promise.resolve() };
+(function () {
+  // Übernommen über den Knopf auf anderer-tab.html: hat Vorrang wie ein von Fieldbook geöffneter Tab (nur einmal)
+  try { if (sessionStorage.getItem("fbVorrang")) { sessionStorage.removeItem("fbVorrang"); FB_TAB.vonFieldbook = true; return; } } catch (e) { }
+  if (!("BroadcastChannel" in window) || document.referrer.indexOf(location.origin + "/") === 0) return;
+  var frisch = location.pathname === "/" && !location.hash && history.length === 1;
+  var schutz = document.createElement("style");
+  // app.css ist noch nicht da: Hintergrund wie --bg in app.css, nach dem eben gesetzten Farbschema
+  var thema = document.documentElement.getAttribute("data-theme");
+  var hell = thema === "light" || (!thema && matchMedia("(prefers-color-scheme: light)").matches);
+  schutz.textContent = "html{background:" + (hell ? "#f6f5f3" : "#161715") + ";color-scheme:" + (hell ? "light" : "dark") + "}body{visibility:hidden}";
+  document.head.appendChild(schutz);
+  var zeigen = function () { if (schutz.parentNode) schutz.parentNode.removeChild(schutz); };
+  setTimeout(zeigen, 3000); // Sicherheitsnetz: nie länger leer
+  function fragen() {
+    return new Promise(function (fertig) {
+      var kanal = new BroadcastChannel("fieldbook-tabs");
+      var t = setTimeout(function () { kanal.close(); zeigen(); fertig(); }, 300);
+      kanal.onmessage = function (e) {
+        if (!e.data || e.data.art !== "aktiv" || !e.data.vonFieldbook) return;
+        clearTimeout(t); kanal.close();
+        location.replace("/anderer-tab.html#" + encodeURIComponent(location.pathname + location.search + location.hash));
+      };
+      kanal.postMessage({ art: "frage" });
+    });
+  }
+  FB_TAB.fertig = !frisch ? fragen() : fetch("/api/tab/marke", { method: "POST" }).then(function (r) { return r.json(); })
+    .then(function (d) { if (!d.neu) return fragen(); FB_TAB.vonFieldbook = true; zeigen(); }, function () { zeigen(); });
+})();
 </script>
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
 <header class="kopf">

@@ -79,7 +79,7 @@ namespace OfflineWissen
 
     public static class App
     {
-        public const string Version = "0.8.8.1";
+        public const string Version = "0.8.8.2";
         static string Root, AppDir, Web, Config, Daten, Prog, Logs;
         static int Port, KiwixPort, LlmPort, SuchPort, RoutePort;
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 200 };
@@ -320,7 +320,18 @@ namespace OfflineWissen
 
         static void BrowserOeffnen()
         {
+            Interlocked.Exchange(ref tabMarke, DateTime.UtcNow.Ticks);
             try { Process.Start(new ProcessStartInfo("http://localhost:" + Port + "/") { UseShellExecute = true }); } catch { }
+        }
+
+        // Welcher Tab ist der, den Fieldbook gerade geöffnet hat? Ein vom Browser wiederhergestellter alter Tab sieht genauso
+        // aus (Startseite, ohne Verlauf, gerade geladen). Darum holt sich der erste frische Tab diese Marke einmal ab
+        // (index.html, /api/tab/marke); wer sie bekommt, hat Vorrang, alle anderen geben ab. Höchstens 2 Minuten gültig.
+        static long tabMarke;
+        static bool TabMarkeAbholen()
+        {
+            long t = Interlocked.Exchange(ref tabMarke, 0);
+            return t > 0 && (DateTime.UtcNow - new DateTime(t, DateTimeKind.Utc)).TotalSeconds < 120;
         }
 
         delegate bool FensterRueckruf(IntPtr h, IntPtr l);
@@ -3736,6 +3747,9 @@ namespace OfflineWissen
                     return;
                 case "desktopsymbol":
                     SendeJson(ctx, DesktopSymbol(Bool(LeseBody(ctx), "an")));
+                    return;
+                case "tab/marke":
+                    SendeJson(ctx, new Dictionary<string, object> { { "neu", ctx.Request.HttpMethod == "POST" && TabMarkeAbholen() } });
                     return;
                 case "browserstart":
                     SendeJson(ctx, BrowserStart(Bool(LeseBody(ctx), "an")));

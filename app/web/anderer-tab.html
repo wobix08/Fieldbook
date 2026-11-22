@@ -52,6 +52,8 @@
       .then(function (r) { return r.ok; }, function () { return false; });
   }
   function hin(melden) {
+    // Mit dem Knopf übernommen: Vorrang wie ein von Fieldbook geöffneter Tab (index.html liest das einmal)
+    if (melden) try { sessionStorage.setItem("fbVorrang", "1"); } catch (e) { }
     if (kanal) { if (melden) kanal.postMessage({ art: "uebernehmen", t: Date.now() }); kanal.close(); }
     location.replace(ziel);
   }
