@@ -210,7 +210,7 @@ Beides passiert nur, wenn du es willst.
 
 **Inhalte automatisch aktualisieren (optional)**\
 Hält Wissenspakete, Karten und Wegedaten aktuell.\
-Im Assistenten ganz am Anfang einschaltbar oder später in den Einstellungen unter *Fieldbook und Updates*, standardmäßig aus.\
+Im Assistenten ganz am Anfang einschaltbar oder später in den Einstellungen unter *Inhalte*, standardmäßig aus.\
 Es gibt keinen Autostart und kein Programm, das dauerhaft im Hintergrund läuft.\
 Stattdessen legt Fieldbook zwei Aufgaben in der Windows-Aufgabenplanung an:
 
@@ -228,7 +228,7 @@ Protokoll: `daten\logs\aktualisierung.log`.
 Fieldbook spielt nie eine neue Version ein, ohne dass du zugestimmt hast.\
 Beim Start fragt es nur kurz bei GitHub nach, ob es eine neue Version gibt, und zeigt dann einen Hinweis (in den Einstellungen oben unter *Fieldbook und Updates*).\
 Möchtest du auch diese kurze Anfrage nicht, schaltest du sie dort bei *Beim Start nach neuer Fieldbook-Version fragen* aus.\
-Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach Updates suchen* klickst.\
+Dann sucht Fieldbook nur noch, wenn du selbst auf *Nach neuer Version suchen* klickst.\
 Ist die automatische Aktualisierung eingeschaltet, kann sie neue Versionen mitladen (Haken *Neue Fieldbook-Versionen zusammen mit den Inhalten laden*).\
 Im Modus „Vorher fragen“ fragt Fieldbook dich, im Modus „Automatisch“ spielt es die neue Version beim nächsten Start ein.\
 Nach dem Update zeigt Fieldbook einmal, was neu ist.

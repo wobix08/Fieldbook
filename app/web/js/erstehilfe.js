@@ -7,6 +7,7 @@ const ErsteHilfe = (() => {
   let stand = null;            // Lernstand aus daten/erstehilfe.json
   let aktiverTakt = null;      // laufende Takt-Übung (wird beim Seitenwechsel gestoppt)
   const artikelCache = {};
+  let quizGeloest = false;     // Rundgang: Quiz mit schon gegebenen richtigen Antworten zeigen
 
   async function zeigen(params) {
     taktStopp();
@@ -69,7 +70,9 @@ const ErsteHilfe = (() => {
       if (!zettel.length) continue;
       k.append(el("div", { class: "e-gruppe" },
         g.titel ? el("div", { class: "e-gruppe-titel" }, g.titel) : null,
-        ...zettel.map(t => el("a", { class: "e-knopf" + (t.id === aktiv ? " aktiv" : ""), href: "#erstehilfe?k=" + t.id, title: t.titel },
+        // Aktiven Spickzettel noch einmal anklicken schließt ihn wieder
+        ...zettel.map(t => el("a", { class: "e-knopf" + (t.id === aktiv ? " aktiv" : ""),
+          href: t.id === aktiv ? "#erstehilfe" : "#erstehilfe?k=" + t.id, title: t.id === aktiv ? "Spickzettel schließen" : t.titel },
           sym(t.icon), el("span", {}, t.kurz || t.titel)))));
     }
   }
@@ -86,12 +89,13 @@ const ErsteHilfe = (() => {
     const artikelKnopf = el("span", { class: "hinweis" }, "Artikel wird gesucht …");
     const lektion = t.lektion && konf.lektionen.find(x => x.id === t.lektion && x.schritte);
     const d = el("div", { class: "notfall-detail" },
+      el("div", { class: "eh-lektion-kopf" }, el("a", { class: "knopf knopf-klein", href: "#erstehilfe" }, "← Erste Hilfe")),
       el("h2", { class: "merk-h2" }, sym(t.icon), t.titel, Merkliste.seitenKnopf({ link: "#erstehilfe?k=" + t.id, titel: t.titel, bereich: "erstehilfe" })),
       el("h3", {}, "Sofort tun"),
       el("ol", {}, ...t.sofort.map(s => el("li", {}, zeilen(s)))),
       t.takt ? taktUebung({}) : null,
       el("div", { class: "knoepfe" },
-        el("a", { class: "knopf", href: "#erstehilfe" }, "← Zum Kurs"),
+        el("a", { class: "knopf", href: "#erstehilfe" }, "← Erste Hilfe"),
         artikelKnopf,
         lektion ? el("a", { class: "knopf", href: "#erstehilfe?l=" + lektion.id }, sym("graduation-cap"), "Zur Lektion") : null,
         kiKnopf(t.titel + ": Was muss ich tun?")));
@@ -203,7 +207,7 @@ const ErsteHilfe = (() => {
         el("b", {}, "✓ Lektion abgeschlossen"),
         " am " + new Date(ls.fertig).toLocaleDateString("de-DE") + ".",
         naechste ? el("a", { class: "knopf knopf-haupt", href: "#erstehilfe?l=" + naechste.id }, "Nächste Lektion: " + naechste.titel + " →")
-                 : el("a", { class: "knopf", href: "#erstehilfe" }, "← Zum Kurs"));
+                 : el("a", { class: "knopf", href: "#erstehilfe" }, "← Erste Hilfe"));
     };
     if (ls.fertig) zeigeFertig();
 
@@ -240,7 +244,7 @@ const ErsteHilfe = (() => {
     // el() lässt null weg, d.append() würde „null“ als Text einfügen
     d.append(...[
       el("div", { class: "eh-lektion-kopf" },
-        el("a", { class: "knopf knopf-klein", href: "#erstehilfe" }, "← Zum Kurs"),
+        el("a", { class: "knopf knopf-klein", href: "#erstehilfe" }, "← Erste Hilfe"),
         el("span", { class: "hinweis" }, "Lektion " + nr + " von " + konf.lektionen.length)),
       el("h2", { class: "merk-h2" }, sym(t.icon), t.titel, Merkliste.seitenKnopf({ link: "#erstehilfe?l=" + t.id, titel: t.titel, bereich: "erstehilfe" })),
       el("h3", {}, "1. Verstehen"),
@@ -260,6 +264,7 @@ const ErsteHilfe = (() => {
       mehr,
       el("p", { class: "eh-hinweis klein" }, hinweisText()),
       t.stand ? el("p", { class: "hinweis klein" }, "Inhalte " + t.stand + ".") : null,
+      zurueckUnten(),
     ].filter(Boolean));
     return d;
   }
@@ -284,7 +289,7 @@ const ErsteHilfe = (() => {
 
   // Auswahl-Antworten zu einer Frage. Falsche Antworten darf man wiederholen. Die Antworten stehen
   // jedes Mal in anderer Reihenfolge, damit man nicht nur die Position lernt.
-  function auswahl(f, beiRichtig, beiFalsch) {
+  function auswahl(f, beiRichtig, beiFalsch, geloest) {
     const rueck = el("p", { class: "eh-rueck", hidden: true });
     const reihe = f.antworten.map((a, j) => j).sort(() => Math.random() - 0.5);
     const knoepfe = reihe.map(j => el("button", { class: "eh-antwort", onclick: (e) => {
@@ -305,6 +310,8 @@ const ErsteHilfe = (() => {
         if (beiFalsch) beiFalsch();
       }
     } }, Land.einsetzen(f.antworten[j])));
+    // Rundgang: richtige Antwort schon gegeben
+    if (geloest) knoepfe[reihe.indexOf(f.richtig)].click();
     return [el("div", { class: "eh-antworten" }, ...knoepfe), rueck];
   }
 
@@ -312,9 +319,10 @@ const ErsteHilfe = (() => {
   function quiz(t, geschafft) {
     const d = el("div", { class: "eh-quiz" });
     let offen = t.quiz.length;
+    const geloest = quizGeloest && Rundgang.aktiv();
     t.quiz.forEach((f, i) => {
       d.append(el("div", { class: "eh-frage" }, el("p", {}, el("b", {}, (i + 1) + ". " + f.frage)),
-        ...auswahl(f, () => { if (--offen === 0) geschafft(); })));
+        ...auswahl(f, () => { if (--offen === 0) geschafft(); }, null, geloest)));
     });
     return d;
   }
@@ -364,14 +372,18 @@ const ErsteHilfe = (() => {
           : el("b", {}, "Geschafft, aber " + fehler + (fehler === 1 ? " Antwort war" : " Antworten waren") + " nicht richtig. Spiel es noch einmal durch, bis alles sitzt. Fehlerfrei geschafft, wird Stufe 2 frei.")),
         el("div", { class: "knoepfe" },
           fehlerfrei ? null : el("button", { class: "knopf knopf-haupt", onclick: () => { d.replaceWith(fallAnsicht(f)); window.scrollTo(0, 0); } }, "↺ Noch einmal"),
-          fehlerfrei && stufe2 ? el("a", { class: "knopf knopf-haupt", href: "#erstehilfe?f=" + f.id + "&s=2" }, "Weiter zu Stufe 2 →") : null,
-          el("a", { class: "knopf", href: "#erstehilfe" }, "← Zum Kurs")));
+          fehlerfrei && stufe2 ? el("a", { class: "knopf knopf-haupt", href: "#erstehilfe?f=" + f.id + "&s=2" }, "Weiter zu Stufe 2 →") : null));
       verlauf.append(box);
       box.scrollIntoView({ behavior: "smooth", block: "start" });
     };
-    d.append(...fallKopf(f, 1), verlauf, el("p", { class: "eh-hinweis klein" }, hinweisText()));
+    d.append(...fallKopf(f, 1), verlauf, el("p", { class: "eh-hinweis klein" }, hinweisText()), zurueckUnten());
     schritt(0);
     return d;
+  }
+
+  // Zurück-Knopf am Seitenende von Lektion und Fallbeispiel (man muss nicht wieder hochscrollen)
+  function zurueckUnten() {
+    return el("div", { class: "knoepfe eh-zurueck-unten" }, el("a", { class: "knopf", href: "#erstehilfe" }, "← Erste Hilfe"));
   }
 
   function hatStufe2(f) { return !!(f.schritte && f.schritte.every(s => s.kernpunkte && s.kernpunkte.length)); }
@@ -385,7 +397,7 @@ const ErsteHilfe = (() => {
       : el("a", { href: "#erstehilfe?f=" + f.id }, "Stufe 1 wiederholen");
     return [
       el("div", { class: "eh-lektion-kopf" },
-        el("a", { class: "knopf knopf-klein", href: "#erstehilfe" }, "← Zum Kurs"),
+        el("a", { class: "knopf knopf-klein", href: "#erstehilfe" }, "← Erste Hilfe"),
         el("span", { class: "hinweis" }, "Fallbeispiel · " + (stufe === 1 ? "Stufe 1: Auswählen" : "Stufe 2: In eigenen Worten")),
         andere),
       el("h2", { class: "merk-h2" }, sym(f.icon), f.titel, Merkliste.seitenKnopf({ link: "#erstehilfe?f=" + f.id, titel: f.titel, bereich: "erstehilfe" })),
@@ -464,15 +476,14 @@ const ErsteHilfe = (() => {
           + (gefaehrlich ? " und " + gefaehrlich + (gefaehrlich === 1 ? " gefährlichen Fehler" : " gefährliche Fehler") + " gemacht." : ".")
           + (gut ? " Sehr gut, das sitzt!" : " Lies die Musterlösungen oben noch einmal und spiel es dann erneut durch."))),
         el("div", { class: "knoepfe" },
-          el("button", { class: "knopf" + (gut ? "" : " knopf-haupt"), onclick: () => { d.replaceWith(fall2Ansicht(f)); window.scrollTo(0, 0); } }, "↺ Noch einmal"),
-          el("a", { class: "knopf", href: "#erstehilfe" }, "← Zum Kurs")));
+          el("button", { class: "knopf" + (gut ? "" : " knopf-haupt"), onclick: () => { d.replaceWith(fall2Ansicht(f)); window.scrollTo(0, 0); } }, "↺ Noch einmal")));
       verlauf.append(box);
       box.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     d.append(...fallKopf(f, 2),
       el("p", { class: "hinweis eh-fall-anleitung" }, zeilen("Diesmal gibt es keine Auswahl. Schreib zu jedem Schritt, was du tun würdest."
         + (KI.bereit() ? " Die KI vergleicht deine Antwort mit den wichtigsten Punkten, danach siehst du die Musterlösung." : " Danach siehst du die wichtigsten Punkte und die Musterlösung."))),
-      verlauf, el("p", { class: "eh-hinweis klein" }, hinweisText()));
+      verlauf, el("p", { class: "eh-hinweis klein" }, hinweisText()), zurueckUnten());
     schritt(0);
     return d;
   }
@@ -696,8 +707,22 @@ const ErsteHilfe = (() => {
       if (was === "fertig") delete ls.fertig;
       if (was === "geuebt") ls.geuebt = [];
     }
+    if (was === "fertig") quizGeloest = false;
     if (location.hash.startsWith("#erstehilfe")) zeigen(new URLSearchParams(location.hash.split("?")[1] || ""));
   }
 
-  return { zeigen, uebungZurueck };
+  // Rundgang: füllt in der offenen Lektion schon aus, was man sonst selbst tun müsste
+  // („geuebt“: alle Übungen abgehakt, „fertig“: Quiz richtig beantwortet und Lektion abgeschlossen)
+  function uebungVorfuellen(was) {
+    const l = new URLSearchParams(location.hash.split("?")[1] || "").get("l");
+    const t = konf && konf.lektionen.find(x => x.id === l && x.schritte);
+    if (!t || !stand) return;
+    const ls = lernstand(t.id);
+    if (was === "geuebt") ls.geuebt = (t.ueben || []).map(u => u.id);
+    if (was === "fertig") { if (!ls.fertig) ls.fertig = new Date().toISOString(); quizGeloest = true; }
+    speichern();
+    zeigen(new URLSearchParams(location.hash.split("?")[1] || ""));
+  }
+
+  return { zeigen, uebungZurueck, uebungVorfuellen };
 })();

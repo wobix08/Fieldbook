@@ -198,6 +198,19 @@ const Rundgang = (() => {
     addEventListener("resize", neu);
     addEventListener("scroll", neu, true);
     setInterval(() => { platzieren(); aufgabePruefen(); rahmenSperren(); }, 250);
+    // „nurKlick“: In der freien Stelle geht während der Aufgabe nur dieser Knopf, andere Knöpfe dort stupsen das
+    // Kästchen an (z. B. im Ort-Fenster nur „Ort merken“, nicht „Route von hier“ oder „Entfernung messen“)
+    const knopfSperren = (e) => {
+      const s = aufgabe && !aufgabe.fertig && kapitelJetzt() && kapitelJetzt().schritte[zustand.schritt];
+      if (!s || !s.nurKlick || !e.target.closest) return;
+      const k = e.target.closest("button, a, [role='button'], input, select, textarea, label");
+      if (!k || k.closest(s.nurKlick) || !k.closest(s.ziel)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.type === "mousedown") stupsen();
+    };
+    document.addEventListener("mousedown", knopfSperren, true);
+    document.addEventListener("click", knopfSperren, true);
     // Klicks fürs Warten auf „klick“: vor der Seite selbst (capture), die Seite darf trotzdem tun, was sie tut
     document.addEventListener("click", (e) => {
       if (!aufgabe || !aufgabe.aktion.klick || !e.target.closest) return;
@@ -320,6 +333,11 @@ const Rundgang = (() => {
       t.kasten.classList.add("fu-wartet");
       await aufraeumen(aufr.filter(a => !(a && a.vorher)), kap);
       if (nr !== lauf) return;
+    }
+    // „vorfuellen“: erledigt beim Ankommen (auch mit „Zurück“), was man sonst selbst tun müsste
+    // (erstehilfe-geuebt: alle Übungen abgehakt, erstehilfe-fertig: Quiz beantwortet, Lektion abgeschlossen)
+    for (const v of [].concat(s.vorfuellen || [])) {
+      if (v === "erstehilfe-geuebt" || v === "erstehilfe-fertig") ErsteHilfe.uebungVorfuellen(v.slice(11));
     }
     punktSetzen(s.punkt, s.zoom, nr);
 
@@ -598,23 +616,52 @@ const Rundgang = (() => {
     if (!teile || !zustand) return;
     const s = kapitelJetzt() && kapitelJetzt().schritte[zustand.schritt];
     const wartet = teile.kasten.classList.contains("fu-wartet") || teile.kasten.classList.contains("fu-weg");
-    let elemente = [], kreise = [];
+    let elemente = [], kreise = [], linien = [];
+    const k = typeof Karten !== "undefined" ? Karten.karte : null;
+    if (k && ringKarte !== k && s && (s.betonen || s.betonenRoute)) { ringKarte = k; k.on("move", () => requestAnimationFrame(betonenZeichnen)); }
+    // „betonenRoute“: Die berechnete Route bleibt auf der Karte hell (Linie als Loch in der Abdunklung)
+    if (s && s.betonenRoute && !wartet && k && k.getSource("route")) {
+      let daten = null;
+      try { daten = k.getSource("route").serialize().data; } catch { }
+      const teileVon = (g) => !g ? [] : g.type === "FeatureCollection" ? g.features.flatMap(f => teileVon(f.geometry))
+        : g.type === "Feature" ? teileVon(g.geometry) : g.type === "LineString" ? [g.coordinates]
+        : g.type === "MultiLineString" ? g.coordinates : [];
+      const kr = rechteck(k.getContainer());
+      for (const kette of teileVon(daten)) {
+        const punkte = kette.map(c => { const p = k.project(c); return { x: p.x + kr.left, y: p.y + kr.top }; });
+        if (punkte.length > 1) linien.push(punkte);
+      }
+    }
     if (s && s.betonen && !wartet) {
-      const k = typeof Karten !== "undefined" ? Karten.karte : null;
-      if (k && ringKarte !== k) { ringKarte = k; k.on("move", () => requestAnimationFrame(betonenZeichnen)); }
       // Stecknadel muss frei auf der Karte liegen: nicht unter Kopfzeile oder Kartenleiste
       const feld = $("#karte") ? rechteck($("#karte")) : null;
       const verdeckt = [".kopf", ".karte-panel"].map(x => $(x)).filter(e => e && sichtbar(e)).map(rechteck);
       const drin = (r, x, y) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+      const flaechen = [];
       for (const e of document.querySelectorAll(s.betonen)) {
         if (!sichtbar(e)) continue;
         const r = rechteck(e), x = r.left + r.width / 2, y = r.top + r.height / 2;
         // (auch nicht unterhalb der Kartenleiste: Die Ringe werden rechts von ihr abgeschnitten)
         if ((feld && !drin(feld, x, y)) || verdeckt.some(v => drin(v, x, y) || (v.top > 0 && x <= v.right && v.left <= (feld ? feld.left : 0) + 1))) continue;
         elemente.push(e);
-        // Kreis um die ganze Stecknadel mit etwas Luft
-        kreise.push({ x, y, r: Math.max(r.width, r.height) / 2 + 10 });
+        flaechen.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
       }
+      // Übereinanderliegende Punkte (z. B. Startpunkt der Route und der gemerkte Ort an derselben Stelle) zählen als
+      // eine Fläche: ein Kringel um beide, so groß wie um eine einzelne Stecknadel
+      for (let weiter = true; weiter;) {
+        weiter = false;
+        for (let i = 0; i < flaechen.length && !weiter; i++) for (let j = i + 1; j < flaechen.length; j++) {
+          const a = flaechen[i], b = flaechen[j];
+          if (a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top) continue;
+          flaechen[i] = { left: Math.min(a.left, b.left), top: Math.min(a.top, b.top), right: Math.max(a.right, b.right), bottom: Math.max(a.bottom, b.bottom) };
+          flaechen.splice(j, 1);
+          weiter = true;
+          break;
+        }
+      }
+      // Kreis um die ganze Fläche mit etwas Luft; kleine Punkte bekommen trotzdem einen gut sichtbaren Ring
+      for (const f of flaechen) kreise.push({ x: (f.left + f.right) / 2, y: (f.top + f.bottom) / 2,
+        r: Math.max(Math.max(f.right - f.left, f.bottom - f.top) / 2 + 10, 28) });
       // Überschneiden sich Kreise, werden sie zu einem großen Kreis, der alle umschließt (bis nichts mehr überlappt)
       for (let weiter = true; weiter;) {
         weiter = false;
@@ -640,7 +687,7 @@ const Rundgang = (() => {
     if (!ringBox) ringBox = document.body.appendChild(el("div", { class: "fu-ringe", "aria-hidden": "true" }));
     ringBox.hidden = !kreise.length;
     let box = { left: 0, top: 0 };
-    if (kreise.length) {
+    if (kreise.length || linien.length) {
       const feld = rechteck($("#karte")), kopf = $(".kopf"), leiste = $(".karte-panel");
       box = { left: Math.max(feld.left, leiste && sichtbar(leiste) ? rechteck(leiste).right : 0), top: Math.max(feld.top, kopf ? rechteck(kopf).bottom : 0) };
       Object.assign(ringBox.style, { left: box.left + "px", top: box.top + "px", width: Math.max(0, feld.right - box.left) + "px", height: Math.max(0, feld.bottom - box.top) + "px" });
@@ -651,15 +698,16 @@ const Rundgang = (() => {
       ring.hidden = !k;
       if (k) Object.assign(ring.style, { left: (k.x - k.r - box.left) + "px", top: (k.y - k.r - box.top) + "px", width: 2 * k.r + "px", height: 2 * k.r + "px" });
     });
-    dunkelZeichnen(kreise, box);
+    dunkelZeichnen(kreise, box, linien);
   }
 
   // Mit Kreisen dunkelt nicht der Schatten des Lichtkegels ab, sondern eine SVG-Fläche mit Löchern: für den Lichtkegel
-  // und für jeden Kreis (auf die freie Karte begrenzt). So ist es in den Kreisen hell wie an der markierten Stelle.
+  // und für jeden Kreis bzw. die Route (auf die freie Karte begrenzt). So ist es in den Kreisen hell wie an der markierten Stelle.
   let dunkel = null;
-  function dunkelZeichnen(kreise, box) {
+  function dunkelZeichnen(kreise, box, linien) {
     const h = document.documentElement;
-    if (!kreise.length) { h.classList.remove("fu-maske"); if (dunkel) dunkel.hidden = true; return; }
+    // (SVG kennt die Eigenschaft „hidden“ nicht, deshalb das Attribut setzen)
+    if (!kreise.length && !linien.length) { h.classList.remove("fu-maske"); if (dunkel) dunkel.setAttribute("hidden", ""); return; }
     const ns = "http://www.w3.org/2000/svg";
     const mach = (name, attr) => { const e = document.createElementNS(ns, name); for (const k in attr) e.setAttribute(k, attr[k]); return e; };
     if (!dunkel) {
@@ -679,9 +727,11 @@ const Rundgang = (() => {
     const feld = $("#karte") ? rechteck($("#karte")) : { right: vb, bottom: vh };
     const innen = mach("svg", { x: box.left, y: box.top, width: Math.max(0, feld.right - box.left), height: Math.max(0, feld.bottom - box.top) });
     for (const k of kreise) innen.append(mach("circle", { cx: k.x - box.left, cy: k.y - box.top, r: k.r, fill: "black" }));
+    for (const punkte of linien) innen.append(mach("polyline", { points: punkte.map(p => (p.x - box.left) + "," + (p.y - box.top)).join(" "),
+      fill: "none", stroke: "black", "stroke-width": 26, "stroke-linecap": "round", "stroke-linejoin": "round" }));
     maske.append(innen);
     dunkel.replaceChildren(maske, mach("rect", { x: 0, y: 0, width: vb, height: vh, fill: "rgba(8, 10, 8, .62)", mask: "url(#fu-maske)" }));
-    dunkel.hidden = false;
+    dunkel.removeAttribute("hidden");
     h.classList.add("fu-maske");
   }
 

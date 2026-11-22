@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Rundgang durch Fieldbook (js/rundgang.js). Läuft im Übungsmodus mit Beispieldaten aus app/web/uebung. Je Schritt: seite (Adresse; geöffnet wird sie nur, wenn man in einer anderen Ansicht ist, mit springen immer), ziel (CSS-Auswahl des Elements, auf das gezeigt wird; ohne ziel steht das Kästchen in der Mitte), zielText (Muster: von den Treffern für ziel nur die mit passendem Text), optional (Schritt fällt weg, wenn das Ziel nicht zu sehen ist), wenn (stimme / ohneStimme / uebersetzer / ohneUebersetzer: Schritt nur mit bzw. ohne Vorlesestimme oder Übersetzer), rahmenZiel (Ziel im Artikel statt ziel), aktion (Aufgabe: Der Schritt geht erst weiter, wenn man sie selbst erledigt hat; klick, sichtbar, adresse, artikel, enthaelt, karte (Liste aus verschoben / gezoomt: Karte selbst bewegt), da (wie sichtbar, darf aber außerhalb des Fensters liegen), text ({ Auswahl: Muster }: Inhalt bzw. Wert passt), alle angegebenen müssen zutreffen; fehl: Bedingung für „falsch gemacht“, dann erscheint fehlhinweis), danach (ms bis zum nächsten Schritt nach erledigter Aufgabe), mit (weiteres Element gehört zur freien Stelle), kasten (rechts: Kästchen oben rechts), punkt ([lon, lat]: Ring auf der Karte, Ziel .fu-kartenpunkt, die Karte springt hin) mit zoom, aufraeumen (nur bei „Zurück“: nimmt zurück, was die Aufgabe des Schritts bewirkt hat; merkliste, merkstellen, vorlesen, uebersetzen, sperrungen, { klick, wenn }, { karte: Zustand aus Karten.uebungZustand } oder { eigene: datei / notiz / notizName / notizText / webseite }, auch als Liste; mit vorher: true vor dem Öffnen der Adresse; außerdem öffnet „Zurück“ die Adresse, auf der man im Schritt angekommen war), zurueckWeg (mit „Zurück“ übersprungen), betonen (CSS-Auswahl: zusätzlich Ringe um diese Elemente auf der Karte, z. B. .poi-marker), beispiel (Kapitel Karten: Beispielort und -ziel für uebungZustand), hinweis (was nach einem Klick daneben im Kästchen steht), ueberspringen (Beschriftung eines Knopfs, mit dem man die offene Aufgabe auslassen darf), warnung (gelb hervorgehoben unter dem Text), titel, text. Jeder Satz kommt automatisch in eine eigene Zeile.",
+  "_hinweis": "Rundgang durch Fieldbook (js/rundgang.js). Läuft im Übungsmodus mit Beispieldaten aus app/web/uebung. Je Schritt: seite (Adresse; geöffnet wird sie nur, wenn man in einer anderen Ansicht ist, mit springen immer), ziel (CSS-Auswahl des Elements, auf das gezeigt wird; ohne ziel steht das Kästchen in der Mitte), zielText (Muster: von den Treffern für ziel nur die mit passendem Text), optional (Schritt fällt weg, wenn das Ziel nicht zu sehen ist), wenn (stimme / ohneStimme / uebersetzer / ohneUebersetzer: Schritt nur mit bzw. ohne Vorlesestimme oder Übersetzer), rahmenZiel (Ziel im Artikel statt ziel), aktion (Aufgabe: Der Schritt geht erst weiter, wenn man sie selbst erledigt hat; klick, sichtbar, adresse, artikel, enthaelt, karte (Liste aus verschoben / gezoomt: Karte selbst bewegt), da (wie sichtbar, darf aber außerhalb des Fensters liegen), text ({ Auswahl: Muster }: Inhalt bzw. Wert passt), alle angegebenen müssen zutreffen; fehl: Bedingung für „falsch gemacht“, dann erscheint fehlhinweis), danach (ms bis zum nächsten Schritt nach erledigter Aufgabe), mit (weiteres Element gehört zur freien Stelle), nurKlick (CSS-Auswahl: während der Aufgabe geht in der freien Stelle nur dieser Knopf, andere Knöpfe dort stupsen das Kästchen an), kasten (rechts: Kästchen oben rechts), punkt ([lon, lat]: Ring auf der Karte, Ziel .fu-kartenpunkt, die Karte springt hin) mit zoom, aufraeumen (nur bei „Zurück“: nimmt zurück, was die Aufgabe des Schritts bewirkt hat; merkliste, merkstellen, vorlesen, uebersetzen, sperrungen, { klick, wenn }, { karte: Zustand aus Karten.uebungZustand } oder { eigene: datei / notiz / notizName / notizText / webseite }, auch als Liste; mit vorher: true vor dem Öffnen der Adresse; außerdem öffnet „Zurück“ die Adresse, auf der man im Schritt angekommen war), zurueckWeg (mit „Zurück“ übersprungen), betonen (CSS-Auswahl: zusätzlich Ringe um diese Elemente auf der Karte, z. B. .poi-marker), betonenRoute (true: die berechnete Route bleibt auf der Karte hell), beispiel (Kapitel Karten: Beispielort und -ziel für uebungZustand), hinweis (was nach einem Klick daneben im Kästchen steht), ueberspringen (Beschriftung eines Knopfs, mit dem man die offene Aufgabe auslassen darf), warnung (gelb hervorgehoben unter dem Text), titel, text. Jeder Satz kommt automatisch in eine eigene Zeile.",
   "kapitel": [
     {
       "id": "ki",
@@ -712,6 +712,7 @@
         {
           "ziel": ".maplibregl-popup:has(.punkt-popup)",
           "aktion": { "sichtbar": ".maplibregl-popup .ort-formular" },
+          "nurKlick": ".punkt-popup button:has(use[href$='#bookmark'])",
           "hinweis": "Klicke auf „Ort merken“.",
           "aufraeumen": { "karte": "popup" },
           "titel": "Ort und Koordinaten",
@@ -728,6 +729,7 @@
         {
           "ziel": ".maplibregl-popup:has(.punkt-popup)",
           "aktion": { "klick": ".punkt-popup button:has(use[href$='#map-pin'])" },
+          "nurKlick": ".punkt-popup button:has(use[href$='#map-pin'])",
           "hinweis": "Klicke auf „Route von hier“.",
           "aufraeumen": { "karte": "eigenerOrt" },
           "titel": "Dein Ort",
@@ -745,6 +747,8 @@
         },
         {
           "ziel": "#routen-ergebnis .routen-ergebnis",
+          "betonenRoute": true,
+          "betonen": ".routen-start, .routen-ziel, .mein-ort",
           "titel": "Deine Route",
           "text": "Die Route ist auf der Karte eingezeichnet. Hier steht, wie lang sie ist, wie lange du ungefähr brauchst und wie viele Höhenmeter es bergauf geht."
         },
@@ -766,6 +770,8 @@
           "danach": 1500,
           "hinweis": "Klicke auf „Rad“.",
           "aufraeumen": { "karte": "route" },
+          "betonenRoute": true,
+          "betonen": ".routen-start, .routen-ziel, .mein-ort",
           "titel": "Zu Fuß, Rad oder Auto",
           "text": "Die Route gibt es zu Fuß, mit dem Rad und mit dem Auto. Jedes Mal nimmt sie die passenden Wege. Klicke auf „Rad“."
         },
@@ -784,6 +790,7 @@
           "zurueckWeg": true,
           "aktion": { "klick": ".punkt-popup button:has(use[href$='#ban'])" },
           "danach": 2000,
+          "nurKlick": ".punkt-popup button:has(use[href$='#ban'])",
           "hinweis": "Klicke auf „Stelle sperren“.",
           "titel": "Stelle sperren",
           "text": "Fieldbook fragt nach, damit du nichts aus Versehen sperrst. Klicke auf „Stelle sperren“."
@@ -792,6 +799,8 @@
           "punkt": [11.111077, 47.500079],
           "zoom": 14,
           "ziel": ".fu-kartenpunkt",
+          "betonenRoute": true,
+          "betonen": ".routen-start, .routen-ziel, .mein-ort",
           "titel": "Außen herum",
           "text": "Im Kreis liegt deine Sperrung, rot markiert. Die Route nimmt jetzt einen anderen Weg. Ziehst du mit der Maus an der Route entlang, sperrst du einen ganzen Abschnitt."
         },
@@ -1052,34 +1061,30 @@
         },
         {
           "ziel": "#eh-inhalt .eh-lektion h2",
+          "aufraeumen": "erstehilfe-geuebt",
           "titel": "Eine Lektion",
           "text": "Jede Lektion hat vier Teile. Zuerst erklärt sie, worum es geht. Dann folgen die Handgriffe Schritt für Schritt, oft mit Bildern. Danach übst du, am besten mit einer zweiten Person. Am Ende steht ein kurzes Quiz."
         },
         {
           "ziel": "#eh-inhalt .eh-ueben",
-          "aktion": { "da": "#eh-inhalt .eh-ueben input:checked" },
-          "danach": 800,
-          "hinweis": "Setze ein Häkchen bei einer Übung.",
-          "aufraeumen": "erstehilfe-geuebt",
+          "aufraeumen": "erstehilfe-fertig",
+          "vorfuellen": "erstehilfe-geuebt",
           "titel": "Üben",
-          "text": "Was du geübt hast, hakst du hier ab. Setze ein Häkchen bei einer Übung."
+          "text": "Was du geübt hast, hakst du hier ab. Für den Rundgang sind die Übungen schon abgehakt."
         },
         {
           "ziel": "#eh-inhalt .eh-quiz",
           "mit": "#eh-inhalt .eh-fertig",
-          "aktion": { "da": "#eh-inhalt .eh-fertig:not([hidden])" },
-          "danach": 1500,
-          "hinweis": "Beantworte alle Fragen im Quiz, zum Weiterlesen scrollen.",
-          "aufraeumen": "erstehilfe-fertig",
+          "vorfuellen": "erstehilfe-fertig",
           "titel": "Das Quiz",
-          "text": "Beantworte alle Fragen, bis die Lektion abgeschlossen ist. Falsche Antworten darfst du wiederholen."
+          "text": "Am Ende beantwortest du ein paar Fragen. Falsche Antworten darfst du wiederholen. Sind alle richtig, ist die Lektion abgeschlossen. Für den Rundgang sind die Antworten schon gegeben."
         },
         {
-          "ziel": "#eh-inhalt .eh-lektion-kopf a[href='#erstehilfe']",
+          "ziel": "#eh-inhalt .eh-zurueck-unten a[href='#erstehilfe']",
           "aktion": { "adresse": "^#erstehilfe$" },
-          "hinweis": "Klicke oben auf „Zum Kurs“.",
-          "titel": "Zurück zum Kurs",
-          "text": "Klicke oben auf „Zum Kurs“."
+          "hinweis": "Klicke unten auf „← Erste Hilfe“.",
+          "titel": "Zurück zu Erste Hilfe",
+          "text": "Klicke unten auf „← Erste Hilfe“."
         },
         {
           "seite": "#erstehilfe",

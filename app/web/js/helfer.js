@@ -573,7 +573,7 @@ function aktualisierungBox(akt, sofort, opt) {
         ...stufen.map(m => el("option", { value: m, selected: (akt.mbit || 0) === m }, m ? "höchstens " + m + " MBit/s" : "Unbegrenzt (volle Geschwindigkeit)")));
       box.append(el("div", { class: "einst-zeile akt-zeile" },
         el("div", {}, el("b", {}, "Download-Geschwindigkeit"),
-          el("small", {}, "Begrenzt Aktualisierungen, damit das Internet für andere im Haushalt flüssig bleibt.", el("br"), "Gilt auch für „Nach Updates suchen“.")),
+          el("small", {}, "Begrenzt Aktualisierungen, damit das Internet für andere im Haushalt flüssig bleibt.", el("br"), "Gilt auch für „Nach neuen Inhalten suchen“.")),
         sel));
     }
     // Fieldbook selbst: deutlich getrennt von den Inhalten

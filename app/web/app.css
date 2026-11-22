@@ -580,6 +580,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 /* Die Zusammenfassung unter dem Titel bleibt auch aufgeklappt stehen, der Kopf ändert seine Höhe nicht (Nutzer) */
 /* Einstellungen: Zeilen unter dem Kopf so weit eingerückt wie der Kopf selbst */
 .einst-liste .klapp-abschnitt-innen { padding: 10px 16px 4px; }
+/* Zwischenüberschriften der Gruppen in den Einstellungen */
+.einst-liste > .einst-gruppe { margin: 18px 0 -2px 2px; font: 600 12px/1.2 var(--titel); letter-spacing: .06em; text-transform: uppercase; color: var(--akzent); }
+.einst-liste > .einst-gruppe:first-child { margin-top: 0; }
 .einst-liste .klapp-abschnitt-innen h3 { margin: 14px 0 8px; }
 /* Inhalte: Kategorien im Bereich Wissen */
 .klapp-abschnitt-innen > .klapp-liste-abschnitte { margin-bottom: 0; padding-left: 28px; }

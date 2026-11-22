@@ -1,4 +1,5 @@
-// Einstellungen: Kategorien zum Aufklappen (Programm und Updates, Darstellung, KI, Inhalte, Datenschutz, Erweitert).
+// Einstellungen: Kategorien zum Aufklappen in drei Gruppen: Deine Inhalte (Bereit für offline?, Inhalte),
+// Programm (Updates, Darstellung, KI, Erweitert), Hilfe und Kontakt (Rundgang, Rückmeldung und Datenschutz).
 // Zugeklappt steht unter jeder Kategorie, wie sie gerade eingestellt ist. Inhalte verwaltet inhalte.js.
 "use strict";
 
@@ -27,13 +28,43 @@ const Einstellungen = (() => {
       const u = a.box.querySelector(".klapp-unter");
       return { box: a.box, innen: a.innen, unter: (t) => { u.textContent = t; } };
     };
+    // Zwischenüberschrift einer Gruppe (Deine Inhalte, Programm, Hilfe und Kontakt)
+    const gruppe = (titel) => liste.append(el("h2", { class: "einst-gruppe" }, titel));
     const zeileMitSchalter = (titel, text, input) => el("div", { class: "einst-zeile" },
       el("div", {}, el("b", {}, titel), text ? el("small", {}, ...[].concat(text)) : null), anAus(input));
 
     // ---------------- Bereit für offline? (ganz oben: kann man das Netz jetzt kappen?)
+    gruppe("Deine Inhalte");
     const bereit = kategorie("bereit", "shield-check", "Bereit für offline?");
 
+    // ---------------- Inhalte (installierte Pakete und Karten, Einrichtung, Aktualisierung der Inhalte)
+    const pk = kat.pakete.filter(p => p.installiert).length, kk = kat.karten.filter(r => r.installiert).length;
+    const installiertText = pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : "");
+    const inh = kategorie("inhalte", "package", "Inhalte");
+    const inhText = el("small");
+    const inhalteStatus = () => akt.geprueft ? "Zuletzt geprüft " + akt.geprueft + " · " +
+      (akt.anzahl ? akt.anzahl + " Aktualisierung(en), ca. " + groesse(akt.bytes) : "alles aktuell") : "Noch nicht geprüft.";
+    const zeichneInhalte = () => {
+      inhText.textContent = inhalteStatus();
+      inh.unter(installiertText + " · " + (akt.an ? "automatisch aktuell" : "nicht automatisch aktuell"));
+    };
+    const inhSuchKnopf = el("button", { class: "knopf knopf-klein", onclick: async (e) => {
+      const r = await jetztAktualisieren(e.currentTarget, {});
+      if (r) { Object.assign(akt, { geprueft: r.geprueft, anzahl: r.anzahl, bytes: r.bytes, titel: r.titel }); zeichneInhalte(); }
+    } }, "Nach neuen Inhalten suchen");
+    inh.innen.append(
+      el("div", { class: "einst-zeile", style: "padding-top:0" },
+        el("div", {}, el("b", {}, "Installiert"), el("small", {}, installiertText)),
+        el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten")),
+      el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, "Einrichtung neu starten"), el("small", {}, "Alles noch einmal Schritt für Schritt auswählen, wie beim ersten Start.", el("br"), "Was schon installiert ist, bleibt.")),
+        el("a", { class: "knopf knopf-klein", href: "#setup?schritt=0&neu=1" }, sym("rotate-ccw"), "Neu starten")),
+      el("div", { class: "einst-zeile" }, el("div", {}, el("b", {}, "Aktualisierung"), inhText), inhSuchKnopf),
+      el("h3", { class: "akt-inhalte-titel" }, "Automatisch aktualisieren"),
+      aktualisierungBox(akt, true, { eingebettet: true, geaendert: () => { zeichneInhalte(); zeichneProgramm(); } }));
+
     // ---------------- Fieldbook und Updates (mit der Version)
+    gruppe("Programm");
     const prog = kategorie("programm", "refresh-cw", "Fieldbook und Updates");
     let programmInfo = { eingerichtet: true, neu: s.programmNeu, verfuegbar: !!s.programmNeu, bereit: s.programmBereit };
     const progText = el("small"), progExtra = el("div");
@@ -43,12 +74,16 @@ const Einstellungen = (() => {
       : u.bereit ? "Version " + u.bereit + " ist heruntergeladen und wird beim nächsten Start eingespielt."
       : u.verfuegbar ? "Neue Version " + u.neu + " verfügbar" + (u.bytes ? " (" + groesse(u.bytes) + ")" : "") + "."
       : u.neu ? "Das ist die neueste Version." : "";
-    const inhalteStatus = () => "Inhalte: " + (akt.geprueft ? "zuletzt geprüft " + akt.geprueft + " · " +
-      (akt.anzahl ? akt.anzahl + " Aktualisierung(en), ca. " + groesse(akt.bytes) : "alles aktuell") : "noch nicht geprüft");
+    // Nur sichtbar, wenn die Inhalte automatisch aktuell gehalten werden (es gelten deren Einstellungen)
+    const mitInhalten = el("div");
     const zeichneProgramm = () => {
       const u = programmInfo;
-      const st = programmStatus(u);
-      progText.replaceChildren(...(st ? [st, el("br")] : []), inhalteStatus());
+      progText.textContent = programmStatus(u);
+      mitInhalten.replaceChildren(...(akt.an ? [zeileMitSchalter("Neue Fieldbook-Versionen zusammen mit den Inhalten laden",
+        ["Es gelten dieselben Einstellungen wie bei der Aktualisierung der Inhalte.", el("br"), "Eingespielt wird die neue Version beim nächsten Start."],
+        el("input", { type: "checkbox", checked: akt.programm !== false, onchange: async (e) => {
+          await aktualisierungSpeichern(akt, { programm: e.target.checked }, true);
+        } }))] : []));
       progExtra.innerHTML = "";
       if (u.verfuegbar && u.notizen) progExtra.append(el("details", {}, el("summary", {}, "Was ist neu in " + u.neu + "?"), el("pre", { style: "white-space:pre-wrap;font-family:inherit" }, u.notizen)));
       if ((u.verfuegbar || u.bereit) && !u.entwicklung) {
@@ -70,18 +105,16 @@ const Einstellungen = (() => {
       const kurz = u.bereit ?"Version " + u.bereit + " wird beim nächsten Start eingespielt"
         : u.verfuegbar ? "Neue Version " + u.neu + " verfügbar"
         : u.entwicklung ? "Entwicklungsordner" : u.neu ? "aktuell" : "";
-      prog.unter("Version " + s.version + (kurz ? " · " + kurz : "") + " · Inhalte " + (akt.an ? "werden automatisch aktuell gehalten" : "nicht automatisch aktuell"));
+      prog.unter("Version " + s.version + (kurz ? " · " + kurz : ""));
     };
-    // Ein Knopf sucht beides: neue Fieldbook-Version und neue Inhalte
+    // Sucht nur nach einer neuen Fieldbook-Version (neue Inhalte: Knopf unter „Inhalte“)
     const suchKnopf = el("button", { class: "knopf knopf-klein", onclick: async (e) => {
       const k = e.currentTarget, t = k.textContent;
       k.disabled = true; k.textContent = "Suche …";
       programmInfo = await api("programmupdate").catch(err => ({ fehler: err.message, eingerichtet: true }));
       zeichneProgramm();
-      k.textContent = t;
-      const r = await jetztAktualisieren(k, { programmNeu: programmInfo.verfuegbar && !programmInfo.entwicklung ? programmInfo.neu : null });
-      if (r) { Object.assign(akt, { geprueft: r.geprueft, anzahl: r.anzahl, bytes: r.bytes, titel: r.titel }); zeichneProgramm(); }
-    } }, "Nach Updates suchen");
+      k.textContent = t; k.disabled = false;
+    } }, "Nach neuer Version suchen");
     prog.innen.append(
       el("div", { class: "einst-zeile", style: "padding-top:0" }, el("div", {}, el("b", {}, "Fieldbook-Version " + s.version), progText), suchKnopf),
       progExtra,
@@ -95,9 +128,9 @@ const Einstellungen = (() => {
           catch (err) { s.updateBeimStart = vorher; zurueckSetzen(box, vorher !== false); await zeigeFehler("Die Einstellung konnte nicht gespeichert werden.", err); }
           finally { statusUngueltig(); }
         } })),
-      el("h3", { class: "akt-inhalte-titel" }, "Inhalte: KI, Wissen, Karten, Sprachen"),
-      aktualisierungBox(akt, true, { eingebettet: true, programm: true, geaendert: zeichneProgramm }));
+      mitInhalten);
     zeichneProgramm();
+    zeichneInhalte();
     // Keine GitHub-Abfrage beim Aufbau: programmNeu und programmBereit kommen aus dem Status (programmInfo oben).
     // Nur wenn eine neue Version da ist, holt der Server Versionshinweise und Größe nach (der Status enthält sie nicht).
     if (s.programmNeu) api("programmupdate?neu=0").then(u => { programmInfo = u; zeichneProgramm(); }).catch(() => { });
@@ -187,36 +220,6 @@ const Einstellungen = (() => {
     if (s.ki.fehler) ki.innen.append(el("p", { class: "fehlerbox" }, s.ki.fehler));
     kiUnter();
 
-    // ---------------- Inhalte
-    const pk = kat.pakete.filter(p => p.installiert).length, kk = kat.karten.filter(r => r.installiert).length;
-    const inh = kategorie("inhalte", "package", "Inhalte", pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : ""));
-    inh.innen.append(
-      el("div", { class: "einst-zeile", style: "padding-top:0" },
-        el("div", {}, el("b", {}, "Installiert"), el("small", {}, pk + " Wissenspakete · " + kk + " Karten" + (s.routen ? " · Routenplanung" : ""))),
-        el("a", { class: "knopf knopf-klein", href: "#inhalte" }, "Verwalten")),
-      el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, "Einrichtung neu starten"), el("small", {}, "Alles noch einmal Schritt für Schritt auswählen, wie beim ersten Start.", el("br"), "Was schon installiert ist, bleibt.")),
-        el("a", { class: "knopf knopf-klein", href: "#setup?schritt=0&neu=1" }, sym("rotate-ccw"), "Neu starten")));
-
-    // ---------------- Rundgang durch Fieldbook (js/rundgang.js), je Kapitel ein Knopf
-    const fu = kategorie("rundgang", "compass", "Rundgang durch Fieldbook", "Schritt für Schritt mit Beispielinhalten");
-    fu.innen.append(el("p", { class: "hinweis", style: "margin-top:0" }, "Der Rundgang zeigt alles mit Beispielinhalten.", el("br"),
-      "Deine eigenen Inhalte bleiben dabei unverändert."));
-    Rundgang.kapitelListe().then(liste => {
-      for (const k of liste) fu.innen.append(el("div", { class: "einst-zeile" },
-        el("div", {}, el("b", {}, k.titel), el("small", {}, ...zeilen(k.text || ""))),
-        el("button", { type: "button", class: "knopf knopf-klein", onclick: (e) => Rundgang.starten(k.id, e.currentTarget) }, "Ansehen")));
-    }).catch(() => fu.innen.append(fehlerBox("Der Rundgang konnte nicht geladen werden.")));
-
-    // ---------------- Rückmeldung und Datenschutz (nur wenn in fieldbook.json ein Dienst eingetragen ist)
-    // Reihenfolge fest, auch wenn die Antworten verschieden schnell kommen
-    const rm = kategorie("datenschutz", "messages-square", "Rückmeldung und Datenschutz", "Rückmeldung an den Entwickler");
-    rm.box.hidden = true;
-    const fbPlatz = el("div"), statPlatz = el("div");
-    rm.innen.append(fbPlatz, statPlatz);
-    api("feedback").then(fb => { if (fb && fb.eingerichtet) { fbPlatz.append(rueckmeldungTeil(fb)); rm.box.hidden = false; } }).catch(() => { });
-    api("statistik").then(st => { if (st && st.eingerichtet) { statPlatz.append(statistikTeil(st, rm.unter)); rm.box.hidden = false; } }).catch(() => { });
-
     // ---------------- Erweitert: Verbindungstest und Proxy für Firmen- und Schulnetze
     const erw = kategorie("erweitert", "settings", "Erweitert", "Internetverbindung prüfen · Proxy für Firmen- und Schulnetze");
     erw.innen.append(el("div", { class: "einst-zeile", style: "padding-top:0" },
@@ -234,6 +237,26 @@ const Einstellungen = (() => {
           finally { statusUngueltig(); }
           proxyStatus.textContent = proxyFeld.value.trim() ? "Gespeichert. Downloads laufen jetzt über diesen Proxy." : "Gespeichert. Fieldbook nimmt wieder den Proxy aus Windows (falls vorhanden).";
         } }, "Speichern"))));
+
+    // ---------------- Rundgang durch Fieldbook (js/rundgang.js), je Kapitel ein Knopf
+    gruppe("Hilfe und Kontakt");
+    const fu = kategorie("rundgang", "compass", "Rundgang durch Fieldbook", "Schritt für Schritt mit Beispielinhalten");
+    fu.innen.append(el("p", { class: "hinweis", style: "margin-top:0" }, "Der Rundgang zeigt alles mit Beispielinhalten.", el("br"),
+      "Deine eigenen Inhalte bleiben dabei unverändert."));
+    Rundgang.kapitelListe().then(liste => {
+      for (const k of liste) fu.innen.append(el("div", { class: "einst-zeile" },
+        el("div", {}, el("b", {}, k.titel), el("small", {}, ...zeilen(k.text || ""))),
+        el("button", { type: "button", class: "knopf knopf-klein", onclick: (e) => Rundgang.starten(k.id, e.currentTarget) }, "Ansehen")));
+    }).catch(() => fu.innen.append(fehlerBox("Der Rundgang konnte nicht geladen werden.")));
+
+    // ---------------- Rückmeldung und Datenschutz (nur wenn in fieldbook.json ein Dienst eingetragen ist)
+    // Reihenfolge fest, auch wenn die Antworten verschieden schnell kommen
+    const rm = kategorie("datenschutz", "messages-square", "Rückmeldung und Datenschutz", "Rückmeldung an den Entwickler");
+    rm.box.hidden = true;
+    const fbPlatz = el("div"), statPlatz = el("div");
+    rm.innen.append(fbPlatz, statPlatz);
+    api("feedback").then(fb => { if (fb && fb.eingerichtet) { fbPlatz.append(rueckmeldungTeil(fb)); rm.box.hidden = false; } }).catch(() => { });
+    api("statistik").then(st => { if (st && st.eingerichtet) { statPlatz.append(statistikTeil(st, rm.unter)); rm.box.hidden = false; } }).catch(() => { });
 
     bereitZeichnen(bereit, s, kat, prog.box);
     bereitBeobachten(bereit, kat, prog.box);

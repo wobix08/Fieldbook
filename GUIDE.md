@@ -413,7 +413,7 @@ Wird ein Ordner gelöscht, bleiben seine Einträge erhalten und stehen dann ohne
 
 ## 6. Inhalte aktuell halten
 
-Im ersten Schritt des Assistenten (oder später in den Einstellungen unter **Fieldbook und Updates**) kannst du **Inhalte automatisch aktuell halten** einschalten.\
+Im ersten Schritt des Assistenten (oder später in den Einstellungen unter **Inhalte**) kannst du **Inhalte automatisch aktuell halten** einschalten.\
 Dann sieht Windows einmal pro Woche nach, ob es neue Ausgaben deiner Wissenspakete, Karten oder Wegedaten gibt.\
 In den Einstellungen stellst du außerdem mit zwei Umschaltern ein:
 
@@ -426,11 +426,14 @@ In den Einstellungen stellst du außerdem mit zwei Umschaltern ein:
 
 
 Geladen wird immer mit niedrigster Priorität, damit du normal weiterarbeiten kannst.\
-Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Einstellungen oder **Nach Aktualisierungen suchen** auf der Seite **Inhalte**.
+Ohne Automatik geht es jederzeit von Hand mit **Nach neuen Inhalten suchen** in den Einstellungen unter **Inhalte** oder **Nach Aktualisierungen suchen** auf der Seite **Inhalte**.
 
 ## 7. Später erweitern oder ändern
 
-- Die **Einstellungen** (Zahnrad oben rechts) sind in Kategorien gegliedert, die per Klick aufklappen: **Bereit für offline?**, **Fieldbook und Updates**, **Darstellung und Land**, **KI-Assistent**, **Inhalte**, **Rundgang durch Fieldbook**, **Rückmeldung und Datenschutz** und **Erweitert**.\
+- Die **Einstellungen** (Zahnrad oben rechts) sind in drei Gruppen mit Kategorien gegliedert, die per Klick aufklappen.\
+  **Deine Inhalte:** **Bereit für offline?** und **Inhalte**.\
+  **Programm:** **Fieldbook und Updates**, **Darstellung und Land**, **KI-Assistent** und **Erweitert**.\
+  **Hilfe und Kontakt:** **Rundgang durch Fieldbook** und **Rückmeldung und Datenschutz**.\
   Zugeklappt steht unter jeder Kategorie, wie sie gerade eingestellt ist.
 - **Bereit für offline?** (ganz oben in den Einstellungen) zeigt auf einen Blick, ob du das Netz jetzt kappen könntest, zum Beispiel vor einer Reise oder einem angekündigten Stromausfall.\
   Geprüft werden Downloads, KI, Wissenspakete (beschädigt oder älter als ein Jahr), die Karte für dein Land mit Routenplanung, der Übersetzer und der Akku.\
@@ -451,7 +454,7 @@ Ohne Automatik geht es jederzeit von Hand mit **Nach Updates suchen** in den Ein
   Für das Kapitel **Karten** lädt Fieldbook vor dem ersten Start einmal eine kleine Beispielkarte (etwa 4 MB, braucht Internet).
 - **Fieldbook selbst aktualisieren**\
   In den Einstellungen oben unter **Fieldbook und Updates** stehen die Version und ob es eine neue gibt.\
-  **Nach Updates suchen** sucht nach einer neuen Programmversion und nach neuen Inhalten zugleich.\
+  **Nach neuer Version suchen** fragt bei GitHub nach einer neuen Programmversion.\
   Ein Klick lädt die neue Version, Fieldbook startet kurz neu.\
   Deine Inhalte und Einstellungen bleiben erhalten.\
   Nach dem Update zeigt Fieldbook einmal die Seite **Neu in Fieldbook** mit allen Neuerungen; später findest du sie dort unter **Was ist neu in Version …?**.\

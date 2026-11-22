@@ -218,6 +218,8 @@ const Routen = (() => {
       // Start: weißer Kreis mit dunklem Rand (mittig auf dem Punkt), Ziel: rote Stecknadel
       const opt = art === "start" ? { element: el("div", { class: "routen-start", title: "Start" }), anchor: "center" } : { color: farbe };
       const m = new maplibregl.Marker(Object.assign(opt, { draggable: true })).setLngLat([punkt.lon, punkt.lat]).addTo(k);
+      // (Klasse für den Rundgang, der die Ziel-Stecknadel mit einem Ring zeigt)
+      if (art === "ziel") m.getElement().classList.add("routen-ziel");
       m.on("dragend", () => {
         const ll = m.getLngLat();
         const neu = { lon: ll.lng, lat: ll.lat, name: "Punkt auf der Karte" };
