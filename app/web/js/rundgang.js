@@ -57,11 +57,12 @@ const Rundgang = (() => {
     if (k && k.laden && !(await beispielLaden(k, knopf))) return;
     // „Auf Deutsch“ merkt sich der Browser (uebersetzer.js). Im Rundgang beginnt es aus, am Ende kommt der alte Stand zurück.
     // Die Backofen-Auswahl auf der Seite Kochen (kochen.js) genauso: im Rundgang „Herd mit Backofen“, danach der alte Wert.
-    let uebersetzen = null, ofen = null;
-    try { uebersetzen = localStorage.getItem("ow-uebersetzen"); ofen = localStorage.getItem("ow-ofen"); } catch { }
-    zustand = { kapitel: kapitelId, schritt: 0, zurueck: location.hash || "#start", seite: null, uebersetzen, ofen };
+    // Gemerkte Zutaten und Kästchen auf der Seite Kochen ebenso: im Rundgang leer, danach wieder da.
+    let uebersetzen = null, ofen = null, koch = null;
+    try { uebersetzen = localStorage.getItem("ow-uebersetzen"); ofen = localStorage.getItem("ow-ofen"); koch = localStorage.getItem("ow-koch"); } catch { }
+    zustand = { kapitel: kapitelId, schritt: 0, zurueck: location.hash || "#start", seite: null, uebersetzen, ofen, koch };
     speichern();
-    try { localStorage.setItem("ow-uebersetzen", "0"); localStorage.removeItem("ow-ofen"); } catch { }
+    try { localStorage.setItem("ow-uebersetzen", "0"); localStorage.removeItem("ow-ofen"); localStorage.removeItem("ow-koch"); } catch { }
     if (!lesen()) { dialog("Rundgang", "Der Rundgang lässt sich in diesem Browser gerade nicht starten.", [{ text: "OK", wert: 1, haupt: true }]); zustand = null; return; }
     cookieSetzen(true);
     // Merkliste und „Zuletzt gelesen“ der Übung auf den Anfang setzen
@@ -97,6 +98,10 @@ const Rundgang = (() => {
       if (z && "ofen" in z) {
         if (z.ofen == null) localStorage.removeItem("ow-ofen");
         else localStorage.setItem("ow-ofen", z.ofen);
+      }
+      if (z && "koch" in z) {
+        if (z.koch == null) localStorage.removeItem("ow-koch");
+        else localStorage.setItem("ow-koch", z.koch);
       }
     } catch { }
     history.replaceState(null, "", seite || (z && z.zurueck) || "#start");
@@ -507,6 +512,7 @@ const Rundgang = (() => {
         }
         else if (a === "kochen") Kochen.uebungLeeren();   // Kochen: Zutaten und Rezepte weg
         else if (a.ofen) await Kochen.uebungOfen(a.ofen); // Kochen: Backofen-Auswahl zurück, Rezepte neu
+        else if (a.haken) await Kochen.uebungHaken(a.haken); // Kochen: { gewuerze: false, … } Häkchen zurück, Rezepte neu
         else if (a.karte) await Karten.uebungZustand(a.karte, kap.beispiel || {});
         else if (a.eigene) await eigeneZurueck(a.eigene, !!a.vorher);   // Eigene Unterlagen: datei, notiz, notizName, notizText, webseite
         else if (a.gespraech) Gespraech.uebungZurueck(a.gespraech);   // Übersetzer: { verlauf, modus, getauscht, feld }

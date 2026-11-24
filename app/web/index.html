@@ -411,8 +411,13 @@ window.FB_TAB = { vonFieldbook: false, fertig: Promise.resolve() };
           </select>
           <button type="submit" class="knopf knopf-haupt">Rezepte finden</button>
         </div>
+        <div class="koch-zeile koch-optionen">
+          <span class="koch-haken"><label><input type="checkbox" id="koch-gewuerze"> Gewürze und Würzzutaten weglassen</label><button type="button" class="koch-hilfe" data-haken="gewuerze" title="Was wird weggelassen?" aria-label="Was wird weggelassen?"><svg class="sym" aria-hidden="true"><use href="symbole.svg#circle-help"/></svg></button></span>
+          <span class="koch-haken"><label><input type="checkbox" id="koch-fleisch"> Fleisch und Fisch austauschbar</label><button type="button" class="koch-hilfe" data-haken="fleisch" title="Was wird getauscht?" aria-label="Was wird getauscht?"><svg class="sym" aria-hidden="true"><use href="symbole.svg#circle-help"/></svg></button></span>
+          <span class="koch-haken"><label><input type="checkbox" id="koch-aehnlich"> Ähnliches austauschbar (Nudeln, Käse, Sahne …)</label><button type="button" class="koch-hilfe" data-haken="aehnlich" title="Was wird getauscht?" aria-label="Was wird getauscht?"><svg class="sym" aria-hidden="true"><use href="symbole.svg#circle-help"/></svg></button></span>
+        </div>
         <div class="koch-zeile">
-          <span class="hinweis klein">Salz, Pfeffer, Öl und Wasser gelten als vorhanden.</span>
+          <span class="hinweis klein">Salz, Pfeffer, Öl und Wasser gelten als vorhanden.<br>Deine Zutaten und Häkchen bleiben fürs nächste Mal gemerkt.</span>
           <a id="koch-paket" class="knopf knopf-klein koch-paket" href="#bibliothek"><svg class="sym" aria-hidden="true"><use href="symbole.svg#book-open"/></svg>Alle Rezepte im Koch-Wiki</a>
         </div>
       </form>

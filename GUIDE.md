@@ -348,6 +348,8 @@ Berechnet wird ohne Internet, die Uhrzeiten richten sich nach der Uhr deines Com
 ### Kochen
 Unter **Was hast du da?** gibst du ein, was im Haus ist.\
 Fieldbook sucht passende Rezepte im Koch-Wiki, zuerst die, für die du alles hast.\
+Mit den Häkchen darunter zählen fehlende Gewürze und Würzzutaten (Kräuter, Zitrone, Senf, Knoblauch, ein Schuss Wein) nicht mit, und ähnliche Zutaten gelten als austauschbar (zum Beispiel Hähnchen statt Rind oder Öl statt Butter).\
+Deine Zutaten und Häkchen bleiben fürs nächste Mal gemerkt.\
 Darunter stehen Rezepte aus dem Vorrat und Faustregeln zu Trinkwasser, Haltbarkeit, Brennstoff sparen und sicherem Einkochen, auch ohne heruntergeladene Pakete.
 
 ### Erste Hilfe

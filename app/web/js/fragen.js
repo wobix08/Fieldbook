@@ -1009,6 +1009,32 @@ const Fragen = (() => {
     return daten.sort((a, b) => a.index - b.index).map(d => d.embedding);
   }
 
+  // Titel-Grenze für Absätze (nur 4B, 24. Nov. 2026): Ein Absatz aus der Bibliothek kann gut zur Frage passen, obwohl
+  // sein Artikel ein ganz anderes Thema hat (Mikrotom beim Messerschärfen, Ungarisch-Lesebuch bei Angst,
+  // Radreise-Checkliste beim Handy laden). Die KI mischte solche Absätze in die Antwort. Weg fällt ein Absatz nur,
+  // wenn weder der Artikeltitel (unter 0,20) noch Titel mit Überschrift (unter 0,40) zur Frage passt. Ausgenommen sind
+  // Fieldbook-Texte, PDF-Seiten und Adressen als Titel (deren Titel sagt nichts über den Inhalt).
+  // An 120 Fragen gemessen: nur Ausreißer unter 0,20, brauchbare Absätze meist über 0,25 (ki-versuche.md).
+  // Test: window.__titelGrenze = true / false.
+  function titelGrenze() {
+    if (window.__titelGrenze !== undefined) return !!window.__titelGrenze;
+    return !!(OW.status && OW.status.modell === "qwen35-4b");
+  }
+  const TITEL_OHNE_SINN = /, Seite \d+$|^(www\.|https?:)|\.html?$/i;
+  async function titelPasst(absaetze, frageVektor) {
+    const pruefen = absaetze.filter(p => p.art !== "fieldbook" && !TITEL_OHNE_SINN.test(p.titel));
+    if (!pruefen.length) return absaetze;
+    const titel = [...new Set(pruefen.map(p => p.titel))];
+    const koepfe = [...new Set(pruefen.filter(p => p.ueb).map(p => p.titel + " – " + p.ueb))];
+    const v = await mischVektoren(titel.concat(koepfe).map(t => "title: " + t + " | text: " + t));
+    const wert = {};
+    titel.concat(koepfe).forEach((t, i) => { wert[t] = aehnlich(frageVektor, v[i]); });
+    const weg = new Set(pruefen.filter(p => wert[p.titel] < 0.20 && (!p.ueb || wert[p.titel + " – " + p.ueb] < 0.40)));
+    // Nur im Test: window.__titelLog = [] zeigt, was wegfällt
+    if (window.__titelLog) window.__titelLog.push(...[...weg].map(p => ({ titel: p.titel, ueb: p.ueb, titelWert: +wert[p.titel].toFixed(3) })));
+    return absaetze.filter(p => !weg.has(p));
+  }
+
   // Absätze breit suchen: Fragewörter, Suchbegriffe und Thema in allen Paketen (Volltext und Titel), bis 40 Artikel,
   // alle Absätze per Wortvergleich vorsortieren, die besten 40 (dazu bis 8 aus Fieldbook) nach Bedeutung, 12 prüft die KI
   async function absaetzeSuchen(buecher, begriffe, frage) {
@@ -1056,9 +1082,9 @@ const Fragen = (() => {
     const vor = frei.slice().sort((a, b) => b.lex - a.lex).slice(0, 40).concat(fb.filter(p => p.lex > 0).sort((a, b) => b.lex - a.lex).slice(0, 8));
     if (!vor.length) return [];
     const v = await mischVektoren(["task: question answering | query: " + frage].concat(vor.map(p => "title: " + p.titel + (p.ueb ? " – " + p.ueb : "") + " | text: " + p.text.slice(0, 500))));
-    vor.forEach((p, i) => { p.wert = aehnlich(v[0], v[i + 1]) + (p.art === "fieldbook" ? 0.05 : p.art === "forum" ? -0.03 : 0); });
+    vor.forEach((p, i) => { p.wert = aehnlich(v[0], v[i + 1]) + (p.art === "fieldbook" && fbAbsatzBonus() ? 0.05 : p.art === "forum" ? -0.03 : 0); });
     vor.sort((a, b) => b.wert - a.wert);
-    const pr = vor.slice(0, 12);
+    const pr = (titelGrenze() ? await titelPasst(vor, v[0]) : vor).slice(0, 12);
     const sys = "Du bewertest Textabschnitte für eine Frage. Ein Abschnitt hilft, wenn er etwas enthält, das direkt zur Antwort beiträgt: eine Anleitung, eine Regel, eine Zahl, eine Warnung oder eine klare Erklärung. " +
       "Er hilft nicht, wenn er nur Geschichte, Begriffe, Statistik, ein anderes Thema oder eine andere Lage behandelt. " +
       "Abschnitte mit gefährlichen, fragwürdigen oder widersprüchlichen Ratschlägen nimmst du nie, auch wenn sie zum Thema passen. Foren sind Meinungen Einzelner: Nimm sie nur, wenn kein Lexikon, Lehrbuch oder Fieldbook-Abschnitt dasselbe besser sagt. " +
@@ -1079,6 +1105,15 @@ const Fragen = (() => {
   // fehlte „Therapie“, bei Sturm die Warnstufen; 7 von 26 Problemfragen bekamen gar keinen Absatz dazu).
   const flach = (s) => String(s || "").replace(/\s+/g, " ").trim();
   // alt (nur im Vergleichstest): Verhalten vor dem 22. Nov. 2026
+  // Bonus +0,05 für einzelne Fieldbook-Absätze (ganze Fieldbook-Artikel behalten ihn immer). Beim 4B aus (23. Nov. 2026):
+  // Allgemeine Notfall-Absätze (Strom weg, Sirene, Notruf) landeten sonst auf Platz 1 und die KI mischte sie in fremde
+  // Fragen. 22 betroffene Fragen blind 13 zu 6 besser, themenfremd 11 statt 17, Wächter 14/14 ×2 (ki-versuche.md).
+  // Andere Modelle behalten den Bonus, bis sie getrennt geprüft sind. Test: window.__fbAbsatzOhneBonus = true / false.
+  function fbAbsatzBonus() {
+    if (window.__fbAbsatzOhneBonus !== undefined) return !window.__fbAbsatzOhneBonus;
+    return !(OW.status && OW.status.modell === "qwen35-4b");
+  }
+
   async function mischen(quellen, absaetze, frage, budgetZeichen, alt) {
     const schonDa = new Set(quellen.map(q => String(q.titel).toLowerCase()));
     const imBlock = alt ? (p) => schonDa.has(String(p.titel).toLowerCase())
@@ -1087,7 +1122,7 @@ const Fragen = (() => {
       .concat(absaetze.filter(p => !imBlock(p)).map(p => ({ p, kopf: p.titel + (p.ueb ? " – " + p.ueb : ""), text: p.text, fb: p.art === "fieldbook" })));
     if (bloecke.length <= quellen.length) return quellen;
     const v = await mischVektoren(["task: question answering | query: " + frage].concat(bloecke.map(b => "title: " + b.kopf + " | text: " + b.text.slice(0, 1500))));
-    bloecke.forEach((b, i) => { b.wert = aehnlich(v[0], v[i + 1]) + (b.fb ? 0.05 : 0); });
+    bloecke.forEach((b, i) => { b.wert = aehnlich(v[0], v[i + 1]) + (b.fb && (b.q || fbAbsatzBonus()) ? 0.05 : 0); });
     bloecke.sort((a, b) => b.wert - a.wert);
     // Nur im Test: window.__mischLog = [] zeigt alle Blöcke mit Wert (auch verworfene Absätze aus schon vorhandenen Artikeln)
     if (window.__mischLog) window.__mischLog.push({ frage, bloecke: bloecke.map(b => ({ kopf: b.kopf, wert: +b.wert.toFixed(3), laenge: b.text.length, art: b.q ? "artikel" : "absatz" })),

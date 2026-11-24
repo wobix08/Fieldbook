@@ -10,6 +10,41 @@ const Kochen = (() => {
   const seitenSpeicher = new Map(), SEITEN_MAX = 200;
   const leitfadenLinks = [];
   let beschaeftigt = false;
+  const HAKEN = ["gewuerze", "fleisch", "aehnlich"];
+
+  // Fragezeichen an den Häkchen: zeigt die Listen aus kochen.json lesbar an
+  // (gleiche Grundform nur einmal, z. B. „Zitrone“ statt „Zitrone, Zitronen“)
+  function lesbar(woerter) {
+    const gesehen = new Set(), aus = [];
+    for (let w of woerter) {
+      w = w.replace(/^=/, "");
+      const s = stamm(w.split(/\s+/).pop());
+      if (gesehen.has(s)) continue;
+      gesehen.add(s);
+      aus.push(w.charAt(0).toUpperCase() + w.slice(1));
+    }
+    return aus;
+  }
+  function hilfeZeigen(k) {
+    let titel, text, liste;
+    if (k === "gewuerze") {
+      titel = "Gewürze und Würzzutaten weglassen";
+      text = "Fehlen dir nur diese Zutaten, gilt das Rezept trotzdem als machbar.\nAuf der Rezeptkarte steht dann „Ohne: …“.";
+      liste = [el("li", {}, lesbar(konf.gewuerze || []).join(", "))];
+    } else {
+      titel = k === "fleisch" ? "Fleisch und Fisch austauschbar" : "Ähnliches austauschbar";
+      text = "Hast du eine Zutat aus einer Gruppe, gelten die anderen derselben Gruppe als vorhanden.\nAuf der Rezeptkarte steht dann zum Beispiel „" + (k === "fleisch" ? "Hähnchen statt Rind" : "Sahne statt Milch") + "“." +
+        (k === "aehnlich" ? "\nÖl zählt immer als vorhanden, deshalb geht auch „Öl statt Butter“." : "");
+      liste = (konf[k] || []).map(g => { const w = lesbar(g); return el("li", {}, el("b", {}, w[0]), ": " + w.slice(1).join(", ")); });
+    }
+    dialog(titel, el("div", {}, el("p", {}, zeilen(text)), el("ul", { class: "koch-hilfe-liste" }, ...liste)), [{ text: "OK", wert: 1, haupt: true }]);
+  }
+
+  function merken() {
+    const g = { zutaten: $("#koch-zutaten").value };
+    for (const k of HAKEN) g[k] = $("#koch-" + k).checked;
+    try { localStorage.setItem("ow-koch", JSON.stringify(g)); } catch { }
+  }
 
   async function zeigen(params) {
     if (!konf) konf = await ladeKonfig("kochen");
@@ -18,6 +53,15 @@ const Kochen = (() => {
       try { const o = localStorage.getItem("ow-ofen"); if (o) $("#koch-ofen").value = o; } catch { }
       $("#koch-ofen").addEventListener("change", () => { try { localStorage.setItem("ow-ofen", $("#koch-ofen").value); } catch { } });
       $("#koch-form").addEventListener("submit", (e) => { e.preventDefault(); suchen(); });
+      // Zutaten und Häkchen fürs nächste Mal merken (meist ist danach noch das meiste da)
+      try {
+        const g = JSON.parse(localStorage.getItem("ow-koch") || "{}");
+        if (g.zutaten) $("#koch-zutaten").value = g.zutaten;
+        for (const k of HAKEN) $("#koch-" + k).checked = !!g[k];
+      } catch { }
+      for (const b of document.querySelectorAll(".koch-hilfe")) b.addEventListener("click", () => hilfeZeigen(b.dataset.haken));
+      $("#koch-form").addEventListener("input", merken);
+      $("#koch-form").addEventListener("change", merken);
       leitfaden();
     }
     // Sprung aus Vorsorge, z. B. #kochen?l=haltbarkeit: Abschnitt aufklappen und hinscrollen
@@ -55,17 +99,63 @@ const Kochen = (() => {
 
   // Einfache Grundform, damit "Eier" zu "Ei" und "Kartoffeln" zu "Kartoffel" passt.
   // Beide Seiten (Eingabe und Rezept) werden gleich behandelt.
+  // Umlaute ohne Punkte, damit „Walnüsse“ zu „Walnuss“ und „Äpfel“ zu „Apfel“ passt; ß wie ss (Schweiz).
+  // Endungen werden mehrfach abgeschnitten („Pinienkerne“ → „Pinienkern“ → „Pinienk“, ebenso „Pinienkern“),
+  // auch ein End-s bei längeren Wörtern („Champignons“, „Avocados“), aber nicht bei „ss“ („Walnuss“).
   function stamm(w) {
-    w = w.toLowerCase();
-    const k = w.replace(/(en|er|n|e)$/, "");
-    return k.length >= 2 ? k : w;
+    w = w.toLowerCase().replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "ss").replace(/ies$/, "y");
+    for (let i = 0; i < 3; i++) {
+      const k = w.length > 4 && /[^s]s$/.test(w) ? w.slice(0, -1) : w.replace(/(en|er|n|e)$/, "");
+      if (k === w || k.length < 2) break;
+      w = k;
+    }
+    return w;
   }
+  // Füllwörter zählen nicht: „oder ein Fertigprodukt“ würde sonst über „ein“ → „ei“ zu Eiern passen
+  const FUELLWORT = /^(ein|eine|einer|einem|einen|eines|einige|oder|und|mit|ohne|von|vom|zum|zur|nach|etwas|evtl|ggf)$/;
   function woerter(text) {
-    return (text.toLowerCase().match(/[a-zäöüß]+/g) || []).map(stamm);
+    return (text.toLowerCase().match(/[a-zäöüß]+/g) || []).filter(w => !FUELLWORT.test(w)).map(stamm);
   }
   // Passt ein Wort zur Zutat? Gleich, oder bei längeren Wörtern als Wortende ("Bergkäse" → "Käse")
   function passt(wort, zutat) {
     return wort === zutat || (zutat.length >= 4 && wort.endsWith(zutat));
+  }
+
+  // Eigene Eingabe aufbereiten: Grundform, dazu das Wort ohne typischen Anhang („Knoblauchzehen“ → „Knoblauch“,
+  // „Zimtstange“ → „Zimt“) und gleichbedeutende Wörter aus kochen.json („gleich“: Topfen = Quark, Semmel = Brötchen).
+  const ANHAENGE = ["zehen", "zehe", "stangen", "stange", "schoten", "schote", "blätter", "blatt", "blättchen", "körner", "korn",
+    "zweige", "zweig", "pulver", "filets", "filet", "würfel", "scheiben", "scheibe", "stücke", "stückchen", "knollen", "knolle",
+    "samen", "saat", "kapseln", "kapsel", "flocken", "flöckchen", "röschen", "spitzen", "wurzel", "stiele", "röllchen", "fäden",
+    "blättern", "kerne", "kernen", "kern", "grün", "fleisch", "brust", "schenkel", "keule", "zesten", "achtel",
+    "spalten", "stifte", "splitter", "kolben", "rohmasse", "stauden"];
+  // Allgemeine Wörter, die eine längere eigene Zutat nicht abdecken („Orangensaft“ ist kein „Saft“ fürs Rezept)
+  const KEIN_OBERBEGRIFF = /^(saft|mark|kern|kerne|pulv|pulver|apfel|kraut|wass|wasser|salat|fleisch|weiss|weiß|grün|grun|frisch|fein|klein|gross|groß)$/;
+  // … und eigene Zutaten, die trotz gleichem Wortende etwas anderes sind („Paniermehl“ ist kein „Mehl“)
+  const KEIN_ERSATZ = /(panier|stärke|kartoffel|mandel|kokos|kernmehl)mehl$|kokosmilch$|(schnitt|bär)lauch$/;
+  function eintrag(z) {
+    const roh = (z.toLowerCase().match(/[a-zäöüß]+/g) || [z.toLowerCase()]).pop();
+    const st = stamm(roh), alle = new Set([st]), suche = [];
+    for (const a of ANHAENGE)
+      // „Kürbiskerne“ sind kein Kürbis
+      if (roh.endsWith(a) && roh.length - a.length >= 3 && !/^kürbisker/.test(roh)) { alle.add(stamm(roh.slice(0, -a.length))); break; }
+    for (const g of konf.gleich || []) {
+      const gs = g.map(f => stamm(f.split(/\s+/).pop()));
+      // nur ganze Wörter, sonst gehörte „Schnittlauch“ zu „Lauch, Porree“
+      if (gs.some(f => alle.has(f))) {
+        gs.forEach(f => alle.add(f));
+        if (stamm(g[0]) !== st) suche.push(g[0]);
+      }
+    }
+    return { name: z, stamm: st, roh, alle: [...alle], suche };
+  }
+  // Steht die eigene Zutat in dieser Rezeptzeile? (zeile = Text der Zeile samt Zutatennamen)
+  function inZeile(s, zeile) {
+    if (woerter(zeile).some(x => s.alle.some(a => passt(x, a)))) return true;
+    // „Vollmilch“ deckt „Milch“, „Bergkäse“ deckt „Käse“, „Trockenhefe“ deckt „Hefe“ (wie geschrieben verglichen)
+    // (in Grundform und wie geschrieben, damit „Frühlingszwiebeln“ wie „Bergkäse“ klappen)
+    const deckt = (eigen, x) => x.length >= 4 && x !== eigen && !KEIN_OBERBEGRIFF.test(x) && eigen.endsWith(x);
+    return !KEIN_ERSATZ.test(s.roh) &&
+      (woerter(zeile).some(x => deckt(s.stamm, x)) || rohWoerter(zeile).some(x => deckt(s.roh, x)));
   }
 
   function eingabe() {
@@ -84,14 +174,20 @@ const Kochen = (() => {
     const status = el("p", { class: "hinweis" }, "Rezepte werden gesucht …");
     ziel.append(status);
     try {
-      const kandidaten = await kandidatenSuchen(buch, zutaten);
+      const staemme = zutaten.map(eintrag);
+      const regeln = regelnBauen(staemme);
+      // Mitgesucht: Oberbegriffe der Tauschgruppen und das übliche Wort für „Topfen“, „Semmel“ usw.
+      const kandidaten = await kandidatenSuchen(buch, zutaten, regeln.oberbegriffe.concat(...staemme.map(s => s.suche)));
       status.textContent = "Rezepte werden geprüft (" + kandidaten.length + ") …";
       const rezepte = (await nachEinander(kandidaten, 8, lesen)).filter(Boolean);
       const ohneOfen = $("#koch-ofen").value === "ohne";
-      const staemme = zutaten.map(z => ({ name: z, stamm: stamm(z.split(/\s+/).pop()) }));
-      const bewertet = rezepte.map(r => bewerten(r, staemme)).filter(r => r.genutzt.length > 0 && r.fehlt.length <= 3);
+      const bewertet = rezepte.map(r => bewerten(r, staemme, regeln)).filter(r => r.genutzt.length > 0 && r.fehlt.length <= 3);
+      // Reihenfolge: erst was fehlt, dann wie viel man ändern muss (tauschen oder weglassen zählt gleich),
+      // bei Gleichstand das Rezept, das mehr eigene Zutaten nutzt
+      const aenderungen = r => r.getauscht.length + r.weg.length;
       bewertet.sort((a, b) =>
-        (ohneOfen ? (a.ofen - b.ofen) : 0) || a.fehlt.length - b.fehlt.length || b.genutzt.length - a.genutzt.length);
+        (ohneOfen ? (a.ofen - b.ofen) : 0) || a.fehlt.length - b.fehlt.length ||
+        aenderungen(a) - aenderungen(b) || b.genutzt.length - a.genutzt.length);
       zeigeRezepte(ziel, bewertet, zutaten, ohneOfen);
     } catch (e) {
       ziel.innerHTML = "";
@@ -102,11 +198,14 @@ const Kochen = (() => {
 
   // Volltextsuche mit allen Zutaten zusammen, paarweise und einzeln. So kommen auch Rezepte in die
   // Auswahl, die nur einen Teil der Zutaten nutzen.
-  async function kandidatenSuchen(buch, zutaten) {
+  // Mit „austauschbar“ wird zusätzlich der Oberbegriff gesucht (z. B. „Fleisch“), damit auch Rezepte mit
+  // einer anderen Zutat aus derselben Gruppe in die Auswahl kommen.
+  async function kandidatenSuchen(buch, zutaten, oberbegriffe) {
     const anfragen = [zutaten.join(" ")];
     for (let i = 0; i < zutaten.length; i++)
       for (let j = i + 1; j < zutaten.length && anfragen.length < 16; j++) anfragen.push(zutaten[i] + " " + zutaten[j]);
     for (const z of zutaten) anfragen.push(z);
+    for (const o of oberbegriffe || []) if (!anfragen.some(q => q.toLowerCase() === o)) anfragen.push(o);
     // Höchstens 4 Suchen gleichzeitig; scheiternde Suchen zählen als leer
     const listen = (await nachEinander(anfragen, 4, q => Kiwix.suche(buch, q, 25))).map(l => l || []);
     const gesehen = new Set(), kandidaten = [];
@@ -168,19 +267,67 @@ const Kochen = (() => {
       !/(grill|pfanne|herd|feuer)\s+oder\s+(back)?ofen|(back)?ofen\s+oder\s+(grill|pfanne|herd)/i.test(s));
   }
 
-  function bewerten(r, staemme) {
-    const immer = konf.immerDa.map(stamm);
-    const genutzt = new Set(), fehlt = [];
-    for (const z of r.zeilen) {
-      const w = woerter(z.text + " " + z.namen.join(" "));
-      const treffer = staemme.filter(s => w.some(x => passt(x, s.stamm)));
+  // ---- Kästchen „weglassen“ und „austauschbar“ (Listen in kochen.json)
+  // Gruppenwörter in Grundform und so wie geschrieben; Wortanfang oder Wortende genügt ab 4 Buchstaben
+  // („Putenschnitzel“ → „pute“, „Eiernudeln“ → „nudeln“)
+  // „=wort“ in kochen.json heißt: nur als ganzes Wort („=lauch“, sonst zählt „Schnittlauch“ mit)
+  function formen(wort) {
+    const w = wort.toLowerCase().split(/\s+/).pop();
+    return w.startsWith("=") ? [w] : [...new Set([w, stamm(w)])];
+  }
+  function inGruppe(wort, gruppe) {
+    return gruppe.some(f => f.startsWith("=") ? wort === f.slice(1) :
+      wort === f || (f.length >= 4 && (wort.startsWith(f) || wort.endsWith(f))));
+  }
+  // Gewürze nur als ganzes Wort, Wortende oder mit typischem Anhang („Zimtstange“, „Lorbeerblätter“),
+  // damit „Gewürzgurke“ oder „Kräuterbutter“ nicht als Gewürz gelten
+  function istGewuerz(wort, liste) {
+    return liste.some(f => wort === f || (f.length >= 4 && wort.endsWith(f)) ||
+      (wort.startsWith(f) && /^(stangen?|pulver|blatt|blätter|körner|korn|zweige?|stiele?|samen|schoten?|nüsse|nuss|zehen?|kapseln?|flocken)$/.test(wort.slice(f.length))));
+  }
+  function rohWoerter(text) { return text.toLowerCase().match(/[a-zäöüß]+/g) || []; }
+
+  function regelnBauen(staemme) {
+    const an = k => { const e = $("#koch-" + k); return !!(e && e.checked); };
+    const gewuerze = an("gewuerze") ? [].concat(...(konf.gewuerze || []).map(formen)) : [];
+    const gruppen = [].concat(an("fleisch") ? konf.fleisch || [] : [], an("aehnlich") ? konf.aehnlich || [] : [])
+      .map(g => ({ oberbegriff: g[0].replace(/^=/, ""), formen: [].concat(...g.map(formen)) }));
+    // Zu jeder eigenen Zutat die Gruppe, in der sie steht
+    // Grundzutaten (Öl usw.) zählen mit, dann gilt z. B. Butter als ersetzbar durch Öl
+    const tausch = [], eigene = staemme.concat(konf.immerDa.map(i => ({ name: i.charAt(0).toUpperCase() + i.slice(1), immer: true })));
+    for (const s of eigene) {
+      const u = s.name.toLowerCase().split(/\s+/).pop();
+      const g = gruppen.find(gr => inGruppe(u, gr.formen));
+      if (g) tausch.push({ name: s.name, gruppe: g, immer: !!s.immer });
+    }
+    return { gewuerze, tausch, oberbegriffe: [...new Set(tausch.filter(t => !t.immer).map(t => t.gruppe.oberbegriff))] };
+  }
+
+  function bewerten(r, staemme, regeln) {
+    // Grundzutaten wie geschrieben vergleichen (mit „ö“), sonst endet „Alkohol“ auf „ol“
+    const immer = konf.immerDa.map(i => i.toLowerCase());
+    const genutzt = new Set(), fehlt = [], getauscht = [], weg = [];
+    zeilen: for (const z of r.zeilen) {
+      const treffer = staemme.filter(s => inZeile(s, z.text + " " + z.namen.join(" ")));
       treffer.forEach(s => genutzt.add(s.name));
       // Grundzutaten auch als Wortende, egal wie kurz ("Olivenöl" → "öl")
-      if (treffer.length || w.some(x => immer.some(i => x.endsWith(i)))) continue;
+      if (treffer.length || rohWoerter(z.text + " " + z.namen.join(" ")).some(x => immer.some(i => x.endsWith(i)))) continue;
       if (/optional|nach belieben|nach geschmack|zum garnieren/i.test(z.text)) continue;
-      fehlt.push(z.namen[0] || z.text.replace(/^[\d½¼¾\s,.–-]*(g|kg|ml|l|el|tl|stück|prise|bund|dose|becher)?\b\s*/i, "").slice(0, 40));
+      const name = z.namen[0] || z.text.replace(/^[\d½¼¾\s,.–-]*(g|kg|ml|l|el|tl|stück|prise|bund|dose|becher)?\b\s*/i, "").slice(0, 40);
+      // Lieber die verlinkten Zutatennamen als den ganzen Text („Butterschmalz oder Schweineschmalz“ ist kein Fleisch)
+      const roh = rohWoerter(z.namen.length ? z.namen.join(" ") : z.text);
+      if (regeln) {
+        for (const t of regeln.tausch)
+          if (roh.some(x => inGruppe(x, t.gruppe.formen))) {
+            if (!t.immer) genutzt.add(t.name);
+            getauscht.push(t.name + " statt " + name);
+            continue zeilen;
+          }
+        if (regeln.gewuerze.length && roh.some(x => istGewuerz(x, regeln.gewuerze))) { weg.push(name); continue; }
+      }
+      fehlt.push(name);
     }
-    return { ...r, genutzt: [...genutzt], fehlt: [...new Set(fehlt)] };
+    return { ...r, genutzt: [...genutzt], fehlt: [...new Set(fehlt)], getauscht: [...new Set(getauscht)], weg: [...new Set(weg)] };
   }
 
   function zeigeRezepte(ziel, rezepte, zutaten, ohneOfen) {
@@ -190,8 +337,9 @@ const Kochen = (() => {
       return;
     }
     // Immer 8 auf einmal, "Weitere Gerichte" hängt die nächsten 8 an
-    // „ohne-ofen“: daran erkennt der Rundgang, dass ohne Backofen gesucht wurde
-    const liste = el("div", { class: "rezepte" + (ohneOfen ? " ohne-ofen" : "") });
+    // „ohne-ofen“ und „haken-…“: daran erkennt der Rundgang, womit gesucht wurde
+    const haken = HAKEN.filter(k => $("#koch-" + k).checked).map(k => " haken-" + k).join("");
+    const liste = el("div", { class: "rezepte" + (ohneOfen ? " ohne-ofen" : "") + haken });
     const weiter = el("button", { type: "button", class: "knopf", onclick: () => mehr() });
     const info = el("span", { class: "hinweis klein" });
     let gezeigt = 0;
@@ -204,16 +352,30 @@ const Kochen = (() => {
       weiter.hidden = rest <= 0;
     }
     mehr();
-    ziel.append(liste, el("div", { class: "rezepte-weiter" }, weiter, info));
+    const unten = el("div", { class: "rezepte-weiter" }, weiter, info);
+    // Oben ein Knopf zum Einklappen, damit man ohne langes Scrollen an Nachlesen und Leitfaden kommt
+    const anzahl = el("span", { class: "hinweis klein" }, rezepte.length + " passende Gerichte");
+    const klappen = el("button", { type: "button", class: "knopf knopf-klein rezepte-klappen", "aria-expanded": "true", onclick: () => {
+      const zu = !liste.hidden;
+      liste.hidden = unten.hidden = zu;
+      klappen.setAttribute("aria-expanded", String(!zu));
+      klappen.lastChild.textContent = zu ? "Rezepte zeigen" : "Rezepte einklappen";
+    } }, sym("chevron-down"), el("span", {}, "Rezepte einklappen"));
+    ziel.append(el("div", { class: "rezepte-kopf" }, anzahl, klappen), liste, unten);
   }
 
   function karte(r, zutaten, ohneOfen) {
     const merkmale = el("div", { class: "rezept-merkmale" },
       r.fehlt.length ? el("span", { class: "merkmal fehlt" }, "Es fehlt: " + r.fehlt.join(", ")) : el("span", { class: "merkmal alles" }, "✓ Du hast alles"),
       el("span", { class: "merkmal" }, "Nutzt: " + r.genutzt.join(", ")));
+    // Jeder Tausch in einem eigenen Kästchen, sonst ist bei mehreren nicht klar, was wozu gehört
+    for (const t of r.getauscht) merkmale.append(el("span", { class: "merkmal tausch" }, sym("arrow-left-right"), t));
+    if (r.weg.length) merkmale.append(el("span", { class: "merkmal weg" }, "Ohne: " + r.weg.join(", ")));
     if (r.ofen) merkmale.append(el("span", { class: "merkmal ofen" + (ohneOfen ? " fehlt" : "") }, "braucht Backofen"));
     const frage = "Wie koche ich „" + r.titel + "“? Ich habe: " + zutaten.join(", ") + "." +
       (ohneOfen ? " Ich habe keinen Backofen, nur eine Herdplatte, einen Gaskocher oder Feuer." : "") +
+      (r.getauscht.length ? " Ich nehme " + r.getauscht.join(", ") + "." : "") +
+      (r.weg.length ? " Ich lasse weg: " + r.weg.join(", ") + "." : "") +
       (r.fehlt.length ? " Es fehlt mir: " + r.fehlt.join(", ") + ". Wie kann ich das ersetzen oder weglassen?" : "");
     const knoepfe = el("div", { class: "knoepfe" },
       el("a", { class: "knopf", href: "#lesen?url=" + encodeURIComponent(r.url) + "&titel=" + encodeURIComponent(r.titel) }, sym("book-open"), "Rezept lesen"));
@@ -344,6 +506,24 @@ const Kochen = (() => {
     for (let i = 0; i < 100 && beschaeftigt; i++) await new Promise(r => setTimeout(r, 100));
     if (eingabe().length) await suchen();
   }
+  // haken: { gewuerze: false, … } – Häkchen zurückstellen und neu suchen
+  async function uebungHaken(haken) {
+    let anders = false;
+    for (const k of Object.keys(haken)) {
+      const e = $("#koch-" + k);
+      if (e && e.checked !== !!haken[k]) { e.checked = !!haken[k]; anders = true; }
+    }
+    if (!anders) return;
+    merken();
+    for (let i = 0; i < 100 && beschaeftigt; i++) await new Promise(r => setTimeout(r, 100));
+    if (eingabe().length) await suchen();
+  }
 
-  return { zeigen, uebungLeeren, uebungOfen };
+  // abgleich: nur für Tests (prüft, ob eine Eingabe zu einer Rezeptzeile passt)
+  async function abgleich(eingabeText, zeilenText) {
+    if (!konf) konf = await ladeKonfig("kochen");
+    return inZeile(eintrag(eingabeText), zeilenText);
+  }
+
+  return { zeigen, uebungLeeren, uebungOfen, uebungHaken, abgleich };
 })();

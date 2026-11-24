@@ -620,6 +620,46 @@
         },
         {
           "seite": "#kochen",
+          "ziel": "#koch-form .koch-optionen",
+          "mit": "#koch-form button[type='submit']",
+          "nurKlick": "label:has(#koch-aehnlich)",
+          "aktion": { "da": "#koch-ergebnis .rezepte.haken-aehnlich" },
+          "hinweis": "Setz das Häkchen bei „Ähnliches austauschbar“ und klicke auf „Rezepte finden“.",
+          "aufraeumen": { "haken": { "aehnlich": false } },
+          "titel": "Ähnliches tauschen",
+          "text": "Oft fehlt nur eine Zutat, für die du etwas Ähnliches hast. Setz das Häkchen bei „Ähnliches austauschbar“ und klicke auf „Rezepte finden“."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-ergebnis .rezept:has(.merkmal.tausch)",
+          "titel": "Öl statt Butter",
+          "text": "Beim Zwiebelrührei fehlte eben noch Butter. Jetzt steht dort „Öl statt Butter“, und du hast alles. Jeder Tausch steht als eigenes Kästchen auf der Karte."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-form .koch-optionen",
+          "mit": "#koch-form button[type='submit']",
+          "nurKlick": "label:has(#koch-gewuerze)",
+          "aktion": { "da": "#koch-ergebnis .rezepte.haken-gewuerze" },
+          "hinweis": "Setz das Häkchen bei „Gewürze und Würzzutaten weglassen“ und klicke auf „Rezepte finden“.",
+          "aufraeumen": { "haken": { "gewuerze": false } },
+          "titel": "Gewürze weglassen",
+          "text": "Ein Gericht gelingt meist auch ohne ein bestimmtes Gewürz. Setz das Häkchen bei „Gewürze und Würzzutaten weglassen“ und klicke auf „Rezepte finden“."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-ergebnis .rezept:has(.merkmal.weg)",
+          "titel": "Ohne Muskat",
+          "text": "Beim Kartoffelkuchen fehlt dir jetzt keine Zutat mehr. „Ohne: Muskat“ zeigt, was du weglässt. Rezepte, bei denen du nichts ändern musst, stehen trotzdem weiter oben."
+        },
+        {
+          "seite": "#kochen",
+          "ziel": "#koch-form .koch-optionen",
+          "titel": "Was getauscht wird",
+          "text": "Mit „Fleisch und Fisch austauschbar“ geht zum Beispiel auch Hähnchen statt Rind. Das Fragezeichen neben jedem Häkchen zeigt, was weggelassen oder getauscht wird."
+        },
+        {
+          "seite": "#kochen",
           "ziel": "#koch-ergebnis .rezept:first-child a[href^='#fragen']",
           "optional": true,
           "titel": "Die KI fragen",
@@ -627,11 +667,20 @@
         },
         {
           "seite": "#kochen",
+          "ziel": "#koch-ergebnis .rezepte-klappen",
+          "aktion": { "da": "#koch-ergebnis .rezepte-klappen[aria-expanded='false']" },
+          "hinweis": "Klicke auf „Rezepte einklappen“.",
+          "aufraeumen": { "klick": "#koch-ergebnis .rezepte-klappen[aria-expanded='false']" },
+          "titel": "Rezepte einklappen",
+          "text": "Unter den Rezepten geht es noch weiter. Damit du nicht lange scrollen musst, klicke auf „Rezepte einklappen“."
+        },
+        {
+          "seite": "#kochen",
           "ziel": "#koch-nachlesen a[href*='Kochkiste']",
           "aktion": { "adresse": "^#lesen.*Kochkiste" },
           "hinweis": "Klicke unter „Nachlesen“ auf „Kochkiste“.",
           "titel": "Kochen ohne Strom",
-          "text": "Unter „Nachlesen“ stehen Artikel aus deinen Paketen, zum Beispiel zum Kochen ohne Strom. Klicke auf „Kochkiste“."
+          "text": "Die Rezepte sind nur eingeklappt, „Rezepte zeigen“ holt sie zurück. Unter „Nachlesen“ stehen Artikel aus deinen Paketen, zum Beispiel zum Kochen ohne Strom. Klicke auf „Kochkiste“."
         },
         {
           "ziel": ".lese-spalte",

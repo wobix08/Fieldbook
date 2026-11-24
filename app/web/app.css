@@ -300,9 +300,22 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .koch-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
 .koch-zeile { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .koch-zeile select { width: auto; flex: 1; min-width: 220px; }
+.koch-optionen { gap: 6px 20px; }
+.koch-haken { display: inline-flex; align-items: center; gap: 4px; }
+.koch-haken label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.koch-hilfe { background: none; border: 0; padding: 2px; color: var(--text2); cursor: pointer; display: inline-flex; border-radius: 50%; }
+.koch-hilfe:hover, .koch-hilfe:focus-visible { color: var(--akzent); }
+.koch-hilfe .sym { width: 15px; height: 15px; }
+.koch-hilfe-liste { margin: 0 0 6px; padding-left: 18px; max-height: 55vh; overflow-y: auto; }
+.koch-hilfe-liste li { margin: 4px 0; }
+.koch-haken input { width: auto; margin: 0; accent-color: var(--akzent, currentColor); }
 /* Eine Zeile pro Rezept: links Name und Merkmale, rechts die Knöpfe */
 .rezepte { display: flex; flex-direction: column; gap: 8px; }
 .koch-paket { margin-left: auto; }
+.rezepte-kopf { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.rezepte-klappen { margin-left: auto; }
+.rezepte-klappen .sym { transform: rotate(180deg); transition: transform .15s; }
+.rezepte-klappen[aria-expanded="false"] .sym { transform: none; }
 .rezepte-weiter { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
 .rezept { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--schatten); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .rezept-text { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 6px; }
@@ -312,6 +325,8 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .merkmal { background: var(--flaeche2); color: var(--text2); border-radius: 8px; padding: 3px 9px; font-size: .86rem; }
 .merkmal.alles { background: var(--akzent-hell); color: var(--akzent); font-weight: 600; }
 .merkmal.fehlt { background: var(--gelb-hell); color: var(--gelb); }
+.merkmal.tausch { display: inline-flex; align-items: center; gap: 5px; }
+.merkmal.tausch .sym { width: 13px; height: 13px; flex: none; }
 /* Vier Gruppen: zwei mal zwei statt drei und eine allein; bei halber Breite untereinander */
 .koch-nachlesen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 @media (max-width: 760px) { .koch-nachlesen { grid-template-columns: 1fr; } }

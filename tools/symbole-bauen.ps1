@@ -19,7 +19,7 @@ $namen = @(
   'phone', 'phone-off', 'siren', 'baby', 'triangle-alert', 'heart', 'wind', 'activity', 'brain', 'bug', 'circle-alert',
   'candy', 'bone', 'skull', 'thermometer', 'bed', 'grape', 'axe', 'speech', 'soup', 'zap-off', 'drama',
   # Kochen
-  'archive', 'wheat', 'refrigerator', 'calendar', 'search',
+  'archive', 'wheat', 'refrigerator', 'calendar', 'search', 'circle-help',
   # Vorsorge
   'shield-check', 'box', 'backpack', 'printer', 'calculator', 'warehouse',
   # Inhalte und Einstellungen
