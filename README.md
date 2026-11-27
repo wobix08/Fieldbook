@@ -13,7 +13,7 @@ Installieren musst du nichts: entpacken, doppelklicken, fertig.
 
 [![Startseite von Fieldbook mit allen Bereichen und ein Wikipedia-Artikel über Stromausfall](.github/screenshots/uebersicht.png)](.github/screenshots/uebersicht.png)
 
-### **[Fieldbook 0.8.8 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.8/Fieldbook-0.8.8.zip)**
+### **[Fieldbook 0.9.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.9.0/Fieldbook-0.9.0.zip)**
 
 Kostenlos, ohne Konto und ohne Werbung.\
 Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
@@ -58,7 +58,7 @@ Wie es weitergeht, steht unter [Schnellstart](#schnellstart).
 
 ## Schnellstart
 
-1. **[Fieldbook 0.8.8 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.8.8/Fieldbook-0.8.8.zip)** (ZIP-Datei, etwa 7 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
+1. **[Fieldbook 0.9.0 herunterladen](https://github.com/wobix08/Fieldbook/releases/download/v0.9.0/Fieldbook-0.9.0.zip)** (ZIP-Datei, etwa 7 MB) und entpacken, zum Beispiel nach `C:\Fieldbook` oder auf einen USB-Stick.\
    Frühere Versionen und was sich geändert hat, stehen unter [Releases](../../releases).
 2. **`Fieldbook.exe`** doppelklicken.
 3. Der Einrichtungs-Assistent öffnet sich im Browser.\
@@ -147,7 +147,7 @@ Deshalb ist bei Fieldbook alles offen und überprüfbar:
   Damit lässt sich prüfen, dass die heruntergeladene ZIP nicht verändert wurde:
 
   ```powershell
-  Get-FileHash .\Fieldbook-0.8.7.zip -Algorithm SHA256
+  Get-FileHash .\Fieldbook-0.9.0.zip -Algorithm SHA256
   ```
 
   Der angezeigte Wert muss mit dem in der `.sha256`-Datei übereinstimmen.

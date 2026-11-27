@@ -581,12 +581,24 @@ const Fragen = (() => {
           halt();
           // Sicherheitsfrage, Fieldbook allein: nur weitere Fieldbook-Absätze dazu. Sonst kam über die Mischform genau
           // der Bibliothekssatz zurück, den das Allein-Schreiben fernhalten soll (Regenwasser: Kinderlexikon, Beeren: Esstest)
-          const nurFb = kurs.length && sicherheitsFrage(suchFrage);
+          const nurFb = kurs.length && await sicherheitsFrageKi(suchFrage);
           // Nur im Test (window.__mischBeide = {}): dieselben Artikel auch nach dem alten Verfahren mischen (Vergleich)
-          if (window.__mischBeide) window.__mischBeide.anKi = await mischen(anKi.map(q => Object.assign({}, q)), nurFb ? abs.filter(p => p.art === "fieldbook") : abs, suchFrage, budget(), true);
-          // Auszug ohne Füllstoff vorerst nur fürs 4B (Nutzer, 22. Nov. 2026: beim 9B erst getrennt prüfen, dort waren die
-          // Antworten schon besser). Test fürs 9B: window.__auszugNeu = true (mit __mischBeide = {} gegen das alte Verfahren)
-          const auszugAlt = !(OW.status && OW.status.modell === "qwen35-4b") && !window.__auszugNeu;
+          // Auszug ohne Füllstoff für 4B und 9B (9B seit 25. Nov. 2026, siehe regelnNeu()).
+          // Test: window.__auszugNeu = true (mit __mischBeide = {} gegen das alte Verfahren)
+          const auszugAlt = !regelnNeu() && !window.__auszugNeu;
+          // Mit __mischBeide = { ohne: "__schalter" } ist „alt“ das heutige Verfahren ohne diesen Testschalter (so am 25. Nov. 2026)
+          // (mischen() liest die Schalter vor dem ersten await, das kurze Umschalten reicht)
+          if (window.__mischBeide) {
+            const ohne = window.__mischBeide.ohne, merk = ohne ? window[ohne] : undefined;
+            if (ohne) window[ohne] = false;
+            // Bei __abschnittBedeutung kommt der Unterschied schon aus lesen(): dort die Artikel mit Wörterzählen
+            const la = window.__mischBeide.lesenAlt;
+            const basis = la && !kurs.length ? la.filter(q => q.intern).concat(la.filter(q => !q.intern)) : anKi;
+            let p;
+            try { p = mischen(basis.map(q => Object.assign({}, q)), nurFb ? abs.filter(p => p.art === "fieldbook") : abs, suchFrage, budget(), ohne ? auszugAlt : true); }
+            finally { if (ohne) window[ohne] = merk; }
+            window.__mischBeide.anKi = await p;
+          }
           anKi = await mischen(anKi, nurFb ? abs.filter(p => p.art === "fieldbook") : abs, suchFrage, budget(), auszugAlt);
           fertig(s3c, anKi.filter(q => q.absatz).length + " passende Absätze dazu");
         } catch (e) { halt(); fertig(s3c, "Absatzsuche hat nicht geklappt.", true); }
@@ -1009,7 +1021,14 @@ const Fragen = (() => {
     return daten.sort((a, b) => a.index - b.index).map(d => d.embedding);
   }
 
-  // Titel-Grenze für Absätze (nur 4B, 24. Nov. 2026): Ein Absatz aus der Bibliothek kann gut zur Frage passen, obwohl
+  // Drei Regeln gegen Nebenquellen (Auszug ohne Füllstoff, Titel-Grenze, kein Bonus für Fieldbook-Absätze) gelten für
+  // 4B und 9B. 9B seit 25. Nov. 2026: blind 50 zu 49 besser, aber themenfremd 23 statt 38, schlecht 6 statt 10,
+  // gefährlich 2 statt 5, Wächter gleich (ki-tests/2026-11-24-9b-regeln). Andere Modelle behalten das alte Verfahren.
+  function regelnNeu() {
+    const m = OW.status && OW.status.modell;
+    return m === "qwen35-4b" || m === "qwen35-9b";
+  }
+  // Titel-Grenze für Absätze (4B seit 24. Nov. 2026, 9B seit 25. Nov.): Ein Absatz aus der Bibliothek kann gut zur Frage passen, obwohl
   // sein Artikel ein ganz anderes Thema hat (Mikrotom beim Messerschärfen, Ungarisch-Lesebuch bei Angst,
   // Radreise-Checkliste beim Handy laden). Die KI mischte solche Absätze in die Antwort. Weg fällt ein Absatz nur,
   // wenn weder der Artikeltitel (unter 0,20) noch Titel mit Überschrift (unter 0,40) zur Frage passt. Ausgenommen sind
@@ -1018,7 +1037,14 @@ const Fragen = (() => {
   // Test: window.__titelGrenze = true / false.
   function titelGrenze() {
     if (window.__titelGrenze !== undefined) return !!window.__titelGrenze;
-    return !!(OW.status && OW.status.modell === "qwen35-4b");
+    return regelnNeu();
+  }
+  // Abschnitte nach Bedeutung statt Wörterzählen (VERSUCH 26. Nov. 2026, siehe lesen()). Test: window.__abschnittBedeutung = true / false.
+  // Aus: an 120 Fragen blind 31 zu 29, mit festem Artikelanfang 28 zu 29. Der Text an die KI ändert sich bei über der
+  // Hälfte der Fragen, die Antwortnoten kippen aber hin und her (ki-tests/2026-11-26-abschnitte-120 und -abschnitte2-120).
+  function abschnittBedeutung() {
+    if (window.__abschnittBedeutung !== undefined) return !!window.__abschnittBedeutung;
+    return false;
   }
   const TITEL_OHNE_SINN = /, Seite \d+$|^(www\.|https?:)|\.html?$/i;
   async function titelPasst(absaetze, frageVektor) {
@@ -1108,10 +1134,11 @@ const Fragen = (() => {
   // Bonus +0,05 für einzelne Fieldbook-Absätze (ganze Fieldbook-Artikel behalten ihn immer). Beim 4B aus (23. Nov. 2026):
   // Allgemeine Notfall-Absätze (Strom weg, Sirene, Notruf) landeten sonst auf Platz 1 und die KI mischte sie in fremde
   // Fragen. 22 betroffene Fragen blind 13 zu 6 besser, themenfremd 11 statt 17, Wächter 14/14 ×2 (ki-versuche.md).
-  // Andere Modelle behalten den Bonus, bis sie getrennt geprüft sind. Test: window.__fbAbsatzOhneBonus = true / false.
+  // 9B seit 25. Nov. 2026 auch ohne Bonus (regelnNeu()), andere Modelle behalten ihn.
+  // Test: window.__fbAbsatzOhneBonus = true / false.
   function fbAbsatzBonus() {
     if (window.__fbAbsatzOhneBonus !== undefined) return !window.__fbAbsatzOhneBonus;
-    return !(OW.status && OW.status.modell === "qwen35-4b");
+    return !regelnNeu();
   }
 
   async function mischen(quellen, absaetze, frage, budgetZeichen, alt) {
@@ -1121,6 +1148,9 @@ const Fragen = (() => {
     const bloecke = quellen.map(q => ({ q, kopf: q.titel, text: q.text, fb: !!q.intern }))
       .concat(absaetze.filter(p => !imBlock(p)).map(p => ({ p, kopf: p.titel + (p.ueb ? " – " + p.ueb : ""), text: p.text, fb: p.art === "fieldbook" })));
     if (bloecke.length <= quellen.length) return quellen;
+    // Verworfen (25. Nov. 2026): gewählte Fieldbook-Texte immer zuerst mitnehmen, lange ab dem passenden Stück
+    // („__fbImmer“), Anlass Bienenstich. Blind 2 zu 13 schlechter, themenfremd 8 statt 3: Als Quelle [1] stützt sich die
+    // KI auf den breiten Fieldbook-Text und mischt Fremdes ein (ki-tests/2026-11-25-fbimmer-120).
     const v = await mischVektoren(["task: question answering | query: " + frage].concat(bloecke.map(b => "title: " + b.kopf + " | text: " + b.text.slice(0, 1500))));
     bloecke.forEach((b, i) => { b.wert = aehnlich(v[0], v[i + 1]) + (b.fb && (b.q || fbAbsatzBonus()) ? 0.05 : 0); });
     bloecke.sort((a, b) => b.wert - a.wert);
@@ -1149,6 +1179,7 @@ const Fragen = (() => {
   }
 
   const ANLEITUNG = /\b(wie|was tun|was mache|was soll|behandl|versorg|reparier|anleitung|hilft|helfen|vorgehen|schritt)/i;
+  const SCHRITT_ABSCHNITT = /anleitung|schritt|vorgehen|durchführung|\bsteps?\b|procedure|instructions/i;
   const PRAXIS_ABSCHNITT = /behandlung|therapie|erste hilfe|versorgung|maßnahmen|massnahmen|reparatur|anleitung|vorgehen|durchführung|anwendung|reinigung|vorbeugung|prävention|treatment|repair|first aid|steps|procedure/i;
 
   // Wortstämme grob: erste 6 Zeichen, damit "versorge" auch "Wundversorgung" trifft
@@ -1204,30 +1235,47 @@ const Fragen = (() => {
     }
     // Sicherheitsfragen: Fieldbook-Inhalte unter den Treffern bleiben und kommen nach vorn (beim Sonnenstich verwarf die
     // Prüfung des 4B den Kurs „Kälte und Hitze“ und nahm nur Wikibooks mit „keine kalten Umschläge mehr“)
-    const sicher = sicherheitsFrage(frage);
+    const sicher = await sicherheitsFrageKi(frage);
     if (sicher) auswahl = gueltig.filter(x => x.a.fb).concat(auswahl.filter(x => !x.a.fb));
     auswahl = auswahl.slice(0, max || 4);
     // Fieldbook-Inhalte (Kurs, Vorsorge) kommen ganz, die übrigen Artikel teilen sich den Rest (mindestens 1.500 Zeichen)
     const fbLaenge = auswahl.filter(x => x.a.fb).reduce((s, x) => s + fbText(x.a.fb, frage).length, 0);
     const proArtikel = Math.floor(Math.max(1500, budgetZeichen - fbLaenge) / Math.max(1, auswahl.filter(x => !x.a.fb).length));
-    // TEST (18. Nov. 2026, nur mit window.__abschnittTest): alle Abschnitte der gewählten Artikel nach Bedeutung (Suchhilfe)
+    // Abschnitte nach Bedeutung (VERSUCH 26. Nov. 2026, Schalter window.__abschnittBedeutung): Beim Wörterzählen enthält
+    // jeder Abschnitt das Suchwort („Palstek“), dann gewinnt der Anfang (Geschichte, Verwendung) und „Knüpfen“ fällt
+    // heraus; ebenso Schach (keine Zugregeln), Fahrrad (Material statt Flick-Schritte), Insektenschutz.
+    // Der Versuch vom 18. Nov. (je Absatz bis 1.500 Zeichen) war 13 zu 4 besser, kostete aber 7 s. Jetzt nur eine Anfrage
+    // je Überschrift (aufeinanderfolgende Abschnitte gleicher Überschrift zusammen, die ersten 500 Zeichen) und nur bei
+    // Artikeln, die nicht ganz in ihren Platz passen: 0,1–0,3 s je Artikel.
     let simsAlle = null;
-    if (window.__abschnittTest && auswahl.length) {
+    const lang = (a) => !a.fb && a.abschnitte.reduce((s, x) => s + x.text.length, 0) > proArtikel;
+    if (abschnittBedeutung() && suchhilfeDa() && auswahl.some(({ a }) => lang(a))) {
       try {
         const uhr = performance.now();
-        const flach = [];
-        auswahl.forEach(({ a }, ai) => a.abschnitte.forEach((s, si) => flach.push({ ai, si,
-          text: "title: " + a.titel + (s.ueberschrift ? " – " + s.ueberschrift : "") + " | text: " + s.text.slice(0, 1500) })));
-        const r = await fetch("/suchhilfe/v1/embeddings", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ input: ["task: search result | query: " + frage + (begriffe.thema ? " (" + begriffe.thema + ")" : "")].concat(flach.map(f => f.text)) }) });
-        const v = (await r.json()).data.sort((x, y) => x.index - y.index).map(d => d.embedding);
-        const aehnlich = (x, y) => { let s = 0, p = 0, q = 0; for (let k = 0; k < x.length; k++) { s += x[k] * y[k]; p += x[k] * x[k]; q += y[k] * y[k]; } return s / Math.sqrt(p * q); };
-        simsAlle = auswahl.map(() => []);
-        flach.forEach((f, k) => { simsAlle[f.ai][f.si] = aehnlich(v[0], v[k + 1]); });
-        window.__abschnittMs = (window.__abschnittMs || []).concat([{ n: flach.length, ms: Math.round(performance.now() - uhr) }]);
-      } catch (e) { window.__abschnittFehler = String(e); }
+        const gruppen = [];
+        auswahl.forEach(({ a }, ai) => {
+          if (!lang(a)) return;
+          a.abschnitte.forEach((s, si) => {
+            const g = gruppen[gruppen.length - 1];
+            if (g && g.ai === ai && g.h === s.ueberschrift) { g.si.push(si); g.text += " " + s.text; }
+            else gruppen.push({ ai, h: s.ueberschrift, si: [si], text: s.text, titel: a.titel });
+          });
+        });
+        const v = await mischVektoren(["task: question answering | query: " + frage]
+          .concat(gruppen.map(g => "title: " + g.titel + (g.h ? " – " + g.h : "") + " | text: " + g.text.slice(0, 500))));
+        simsAlle = auswahl.map(() => null);
+        gruppen.forEach((g, k) => {
+          const w = aehnlich(v[0], v[k + 1]);
+          simsAlle[g.ai] = simsAlle[g.ai] || [];
+          for (const si of g.si) simsAlle[g.ai][si] = w;
+        });
+        if (window.__abschnittLog) window.__abschnittLog.push({ frage, gruppen: gruppen.length, ms: Math.round(performance.now() - uhr) });
+      } catch { simsAlle = null; /* Suchhilfe antwortet nicht: Wörter zählen wie bisher */ }
     }
-    return auswahl.map(({ t, a }, i) => {
+    // Nur im Test (window.__mischBeide = { ohne: "__abschnittBedeutung" }): dieselben Artikel auch mit Wörterzählen
+    if (window.__mischBeide && window.__mischBeide.ohne === "__abschnittBedeutung") window.__mischBeide.lesenAlt = zuschneiden(null);
+    return zuschneiden(simsAlle);
+    function zuschneiden(simsAlle) { return auswahl.map(({ t, a }, i) => {
       // Fieldbook-Inhalt: ganzer, zur Frage zugeschnittener Text; intern = fachlich geprüft, kurs = KI schreibt nur daraus
       // Nur über einen einzelnen Abschnitt gefunden (nurAbschnitt): Die Lektion passt nicht als Ganzes, oft nur ein
       // Nachbarthema (Erfrierungen → Abschnitt Unterkühlung). Dann eine Quelle neben anderen, nicht die einzige.
@@ -1256,13 +1304,25 @@ const Fragen = (() => {
       // Wie-Fragen: Eine Anleitung ist ein zusammenhängender Block. Nach der Einleitung ab dem ersten Absatz mit
       // Anleitungs-Überschrift der Reihe nach, bis das Budget voll ist. Die Schritte selbst enthalten oft kein Suchwort
       // („250 g Olivenöl“) und fielen beim Wörterzählen heraus (Seife: 0 von 14 Rezept-Absätzen, Test 18. Nov. 2026).
-      const praxisStart = anleitung && !sims ? a.abschnitte.findIndex(s => PRAXIS_ABSCHNITT.test(s.ueberschrift)) : -1;
+      // Mit Abschnitten nach Bedeutung nur noch bei echten Schritt-Überschriften: Bei „Seife herstellen“ lagen „Lauge“ und
+      // „Warnhinweise“ nach Bedeutung weit unten. „Behandlung“, „Anwendung“ findet die Bedeutung selbst; als Startpunkt
+      // trafen sie „Seifen zur Oberflächenbehandlung“ und „Kombinierte Anwendungen“ (Insektenschutz).
+      const praxisStart = !anleitung ? -1 : a.abschnitte.findIndex(s => (sims ? SCHRITT_ABSCHNITT : PRAXIS_ABSCHNITT).test(s.ueberschrift));
       if (praxisStart >= 0) {
         const einleitung = bewertet.find(b => b.s.text.trim().length >= 40);
         if (einleitung && einleitung.idx < praxisStart) { gewaehlt.push(einleitung); laenge += einleitung.s.text.length; }
         for (let k = praxisStart; k < bewertet.length && laenge <= proArtikel; k++) { gewaehlt.push(bewertet[k]); laenge += bewertet[k].s.text.length; }
       } else {
+        // Mit Abschnitten nach Bedeutung: der Artikelanfang (erste Überschriftengruppe) kommt immer, bis zum halben Platz.
+        // Bei Wissensfragen steht dort das Wichtigste (26. Nov. 2026 ohne diese Regel: Glühbirne ohne Swan, Wolf ohne „scheu“).
+        if (sims) {
+          const h0 = a.abschnitte[0].ueberschrift;
+          for (let k = 0; k < bewertet.length && bewertet[k].s.ueberschrift === h0 && laenge < proArtikel / 2; k++) {
+            gewaehlt.push(bewertet[k]); laenge += bewertet[k].s.text.length;
+          }
+        }
         for (const b of bewertet.slice().sort((x, y) => y.p - x.p || x.idx - y.idx)) {
+          if (gewaehlt.includes(b)) continue;
           if (laenge > proArtikel) break;
           gewaehlt.push(b);
           laenge += b.s.text.length;
@@ -1280,7 +1340,7 @@ const Fragen = (() => {
       }).filter(x => x.anfang < proArtikel);
       // Fundstellen in PDF-Büchern verweisen auf die Seite im PDF selbst
       return { nr: i + 1, titel: a.titel || t.titel, url: t.pdf || a.url || t.url, buch: t.buch, text, absaetze };
-    });
+    }); }
   }
 
   // Quellen prüfen: Die KI bekommt Titel, Anfang und Abschnittsüberschriften jedes Artikels und nennt die,
@@ -1377,6 +1437,32 @@ const Fragen = (() => {
   // „Notruf“, „Notfall“ allein zählen nicht: Bei „Notrufmeldestelle in Wuppertal“ verdrängten die allgemeinen
   // Fieldbook-Texte sonst den passenden Artikel
   const sicherheitsFrage = (frage) => { const a = fragenArt(frage); return a.koerper || a.trinkwasser || a.nahrung || a.elektrik; };
+  // Sicherheitsfragen zusätzlich per KI erkennen (VERSUCH 26. Nov. 2026, Schalter window.__sicherKi): Die Wortliste erkennt
+  // nur 42 von 96 Sicherheitsfragen (19. Nov., 220 Fragen von Hand eingeordnet). Eine eigene kleine Anfrage, bei der das 4B
+  // erst das Thema aufschreibt und dann urteilt, erkannte 82 bei 20 Fehlalarmen; reines Ja/Nein schwankte zwischen 17 und 90.
+  // Aus: im Paket-Test (ki-tests/2026-11-26-paket) gebrochen, u. a. SOS-Wächter (nur noch Fieldbook-Texte, Wikipedia „SOS“ weg).
+  function sicherKiAn() { return window.__sicherKi !== undefined ? !!window.__sicherKi : false; }
+  const sicherKiMerk = new Map();
+  async function sicherheitsFrageKi(frage) {
+    if (sicherheitsFrage(frage)) return true;
+    if (!sicherKiAn()) return false;
+    if (!sicherKiMerk.has(frage)) sicherKiMerk.set(frage, (async () => {
+      try {
+        // 26. Nov. an den 220 Fragen, zusammen mit der Wortliste: diese Fassung 76 von 96 bei 18 Fehlalarmen; „ernsthaft
+        // verletzen …“ nur 66/11 (übersah Knochenbruch, Schnittwunde); „im Zweifel true“ 88/34 (Palstek, Nottoilette, Wolf)
+        const sys = "Du ordnest Fragen ein. Schreibe zuerst in zwei bis vier Wörtern das Thema der Frage auf. " +
+          "Entscheide dann, ob es um Gesundheit oder Sicherheit geht: true, wenn eine falsche oder ungenaue Antwort jemandem schaden könnte " +
+          "(Verletzung, Krankheit, Vergiftung, Unterkühlung, Brand, Stromschlag), auch wenn die Frage harmlos klingt. Sonst false. Antworte nur mit JSON.";
+        const schema = { type: "object", properties: { thema: { type: "string" }, gefahr: { type: "boolean" } }, required: ["thema", "gefahr"] };
+        const roh = await mitFrist(20000, (signal) => KI.chat([{ role: "system", content: sys }, { role: "user", content: "Frage: " + frage }],
+          { max_tokens: 40, temperature: 0, response_format: { type: "json_schema", json_schema: { name: "sicherheit", schema } }, signal }));
+        const j = JSON.parse(roh.match(/\{[\s\S]*\}/)[0]);
+        if (window.__sicherLog) window.__sicherLog.push({ frage, thema: j.thema, gefahr: !!j.gefahr });
+        return j.gefahr === true;
+      } catch { return false; }
+    })());
+    return sicherKiMerk.get(frage);
+  }
 
   // Fieldbooks eigene Inhalte als durchsuchbare Quelle: Erste-Hilfe-Kurs (erstehilfe.json, vom Nutzer fachlich geprüft)
   // und Vorsorge-Themen (vorsorge.json). Ersetzt seit 18. Nov. 2026 die Wortliste KURS_THEMEN, die nie vollständig war

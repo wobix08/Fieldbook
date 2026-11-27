@@ -126,7 +126,7 @@
         { "titel": "Sofort", "punkte": [
           { "text": "Bei einem Rohrbruch den Haupthahn zudrehen.", "mehr": "Er sitzt meist im Keller beim Wasserzähler." },
           { "text": "Kommt noch etwas Wasser, Badewanne, Eimer und Töpfe füllen." },
-          { "text": "Die Toilette nicht mehr spülen und das Wasser im Spülkasten aufheben.", "mehr": "Darin stehen etwa 6 bis 9 Liter Leitungswasser (nur, wenn keine WC-Steine oder Reiniger im Kasten hängen). Auch im Warmwasserspeicher sind je nach Größe 30 bis 200 Liter, abzuzapfen am Hahn unten. Vor dem Trinken abkochen oder entkeimen.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } },
+          { "text": "Die Toilette nicht mehr spülen und das Wasser im Spülkasten aufheben.", "mehr": "Darin stehen etwa 6 bis 9 Liter Leitungswasser. Auch im Warmwasserspeicher sind je nach Größe 30 bis 200 Liter, abzuzapfen am Hahn unten. Beides vor dem Trinken abkochen oder entkeimen. Wasser aus dem Spülkasten nur trinken, wenn keine WC-Steine oder Reiniger darin hängen, sonst nur für die Toilette nehmen.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } },
           { "text": "Restwasser aus der Leitung holen: Haupthahn zu, oben im Haus einen Hahn öffnen, dann unten einen Hahn öffnen und das Wasser auffangen." },
           { "text": "Ein Notklo einrichten: einen stabilen Müllbeutel in die Toilette oder einen Eimer hängen.", "mehr": "Nach jeder Benutzung etwas Katzenstreu, Sägespäne, Erde oder zerknülltes Zeitungspapier darüber, den Beutel zuknoten und draußen sammeln. Im Keller oder Erdgeschoss mit Hebeanlage gar nicht spülen, sonst kann Abwasser zurückdrücken.", "verweis": { "text": "Vorsorge: Material fürs Notklo bereitlegen", "link": "#vorsorge?k=haus&s=2" } }
         ] },
@@ -312,7 +312,7 @@
           "punkte": [
             { "id": "wasser", "text": "Wasser und Getränke für 10 Tage", "mehr": "Wie viel das für euren Haushalt ist, zeigt der Vorratsrechner beim Thema Essen.", "alt": ["vorraete/wasser"], "verweis": { "text": "Zum Vorratsrechner", "link": "#vorsorge?k=essen&z=rechner" } },
             { "id": "haupthahn", "frei": true, "text": "Wissen, wo der Haupthahn für das Wasser ist", "mehr": "Meist im Keller beim Wasserzähler. Bei einem Rohrbruch dreht man ihn zu." },
-            { "id": "reserve", "frei": true, "text": "Wissen, wo im Haus noch Wasser steckt", "mehr": "Im Spülkasten der Toilette stehen 6 bis 9 Liter, im Warmwasserspeicher je nach Größe 30 bis 200 Liter. Vor dem Trinken abkochen.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } }
+            { "id": "reserve", "frei": true, "text": "Wissen, wo im Haus noch Wasser steckt", "mehr": "Im Spülkasten der Toilette stehen 6 bis 9 Liter, im Warmwasserspeicher je nach Größe 30 bis 200 Liter. Vor dem Trinken abkochen. Wasser aus dem Spülkasten nur trinken, wenn keine WC-Steine oder Reiniger darin hängen.", "verweis": { "text": "Kochen: Wasser trinkbar machen", "link": "#kochen?l=wasser" } }
           ]
         },
         {
